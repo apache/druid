@@ -28,7 +28,6 @@ import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedRow;
-import org.apache.druid.data.input.ProjectionSpec;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -193,7 +192,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   private void initializeProjections(IncrementalIndexSchema incrementalIndexSchema, boolean useMaxMemoryEstimates)
   {
     this.aggregateProjections = new ObjectAVLTreeSet<>(OnHeapAggregateProjection.COMPARATOR);
-    for (ProjectionSpec projectionSpec : incrementalIndexSchema.getProjections()) {
+    for (AggregateProjectionSpec projectionSpec : incrementalIndexSchema.getProjections()) {
       if (projectionSpec instanceof AggregateProjectionSpec) {
         AggregateProjectionSpec schema = (AggregateProjectionSpec) projectionSpec;
         final List<DimensionDesc> descs = new ArrayList<>();

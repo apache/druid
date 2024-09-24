@@ -22,7 +22,6 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.data.input.ProjectionSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -61,7 +60,7 @@ public class AggregateProjectionSpecTest extends InitializedNullHandlingTest
             new LongSumAggregatorFactory("e", "e")
         }
     );
-    Assert.assertEquals(spec, JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), ProjectionSpec.class));
+    Assert.assertEquals(spec, JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionSpec.class));
   }
 
   @Test

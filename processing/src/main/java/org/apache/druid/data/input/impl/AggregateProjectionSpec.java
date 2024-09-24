@@ -22,8 +22,9 @@ package org.apache.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Lists;
-import org.apache.druid.data.input.ProjectionSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -35,7 +36,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-public class AggregateProjectionSpec implements ProjectionSpec
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeName(AggregateProjectionSpec.TYPE_NAME)
+public class AggregateProjectionSpec
 {
   public static final String TYPE_NAME = "aggregate";
 
@@ -67,7 +70,6 @@ public class AggregateProjectionSpec implements ProjectionSpec
     }
   }
 
-  @Override
   @JsonProperty
   public String getName()
   {
@@ -81,7 +83,6 @@ public class AggregateProjectionSpec implements ProjectionSpec
     return groupingColumns;
   }
 
-  @Override
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public VirtualColumns getVirtualColumns()
@@ -97,7 +98,6 @@ public class AggregateProjectionSpec implements ProjectionSpec
   }
 
   @JsonProperty
-  @Override
   public List<OrderBy> getOrdering()
   {
     return ordering;

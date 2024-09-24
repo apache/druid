@@ -30,7 +30,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.TreeMultiset;
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.data.input.ProjectionSpec;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -88,7 +88,7 @@ public class DataSchema
 
   // This is used for backward compatibility
   private InputRowParser inputRowParser;
-  private List<ProjectionSpec> projections;
+  private List<AggregateProjectionSpec> projections;
 
   @JsonCreator
   public DataSchema(
@@ -98,7 +98,7 @@ public class DataSchema
       @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
       @JsonProperty("transformSpec") TransformSpec transformSpec,
-      @JsonProperty("projections") @Nullable List<ProjectionSpec> projections,
+      @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
       @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap,
       @JacksonInject ObjectMapper objectMapper
   )
@@ -357,7 +357,7 @@ public class DataSchema
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<ProjectionSpec> getProjections()
+  public List<AggregateProjectionSpec> getProjections()
   {
     return projections;
   }
@@ -436,7 +436,7 @@ public class DataSchema
     private ObjectMapper objectMapper;
     private TimestampSpec timestampSpec;
     private DimensionsSpec dimensionsSpec;
-    private List<ProjectionSpec> projections;
+    private List<AggregateProjectionSpec> projections;
 
     public Builder()
     {
@@ -503,7 +503,7 @@ public class DataSchema
       return this;
     }
 
-    public Builder withProjections(List<ProjectionSpec> projections)
+    public Builder withProjections(List<AggregateProjectionSpec> projections)
     {
       this.projections = projections;
       return this;

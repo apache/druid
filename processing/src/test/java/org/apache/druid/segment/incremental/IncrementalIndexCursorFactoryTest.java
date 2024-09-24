@@ -1227,7 +1227,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     Assert.assertArrayEquals(new Object[]{"aa", 9L, NullHandling.defaultFloatValue()}, results.get(0).getArray());
     Assert.assertArrayEquals(new Object[]{"bb", 6L, NullHandling.defaultFloatValue()}, results.get(1).getArray());
     Assert.assertArrayEquals(new Object[]{"cc", 2L, NullHandling.defaultFloatValue()}, results.get(2).getArray());
-    Assert.assertArrayEquals(new Object[]{"dd", 2L, NullHandling.defaultFloatValue()  }, results.get(3).getArray());
+    Assert.assertArrayEquals(new Object[]{"dd", 2L, NullHandling.defaultFloatValue()}, results.get(3).getArray());
   }
 
   @Test

@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
-import org.apache.druid.data.input.ProjectionSpec;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -49,7 +49,7 @@ public class IncrementalIndexSchema
   private final AggregatorFactory[] metrics;
   private final boolean rollup;
 
-  private final List<ProjectionSpec> projections;
+  private final List<AggregateProjectionSpec> projections;
 
   public IncrementalIndexSchema(
       long minTimestamp,
@@ -59,7 +59,7 @@ public class IncrementalIndexSchema
       DimensionsSpec dimensionsSpec,
       AggregatorFactory[] metrics,
       boolean rollup,
-      List<ProjectionSpec> projections
+      List<AggregateProjectionSpec> projections
   )
   {
     this.minTimestamp = minTimestamp;
@@ -107,7 +107,7 @@ public class IncrementalIndexSchema
     return rollup;
   }
 
-  public List<ProjectionSpec> getProjections()
+  public List<AggregateProjectionSpec> getProjections()
   {
     return projections;
   }
@@ -121,7 +121,7 @@ public class IncrementalIndexSchema
     private DimensionsSpec dimensionsSpec;
     private AggregatorFactory[] metrics;
     private boolean rollup;
-    private List<ProjectionSpec> projections;
+    private List<AggregateProjectionSpec> projections;
 
     public Builder()
     {
@@ -190,7 +190,7 @@ public class IncrementalIndexSchema
       return this;
     }
 
-    public Builder withProjections(@Nullable List<ProjectionSpec> projections)
+    public Builder withProjections(@Nullable List<AggregateProjectionSpec> projections)
     {
       this.projections = projections == null ? Collections.emptyList() : projections;
       return this;
