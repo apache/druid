@@ -32,6 +32,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -262,6 +263,32 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testHandoffTaskGroupsEarlyOnNonStreamSupervisor()
+  {
+    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id3", new TestSupervisorSpec("id3", supervisor3)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor3.start();
+
+    replayAll();
+
+    manager.start();
+
+    final UOE ex = Assert.assertThrows(
+        UOE.class,
+        () -> manager.handoffTaskGroupsEarly("id3", ImmutableList.of(1))
+    );
+    Assert.assertEquals(
+        "Handoff task groups operation is not supported by the supervisor[id3] of type[TestSupervisorSpec].",
+        ex.getMessage()
+    );
+
+    verifyAll();
+  }
+
+  @Test
   public void testStartAlreadyStarted()
   {
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
@@ -355,6 +382,30 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
     Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1", null));
     Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home", null));
+
+    verifyAll();
+  }
+
+  @Test
+  public void testResetOnNonStreamSupervisor()
+  {
+    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id3", new TestSupervisorSpec("id3", supervisor3)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor3.start();
+    replayAll();
+
+    manager.start();
+    final UOE ex = Assert.assertThrows(
+        UOE.class,
+        () -> manager.resetSupervisor("id3", null)
+    );
+    Assert.assertEquals(
+        "Reset operation is not supported by the supervisor[id3] of type[TestSupervisorSpec].",
+        ex.getMessage()
+    );
 
     verifyAll();
   }
@@ -670,7 +721,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     @Override
     public String getType()
     {
-      return null;
+      return "TestSupervisorSpec";
     }
 
     @Override

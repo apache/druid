@@ -29,7 +29,6 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -146,7 +145,7 @@ public class SupervisorManager
     }
     if (!(supervisor.lhs instanceof StreamSupervisor)) {
       throw new UOE(
-          "Unable to handoff task groups for supervisor[%s] as [%s] supervisors don't support the operation.",
+          "Handoff task groups operation is not supported by the supervisor[%s] of type[%s].",
           id,
           supervisor.rhs.getType()
       );
@@ -289,11 +288,9 @@ public class SupervisorManager
 
     if (!(supervisor.lhs instanceof StreamSupervisor)) {
       throw new UOE(
-          StringUtils.format(
-              "Unable to reset supervisor id[%s]. Resetting is not supported by [%s] supervisor.",
-              id,
-              supervisor.rhs.getType()
-          )
+          "Reset operation is not supported by the supervisor[%s] of type[%s].",
+          id,
+          supervisor.rhs.getType()
       );
     }
 
@@ -324,8 +321,14 @@ public class SupervisorManager
       Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
 
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
-      Preconditions.checkState(supervisor.lhs instanceof StreamSupervisor, "supervisor must be a stream supervisor");
 
+      if (!(supervisor.lhs instanceof StreamSupervisor)) {
+        throw new UOE(
+            "Checkpoint operation is not supported by the supervisor[%s] of type[%s].",
+            supervisorId,
+            supervisor.rhs.getType()
+        );
+      }
       final StreamSupervisor streamSupervisor = (StreamSupervisor) supervisor.lhs;
       streamSupervisor.checkpoint(taskGroupId, previousDataSourceMetadata);
       return true;
