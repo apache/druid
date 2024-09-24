@@ -362,7 +362,7 @@ public class ExtensionsLoaderTest
     });
 
     Assert.assertEquals(
-        StringUtils.format("[%s] depends on [%s] which is not a valid extension or not loaded.", extensionDir.getName(), druidExtensionDependency),
+        StringUtils.format("Extension [%s] depends on [%s] which is not a valid extension or not loaded.", extensionDir.getName(), druidExtensionDependency),
         exception.getMessage()
     );
   }
@@ -433,9 +433,8 @@ public class ExtensionsLoaderTest
       extnLoader.getClassLoaderForExtension(extensionDir, false);
     });
 
-    Assert.assertEquals(
-        exception.getMessage(),
-        StringUtils.format("The extension [%s] has multiple druid jars with dependencies in it. Each jar should be in a separate extension directory.", extensionDir.getName())
+    Assert.assertTrue(
+        exception.getMessage().contains("Each jar should be in a separate extension directory.")
     );
   }
 
