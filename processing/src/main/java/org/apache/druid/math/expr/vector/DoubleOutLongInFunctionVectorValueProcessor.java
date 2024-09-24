@@ -29,7 +29,7 @@ public abstract class DoubleOutLongInFunctionVectorValueProcessor
 {
   public DoubleOutLongInFunctionVectorValueProcessor(ExprVectorProcessor<long[]> processor, int maxVectorSize)
   {
-    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.LONG), maxVectorSize);
+    super(CastToTypeVectorProcessor.cast(processor, ExpressionType.LONG, maxVectorSize), maxVectorSize);
   }
 
   public abstract double apply(long input);
