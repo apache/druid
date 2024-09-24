@@ -16,29 +16,17 @@
  * limitations under the License.
  */
 
-import type { Execution } from '../druid-models';
+@import '../../variables';
 
-export interface WorkbenchRunningPromise {
-  executionPromise: Promise<Execution>;
-  startTime: Date;
-}
-
-export class WorkbenchRunningPromises {
-  private static readonly promises = new Map<string, WorkbenchRunningPromise>();
-
-  static isWorkbenchRunningPromise(x: any): x is WorkbenchRunningPromise {
-    return Boolean(x.executionPromise);
-  }
-
-  static storePromise(id: string, promise: WorkbenchRunningPromise): void {
-    WorkbenchRunningPromises.promises.set(id, promise);
-  }
-
-  static getPromise(id: string): WorkbenchRunningPromise | undefined {
-    return WorkbenchRunningPromises.promises.get(id);
-  }
-
-  static deletePromise(id: string): void {
-    WorkbenchRunningPromises.promises.delete(id);
-  }
+.mouse-tooltip {
+  position: absolute;
+  background: $dark-gray1;
+  color: $light-gray5;
+  padding: 5px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1000;
+  font-size: 11px;
+  max-width: 75vw;
+  white-space: pre-wrap;
 }

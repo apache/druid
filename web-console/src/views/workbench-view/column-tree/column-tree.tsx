@@ -469,7 +469,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                       icon={dataTypeToIcon(columnData.DATA_TYPE)}
                       aria-hidden
                       tabIndex={-1}
-                      title={columnData.DATA_TYPE}
+                      data-tooltip={columnData.DATA_TYPE}
                     />
                   ),
                   label: (
@@ -648,7 +648,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                 </Menu>
               }
             >
-              <Button icon={IconNames.SETTINGS} />
+              <Button icon={IconNames.SETTINGS} data-tooltip="Search settings" />
             </Popover>
           </ButtonGroup>
         }

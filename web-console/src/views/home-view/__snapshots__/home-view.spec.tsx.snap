@@ -9,7 +9,7 @@ exports[`HomeView matches snapshot (coordinator) 1`] = `
       Capabilities {
         "coordinator": true,
         "maxTaskSlots": undefined,
-        "multiStageQuery": false,
+        "multiStageQueryTask": false,
         "overlord": false,
         "queryType": "none",
       }
@@ -21,7 +21,7 @@ exports[`HomeView matches snapshot (coordinator) 1`] = `
         Capabilities {
           "coordinator": true,
           "maxTaskSlots": undefined,
-          "multiStageQuery": false,
+          "multiStageQueryTask": false,
           "overlord": false,
           "queryType": "none",
         }
@@ -32,7 +32,7 @@ exports[`HomeView matches snapshot (coordinator) 1`] = `
         Capabilities {
           "coordinator": true,
           "maxTaskSlots": undefined,
-          "multiStageQuery": false,
+          "multiStageQueryTask": false,
           "overlord": false,
           "queryType": "none",
         }
@@ -44,7 +44,7 @@ exports[`HomeView matches snapshot (coordinator) 1`] = `
       Capabilities {
         "coordinator": true,
         "maxTaskSlots": undefined,
-        "multiStageQuery": false,
+        "multiStageQueryTask": false,
         "overlord": false,
         "queryType": "none",
       }
@@ -55,7 +55,7 @@ exports[`HomeView matches snapshot (coordinator) 1`] = `
       Capabilities {
         "coordinator": true,
         "maxTaskSlots": undefined,
-        "multiStageQuery": false,
+        "multiStageQueryTask": false,
         "overlord": false,
         "queryType": "none",
       }
@@ -73,7 +73,7 @@ exports[`HomeView matches snapshot (full) 1`] = `
       Capabilities {
         "coordinator": true,
         "maxTaskSlots": undefined,
-        "multiStageQuery": true,
+        "multiStageQueryTask": true,
         "overlord": true,
         "queryType": "nativeAndSql",
       }
@@ -85,7 +85,7 @@ exports[`HomeView matches snapshot (full) 1`] = `
         Capabilities {
           "coordinator": true,
           "maxTaskSlots": undefined,
-          "multiStageQuery": true,
+          "multiStageQueryTask": true,
           "overlord": true,
           "queryType": "nativeAndSql",
         }
@@ -96,7 +96,7 @@ exports[`HomeView matches snapshot (full) 1`] = `
         Capabilities {
           "coordinator": true,
           "maxTaskSlots": undefined,
-          "multiStageQuery": true,
+          "multiStageQueryTask": true,
           "overlord": true,
           "queryType": "nativeAndSql",
         }
@@ -109,7 +109,7 @@ exports[`HomeView matches snapshot (full) 1`] = `
         Capabilities {
           "coordinator": true,
           "maxTaskSlots": undefined,
-          "multiStageQuery": true,
+          "multiStageQueryTask": true,
           "overlord": true,
           "queryType": "nativeAndSql",
         }
@@ -120,7 +120,7 @@ exports[`HomeView matches snapshot (full) 1`] = `
         Capabilities {
           "coordinator": true,
           "maxTaskSlots": undefined,
-          "multiStageQuery": true,
+          "multiStageQueryTask": true,
           "overlord": true,
           "queryType": "nativeAndSql",
         }
@@ -132,7 +132,7 @@ exports[`HomeView matches snapshot (full) 1`] = `
       Capabilities {
         "coordinator": true,
         "maxTaskSlots": undefined,
-        "multiStageQuery": true,
+        "multiStageQueryTask": true,
         "overlord": true,
         "queryType": "nativeAndSql",
       }
@@ -143,7 +143,7 @@ exports[`HomeView matches snapshot (full) 1`] = `
       Capabilities {
         "coordinator": true,
         "maxTaskSlots": undefined,
-        "multiStageQuery": true,
+        "multiStageQueryTask": true,
         "overlord": true,
         "queryType": "nativeAndSql",
       }
@@ -161,7 +161,7 @@ exports[`HomeView matches snapshot (overlord) 1`] = `
       Capabilities {
         "coordinator": false,
         "maxTaskSlots": undefined,
-        "multiStageQuery": false,
+        "multiStageQueryTask": false,
         "overlord": true,
         "queryType": "none",
       }
@@ -173,7 +173,7 @@ exports[`HomeView matches snapshot (overlord) 1`] = `
         Capabilities {
           "coordinator": false,
           "maxTaskSlots": undefined,
-          "multiStageQuery": false,
+          "multiStageQueryTask": false,
           "overlord": true,
           "queryType": "none",
         }
@@ -184,7 +184,7 @@ exports[`HomeView matches snapshot (overlord) 1`] = `
         Capabilities {
           "coordinator": false,
           "maxTaskSlots": undefined,
-          "multiStageQuery": false,
+          "multiStageQueryTask": false,
           "overlord": true,
           "queryType": "none",
         }
