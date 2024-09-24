@@ -4245,6 +4245,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return activeTaskMap.build();
   }
 
+  /**
+   * Computes maxLag, totalLag and avgLag
+   */
+  public abstract LagStats computeLagStats();
 
   /**
    * creates a specific task IOConfig instance for Kafka/Kinesis
@@ -4328,13 +4332,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       SequenceOffsetType seq,
       boolean isExclusive
   );
-
-
-  /**
-   * Computes maxLag, totalLag and avgLag
-   */
-  public abstract LagStats computeLagStats();
-
 
   /**
    * default implementation, schedules periodic fetch of latest offsets and {@link #emitLag} reporting for Kafka and Kinesis
