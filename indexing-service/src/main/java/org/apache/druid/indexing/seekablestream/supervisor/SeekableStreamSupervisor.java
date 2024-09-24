@@ -975,7 +975,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     this.taskClient = taskClientFactory.build(dataSource, taskInfoProvider, maxNumTasks, this.tuningConfig);
   }
 
-  @Override
   public int getActiveTaskGroupsCount()
   {
     return activelyReadingTaskGroups.values().size();
@@ -1107,7 +1106,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    * @param resetDataSourceMetadata required datasource metadata with offsets to reset.
    * @throws DruidException if any metadata attribute doesn't match the supervisor's.
    */
-  @Override
   public void resetOffsets(@Nonnull DataSourceMetadata resetDataSourceMetadata)
   {
     if (resetDataSourceMetadata == null) {
@@ -1975,7 +1973,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return false;
   }
 
-  @Override
+  /**
+   * Marks the given task groups as ready for segment hand-off irrespective of the task run times.
+   * In the subsequent run, the supervisor initiates segment publish and hand-off for these task groups and rolls over their tasks.
+   * taskGroupIds that are not valid or not actively reading are simply ignored.
+   */
   public void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
   {
     addNotice(new HandoffTaskGroupsNotice(taskGroupIds));
@@ -4170,7 +4172,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return ioConfig;
   }
 
-  @Override
+  /**
+   * The definition of checkpoint is not very strict as currently it does not affect data or control path.
+   * On this call Supervisor can potentially checkpoint data processed so far to some durable storage
+   * for example - Kafka/Kinesis Supervisor uses this to merge and handoff segments containing at least the data
+   * represented by {@param currentCheckpoint} DataSourceMetadata
+   *
+   * @param taskGroupId        unique Identifier to figure out for which sequence to do checkpointing
+   * @param checkpointMetadata metadata for the sequence to currently checkpoint
+   */
   public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
   {
     Preconditions.checkNotNull(checkpointMetadata, "checkpointMetadata");
@@ -4248,6 +4258,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     return activeTaskMap.build();
   }
 
+  /**
+   * Computes maxLag, totalLag and avgLag
+   */
+  public abstract LagStats computeLagStats();
 
   /**
    * creates a specific task IOConfig instance for Kafka/Kinesis

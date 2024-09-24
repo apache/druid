@@ -23,11 +23,12 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
+
+import javax.annotation.Nullable;
 
 /**
  * Supervisor for compaction of a single datasource.
@@ -112,36 +113,10 @@ public class CompactionSupervisor implements Supervisor
     }
   }
 
-  // Un-implemented methods used only by streaming supervisors
-
   @Override
-  public void reset(DataSourceMetadata dataSourceMetadata)
+  public void reset(@Nullable DataSourceMetadata dataSourceMetadata)
   {
-    throw new UnsupportedOperationException("Resetting not supported for 'autocompact' supervisors.");
-  }
-
-  @Override
-  public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
-  {
-    throw new UnsupportedOperationException("Resetting offsets not supported for 'autocompact' supervisors.");
-  }
-
-  @Override
-  public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
-  {
-    throw new UnsupportedOperationException("Checkpointing not supported for 'autocompact' supervisors.");
-  }
-
-  @Override
-  public LagStats computeLagStats()
-  {
-    throw new UnsupportedOperationException("Lag stats not supported for 'autocompact' supervisors.");
-  }
-
-  @Override
-  public int getActiveTaskGroupsCount()
-  {
-    throw new UnsupportedOperationException("Task groups not supported for 'autocompact' supervisors.");
+    // do nothing
   }
 
   public enum State implements SupervisorStateManager.State

@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -142,7 +143,8 @@ public class SupervisorManager
     if (supervisor == null || supervisor.lhs == null) {
       return false;
     }
-    supervisor.lhs.handoffTaskGroupsEarly(taskGroupIds);
+    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "handoff");
+    streamSupervisor.handoffTaskGroupsEarly(taskGroupIds);
     return true;
   }
 
@@ -277,10 +279,11 @@ public class SupervisorManager
       return false;
     }
 
+    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "reset");
     if (resetDataSourceMetadata == null) {
-      supervisor.lhs.reset(null);
+      streamSupervisor.reset(null);
     } else {
-      supervisor.lhs.resetOffsets(resetDataSourceMetadata);
+      streamSupervisor.resetOffsets(resetDataSourceMetadata);
     }
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
     if (autoscaler != null) {
@@ -303,7 +306,8 @@ public class SupervisorManager
 
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
 
-      supervisor.lhs.checkpoint(taskGroupId, previousDataSourceMetadata);
+      final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(supervisorId, "checkPoint");
+      streamSupervisor.checkpoint(taskGroupId, previousDataSourceMetadata);
       return true;
     }
     catch (Exception e) {
@@ -444,5 +448,22 @@ public class SupervisorManager
     }
 
     return true;
+  }
+
+  private SeekableStreamSupervisor requireSeekableStreamSupervisor(final String supervisorId, final String operation)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+    if (supervisor.lhs instanceof SeekableStreamSupervisor) {
+      return (SeekableStreamSupervisor) supervisor.lhs;
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build(
+                              "Operation[%s] is not supported by supervisor[%s] of type[%s].",
+                              operation,
+                              supervisorId,
+                              supervisor.rhs.getType()
+                          );
+    }
   }
 }
