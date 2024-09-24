@@ -37,8 +37,8 @@ public abstract class LongOutObjectsInFunctionVectorProcessor
   )
   {
     super(
-        CastToTypeVectorProcessor.cast(left, inputType),
-        CastToTypeVectorProcessor.cast(right, inputType),
+        CastToTypeVectorProcessor.cast(left, inputType, maxVectorSize),
+        CastToTypeVectorProcessor.cast(right, inputType, maxVectorSize),
         new long[maxVectorSize]
     );
     this.outNulls = new boolean[maxVectorSize];
