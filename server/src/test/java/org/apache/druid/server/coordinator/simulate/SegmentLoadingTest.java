@@ -74,7 +74,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     startSimulation(sim);
     runCoordinatorCycle();
 
-    // Verify that that replicationThrottleLimit is honored
+    // Verify that replicationThrottleLimit is honored
     verifyValue(Metric.ASSIGNED_COUNT, 2L);
 
     loadQueuedSegments();

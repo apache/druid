@@ -17,15 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.server.http;
 
-import org.apache.druid.timeline.SegmentId;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.server.coordinator.duty.DutyGroupStatus;
 
-import java.util.Set;
+import java.util.List;
 
-public interface SegmentDeleteHandler
+public class CoordinatorDutyStatus
 {
+  private final List<DutyGroupStatus> dutyGroups;
 
-  int markSegmentsAsUnused(Set<SegmentId> segmentIds);
+  public CoordinatorDutyStatus(List<DutyGroupStatus> dutyGroups)
+  {
+    this.dutyGroups = dutyGroups;
+  }
 
+  @JsonProperty
+  public List<DutyGroupStatus> getDutyGroups()
+  {
+    return dutyGroups;
+  }
 }
