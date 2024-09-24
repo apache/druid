@@ -42,9 +42,6 @@ public abstract class CastToTypeVectorProcessor<TOutput> implements ExprVectorPr
       caster = castInput;
     } else {
       switch (castToType.getType()) {
-        case STRING:
-          caster = new CastToStringVectorProcessor(castInput, maxVectorSize);
-          break;
         case LONG:
           caster = new CastToLongVectorProcessor(castInput);
           break;
