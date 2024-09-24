@@ -170,7 +170,8 @@ public class ExpressionVectorSelectors
     return new ExpressionVectorObjectSelector(
         CastToTypeVectorProcessor.cast(
             VectorProcessors.identifier(binding, columnName),
-            ExpressionType.fromColumnType(castTo)
+            ExpressionType.fromColumnType(castTo),
+            binding.getMaxVectorSize()
         ),
         binding
     );
@@ -190,7 +191,8 @@ public class ExpressionVectorSelectors
     return new ExpressionVectorValueSelector(
         CastToTypeVectorProcessor.cast(
             VectorProcessors.identifier(binding, columnName),
-            ExpressionType.fromColumnType(castTo)
+            ExpressionType.fromColumnType(castTo),
+            binding.getMaxVectorSize()
         ),
         binding
     );
