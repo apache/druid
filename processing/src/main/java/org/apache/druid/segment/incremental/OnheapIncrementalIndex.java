@@ -193,98 +193,96 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   {
     this.aggregateProjections = new ObjectAVLTreeSet<>(OnHeapAggregateProjection.COMPARATOR);
     for (AggregateProjectionSpec projectionSpec : incrementalIndexSchema.getProjections()) {
-      if (projectionSpec instanceof AggregateProjectionSpec) {
-        AggregateProjectionSpec schema = (AggregateProjectionSpec) projectionSpec;
-        final List<DimensionDesc> descs = new ArrayList<>();
-        // mapping of position in descs on the projection to position in the parent incremental index. Like the parent
-        // incremental index, the time (or time-like) column does not have a dimension descriptor and is specially
-        // handled as the timestamp of the row. Unlike the parent incremental index, an aggregating projection will
-        // always have its time-like column in the grouping columns list, so its position in this array specifies -1
-        final int[] parentDimIndex = new int[schema.getGroupingColumns().size()];
-        Arrays.fill(parentDimIndex, -1);
-        int foundTimePosition = -1;
-        String timeColumnName = null;
-        Granularity granularity = null;
-        // try to find the __time column equivalent, which might be a time_floor expression to model granularity
-        // bucketing. The time column is decided as the finest granularity on __time detected. If the projection does
-        // not have a time-like column, the granularity will be handled as ALL for the projection and all projection
-        // rows will use a synthetic timestamp of the minimum timestamp of the incremental index
-        for (int i = 0; i < schema.getGroupingColumns().size(); i++) {
-          final DimensionSchema dimension = schema.getGroupingColumns().get(i);
-          if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
+      AggregateProjectionSpec schema = projectionSpec;
+      final List<DimensionDesc> descs = new ArrayList<>();
+      // mapping of position in descs on the projection to position in the parent incremental index. Like the parent
+      // incremental index, the time (or time-like) column does not have a dimension descriptor and is specially
+      // handled as the timestamp of the row. Unlike the parent incremental index, an aggregating projection will
+      // always have its time-like column in the grouping columns list, so its position in this array specifies -1
+      final int[] parentDimIndex = new int[schema.getGroupingColumns().size()];
+      Arrays.fill(parentDimIndex, -1);
+      int foundTimePosition = -1;
+      String timeColumnName = null;
+      Granularity granularity = null;
+      // try to find the __time column equivalent, which might be a time_floor expression to model granularity
+      // bucketing. The time column is decided as the finest granularity on __time detected. If the projection does
+      // not have a time-like column, the granularity will be handled as ALL for the projection and all projection
+      // rows will use a synthetic timestamp of the minimum timestamp of the incremental index
+      for (int i = 0; i < schema.getGroupingColumns().size(); i++) {
+        final DimensionSchema dimension = schema.getGroupingColumns().get(i);
+        if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
+          timeColumnName = dimension.getName();
+          foundTimePosition = i;
+          parentDimIndex[i] = -1;
+          granularity = Granularities.NONE;
+        } else {
+          final VirtualColumn vc = schema.getVirtualColumns().getVirtualColumn(dimension.getName());
+          final Granularity maybeGranularity = Granularities.fromVirtualColumn(vc);
+          if (granularity == null && maybeGranularity != null) {
+            granularity = maybeGranularity;
             timeColumnName = dimension.getName();
             foundTimePosition = i;
-            parentDimIndex[i] = -1;
-            granularity = Granularities.NONE;
-          } else {
-            final VirtualColumn vc = schema.getVirtualColumns().getVirtualColumn(dimension.getName());
-            final Granularity maybeGranularity = Granularities.fromVirtualColumn(vc);
-            if (granularity == null && maybeGranularity != null) {
-              granularity = maybeGranularity;
-              timeColumnName = dimension.getName();
-              foundTimePosition = i;
-            } else if (granularity != null && maybeGranularity != null && maybeGranularity.isFinerThan(granularity)) {
-              granularity = maybeGranularity;
-              timeColumnName = dimension.getName();
-              foundTimePosition = i;
-            }
+          } else if (granularity != null && maybeGranularity != null && maybeGranularity.isFinerThan(granularity)) {
+            granularity = maybeGranularity;
+            timeColumnName = dimension.getName();
+            foundTimePosition = i;
           }
         }
-        int i = 0;
-        final Map<String, DimensionDesc> dimensionsMap = new HashMap<>();
-        for (DimensionSchema dimension : schema.getGroupingColumns()) {
-          if (dimension.getName().equals(timeColumnName)) {
-            continue;
-          }
-          final DimensionDesc parent = getDimension(dimension.getName());
-          if (parent == null) {
-            // this dimension only exists in the child, it needs its own handler
-            final DimensionDesc childOnly = new DimensionDesc(
-                i++,
-                dimension.getName(),
-                dimension.getDimensionHandler(),
-                useMaxMemoryEstimates
-            );
-            descs.add(childOnly);
-            dimensionsMap.put(dimension.getName(), childOnly);
-          } else {
-            if (!dimension.getColumnType().equals(parent.getCapabilities().toColumnType())) {
-              throw InvalidInput.exception(
-                  "projection[%s] contains dimension[%s] with different type[%s] than type[%s] in base table",
-                  schema.getName(),
-                  dimension.getName(),
-                  dimension.getColumnType(),
-                  parent.getCapabilities().toColumnType()
-              );
-            }
-            // make a new DimensionDesc from the child, containing all of the parents stuff but with the childs position
-            final DimensionDesc child = new DimensionDesc(
-                i++,
-                parent.getName(),
-                parent.getHandler(),
-                parent.getIndexer()
-            );
-            descs.add(child);
-            dimensionsMap.put(dimension.getName(), child);
-            parentDimIndex[child.getIndex()] = parent.getIndex();
-          }
-        }
-        aggregateProjections.add(
-            new OnHeapAggregateProjection(
-                schema,
-                descs,
-                dimensionsMap,
-                parentDimIndex,
-                this,
-                timeColumnName,
-                granularity,
-                foundTimePosition,
-                incrementalIndexSchema.getMinTimestamp(),
-                this.useMaxMemoryEstimates,
-                this.maxBytesPerRowForAggregators
-            )
-        );
       }
+      int i = 0;
+      final Map<String, DimensionDesc> dimensionsMap = new HashMap<>();
+      for (DimensionSchema dimension : schema.getGroupingColumns()) {
+        if (dimension.getName().equals(timeColumnName)) {
+          continue;
+        }
+        final DimensionDesc parent = getDimension(dimension.getName());
+        if (parent == null) {
+          // this dimension only exists in the child, it needs its own handler
+          final DimensionDesc childOnly = new DimensionDesc(
+              i++,
+              dimension.getName(),
+              dimension.getDimensionHandler(),
+              useMaxMemoryEstimates
+          );
+          descs.add(childOnly);
+          dimensionsMap.put(dimension.getName(), childOnly);
+        } else {
+          if (!dimension.getColumnType().equals(parent.getCapabilities().toColumnType())) {
+            throw InvalidInput.exception(
+                "projection[%s] contains dimension[%s] with different type[%s] than type[%s] in base table",
+                schema.getName(),
+                dimension.getName(),
+                dimension.getColumnType(),
+                parent.getCapabilities().toColumnType()
+            );
+          }
+          // make a new DimensionDesc from the child, containing all of the parents stuff but with the childs position
+          final DimensionDesc child = new DimensionDesc(
+              i++,
+              parent.getName(),
+              parent.getHandler(),
+              parent.getIndexer()
+          );
+          descs.add(child);
+          dimensionsMap.put(dimension.getName(), child);
+          parentDimIndex[child.getIndex()] = parent.getIndex();
+        }
+      }
+      aggregateProjections.add(
+          new OnHeapAggregateProjection(
+              schema,
+              descs,
+              dimensionsMap,
+              parentDimIndex,
+              this,
+              timeColumnName,
+              granularity,
+              foundTimePosition,
+              incrementalIndexSchema.getMinTimestamp(),
+              this.useMaxMemoryEstimates,
+              this.maxBytesPerRowForAggregators
+          )
+      );
     }
   }
 
