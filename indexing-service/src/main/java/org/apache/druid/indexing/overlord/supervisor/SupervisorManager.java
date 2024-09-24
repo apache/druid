@@ -143,7 +143,7 @@ public class SupervisorManager
     if (supervisor == null || supervisor.lhs == null) {
       return false;
     }
-    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "handof");
+    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "handoff");
     streamSupervisor.handoffTaskGroupsEarly(taskGroupIds);
     return true;
   }
@@ -459,7 +459,7 @@ public class SupervisorManager
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.UNSUPPORTED)
                           .build(
-                              "Opeartion[%s] is not supported by supervisor[%s] of type[%s].",
+                              "Operation[%s] is not supported by supervisor[%s] of type[%s].",
                               operation,
                               supervisorId,
                               supervisor.rhs.getType()
