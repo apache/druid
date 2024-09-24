@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Dialog, Tab, Tabs, Tag } from '@blueprintjs/core';
+import { Button, Callout, Classes, Dialog, Tab, Tabs, TabsExpander, Tag } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
@@ -113,7 +113,7 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
                   }
                 />
               ))}
-              <Tabs.Expander />
+              <TabsExpander />
             </Tabs>
           ) : (
             <div>

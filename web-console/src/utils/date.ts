@@ -28,8 +28,10 @@ export function dateToIsoDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-export function prettyFormatIsoDate(isoDate: string): string {
-  return isoDate.replace('T', ' ').replace(/\.\d\d\dZ$/, '');
+export function prettyFormatIsoDate(isoDate: string | Date): string {
+  return (typeof isoDate === 'string' ? isoDate : isoDate.toISOString())
+    .replace('T', ' ')
+    .replace(/\.\d\d\dZ$/, '');
 }
 
 export function utcToLocalDate(utcDate: Date): Date {

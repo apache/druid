@@ -199,6 +199,7 @@ exports[`HeaderBar matches snapshot 1`] = `
       <Blueprint5.Button
         active={false}
         className="header-entry"
+        data-tooltip="More views"
         icon="more"
         minimal={true}
       />
@@ -212,7 +213,7 @@ exports[`HeaderBar matches snapshot 1`] = `
         Capabilities {
           "coordinator": true,
           "maxTaskSlots": undefined,
-          "multiStageQuery": true,
+          "multiStageQueryTask": true,
           "overlord": true,
           "queryType": "nativeAndSql",
         }
@@ -333,6 +334,7 @@ exports[`HeaderBar matches snapshot 1`] = `
     >
       <Blueprint5.Button
         className="header-entry"
+        data-tooltip="Settings"
         icon="cog"
         minimal={true}
       />
@@ -418,6 +420,7 @@ exports[`HeaderBar matches snapshot 1`] = `
     >
       <Blueprint5.Button
         className="header-entry"
+        data-tooltip="Help"
         icon="help"
         minimal={true}
       />

@@ -32,7 +32,7 @@ import type { QueryContext } from './druid-models';
 import type { Links } from './links';
 import { setLinkOverrides } from './links';
 import { Api, UrlBaser } from './singletons';
-import { setLocalStorageNamespace } from './utils';
+import { initMouseTooltip, setLocalStorageNamespace } from './utils';
 
 import './entry.scss';
 
@@ -117,6 +117,8 @@ createRoot(container).render(
     />
   </OverlaysProvider>,
 );
+
+initMouseTooltip();
 
 // ---------------------------------
 // Taken from https://hackernoon.com/removing-that-ugly-focus-ring-and-keeping-it-too-6c8727fefcd2
