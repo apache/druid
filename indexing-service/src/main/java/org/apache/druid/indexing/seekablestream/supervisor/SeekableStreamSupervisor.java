@@ -56,6 +56,7 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.supervisor.StreamSupervisor;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
@@ -146,7 +147,7 @@ import java.util.stream.Stream;
  * @param <SequenceOffsetType> the type of the sequence number or offsets, for example, Kafka uses long offsets while Kinesis uses String sequence numbers
  */
 public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
-    implements Supervisor
+    implements StreamSupervisor
 {
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
   public static final String AUTOSCALER_SKIP_REASON_DIMENSION = "scalingSkipReason";

@@ -132,9 +132,9 @@ public class NoopSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public Supervisor createSupervisor()
+  public StreamSupervisor createSupervisor()
   {
-    return new Supervisor()
+    return new StreamSupervisor()
     {
       @Override
       public void start()

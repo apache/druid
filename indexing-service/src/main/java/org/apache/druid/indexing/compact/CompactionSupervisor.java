@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.compact;
 
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.supervisor.StreamSupervisor;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
@@ -93,38 +94,6 @@ public class CompactionSupervisor implements Supervisor
     } else {
       return State.RUNNING;
     }
-  }
-
-  // Un-implemented methods used only by streaming supervisors
-
-  @Override
-  public void reset(DataSourceMetadata dataSourceMetadata)
-  {
-    throw new UnsupportedOperationException("Resetting not supported for 'autocompact' supervisors.");
-  }
-
-  @Override
-  public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
-  {
-    throw new UnsupportedOperationException("Resetting offsets not supported for 'autocompact' supervisors.");
-  }
-
-  @Override
-  public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
-  {
-    throw new UnsupportedOperationException("Checkpointing not supported for 'autocompact' supervisors.");
-  }
-
-  @Override
-  public LagStats computeLagStats()
-  {
-    throw new UnsupportedOperationException("Lag stats not supported for 'autocompact' supervisors.");
-  }
-
-  @Override
-  public int getActiveTaskGroupsCount()
-  {
-    throw new UnsupportedOperationException("Task groups not supported for 'autocompact' supervisors.");
   }
 
   public enum State implements SupervisorStateManager.State

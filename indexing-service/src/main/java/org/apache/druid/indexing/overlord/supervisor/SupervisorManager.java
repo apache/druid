@@ -29,6 +29,8 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -142,7 +144,15 @@ public class SupervisorManager
     if (supervisor == null || supervisor.lhs == null) {
       return false;
     }
-    supervisor.lhs.handoffTaskGroupsEarly(taskGroupIds);
+    if (!(supervisor.lhs instanceof StreamSupervisor)) {
+      throw new UOE(
+          "Unable to handoff task groups for supervisor[%s] as [%s] supervisors don't support the operation.",
+          id,
+          supervisor.rhs.getType()
+      );
+    }
+    final StreamSupervisor streamSupervisor = (StreamSupervisor) supervisor.lhs;
+    streamSupervisor.handoffTaskGroupsEarly(taskGroupIds);
     return true;
   }
 
@@ -277,10 +287,22 @@ public class SupervisorManager
       return false;
     }
 
+    if (!(supervisor.lhs instanceof StreamSupervisor)) {
+      throw new UOE(
+          StringUtils.format(
+              "Unable to reset supervisor id[%s]. Resetting is not supported by [%s] supervisor.",
+              id,
+              supervisor.rhs.getType()
+          )
+      );
+    }
+
+    final StreamSupervisor streamSupervisor = (StreamSupervisor) supervisor.lhs;
+
     if (resetDataSourceMetadata == null) {
-      supervisor.lhs.reset(null);
+      streamSupervisor.reset(null);
     } else {
-      supervisor.lhs.resetOffsets(resetDataSourceMetadata);
+      streamSupervisor.resetOffsets(resetDataSourceMetadata);
     }
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
     if (autoscaler != null) {
@@ -302,8 +324,10 @@ public class SupervisorManager
       Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
 
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
+      Preconditions.checkState(supervisor.lhs instanceof StreamSupervisor, "supervisor must be a stream supervisor");
 
-      supervisor.lhs.checkpoint(taskGroupId, previousDataSourceMetadata);
+      final StreamSupervisor streamSupervisor = (StreamSupervisor) supervisor.lhs;
+      streamSupervisor.checkpoint(taskGroupId, previousDataSourceMetadata);
       return true;
     }
     catch (Exception e) {
