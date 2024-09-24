@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.exec.MSQTasks;
-import org.apache.druid.msq.guice.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
@@ -42,6 +41,7 @@ import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
+import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -68,6 +68,7 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.destination.ExportDestination;
 import org.apache.druid.sql.destination.IngestDestination;
 import org.apache.druid.sql.destination.TableDestination;
+import org.apache.druid.sql.hook.DruidHook;
 import org.apache.druid.sql.http.ResultFormat;
 import org.joda.time.Interval;
 
@@ -117,6 +118,8 @@ public class MSQTaskQueryMaker implements QueryMaker
   public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
+    plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, druidQuery.getQuery());
+
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 
     // SQL query context: context provided by the user, and potentially modified by handlers during planning.

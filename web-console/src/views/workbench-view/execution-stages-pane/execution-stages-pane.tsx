@@ -61,6 +61,11 @@ import './execution-stages-pane.scss';
 const MAX_STAGE_ROWS = 20;
 const MAX_DETAIL_ROWS = 20;
 const NOT_SIZE_ON_DISK = '(does not represent size on disk)';
+const NO_SIZE_INFO = 'no size info';
+
+// For the graph
+const LANE_WIDTH = 20;
+const STAGE_OFFSET = '19px';
 
 function summarizeTableInput(tableStageInput: StageInput): string {
   if (tableStageInput.type !== 'table') return '';
@@ -271,7 +276,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                       title={
                         c.bytes
                           ? `Uncompressed size: ${formatBytesCompact(c.bytes)} ${NOT_SIZE_ON_DISK}`
-                          : undefined
+                          : NO_SIZE_INFO
                       }
                     />
                     {Boolean(c.totalFiles) && (
@@ -378,7 +383,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
                     title={
                       c.bytes
                         ? `Uncompressed size: ${formatBytesCompact(c.bytes)} ${NOT_SIZE_ON_DISK}`
-                        : undefined
+                        : NO_SIZE_INFO
                     }
                   />
                 );
@@ -395,19 +400,15 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
     const hasCounter = stages.hasCounterForStage(stage, inputCounter);
     const bytes = stages.getTotalCounterForStage(stage, inputCounter, 'bytes');
     const inputFileCount = stages.getTotalCounterForStage(stage, inputCounter, 'totalFiles');
+    const inputLabel = `${formatInputLabel(stage, inputNumber)} (input${inputNumber})`;
     return (
       <div
         className="data-transfer"
         key={inputNumber}
         title={
           bytes
-            ? `${formatInputLabel(
-                stage,
-                inputNumber,
-              )} (input${inputNumber}) uncompressed size: ${formatBytesCompact(
-                bytes,
-              )} ${NOT_SIZE_ON_DISK}`
-            : undefined
+            ? `${inputLabel} uncompressed size: ${formatBytesCompact(bytes)} ${NOT_SIZE_ON_DISK}`
+            : `${inputLabel}: ${NO_SIZE_INFO}`
         }
       >
         <BracedText
@@ -510,13 +511,20 @@ ${title} uncompressed size: ${formatBytesCompact(
     if (!stages.hasCounterForStage(stage, 'segmentGenerationProgress')) return;
 
     return (
-      <div className="data-transfer">
+      <div className="data-transfer" title={NO_SIZE_INFO}>
         <BracedText
           text={formatRows(stages.getTotalSegmentGenerationProgressForStage(stage, field))}
           braces={rowsValues}
         />
       </div>
     );
+  }
+
+  const graphInfos = stages.getGraphInfos();
+  const maxLanes = Math.max(...graphInfos.map(graphInfo => graphInfo.length));
+
+  function laneX(laneNumber: number) {
+    return `${((laneNumber + 0.5) / maxLanes) * 100}%`;
   }
 
   return (
@@ -531,6 +539,61 @@ ${title} uncompressed size: ${formatBytesCompact(
       showPagination={stages.stageCount() > MAX_STAGE_ROWS}
       SubComponent={({ original }) => detailedStats(original)}
       columns={[
+        {
+          id: 'graph',
+          className: 'graph-cell',
+          accessor: 'stageNumber',
+          show: maxLanes > 1,
+          width: LANE_WIDTH * maxLanes,
+          minWidth: LANE_WIDTH,
+          Cell({ value }) {
+            const graphInfo = graphInfos[value];
+
+            return (
+              <svg xmlns="http://www.w3.org/2000/svg">
+                {graphInfo.flatMap((lane, i) => {
+                  switch (lane.type) {
+                    case 'line':
+                      return (
+                        <line
+                          key={`line${i}`}
+                          x1={laneX(lane.fromLane)}
+                          y1="0%"
+                          x2={laneX(i)}
+                          y2="100%"
+                        />
+                      );
+
+                    case 'stage':
+                      return [
+                        ...lane.fromLanes.map(fromLane => (
+                          <line
+                            key={`stage${i}_from${fromLane}`}
+                            x1={laneX(fromLane)}
+                            y1="0%"
+                            x2={laneX(i)}
+                            y2={STAGE_OFFSET}
+                          />
+                        )),
+                        ...(lane.hasOut
+                          ? [
+                              <line
+                                key={`stage${i}_out`}
+                                x1={laneX(i)}
+                                y1={STAGE_OFFSET}
+                                x2={laneX(i)}
+                                y2="100%"
+                              />,
+                            ]
+                          : []),
+                        <circle key={`stage${i}_stage`} cx={laneX(i)} cy={STAGE_OFFSET} r={5} />,
+                      ];
+                  }
+                })}
+              </svg>
+            );
+          },
+        },
         {
           Header: twoLines('Stage', <i>processorType</i>),
           id: 'stage',

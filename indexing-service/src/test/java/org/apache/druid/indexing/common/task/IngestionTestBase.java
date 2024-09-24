@@ -314,7 +314,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
           csvParseSpec.getListDelimiter(),
           getColumnsFromHeader ? null : true,
           getColumnsFromHeader ? true : null,
-          csvParseSpec.getSkipHeaderRows()
+          csvParseSpec.getSkipHeaderRows(),
+          null
       );
     } else if (parseSpec instanceof DelimitedParseSpec) {
       DelimitedParseSpec delimitedParseSpec = (DelimitedParseSpec) parseSpec;
@@ -325,7 +326,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
           delimitedParseSpec.getDelimiter(),
           getColumnsFromHeader ? null : true,
           getColumnsFromHeader ? true : null,
-          delimitedParseSpec.getSkipHeaderRows()
+          delimitedParseSpec.getSkipHeaderRows(),
+          null
       );
     } else if (parseSpec instanceof RegexParseSpec) {
       RegexParseSpec regexParseSpec = (RegexParseSpec) parseSpec;

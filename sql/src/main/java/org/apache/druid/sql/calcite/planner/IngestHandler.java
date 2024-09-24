@@ -341,7 +341,6 @@ public abstract class IngestHandler extends QueryHandler
     protected static DruidSqlReplace convertQuery(DruidSqlReplace sqlNode)
     {
       SqlNode query = convertSourceQuery(sqlNode);
-
       return DruidSqlReplace.create(
           new SqlInsert(
               sqlNode.getParserPosition(),

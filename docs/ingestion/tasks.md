@@ -36,8 +36,8 @@ Task APIs are available in two main places:
 - The [Overlord](../design/overlord.md) process offers HTTP APIs to submit tasks, cancel tasks, check their status,
 review logs and reports, and more. Refer to the [Tasks API reference](../api-reference/tasks-api.md) for a
 full list.
-- Druid SQL includes a [`sys.tasks`](../querying/sql-metadata-tables.md#tasks-table) table that provides information about currently
-running tasks. This table is read-only, and has a limited (but useful!) subset of the full information available through
+- Druid SQL includes a [`sys.tasks`](../querying/sql-metadata-tables.md#tasks-table) table that provides information about active
+and recently completed tasks. This table is read-only and has a subset of the full task report available through
 the Overlord APIs.
 
 <a name="reports"></a>
@@ -458,7 +458,7 @@ To enable batched segment allocation on the overlord, set  `druid.indexer.tasklo
 The task context is used for various individual task configuration.
 Specify task context configurations in the `context` field of the ingestion spec.
 When configuring [automatic compaction](../data-management/automatic-compaction.md), set the task context configurations in `taskContext` rather than in `context`.
-The settings get passed into the `context` field of the compaction tasks issued to MiddleManagers.
+The settings get passed into the `context` field of the compaction tasks issued to Middle Managers.
 
 The following parameters apply to all task types.
 
@@ -477,18 +477,18 @@ Logs are created by ingestion tasks as they run. You can configure Druid to push
 
 Once the task has been submitted to the Overlord it remains `WAITING` for locks to be acquired. Worker slot allocation is then `PENDING` until the task can actually start executing.
 
-The task then starts creating logs in a local directory of the middle manager (or indexer) in a `log` directory for the specific `taskId` at [`druid.worker.baseTaskDirs`](../configuration/index.md#middlemanager-configuration).
+The task then starts creating logs in a local directory of the middle manager (or indexer) in a `log` directory for the specific `taskId` at [`druid.worker.baseTaskDirs`](../configuration/index.md#middle-manager-configuration).
 
 When the task completes - whether it succeeds or fails - the middle manager (or indexer) will push the task log file into the location specified in [`druid.indexer.logs`](../configuration/index.md#task-logging).
 
-Task logs on the Druid web console are retrieved via an [API](../api-reference/service-status-api.md#overlord) on the Overlord. It automatically detects where the log file is, either in the middleManager / indexer or in long-term storage, and passes it back.
+Task logs on the Druid web console are retrieved via an [API](../api-reference/service-status-api.md#overlord) on the Overlord. It automatically detects where the log file is, either in the Middle Manager / indexer or in long-term storage, and passes it back.
 
 If you don't see the log file in long-term storage, it means either:
 
-1. the middleManager / indexer failed to push the log file to deep storage or
-2. the task did not complete.
+- the Middle Manager / indexer failed to push the log file to deep storage or
+- the task did not complete.
 
-You can check the middleManager / indexer logs locally to see if there was a push failure. If there was not, check the Overlord's own process logs to see why the task failed before it started.
+You can check the Middle Manager / indexer logs locally to see if there was a push failure. If there was not, check the Overlord's own process logs to see why the task failed before it started.
 
 :::info
  If you are running the indexing service in remote mode, the task logs must be stored in S3, Azure Blob Store, Google Cloud Storage or HDFS.

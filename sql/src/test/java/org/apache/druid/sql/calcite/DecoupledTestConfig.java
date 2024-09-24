@@ -21,8 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -87,9 +85,18 @@ public @interface DecoupledTestConfig
      */
     DEFINETLY_WORSE_PLAN,
     /**
-     * A new {@link FinalizingFieldAccessPostAggregator} appeared in the plan.
+     * Some extra unused columns are being projected.
+     *
+     * Example: ScanQuery over a join projects columns=[dim2, j0.m1, m1, m2] instead of just columns=[dim2, m2]
      */
-    FINALIZING_FIELD_ACCESS;
+    EQUIV_PLAN_EXTRA_COLUMNS,
+    /**
+     * Materialization of a CAST was pushed down to a join branch
+     *
+     * instead of  joining on condition (CAST("j0.k", 'DOUBLE') == "_j0.m1")
+     * a vc was computed for CAST("j0.k", 'DOUBLE')
+     */
+    EQUIV_PLAN_CAST_MATERIALIZED_EARLIER;
 
     public boolean isPresent()
     {

@@ -41,6 +41,7 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -77,8 +78,10 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
+import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -462,7 +465,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         transformSpec,
         metricsSpec,
         granularitySpec,
-        getMetricBuilder()
+        getMetricBuilder(),
+        !(compactionRunner instanceof NativeCompactionRunner)
     );
 
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
@@ -488,7 +492,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nullable final ClientCompactionTaskTransformSpec transformSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
-      final ServiceMetricEvent.Builder metricBuilder
+      final ServiceMetricEvent.Builder metricBuilder,
+      boolean needMultiValuedColumns
   ) throws IOException
   {
     final Iterable<DataSegment> timelineSegments = retrieveRelevantTimelineHolders(
@@ -552,7 +557,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             metricsSpec,
             granularitySpec == null
             ? new ClientCompactionTaskGranularitySpec(segmentGranularityToUse, null, null)
-            : granularitySpec.withSegmentGranularity(segmentGranularityToUse)
+            : granularitySpec.withSegmentGranularity(segmentGranularityToUse),
+            needMultiValuedColumns
         );
         intervalDataSchemaMap.put(interval, dataSchema);
       }
@@ -577,7 +583,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           dimensionsSpec,
           transformSpec,
           metricsSpec,
-          granularitySpec
+          granularitySpec,
+          needMultiValuedColumns
       );
       return Collections.singletonMap(segmentProvider.interval, dataSchema);
     }
@@ -607,7 +614,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @Nullable DimensionsSpec dimensionsSpec,
       @Nullable ClientCompactionTaskTransformSpec transformSpec,
       @Nullable AggregatorFactory[] metricsSpec,
-      @Nonnull ClientCompactionTaskGranularitySpec granularitySpec
+      @Nonnull ClientCompactionTaskGranularitySpec granularitySpec,
+      boolean needMultiValuedColumns
   )
   {
     // Check index metadata & decide which values to propagate (i.e. carry over) for rollup & queryGranularity
@@ -616,7 +624,8 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         granularitySpec.isRollup() == null,
         granularitySpec.getQueryGranularity() == null,
         dimensionsSpec == null,
-        metricsSpec == null
+        metricsSpec == null,
+        needMultiValuedColumns
     );
 
     final Stopwatch stopwatch = Stopwatch.createStarted();
@@ -668,13 +677,14 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       finalMetricsSpec = metricsSpec;
     }
 
-    return new DataSchema(
+    return new CombinedDataSchema(
         dataSource,
         new TimestampSpec(ColumnHolder.TIME_COLUMN_NAME, "millis", null),
         finalDimensionsSpec,
         finalMetricsSpec,
         uniformGranularitySpec,
-        transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null)
+        transformSpec == null ? null : new TransformSpec(transformSpec.getFilter(), null),
+        existingSegmentAnalyzer.getMultiValuedDimensions()
     );
   }
 
@@ -748,6 +758,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     private final boolean needQueryGranularity;
     private final boolean needDimensionsSpec;
     private final boolean needMetricsSpec;
+    private final boolean needMultiValuedDimensions;
 
     // For processRollup:
     private boolean rollup = true;
@@ -761,13 +772,15 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
     // For processMetricsSpec:
     private final Set<List<AggregatorFactory>> aggregatorFactoryLists = new HashSet<>();
+    private Set<String> multiValuedDimensions;
 
     ExistingSegmentAnalyzer(
         final Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segmentsIterable,
         final boolean needRollup,
         final boolean needQueryGranularity,
         final boolean needDimensionsSpec,
-        final boolean needMetricsSpec
+        final boolean needMetricsSpec,
+        final boolean needMultiValuedDimensions
     )
     {
       this.segmentsIterable = segmentsIterable;
@@ -775,13 +788,24 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.needQueryGranularity = needQueryGranularity;
       this.needDimensionsSpec = needDimensionsSpec;
       this.needMetricsSpec = needMetricsSpec;
+      this.needMultiValuedDimensions = needMultiValuedDimensions;
+    }
+
+    private boolean shouldFetchSegments()
+    {
+      // Don't fetch segments for just needMultiValueDimensions
+      return needRollup || needQueryGranularity || needDimensionsSpec || needMetricsSpec;
     }
 
     public void fetchAndProcessIfNeeded()
     {
-      if (!needRollup && !needQueryGranularity && !needDimensionsSpec && !needMetricsSpec) {
+      if (!shouldFetchSegments()) {
         // Nothing to do; short-circuit and don't fetch segments.
         return;
+      }
+
+      if (needMultiValuedDimensions) {
+        multiValuedDimensions = new HashSet<>();
       }
 
       final List<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments = sortSegmentsListNewestFirst();
@@ -804,6 +828,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             processQueryGranularity(index);
             processDimensionsSpec(index);
             processMetricsSpec(index);
+            processMultiValuedDimensions(index);
           }
         }
       }
@@ -890,6 +915,11 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return mergedAggregators;
     }
 
+    public Set<String> getMultiValuedDimensions()
+    {
+      return multiValuedDimensions;
+    }
+
     /**
      * Sort {@link #segmentsIterable} in order, such that we look at later segments prior to earlier ones. Useful when
      * analyzing dimensions, as it allows us to take the latest value we see, and therefore prefer types from more
@@ -960,9 +990,19 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           // column for it.
           final ColumnHolder columnHolder = index.getColumnHolder(dimension);
           if (columnHolder != null) {
+            DimensionSchema schema = columnHolder.getColumnFormat().getColumnSchema(dimension);
+            // rewrite string dimensions to always use MultiValueHandling.ARRAY since it preserves the exact order of
+            // the row regardless of the mode the initial ingest was using
+            if (schema instanceof StringDimensionSchema) {
+              schema = new StringDimensionSchema(
+                  schema.getName(),
+                  DimensionSchema.MultiValueHandling.ARRAY,
+                  schema.hasBitmapIndex()
+              );
+            }
             dimensionSchemaMap.put(
                 dimension,
-                columnHolder.getColumnFormat().getColumnSchema(dimension)
+                schema
             );
           }
         }
@@ -981,6 +1021,24 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         // different segments.
         aggregatorFactoryLists.add(Arrays.asList(aggregators));
       }
+    }
+
+    private void processMultiValuedDimensions(final QueryableIndex index)
+    {
+      if (!needMultiValuedDimensions) {
+        return;
+      }
+      for (String dimension : index.getAvailableDimensions()) {
+        if (isMultiValuedDimension(index, dimension)) {
+          multiValuedDimensions.add(dimension);
+        }
+      }
+    }
+
+    private boolean isMultiValuedDimension(final QueryableIndex index, final String col)
+    {
+      ColumnCapabilities columnCapabilities = index.getColumnCapabilities(col);
+      return columnCapabilities != null && columnCapabilities.hasMultipleValues().isTrue();
     }
 
     static Granularity compareWithCurrent(Granularity queryGranularity, Granularity current)

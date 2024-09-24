@@ -28,18 +28,15 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.loading.LoadSpec;
@@ -242,9 +239,9 @@ public class TestSegmentUtils
     }
 
     @Override
-    public StorageAdapter asStorageAdapter()
+    public CursorFactory asCursorFactory()
     {
-      return makeFakeStorageAdapter(interval, 0);
+      return new QueryableIndexCursorFactory(index);
     }
 
     @Override
@@ -253,85 +250,6 @@ public class TestSegmentUtils
       synchronized (lock) {
         closed = true;
       }
-    }
-
-    private StorageAdapter makeFakeStorageAdapter(Interval interval, int cardinality)
-    {
-      StorageAdapter adapter = new StorageAdapter()
-      {
-        @Override
-        public Interval getInterval()
-        {
-          return interval;
-        }
-
-        @Override
-        public int getDimensionCardinality(String column)
-        {
-          return cardinality;
-        }
-
-        @Override
-        public Indexed<String> getAvailableDimensions()
-        {
-          return null;
-        }
-
-        @Override
-        public Iterable<String> getAvailableMetrics()
-        {
-          return null;
-        }
-
-        @Nullable
-        @Override
-        public Comparable getMinValue(String column)
-        {
-          return null;
-        }
-
-        @Nullable
-        @Override
-        public Comparable getMaxValue(String column)
-        {
-          return null;
-        }
-
-        @Nullable
-        @Override
-        public ColumnCapabilities getColumnCapabilities(String column)
-        {
-          return null;
-        }
-
-        @Override
-        public int getNumRows()
-        {
-          return 0;
-        }
-
-        @Override
-        public Metadata getMetadata()
-        {
-          return null;
-        }
-
-        @Override
-        public CursorHolder makeCursorHolder(CursorBuildSpec spec)
-        {
-          return new CursorHolder()
-          {
-            @Nullable
-            @Override
-            public Cursor asCursor()
-            {
-              return null;
-            }
-          };
-        }
-      };
-
-      return adapter;
     }
   }
 

@@ -30,6 +30,21 @@ import java.nio.file.StandardCopyOption;
 
 public class TestUtils
 {
+  public static void setUpCgroupsV2(
+      File procDir,
+      File cgroupDir
+  ) throws IOException
+  {
+    final File procMounts = new File(procDir, "mounts");
+    copyResource("/cgroupv2/proc.mounts", procMounts);
+
+    final String procMountsString = StringUtils.fromUtf8(Files.readAllBytes(procMounts.toPath()));
+    Files.write(
+        procMounts.toPath(),
+        StringUtils.toUtf8(StringUtils.replace(procMountsString, "/sys/fs/cgroup", cgroupDir.getAbsolutePath()))
+    );
+  }
+
   public static void setUpCgroups(
       File procDir,
       File cgroupDir

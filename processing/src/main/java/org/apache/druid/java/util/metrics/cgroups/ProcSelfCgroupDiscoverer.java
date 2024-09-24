@@ -24,11 +24,21 @@ import java.nio.file.Paths;
 
 public class ProcSelfCgroupDiscoverer implements CgroupDiscoverer
 {
-  private final ProcCgroupDiscoverer delegate;
+  private final CgroupDiscoverer delegate;
 
   public ProcSelfCgroupDiscoverer()
   {
-    delegate = new ProcCgroupDiscoverer(Paths.get("/proc/self"));
+    this(ProcCgroupDiscoverer.class);
+  }
+
+  public ProcSelfCgroupDiscoverer(Class<? extends CgroupDiscoverer> discoverer)
+  {
+    try {
+      delegate = discoverer.getDeclaredConstructor(Path.class).newInstance(Paths.get("/proc/self"));
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override

@@ -64,17 +64,19 @@ import org.apache.druid.segment.CloserRule;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IncrementalIndexTimeBoundaryInspector;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
 import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -182,18 +184,17 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                            .addOrderByColumn("billy")
                                            .build();
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
-    final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+    final IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
             () -> ByteBuffer.allocate(50000)
         );
         ResourceHolder<ByteBuffer> processingBuffer = pool.take();
-        final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)
+        final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)
     ) {
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           query,
-          adapter,
           new IncrementalIndexTimeBoundaryInspector(index),
           cursorHolder,
           buildSpec,
@@ -258,7 +259,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                            )
                                            .addOrderByColumn("billy")
                                            .build();
-    final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+    final IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
     try (
         CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
@@ -266,11 +267,10 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
             () -> ByteBuffer.allocate(50000)
         );
         ResourceHolder<ByteBuffer> processingBuffer = pool.take();
-        final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)
+        final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)
     ) {
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           query,
-          adapter,
           new IncrementalIndexTimeBoundaryInspector(index),
           cursorHolder,
           buildSpec,
@@ -320,7 +320,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         )
     );
 
-    IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
 
     for (boolean descending : Arrays.asList(false, true)) {
       final CursorBuildSpec buildSpec = CursorBuildSpec
@@ -330,7 +330,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           .setPreferredOrdering(descending ? Cursors.descendingTimeOrder() : Cursors.ascendingTimeOrder())
           .build();
 
-      try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
+      try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
         Cursor cursor = cursorHolder.asCursor();
         DimensionSelector dimSelector;
 
@@ -390,8 +390,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                   .threshold(10)
                   .aggregators(new LongSumAggregatorFactory("cnt", "cnt"))
                   .build(),
-              new IncrementalIndexStorageAdapter(index),
-              new IncrementalIndexTimeBoundaryInspector(index),
+              new IncrementalIndexSegment(index, SegmentId.dummy("test")),
               null
           )
           .toList();
@@ -430,7 +429,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                            .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                                            .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                                            .build();
-    final IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
+    final IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
 
     try (
@@ -439,11 +438,10 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
             () -> ByteBuffer.allocate(50000)
         );
         ResourceHolder<ByteBuffer> processingBuffer = pool.take();
-        final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)
+        final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)
     ) {
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           query,
-          adapter,
           new IncrementalIndexTimeBoundaryInspector(index),
           cursorHolder,
           buildSpec,
@@ -478,12 +476,12 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
       );
     }
 
-    final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
+    final CursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
                                                      .build();
-    try (final CursorHolder cursorHolder = sa.makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       Cursor cursor = cursorHolder.asCursor();
       DimensionSelector dimSelector = cursor
           .getColumnSelectorFactory()
@@ -534,13 +532,13 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
       );
     }
 
-    final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
+    final CursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setFilter(new DictionaryRaceTestFilter(index, timestamp))
                                                      .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
                                                      .build();
-    try (final CursorHolder cursorHolder = sa.makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       Cursor cursor = cursorHolder.asCursor();
       DimensionSelector dimSelector = cursor
           .getColumnSelectorFactory()
@@ -579,12 +577,12 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
       index.add(rows.get(i));
     }
 
-    final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
+    final CursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
 
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setInterval(Intervals.utc(timestamp - 60_000, timestamp + 60_000))
                                                      .build();
-    try (final CursorHolder cursorHolder = sa.makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       Cursor cursor = cursorHolder.asCursor();
 
       DimensionSelector dimSelector1A = cursor

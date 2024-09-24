@@ -292,7 +292,6 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     final GroupingEngine engine1 = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
@@ -301,7 +300,6 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     final GroupingEngine engine2 = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPool2,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
@@ -310,12 +308,14 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
 
     groupByFactory = new GroupByQueryRunnerFactory(
         engine1,
-        new GroupByQueryQueryToolChest(engine1, groupByResourcesReservationPool)
+        new GroupByQueryQueryToolChest(engine1, groupByResourcesReservationPool),
+        bufferPool
     );
 
     groupByFactory2 = new GroupByQueryRunnerFactory(
         engine2,
-        new GroupByQueryQueryToolChest(engine2, groupByResourcesReservationPool2)
+        new GroupByQueryQueryToolChest(engine2, groupByResourcesReservationPool2),
+        bufferPool
     );
   }
 

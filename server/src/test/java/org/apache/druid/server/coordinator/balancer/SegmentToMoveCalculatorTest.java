@@ -83,6 +83,10 @@ public class SegmentToMoveCalculatorTest
   @Test
   public void testMaxSegmentsToMoveIncreasesWithCoordinatorPeriod()
   {
+    Assert.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(0)));
+    Assert.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(10_000)));
+    Assert.assertEquals(100, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(20_000)));
+
     Assert.assertEquals(5_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(30_000)));
     Assert.assertEquals(10_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(60_000)));
     Assert.assertEquals(15_000, computeMaxSegmentsToMoveInPeriod(200_000, Duration.millis(90_000)));

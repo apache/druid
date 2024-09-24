@@ -35,7 +35,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -155,7 +155,7 @@ public class ExpressionVectorSelectorBenchmark
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
     final CursorHolder cursorHolder = closer.register(
-        new QueryableIndexStorageAdapter(index).makeCursorHolder(buildSpec)
+        new QueryableIndexCursorFactory(index).makeCursorHolder(buildSpec)
     );
     if (vectorize) {
       VectorCursor cursor = cursorHolder.asVectorCursor();

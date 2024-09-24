@@ -40,11 +40,10 @@ import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.CursorHolderFactory;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.Filters;
@@ -95,13 +94,15 @@ public class TimeBoundaryQueryRunnerFactory
 
   private static class TimeBoundaryQueryRunner implements QueryRunner<Result<TimeBoundaryResultValue>>
   {
-    private final StorageAdapter adapter;
+    private final CursorFactory cursorFactory;
+    private final Interval dataInterval;
     @Nullable
     private final TimeBoundaryInspector timeBoundaryInspector;
 
     public TimeBoundaryQueryRunner(Segment segment)
     {
-      this.adapter = segment.asStorageAdapter();
+      this.cursorFactory = segment.asCursorFactory();
+      this.dataInterval = segment.getDataInterval();
       this.timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
     }
 
@@ -124,9 +125,9 @@ public class TimeBoundaryQueryRunnerFactory
             @Override
             public Iterator<Result<TimeBoundaryResultValue>> make()
             {
-              if (adapter == null) {
+              if (cursorFactory == null) {
                 throw new ISE(
-                    "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+                    "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
                 );
               }
 
@@ -142,13 +143,13 @@ public class TimeBoundaryQueryRunnerFactory
                   maxTime = timeBoundaryInspector.getMaxTime();
                 }
               } else {
-                final Pair<DateTime, DateTime> timeBoundary = getTimeBoundary(query, adapter);
+                final Pair<DateTime, DateTime> timeBoundary = getTimeBoundary(query, cursorFactory);
                 minTime = timeBoundary.left();
                 maxTime = timeBoundary.right();
               }
 
               return query.buildResult(
-                  adapter.getInterval().getStart(),
+                  dataInterval.getStart(),
                   minTime,
                   maxTime
               ).iterator();
@@ -168,7 +169,7 @@ public class TimeBoundaryQueryRunnerFactory
    * Whether a particular {@link TimeBoundaryQuery} can use {@link TimeBoundaryInspector#getMinTime()} and/or
    * {@link TimeBoundaryInspector#getMaxTime()}.
    *
-   * If false, must use {@link StorageAdapter#makeCursorHolder(CursorBuildSpec)}.
+   * If false, must use {@link CursorFactory#makeCursorHolder(CursorBuildSpec)}.
    */
   private static boolean canUseTimeBoundaryInspector(
       final TimeBoundaryQuery query,
@@ -211,7 +212,7 @@ public class TimeBoundaryQueryRunnerFactory
 
   private static Pair<DateTime, DateTime> getTimeBoundary(
       final TimeBoundaryQuery query,
-      final CursorHolderFactory cursorHolderFactory
+      final CursorFactory cursorFactory
   )
   {
     DateTime minTime = null, maxTime = null;
@@ -222,7 +223,7 @@ public class TimeBoundaryQueryRunnerFactory
                          .setPreferredOrdering(Cursors.ascendingTimeOrder())
                          .build();
 
-      try (final CursorHolder cursorHolder = cursorHolderFactory.makeCursorHolder(cursorSpec)) {
+      try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(cursorSpec)) {
         if (cursorHolder.getTimeOrder() == Order.ASCENDING) {
           // Time-ordered cursor, use the first timestamp.
           minTime = getFirstTimestamp(query, cursorHolder);
@@ -239,7 +240,7 @@ public class TimeBoundaryQueryRunnerFactory
                          .setPreferredOrdering(Cursors.descendingTimeOrder())
                          .build();
 
-      try (final CursorHolder cursorHolder = cursorHolderFactory.makeCursorHolder(cursorSpec)) {
+      try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(cursorSpec)) {
         if (cursorHolder.getTimeOrder() == Order.DESCENDING) {
           // Time-ordered cursor, use the first timestamp.
           maxTime = getFirstTimestamp(query, cursorHolder);

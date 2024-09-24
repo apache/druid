@@ -163,7 +163,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       null,
       false,
       false,
-      0
+      0,
+      null
   );
   public static final ParallelIndexTuningConfig DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING =
       TuningConfigBuilder.forParallelIndexTask()

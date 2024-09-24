@@ -64,13 +64,14 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.SimpleAscendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
@@ -245,17 +246,18 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   protected ReturnOrAwait<Unit> runWithSegment(final SegmentWithDescriptor segment) throws IOException
   {
     if (cursor == null) {
-      final ResourceHolder<Segment> segmentHolder = closer.register(segment.getOrLoad());
+      final ResourceHolder<CompleteSegment> segmentHolder = closer.register(segment.getOrLoad());
 
-      final StorageAdapter adapter = mapSegment(segmentHolder.get()).asStorageAdapter();
-      if (adapter == null) {
+      final Segment mappedSegment = mapSegment(segmentHolder.get().getSegment());
+      final CursorFactory cursorFactory = mappedSegment.asCursorFactory();
+      if (cursorFactory == null) {
         throw new ISE(
-            "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+            "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
         );
       }
 
       final CursorHolder cursorHolder = closer.register(
-          adapter.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null))
+          cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null))
       );
       final Cursor nextCursor = cursorHolder.asCursor();
 
@@ -263,7 +265,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         // No cursors!
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
-        final long rowsFlushed = setNextCursor(nextCursor, segmentHolder.get());
+        final long rowsFlushed = setNextCursor(nextCursor, segmentHolder.get().getSegment());
         assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
       }
     }
@@ -292,15 +294,16 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         final Frame frame = inputChannel.read();
         final FrameSegment frameSegment = new FrameSegment(frame, inputFrameReader, SegmentId.dummy("scan"));
 
-        final StorageAdapter adapter = mapSegment(frameSegment).asStorageAdapter();
-        if (adapter == null) {
+        final Segment mappedSegment = mapSegment(frameSegment);
+        final CursorFactory cursorFactory = mappedSegment.asCursorFactory();
+        if (cursorFactory == null) {
           throw new ISE(
-              "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+              "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
           );
         }
 
         final CursorHolder cursorHolder = closer.register(
-            adapter.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null))
+            cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null))
         );
         final Cursor nextCursor = cursorHolder.asCursor();
 

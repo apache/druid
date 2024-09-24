@@ -28,7 +28,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.StorageAdapter;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -47,18 +46,18 @@ import java.util.List;
  */
 public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], TopNParams>
 {
-  private final StorageAdapter storageAdapter;
   private final TopNQuery query;
+  private final TopNCursorInspector cursorInspector;
   private final NonBlockingPool<ByteBuffer> bufferPool;
 
   public AggregateTopNMetricFirstAlgorithm(
-      StorageAdapter storageAdapter,
       TopNQuery query,
+      TopNCursorInspector cursorInspector,
       NonBlockingPool<ByteBuffer> bufferPool
   )
   {
-    this.storageAdapter = storageAdapter;
     this.query = query;
+    this.cursorInspector = cursorInspector;
     this.bufferPool = bufferPool;
   }
 
@@ -90,7 +89,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
         .build();
     final TopNResultBuilder singleMetricResultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, singleMetricQuery);
 
-    PooledTopNAlgorithm singleMetricAlgo = new PooledTopNAlgorithm(storageAdapter, singleMetricQuery, bufferPool);
+    PooledTopNAlgorithm singleMetricAlgo = new PooledTopNAlgorithm(singleMetricQuery, cursorInspector, bufferPool);
     PooledTopNAlgorithm.PooledTopNParams singleMetricParam = null;
     int[] dimValSelector;
     try {
@@ -109,7 +108,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       singleMetricAlgo.cleanup(singleMetricParam);
     }
 
-    PooledTopNAlgorithm allMetricAlgo = new PooledTopNAlgorithm(storageAdapter, query, bufferPool);
+    PooledTopNAlgorithm allMetricAlgo = new PooledTopNAlgorithm(query, cursorInspector, bufferPool);
     PooledTopNAlgorithm.PooledTopNParams allMetricsParam = null;
     try {
       // reset cursor since we call run again
