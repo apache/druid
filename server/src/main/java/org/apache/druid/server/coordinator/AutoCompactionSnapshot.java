@@ -229,7 +229,8 @@ public class AutoCompactionSnapshot
       return this;
     }
 
-    public Builder withMessage(String message) {
+    public Builder withMessage(String message)
+    {
       this.message = message;
       return this;
     }
