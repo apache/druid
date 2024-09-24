@@ -120,13 +120,19 @@ public class CompactSegments implements CoordinatorCustomDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    // Coordinator supports only native engine for compaction
-    run(
-        params.getCompactionConfig(),
-        params.getUsedSegmentsTimelinesPerDataSource(),
-        CompactionEngine.NATIVE,
-        params.getCoordinatorStats()
-    );
+    if (isCompactionSupervisorEnabled()) {
+      LOG.warn(
+          "Skipping CompactSegments duty since compaction supervisors"
+          + " are already running on Overlord."
+      );
+    } else {
+      run(
+          params.getCompactionConfig(),
+          params.getUsedSegmentsTimelinesPerDataSource(),
+          CompactionEngine.NATIVE,
+          params.getCoordinatorStats()
+      );
+    }
     return params;
   }
 
@@ -137,11 +143,8 @@ public class CompactSegments implements CoordinatorCustomDuty
       CoordinatorRunStats stats
   )
   {
-    LOG.info("Running CompactSegments duty");
-
     final int maxCompactionTaskSlots = dynamicConfig.getMaxCompactionTaskSlots();
     if (maxCompactionTaskSlots <= 0) {
-      LOG.info("Skipping compaction as maxCompactionTaskSlots is [%d].", maxCompactionTaskSlots);
       resetCompactionSnapshot();
       return;
     }
@@ -149,7 +152,6 @@ public class CompactSegments implements CoordinatorCustomDuty
     statusTracker.onCompactionConfigUpdated(dynamicConfig);
     List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
     if (compactionConfigList == null || compactionConfigList.isEmpty()) {
-      LOG.info("Skipping compaction as compaction config list is empty.");
       resetCompactionSnapshot();
       return;
     }
@@ -249,6 +251,21 @@ public class CompactSegments implements CoordinatorCustomDuty
   private void resetCompactionSnapshot()
   {
     autoCompactionSnapshotPerDataSource.set(Collections.emptyMap());
+  }
+
+  /**
+   * Check if compaction supervisors are enabled on the Overlord. In this case,
+   * CompactSegments duty should not be run.
+   */
+  private boolean isCompactionSupervisorEnabled()
+  {
+    try {
+      return FutureUtils.getUnchecked(overlordClient.isCompactionSupervisorEnabled(), true);
+    }
+    catch (Exception e) {
+      // The Overlord is probably on an older version, assume that compaction supervisor is NOT enabled
+      return false;
+    }
   }
 
   /**
@@ -415,7 +432,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       // compaction is enabled and estimatedIncompleteCompactionTasks is 0.
       availableCompactionTaskSlots = Math.max(1, compactionTaskCapacity);
     }
-    LOG.info(
+    LOG.debug(
         "Found [%d] available task slots for compaction out of max compaction task capacity [%d]",
         availableCompactionTaskSlots, compactionTaskCapacity
     );
@@ -567,7 +584,7 @@ public class CompactSegments implements CoordinatorCustomDuty
           new ClientCompactionRunnerInfo(compactionEngine)
       );
 
-      LOG.info(
+      LOG.debug(
           "Submitted a compaction task[%s] for [%d] segments in datasource[%s], umbrella interval[%s].",
           taskId, segmentsToCompact.size(), dataSourceName, entry.getUmbrellaInterval()
       );

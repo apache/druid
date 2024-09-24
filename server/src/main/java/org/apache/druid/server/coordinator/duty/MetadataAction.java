@@ -17,27 +17,29 @@
  * under the License.
  */
 
-package org.apache.druid.server.metrics;
+package org.apache.druid.server.coordinator.duty;
 
-import org.apache.druid.java.util.emitter.core.Event;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.timeline.SegmentId;
 
-public class NoopServiceEmitter extends ServiceEmitter
+import java.util.List;
+import java.util.Set;
+
+/**
+ * Contains functional interfaces that are used by a {@link CoordinatorDuty} to
+ * perform a single read or write operation on the metadata store.
+ */
+public final class MetadataAction
 {
-  private static final NoopServiceEmitter INSTANCE = new NoopServiceEmitter();
-
-  public static NoopServiceEmitter instance()
+  @FunctionalInterface
+  public interface DeleteSegments
   {
-    return INSTANCE;
+    int markSegmentsAsUnused(Set<SegmentId> segmentIds);
   }
 
-  public NoopServiceEmitter()
+  @FunctionalInterface
+  public interface GetDatasourceRules
   {
-    super("", "", null);
-  }
-
-  @Override
-  public void emit(Event event)
-  {
+    List<Rule> getRulesWithDefault(String dataSource);
   }
 }
