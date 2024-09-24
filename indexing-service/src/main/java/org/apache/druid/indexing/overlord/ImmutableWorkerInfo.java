@@ -63,7 +63,7 @@ public class ImmutableWorkerInfo
       @JsonProperty("worker") Worker worker,
       @JsonProperty("currCapacityUsed") int currCapacityUsed,
       @JsonProperty("currParallelIndexCapacityUsed") int currParallelIndexCapacityUsed,
-      @JsonProperty("currTypeSpecificCapacityUsed") Map<String, Integer> typeSpecificCapacityMap,
+      @JsonProperty("currTypeSpecificCapacityUsed") @Nullable Map<String, Integer> typeSpecificCapacityMap,
       @JsonProperty("availabilityGroups") Set<String> availabilityGroups,
       @JsonProperty("runningTasks") Collection<String> runningTasks,
       @JsonProperty("lastCompletedTaskTime") DateTime lastCompletedTaskTime,
@@ -253,6 +253,31 @@ public class ImmutableWorkerInfo
     return workerParallelIndexCapacity;
   }
 
+  /**
+   * Determines if a specific task can be executed on the worker based on
+   * various capacity, custom limits, and availability conditions.
+   * <p>
+   * This method checks:
+   * <ul>
+   *   <li>Whether the worker has sufficient capacity to handle the task.</li>
+   *   <li>Whether the task can run under custom-defined limits for its type,
+   *   such as a maximum number of tasks allowed or a ratio of slots the task type can occupy.</li>
+   *   <li>Whether the availability group of the task is currently available.</li>
+   * </ul>
+   *
+   * @param task The {@link Task} to be executed. The task contains details such as required capacity
+   *             and its type.
+   * @param taskLimits A map containing custom limits for different task types. The key is a string
+   *                   representing the task type, and the value is a {@link Number} which can be:
+   *                   <ul>
+   *                     <li>A {@code Double} representing a ratio of available slots the task type can use (0 to 1).</li>
+   *                     <li>An {@code Integer} representing an absolute limit of slots the task type can occupy.</li>
+   *                   </ul>
+   *                   If the task type is not present in this map, the task can use all available slots.
+   * @return {@code true} if the task can run, meaning the worker has sufficient capacity,
+   *         the task type does not exceed custom limits, and the task's availability group is available.
+   *         Returns {@code false} otherwise.
+   */
   public boolean canRunTask(Task task, Map<String, Number> taskLimits)
   {
     return hasSufficientWorkerCapacity(task)

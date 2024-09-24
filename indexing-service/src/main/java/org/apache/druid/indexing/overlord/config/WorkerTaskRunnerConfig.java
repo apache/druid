@@ -70,7 +70,7 @@ public class WorkerTaskRunnerConfig
    * that tasks of this type can occupy. For example, a value of 0.5 means that tasks
    * of this type can occupy up to 50% of the task slots on a worker.
    * A value of 0 means that tasks of this type can occupy no slots (i.e., they are effectively disabled).
-   * A value of 1 means no restriction, allowing tasks of this type to occupy all available slots.
+   * A value of 1.0 means no restriction, allowing tasks of this type to occupy all available slots.
    * <p>
    * 2. An `Integer` that is greater than or equal to 0, representing an absolute limit
    * on the number of task slots that tasks of this type can occupy. For example, a value of 5
@@ -95,7 +95,7 @@ public class WorkerTaskRunnerConfig
    * representing the absolute limit of task slots for that type. If a task type is absent,
    * it is not limited in terms of the number of task slots it can occupy.
    */
-  public Map<String, Number> getTaskSlotLimitsLimits()
+  public Map<String, Number> getTaskSlotLimits()
   {
     return taskSlotLimits;
   }
