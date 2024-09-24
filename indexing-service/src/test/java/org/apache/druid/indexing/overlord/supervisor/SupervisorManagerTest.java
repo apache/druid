@@ -34,8 +34,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -405,7 +403,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
 
     MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, () ->  manager.resetSupervisor("id3", null)),
+        Assert.assertThrows(DruidException.class, () -> manager.resetSupervisor("id3", null)),
         new DruidExceptionMatcher(
             DruidException.Persona.USER,
             DruidException.Category.UNSUPPORTED,
