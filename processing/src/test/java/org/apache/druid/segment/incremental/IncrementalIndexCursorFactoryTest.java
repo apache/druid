@@ -40,6 +40,7 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.js.JavaScriptConfig;
@@ -52,6 +53,7 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -271,7 +273,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
                                       }
                                   ),
                                   new AggregateProjectionSpec(
-                                      "a_hourly_c_sum_with_count",
+                                      "a_hourly_c_sum_with_count_latest",
                                       Arrays.asList(
                                           new LongDimensionSchema("__gran"),
                                           new StringDimensionSchema("a")
@@ -281,7 +283,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
                                       ),
                                       new AggregatorFactory[]{
                                           new CountAggregatorFactory("chocula"),
-                                          new LongSumAggregatorFactory("_c_sum", "c")
+                                          new LongSumAggregatorFactory("_c_sum", "c"),
+                                          new LongLastAggregatorFactory("_c_last", "c", null)
                                       }
                                   ),
                                   new AggregateProjectionSpec(
@@ -980,12 +983,12 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
                     .setGranularity(Granularities.ALL)
                     .setInterval(Intervals.ETERNITY)
                     .addDimension("a")
-                    .addDimension("b")
-                    .setContext(ImmutableMap.of(QueryContexts.CTX_NO_PROJECTION, true))
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new LongLastAggregatorFactory("c_last", "c", null))
+                    .setContext(ImmutableMap.of(QueryContexts.CTX_NO_PROJECTION, true))
                     .build();
-    CursorBuildSpec buildSpecSkip = GroupingEngine.makeCursorBuildSpec(query, null);
-    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpecSkip)) {
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
       final Cursor cursor = cursorHolder.asCursor();
       int rowCount = 0;
       while (!cursor.isDone()) {
@@ -995,6 +998,17 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
       // has to scan full 8 rows because context ensures projections not used
       Assert.assertEquals(8, rowCount);
     }
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+    final List<ResultRow> results = resultRows.toList();
+    Assert.assertEquals(2, results.size());
+    Assert.assertArrayEquals(new Object[]{"a", 7L, Pair.of(timestamp.plusHours(1).plusMinutes(1).getMillis(), 2L)}, results.get(0).getArray());
+    Assert.assertArrayEquals(new Object[]{"b", 12L, Pair.of(timestamp.plusMinutes(10).getMillis(), 5L)}, results.get(1).getArray());
   }
 
   @Test
@@ -1008,6 +1022,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
                     .setInterval(Intervals.ETERNITY)
                     .addDimension("a")
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new LongLastAggregatorFactory("c_last", "c", null))
                     .build();
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
     try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
@@ -1028,8 +1043,8 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     );
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(2, results.size());
-    Assert.assertArrayEquals(new Object[]{"a", 7L}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{"b", 12L}, results.get(1).getArray());
+    Assert.assertArrayEquals(new Object[]{"a", 7L, Pair.of(timestamp.plusHours(1).plusMinutes(1).getMillis(), 2L)}, results.get(0).getArray());
+    Assert.assertArrayEquals(new Object[]{"b", 12L, Pair.of(timestamp.plusMinutes(10).getMillis(), 5L)}, results.get(1).getArray());
   }
 
   @Test
@@ -1066,6 +1081,42 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     Assert.assertEquals(2, results.size());
     Assert.assertArrayEquals(new Object[]{"a", 7L, 5L}, results.get(0).getArray());
     Assert.assertArrayEquals(new Object[]{"b", 12L, 3L}, results.get(1).getArray());
+  }
+
+  @Test
+  public void testProjectionSingleDimMultipleSameAggs()
+  {
+    // test can use the single dimension projection
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .addDimension("a")
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new LongSumAggregatorFactory("c_sum_2", "c"))
+                    .build();
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(3, rowCount);
+    }
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+    final List<ResultRow> results = resultRows.toList();
+    Assert.assertEquals(2, results.size());
+    Assert.assertArrayEquals(new Object[]{"a", 7L, 7L}, results.get(0).getArray());
+    Assert.assertArrayEquals(new Object[]{"b", 12L, 12L}, results.get(1).getArray());
   }
 
   @Test

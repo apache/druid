@@ -105,7 +105,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     private final ValueMatcher filterMatcher;
     private final int maxRowIndex;
     @MonotonicNonNull
-    private Iterator<IncrementalIndexRow> baseIter = null;
+    private Iterator<IncrementalIndexRow> baseIter;
     private int numAdvanced;
     private boolean done;
 

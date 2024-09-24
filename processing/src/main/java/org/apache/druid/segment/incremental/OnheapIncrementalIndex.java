@@ -1326,7 +1326,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         this.aggregatorFactories = new AggregatorFactory[metrics.length + 1];
         System.arraycopy(metrics, 0, this.aggregatorFactories, 0, metrics.length);
         AggregatorFactory count = new CountAggregatorFactory("__count");
-        this.aggregatorFactories[metrics.length] = count;
+        aggregatorFactories[metrics.length] = count;
         MetricDesc metricDesc = new MetricDesc(aggregatorsMap.size(), count);
         aggregatorsMap.put(count.getName(), metricDesc);
       } else {
