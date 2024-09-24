@@ -30,6 +30,7 @@ import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.filter.ValueMatchers;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.util.Iterator;
 import java.util.List;
@@ -98,19 +99,18 @@ public class IncrementalIndexCursorHolder implements CursorHolder
 
   static class IncrementalIndexCursor implements Cursor
   {
-    private final IncrementalIndexRowSelector rowSelector;
+    private final Iterable<IncrementalIndexRow> cursorIterable;
     private final IncrementalIndexRowHolder currEntry;
     private final ColumnSelectorFactory columnSelectorFactory;
     private final ValueMatcher filterMatcher;
     private final int maxRowIndex;
-    private Iterator<IncrementalIndexRow> baseIter;
-    private Iterable<IncrementalIndexRow> cursorIterable;
-    private boolean emptyRange;
+    @MonotonicNonNull
+    private Iterator<IncrementalIndexRow> baseIter = null;
     private int numAdvanced;
     private boolean done;
 
     IncrementalIndexCursor(
-        IncrementalIndexRowSelector index,
+        IncrementalIndexRowSelector rowSelector,
         CursorBuildSpec buildSpec,
         String timeColumn,
         Order timeOrder
@@ -118,10 +118,9 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     {
       currEntry = new IncrementalIndexRowHolder();
       // Set maxRowIndex before creating the filterMatcher. See https://github.com/apache/druid/pull/6340
-      maxRowIndex = index.getLastRowIndex();
+      maxRowIndex = rowSelector.getLastRowIndex();
       numAdvanced = -1;
 
-      rowSelector = index;
       cursorIterable = rowSelector.getFacts().timeRangeIterable(
           timeOrder == Order.DESCENDING,
           buildSpec.getInterval().getStartMillis(),
@@ -137,8 +136,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       filterMatcher = buildSpec.getFilter() == null
                       ? ValueMatchers.allTrue()
                       : buildSpec.getFilter().makeMatcher(columnSelectorFactory);
-      emptyRange = !cursorIterable.iterator().hasNext();
-
       reset();
     }
 
@@ -243,7 +240,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
         numAdvanced++;
       }
 
-      done = !foundMatched && (emptyRange || !baseIter.hasNext());
+      done = !foundMatched;
     }
 
     private boolean beyondMaxRowIndex(int rowIndex)
