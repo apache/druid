@@ -122,7 +122,7 @@ public class CompactSegments implements CoordinatorCustomDuty
   {
     if (isCompactionSupervisorEnabled()) {
       LOG.warn(
-          "Skipping CompactSegments duty since compaction supervisors are"
+          "Skipping CompactSegments duty since compaction supervisors"
           + " are already running on Overlord."
       );
     } else {
