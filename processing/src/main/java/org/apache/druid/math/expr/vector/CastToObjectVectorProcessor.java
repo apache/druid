@@ -19,34 +19,43 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 
-public final class CastToStringVectorProcessor extends CastToTypeVectorProcessor<Object[]>
+public class CastToObjectVectorProcessor extends CastToTypeVectorProcessor<Object[]>
 {
+  private final ExpressionType outputType;
+  private final ExpressionType delegateType;
   private final Object[] output;
 
-  public CastToStringVectorProcessor(ExprVectorProcessor<?> delegate, int maxVectorSize)
+  public CastToObjectVectorProcessor(
+      ExprVectorProcessor<?> delegate,
+      ExpressionType outputType,
+      int maxVectorSize
+  )
   {
     super(delegate);
+    this.delegateType = delegate.getOutputType();
+    this.outputType = outputType;
     this.output = new Object[maxVectorSize];
   }
 
   @Override
   public ExprEvalVector<Object[]> evalVector(Expr.VectorInputBinding bindings)
   {
-    ExprEvalVector<?> result = delegate.evalVector(bindings);
-    final Object[] objects = result.getObjectVector();
+    final ExprEvalVector<?> delegateOutput = delegate.evalVector(bindings);
+    final Object[] toCast = delegateOutput.getObjectVector();
     for (int i = 0; i < bindings.getCurrentVectorSize(); i++) {
-      output[i] = Evals.asString(objects[i]);
+      ExprEval<?> cast = ExprEval.ofType(delegateType, toCast[i]).castTo(outputType);
+      output[i] = cast.value();
     }
-    return new ExprEvalObjectVector(output, ExpressionType.STRING);
+    return new ExprEvalObjectVector(output, outputType);
   }
 
   @Override
   public ExpressionType getOutputType()
   {
-    return ExpressionType.STRING;
+    return outputType;
   }
 }
