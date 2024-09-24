@@ -22,6 +22,7 @@ package org.apache.druid.guice;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
 import org.apache.druid.initialization.DruidModule;
@@ -44,6 +45,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -51,7 +53,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
@@ -71,13 +72,16 @@ public class ExtensionsLoader
   private final ExtensionsConfig extensionsConfig;
   private final ObjectMapper objectMapper;
 
-  private final ConcurrentHashMap<Pair<File, Boolean>, StandardURLClassLoader> loaders = new ConcurrentHashMap<>();
+  @GuardedBy("this")
+  private final HashMap<Pair<File, Boolean>, StandardURLClassLoader> loaders = new HashMap<>();
 
   /**
    * Map of loaded extensions, keyed by class (or interface).
    */
-  private final ConcurrentHashMap<Class<?>, Collection<?>> extensions = new ConcurrentHashMap<>();
+  @GuardedBy("this")
+  private final HashMap<Class<?>, Collection<?>> extensions = new HashMap<>();
 
+  @GuardedBy("this")
   @MonotonicNonNull
   private File[] extensionFilesToLoad;
 
@@ -106,12 +110,14 @@ public class ExtensionsLoader
    */
   public <T> Collection<T> getLoadedImplementations(Class<T> clazz)
   {
-    @SuppressWarnings("unchecked")
-    Collection<T> retVal = (Collection<T>) extensions.get(clazz);
-    if (retVal == null) {
-      return Collections.emptySet();
+    synchronized (this) {
+      @SuppressWarnings("unchecked")
+      Collection<T> retVal = (Collection<T>) extensions.get(clazz);
+      if (retVal == null) {
+        return Collections.emptySet();
+      }
+      return retVal;
     }
-    return retVal;
   }
 
   /**
@@ -125,7 +131,9 @@ public class ExtensionsLoader
   @VisibleForTesting
   public Map<Pair<File, Boolean>, StandardURLClassLoader> getLoadersMap()
   {
-    return loaders;
+    synchronized (this) {
+      return loaders;
+    }
   }
 
   /**
@@ -149,12 +157,14 @@ public class ExtensionsLoader
     // In practice, it appears the only place this matters is with DruidModule:
     // initialization gets the list of extensions, and two REST API calls later
     // ask for the same list.
-    Collection<?> modules = extensions.computeIfAbsent(
-        serviceClass,
-        serviceC -> new ServiceLoadingFromExtensions<>(serviceC).implsToLoad
-    );
-    //noinspection unchecked
-    return (Collection<T>) modules;
+    synchronized (this) {
+      Collection<?> modules = extensions.computeIfAbsent(
+          serviceClass,
+          serviceC -> new ServiceLoadingFromExtensions<>(serviceC).implsToLoad
+      );
+      //noinspection unchecked
+      return (Collection<T>) modules;
+    }
   }
 
   public Collection<DruidModule> getModules()
@@ -201,37 +211,51 @@ public class ExtensionsLoader
         extensionsToLoad[i++] = extensionDir;
       }
     }
-    extensionFilesToLoad = extensionsToLoad == null ? new File[]{} : extensionsToLoad;
+    synchronized (this) {
+      extensionFilesToLoad = extensionsToLoad == null ? new File[]{} : extensionsToLoad;
+    }
   }
 
   public File[] getExtensionFilesToLoad()
   {
-    if (extensionFilesToLoad == null) {
-      initializeExtensionFilesToLoad();
+    synchronized (this) {
+      if (extensionFilesToLoad == null) {
+        initializeExtensionFilesToLoad();
+      }
+      return extensionFilesToLoad;
     }
-    return extensionFilesToLoad;
   }
 
   /**
    * @param extension The File instance of the extension we want to load
    *
-   * @return a URLClassLoader that loads all the jars on which the extension is dependent
+   * @return a StandardURLClassLoader that loads all the jars on which the extension is dependent
    */
   public StandardURLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst)
   {
     return getClassLoaderForExtension(extension, useExtensionClassloaderFirst, new ArrayList<>());
   }
 
+  /**
+   * @param extension The File instance of the extension we want to load
+   * @param useExtensionClassloaderFirst Whether to return a StandardURLClassLoader that checks extension classloaders first for classes
+   * @param extensionDependencyStack If the extension is requested as a dependency of another extension, a list containing the
+   *                                 dependency stack of the dependent extension (for checking circular dependencies). Otherwise
+   *                                 this is a empty list.
+   * @return a StandardURLClassLoader that loads all the jars on which the extension is dependent
+   */
   public StandardURLClassLoader getClassLoaderForExtension(File extension, boolean useExtensionClassloaderFirst, List<String> extensionDependencyStack)
   {
     Pair<File, Boolean> classLoaderKey = Pair.of(extension, useExtensionClassloaderFirst);
-    StandardURLClassLoader classLoader = loaders.get(classLoaderKey);
-    if (classLoader == null) {
-      classLoader = makeClassLoaderWithDruidExtensionDependencies(extension, useExtensionClassloaderFirst, extensionDependencyStack);
-      loaders.put(classLoaderKey, classLoader);
-    }
+    synchronized (this) {
+      StandardURLClassLoader classLoader = loaders.get(classLoaderKey);
+      if (classLoader == null) {
+        classLoader = makeClassLoaderWithDruidExtensionDependencies(extension, useExtensionClassloaderFirst, extensionDependencyStack);
+        loaders.put(classLoaderKey, classLoader);
+      }
 
-    return classLoader;
+      return classLoader;
+    }
   }
 
   private StandardURLClassLoader makeClassLoaderWithDruidExtensionDependencies(File extension, boolean useExtensionClassloaderFirst, List<String> extensionDependencyStack)
@@ -249,7 +273,7 @@ public class ExtensionsLoader
       if (!extensionDependencyFileOptional.isPresent()) {
         throw new RE(
             StringUtils.format(
-                "[%s] depends on [%s] which is not a valid extension or not loaded.",
+                "Extension [%s] depends on [%s] which is not a valid extension or not loaded.",
                 extension.getName(),
                 druidExtensionDependencyName
             )
@@ -260,7 +284,7 @@ public class ExtensionsLoader
         extensionDependencyStack.add(extensionDependencyFile.getName());
         throw new RE(
             StringUtils.format(
-                "[%s] has a circular druid extension dependency. Dependency stack [%s].",
+                "Extension [%s] has a circular druid extension dependency. Dependency stack [%s].",
                 extensionDependencyStack.get(0),
                 extensionDependencyStack
             )
@@ -343,6 +367,7 @@ public class ExtensionsLoader
   {
     final Collection<File> jars = FileUtils.listFiles(extension, new String[]{"jar"}, false);
     DruidExtensionDependencies druidExtensionDependencies = null;
+    String druidExtensionDependenciesJarName = null;
     for (File extensionFile : jars) {
       try (JarFile jarFile = new JarFile(extensionFile.getPath())) {
         Enumeration<JarEntry> entries = jarFile.entries();
@@ -351,12 +376,14 @@ public class ExtensionsLoader
           JarEntry entry = entries.nextElement();
           String entryName = entry.getName();
           if (DRUID_EXTENSION_DEPENDENCIES_JSON.equals(entryName)) {
-            log.debug("Found extension dependency entry in druid jar %s", extensionFile.getPath());
-            if (druidExtensionDependencies != null) {
+            log.debug("Found extension dependency entry in jar [%s]", extensionFile.getPath());
+            if (druidExtensionDependenciesJarName != null) {
               throw new RE(
                   StringUtils.format(
-                      "The extension [%s] has multiple druid jars with dependencies in it. Each jar should be in a separate extension directory.",
-                      extension.getName()
+                      "The extension [%s] has multiple jars [%s] [%s] with dependencies in them. Each jar should be in a separate extension directory.",
+                      extension.getName(),
+                      druidExtensionDependenciesJarName,
+                      jarFile.getName()
                   )
               );
             }
@@ -364,11 +391,12 @@ public class ExtensionsLoader
                 jarFile.getInputStream(entry),
                 DruidExtensionDependencies.class
             );
+            druidExtensionDependenciesJarName = jarFile.getName();
           }
         }
       }
       catch (IOException e) {
-        throw new RuntimeException(e);
+        throw new RE(e, "Failed to get dependencies for extension [%s]", extension);
       }
     }
     return druidExtensionDependencies == null ? Optional.empty() : Optional.of(druidExtensionDependencies);
