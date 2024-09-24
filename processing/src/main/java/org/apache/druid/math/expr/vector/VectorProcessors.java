@@ -21,6 +21,7 @@ package org.apache.druid.math.expr.vector;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
@@ -81,16 +82,17 @@ public class VectorProcessors
   }
 
   /**
-   * Creates an {@link ExprVectorProcessor} that creates a {@link ExprEvalVector} for a constant {@link String} value.
+   * Creates an {@link ExprVectorProcessor} that creates a {@link ExprEvalVector} for a constant any non-numeric value.
+   * Numeric types should use {@link #constant(Double, int)} or {@link #constant(Long, int)} instead.
    *
    * @see org.apache.druid.math.expr.ConstantExpr
    */
   public static <T> ExprVectorProcessor<T> constant(@Nullable Object constant, int maxVectorSize, ExpressionType type)
   {
-    final Object[] objects = new Object[maxVectorSize];
     if (type.isNumeric()) {
-      return constant((Long) null, maxVectorSize);
+      throw DruidException.defensive("Type[%s] should use the numeric constant creator instead", type);
     }
+    final Object[] objects = new Object[maxVectorSize];
     Arrays.fill(objects, constant);
     final ExprEvalObjectVector eval = new ExprEvalObjectVector(objects, type);
     return new ExprVectorProcessor<T>()
