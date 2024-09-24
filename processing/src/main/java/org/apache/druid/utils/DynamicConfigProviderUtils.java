@@ -22,13 +22,14 @@ package org.apache.druid.utils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.metadata.DynamicConfigProvider;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class DynamicConfigProviderUtils
 {
-  public static Map<String, String> extraConfigAndSetStringMap(Map<String, Object> config, String dynamicConfigProviderKey, ObjectMapper mapper)
+  public static Map<String, String> extraConfigAndSetStringMap(@Nullable Map<String, Object> config, String dynamicConfigProviderKey, ObjectMapper mapper)
   {
     HashMap<String, String> newConfig = new HashMap<>();
     if (config != null) {
@@ -43,7 +44,7 @@ public class DynamicConfigProviderUtils
     return newConfig;
   }
 
-  public static Map<String, Object> extraConfigAndSetObjectMap(Map<String, Object> config, String dynamicConfigProviderKey, ObjectMapper mapper)
+  public static Map<String, Object> extraConfigAndSetObjectMap(@Nullable Map<String, Object> config, String dynamicConfigProviderKey, ObjectMapper mapper)
   {
     HashMap<String, Object> newConfig = new HashMap<>();
     if (config != null) {
@@ -58,7 +59,7 @@ public class DynamicConfigProviderUtils
     return newConfig;
   }
 
-  private static Map<String, String> extraConfigFromProvider(Object dynamicConfigProviderJson, ObjectMapper mapper)
+  private static Map<String, String> extraConfigFromProvider(@Nullable Object dynamicConfigProviderJson, ObjectMapper mapper)
   {
     if (dynamicConfigProviderJson != null) {
       DynamicConfigProvider dynamicConfigProvider = mapper.convertValue(dynamicConfigProviderJson, DynamicConfigProvider.class);
