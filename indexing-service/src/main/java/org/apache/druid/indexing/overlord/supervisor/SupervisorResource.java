@@ -123,7 +123,7 @@ public class SupervisorResource
     return asLeaderWithSupervisorManager(
         manager -> {
           Preconditions.checkArgument(
-              spec.getDataSources() != null && spec.getDataSources().size() > 0,
+              spec.getDataSources() != null && !spec.getDataSources().isEmpty(),
               "No dataSources found to perform authorization checks"
           );
           final Set<ResourceAction> resourceActions;
@@ -533,7 +533,7 @@ public class SupervisorResource
                         authorizerMapper
                     )
                 );
-            if (authorizedHistoryForId.size() > 0) {
+            if (!authorizedHistoryForId.isEmpty()) {
               return Response.ok(authorizedHistoryForId).build();
             }
           }

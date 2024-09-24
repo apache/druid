@@ -38,9 +38,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
-import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
-import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.StatementContext;
@@ -91,24 +89,19 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   public void insert(final String id, final SupervisorSpec spec)
   {
     dbi.withHandle(
-        new HandleCallback<Void>()
-        {
-          @Override
-          public Void withHandle(Handle handle) throws Exception
-          {
-            handle.createStatement(
-                StringUtils.format(
-                    "INSERT INTO %s (spec_id, created_date, payload) VALUES (:spec_id, :created_date, :payload)",
-                    getSupervisorsTable()
-                )
-            )
-                  .bind("spec_id", id)
-                  .bind("created_date", DateTimes.nowUtc().toString())
-                  .bind("payload", jsonMapper.writeValueAsBytes(spec))
-                  .execute();
+        (HandleCallback<Void>) handle -> {
+          handle.createStatement(
+              StringUtils.format(
+                  "INSERT INTO %s (spec_id, created_date, payload) VALUES (:spec_id, :created_date, :payload)",
+                  getSupervisorsTable()
+              )
+          )
+                .bind("spec_id", id)
+                .bind("created_date", DateTimes.nowUtc().toString())
+                .bind("payload", jsonMapper.writeValueAsBytes(spec))
+                .execute();
 
-            return null;
-          }
+          return null;
         }
     );
   }
@@ -118,54 +111,29 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   {
     return ImmutableMap.copyOf(
         dbi.withHandle(
-            new HandleCallback<Map<String, List<VersionedSupervisorSpec>>>()
-            {
-              @Override
-              public Map<String, List<VersionedSupervisorSpec>> withHandle(Handle handle)
-              {
-                return handle.createQuery(
-                    StringUtils.format(
-                        "SELECT id, spec_id, created_date, payload FROM %1$s ORDER BY id DESC",
-                        getSupervisorsTable()
-                    )
-                ).map(
-                    new ResultSetMapper<Pair<String, VersionedSupervisorSpec>>()
-                    {
-                      @Override
-                      public Pair<String, VersionedSupervisorSpec> map(int index, ResultSet r, StatementContext ctx)
-                          throws SQLException
-                      {
-                        return Pair.of(
-                            r.getString("spec_id"),
-                            createVersionSupervisorSpecFromResponse(r)
-                        );
-                      }
-                    }
-                ).fold(
-                    new HashMap<>(),
-                    new Folder3<Map<String, List<VersionedSupervisorSpec>>, Pair<String, VersionedSupervisorSpec>>()
-                    {
-                      @Override
-                      public Map<String, List<VersionedSupervisorSpec>> fold(
-                          Map<String, List<VersionedSupervisorSpec>> retVal,
-                          Pair<String, VersionedSupervisorSpec> pair,
-                          FoldController foldController,
-                          StatementContext statementContext
-                      )
-                      {
-                        try {
-                          String specId = pair.lhs;
-                          retVal.computeIfAbsent(specId, sId -> new ArrayList<>()).add(pair.rhs);
-                          return retVal;
-                        }
-                        catch (Exception e) {
-                          throw new RuntimeException(e);
-                        }
-                      }
-                    }
-                );
-              }
-            }
+            (HandleCallback<Map<String, List<VersionedSupervisorSpec>>>) handle -> handle.createQuery(
+                StringUtils.format(
+                    "SELECT id, spec_id, created_date, payload FROM %1$s ORDER BY id DESC",
+                    getSupervisorsTable()
+                )
+            ).map(
+                (index, r, ctx) -> Pair.of(
+                    r.getString("spec_id"),
+                    createVersionSupervisorSpecFromResponse(r)
+                )
+            ).fold(
+                new HashMap<>(),
+                (Folder3<Map<String, List<VersionedSupervisorSpec>>, Pair<String, VersionedSupervisorSpec>>) (retVal, pair, foldController, statementContext) -> {
+                  try {
+                    String specId = pair.lhs;
+                    retVal.computeIfAbsent(specId, sId -> new ArrayList<>()).add(pair.rhs);
+                    return retVal;
+                  }
+                  catch (Exception e) {
+                    throw new RuntimeException(e);
+                  }
+                }
+            )
         )
     );
   }
@@ -175,30 +143,15 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   {
     return ImmutableList.copyOf(
         dbi.withHandle(
-            new HandleCallback<List<VersionedSupervisorSpec>>()
-            {
-              @Override
-              public List<VersionedSupervisorSpec> withHandle(Handle handle)
-              {
-                return handle.createQuery(
-                    StringUtils.format(
-                        "SELECT id, spec_id, created_date, payload FROM %1$s WHERE spec_id = :spec_id ORDER BY id DESC",
-                        getSupervisorsTable()
-                    )
-                ).bind("spec_id", id
-                ).map(
-                    new ResultSetMapper<VersionedSupervisorSpec>()
-                    {
-                      @Override
-                      public VersionedSupervisorSpec map(int index, ResultSet r, StatementContext ctx)
-                          throws SQLException
-                      {
-                        return createVersionSupervisorSpecFromResponse(r);
-                      }
-                    }
-                ).list();
-              }
-            }
+            (HandleCallback<List<VersionedSupervisorSpec>>) handle -> handle.createQuery(
+                StringUtils.format(
+                    "SELECT id, spec_id, created_date, payload FROM %1$s WHERE spec_id = :spec_id ORDER BY id DESC",
+                    getSupervisorsTable()
+                )
+            ).bind("spec_id", id
+            ).map(
+                (index, r, ctx) -> createVersionSupervisorSpecFromResponse(r)
+            ).list()
         )
     );
   }
@@ -229,74 +182,58 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   {
     return ImmutableMap.copyOf(
         dbi.withHandle(
-            new HandleCallback<Map<String, SupervisorSpec>>()
-            {
-              @Override
-              public Map<String, SupervisorSpec> withHandle(Handle handle)
-              {
-                return handle.createQuery(
-                    StringUtils.format(
-                        "SELECT r.spec_id, r.payload "
-                        + "FROM %1$s r "
-                        + "INNER JOIN(SELECT spec_id, max(id) as id FROM %1$s GROUP BY spec_id) latest "
-                        + "ON r.id = latest.id",
-                        getSupervisorsTable()
-                    )
-                ).map(
-                    new ResultSetMapper<Pair<String, SupervisorSpec>>()
-                    {
-                      @Nullable
-                      @Override
-                      public Pair<String, SupervisorSpec> map(int index, ResultSet r, StatementContext ctx)
-                          throws SQLException
-                      {
-                        try {
-                          return Pair.of(
-                              r.getString("spec_id"),
-                              jsonMapper.readValue(
-                                  r.getBytes("payload"), new TypeReference<SupervisorSpec>()
-                                  {
-                                  }
-                              )
-                          );
-                        }
-                        catch (IOException e) {
-                          String exceptionMessage = StringUtils.format(
-                              "Could not map json payload to a SupervisorSpec for spec_id: [%s]."
-                              + " Delete the supervisor from the database and re-submit it to the overlord.",
-                              r.getString("spec_id")
-                          );
-                          log.error(e, exceptionMessage);
-                          return null;
-                        }
-                      }
+            (HandleCallback<Map<String, SupervisorSpec>>) handle -> handle.createQuery(
+                StringUtils.format(
+                    "SELECT r.spec_id, r.payload "
+                    + "FROM %1$s r "
+                    + "INNER JOIN(SELECT spec_id, max(id) as id FROM %1$s GROUP BY spec_id) latest "
+                    + "ON r.id = latest.id",
+                    getSupervisorsTable()
+                )
+            ).map(
+                new ResultSetMapper<Pair<String, SupervisorSpec>>()
+                {
+                  @Nullable
+                  @Override
+                  public Pair<String, SupervisorSpec> map(int index, ResultSet r, StatementContext ctx)
+                      throws SQLException
+                  {
+                    try {
+                      return Pair.of(
+                          r.getString("spec_id"),
+                          jsonMapper.readValue(
+                              r.getBytes("payload"), new TypeReference<SupervisorSpec>()
+                              {
+                              }
+                          )
+                      );
                     }
-                ).fold(
-                    new HashMap<>(),
-                    new Folder3<Map<String, SupervisorSpec>, Pair<String, SupervisorSpec>>()
-                    {
-                      @Override
-                      public Map<String, SupervisorSpec> fold(
-                          Map<String, SupervisorSpec> retVal,
-                          Pair<String, SupervisorSpec> stringObjectMap,
-                          FoldController foldController,
-                          StatementContext statementContext
-                      )
-                      {
-                        try {
-                          if (null != stringObjectMap) {
-                            retVal.put(stringObjectMap.lhs, stringObjectMap.rhs);
-                          }
-                          return retVal;
-                        }
-                        catch (Exception e) {
-                          throw new RuntimeException(e);
-                        }
-                      }
+                    catch (IOException e) {
+                      String exceptionMessage = StringUtils.format(
+                          "Could not map json payload to a SupervisorSpec for spec_id: [%s]."
+                          + " Delete the supervisor from the table[%s] in the database and re-submit it to the overlord.",
+                          r.getString("spec_id"),
+                          getSupervisorsTable()
+                      );
+                      log.error(e, exceptionMessage);
+                      return null;
                     }
-                );
-              }
-            }
+                  }
+                }
+            ).fold(
+                new HashMap<>(),
+                (Folder3<Map<String, SupervisorSpec>, Pair<String, SupervisorSpec>>) (retVal, stringObjectMap, foldController, statementContext) -> {
+                  try {
+                    if (null != stringObjectMap) {
+                      retVal.put(stringObjectMap.lhs, stringObjectMap.rhs);
+                    }
+                    return retVal;
+                  }
+                  catch (Exception e) {
+                    throw new RuntimeException(e);
+                  }
+                }
+            )
         )
     );
   }
@@ -307,7 +244,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
     Map<String, SupervisorSpec> supervisors = getLatest();
     Map<String, SupervisorSpec> activeSupervisors = new HashMap<>();
     for (Map.Entry<String, SupervisorSpec> entry : supervisors.entrySet()) {
-      // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
+      // Terminated supervisor will have its latest supervisorSpec as NoopSupervisorSpec
       // (NoopSupervisorSpec is used as a tombstone marker)
       if (!(entry.getValue() instanceof NoopSupervisorSpec)) {
         activeSupervisors.put(entry.getKey(), entry.getValue());
@@ -320,15 +257,15 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   public Map<String, SupervisorSpec> getLatestTerminatedOnly()
   {
     Map<String, SupervisorSpec> supervisors = getLatest();
-    Map<String, SupervisorSpec> activeSupervisors = new HashMap<>();
+    Map<String, SupervisorSpec> terminatedSupervisors = new HashMap<>();
     for (Map.Entry<String, SupervisorSpec> entry : supervisors.entrySet()) {
-      // Terminated supervisor will have it's latest supervisorSpec as NoopSupervisorSpec
+      // Terminated supervisor will have its latest supervisorSpec as NoopSupervisorSpec
       // (NoopSupervisorSpec is used as a tombstone marker)
       if (entry.getValue() instanceof NoopSupervisorSpec) {
-        activeSupervisors.put(entry.getKey(), entry.getValue());
+        terminatedSupervisors.put(entry.getKey(), entry.getValue());
       }
     }
-    return ImmutableMap.copyOf(activeSupervisors);
+    return ImmutableMap.copyOf(terminatedSupervisors);
   }
 
   @Override
