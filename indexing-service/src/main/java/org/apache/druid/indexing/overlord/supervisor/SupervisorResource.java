@@ -50,6 +50,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -123,7 +124,7 @@ public class SupervisorResource
     return asLeaderWithSupervisorManager(
         manager -> {
           Preconditions.checkArgument(
-              spec.getDataSources() != null && !spec.getDataSources().isEmpty(),
+              !CollectionUtils.isNullOrEmpty(spec.getDataSources()),
               "No dataSources found to perform authorization checks"
           );
           final Set<ResourceAction> resourceActions;
@@ -412,7 +413,7 @@ public class SupervisorResource
   public Response handoffTaskGroups(@PathParam("id") final String id, @Nonnull final HandoffTaskGroupsRequest handoffTaskGroupsRequest)
   {
     List<Integer> taskGroupIds = handoffTaskGroupsRequest.getTaskGroupIds();
-    if (taskGroupIds == null || taskGroupIds.isEmpty()) {
+    if (CollectionUtils.isNullOrEmpty(taskGroupIds)) {
       return Response.status(Response.Status.BAD_REQUEST)
           .entity(ImmutableMap.of("error", "List of task groups to handoff can't be empty"))
           .build();

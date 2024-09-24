@@ -20,7 +20,6 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
@@ -89,7 +88,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   public void insert(final String id, final SupervisorSpec spec)
   {
     dbi.withHandle(
-        (HandleCallback<Void>) handle -> {
+        handle -> {
           handle.createStatement(
               StringUtils.format(
                   "INSERT INTO %s (spec_id, created_date, payload) VALUES (:spec_id, :created_date, :payload)",
@@ -148,10 +147,10 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                     "SELECT id, spec_id, created_date, payload FROM %1$s WHERE spec_id = :spec_id ORDER BY id DESC",
                     getSupervisorsTable()
                 )
-            ).bind("spec_id", id
-            ).map(
-                (index, r, ctx) -> createVersionSupervisorSpecFromResponse(r)
-            ).list()
+            )
+            .bind("spec_id", id)
+            .map((index, r, ctx) -> createVersionSupervisorSpecFromResponse(r))
+            .list()
         )
     );
   }
@@ -160,12 +159,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   {
     SupervisorSpec payload;
     try {
-      payload = jsonMapper.readValue(
-          r.getBytes("payload"),
-          new TypeReference<SupervisorSpec>()
-          {
-          }
-      );
+      payload = jsonMapper.readValue(r.getBytes("payload"), SupervisorSpec.class);
     }
     catch (JsonParseException | JsonMappingException e) {
       log.warn("Failed to deserialize payload for spec_id[%s]", r.getString("spec_id"));
@@ -201,11 +195,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                     try {
                       return Pair.of(
                           r.getString("spec_id"),
-                          jsonMapper.readValue(
-                              r.getBytes("payload"), new TypeReference<SupervisorSpec>()
-                              {
-                              }
-                          )
+                          jsonMapper.readValue(r.getBytes("payload"), SupervisorSpec.class)
                       );
                     }
                     catch (IOException e) {
@@ -241,8 +231,8 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   @Override
   public Map<String, SupervisorSpec> getLatestActiveOnly()
   {
-    Map<String, SupervisorSpec> supervisors = getLatest();
-    Map<String, SupervisorSpec> activeSupervisors = new HashMap<>();
+    final Map<String, SupervisorSpec> supervisors = getLatest();
+    final Map<String, SupervisorSpec> activeSupervisors = new HashMap<>();
     for (Map.Entry<String, SupervisorSpec> entry : supervisors.entrySet()) {
       // Terminated supervisor will have its latest supervisorSpec as NoopSupervisorSpec
       // (NoopSupervisorSpec is used as a tombstone marker)
@@ -256,8 +246,8 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   @Override
   public Map<String, SupervisorSpec> getLatestTerminatedOnly()
   {
-    Map<String, SupervisorSpec> supervisors = getLatest();
-    Map<String, SupervisorSpec> terminatedSupervisors = new HashMap<>();
+    final Map<String, SupervisorSpec> supervisors = getLatest();
+    final Map<String, SupervisorSpec> terminatedSupervisors = new HashMap<>();
     for (Map.Entry<String, SupervisorSpec> entry : supervisors.entrySet()) {
       // Terminated supervisor will have its latest supervisorSpec as NoopSupervisorSpec
       // (NoopSupervisorSpec is used as a tombstone marker)
