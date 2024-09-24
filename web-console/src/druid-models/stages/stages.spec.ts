@@ -335,4 +335,51 @@ describe('Stages', () => {
       `);
     });
   });
+
+  describe('#getGraphInfos', () => {
+    it('works for mock', () => {
+      expect(STAGES.getGraphInfos()).toMatchInlineSnapshot(`
+        [
+          [
+            {
+              "fromLanes": [],
+              "hasOut": true,
+              "stageNumber": 0,
+              "type": "stage",
+            },
+          ],
+          [
+            {
+              "fromLanes": [
+                0,
+              ],
+              "hasOut": true,
+              "stageNumber": 1,
+              "type": "stage",
+            },
+          ],
+          [
+            {
+              "fromLanes": [
+                0,
+              ],
+              "hasOut": true,
+              "stageNumber": 2,
+              "type": "stage",
+            },
+          ],
+          [
+            {
+              "fromLanes": [
+                0,
+              ],
+              "hasOut": false,
+              "stageNumber": 3,
+              "type": "stage",
+            },
+          ],
+        ]
+      `);
+    });
+  });
 });

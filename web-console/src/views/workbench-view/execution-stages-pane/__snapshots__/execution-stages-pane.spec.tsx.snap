@@ -61,6 +61,15 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
     [
       {
         "Cell": [Function],
+        "accessor": "stageNumber",
+        "className": "graph-cell",
+        "id": "graph",
+        "minWidth": 20,
+        "show": false,
+        "width": 20,
+      },
+      {
+        "Cell": [Function],
         "Header": <React.Fragment>
           Stage
           <br />
