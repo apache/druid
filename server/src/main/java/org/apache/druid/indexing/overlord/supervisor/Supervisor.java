@@ -21,15 +21,16 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.indexing.overlord.DataSourceMetadata;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * An interface representing a general supervisor for managing ingestion tasks. For streaming ingestion use cases,
+ * see {@link StreamSupervisor}.
+ */
 public interface Supervisor
 {
   void start();

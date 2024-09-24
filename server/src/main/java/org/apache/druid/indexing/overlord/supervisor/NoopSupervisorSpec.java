@@ -132,7 +132,7 @@ public class NoopSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public StreamSupervisor createSupervisor()
+  public Supervisor createSupervisor()
   {
     return new StreamSupervisor()
     {

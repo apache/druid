@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexing.overlord.ObjectMetadata;
 import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.StreamSupervisor;
-import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
@@ -31,7 +30,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.concurrent.Callable;
 
 public class NoopSupervisorSpecTest
 {
@@ -41,7 +39,7 @@ public class NoopSupervisorSpecTest
     Exception e = null;
     try {
       NoopSupervisorSpec noopSupervisorSpec = new NoopSupervisorSpec(null, Collections.singletonList("datasource1"));
-      StreamSupervisor supervisor = noopSupervisorSpec.createSupervisor();
+      StreamSupervisor supervisor = (StreamSupervisor) noopSupervisorSpec.createSupervisor();
       SupervisorTaskAutoScaler autoscaler = noopSupervisorSpec.createAutoscaler(supervisor);
       Assert.assertNull(autoscaler);
 
@@ -73,7 +71,7 @@ public class NoopSupervisorSpecTest
   public void testNoppSupervisorResetOffsetsDoNothing()
   {
     NoopSupervisorSpec expectedSpec = new NoopSupervisorSpec(null, null);
-    StreamSupervisor noOpSupervisor = expectedSpec.createSupervisor();
+    StreamSupervisor noOpSupervisor = (StreamSupervisor) expectedSpec.createSupervisor();
     Assert.assertEquals(-1, noOpSupervisor.getActiveTaskGroupsCount());
     noOpSupervisor.resetOffsets(null);
     Assert.assertEquals(-1, noOpSupervisor.getActiveTaskGroupsCount());
@@ -89,7 +87,7 @@ public class NoopSupervisorSpecTest
   public void testNoppSupervisorStopTaskEarlyDoNothing()
   {
     NoopSupervisorSpec expectedSpec = new NoopSupervisorSpec(null, null);
-    StreamSupervisor noOpSupervisor = expectedSpec.createSupervisor();
+    StreamSupervisor noOpSupervisor = (StreamSupervisor) expectedSpec.createSupervisor();
     Assert.assertThrows(UnsupportedOperationException.class,
         () -> noOpSupervisor.handoffTaskGroupsEarly(ImmutableList.of())
     );
