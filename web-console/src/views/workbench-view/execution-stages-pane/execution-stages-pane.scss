@@ -59,7 +59,7 @@
     opacity: 0.6;
   }
 
-  .sort-marker {
+  .detail-line {
     font-style: italic;
     opacity: 0.6;
   }
@@ -117,12 +117,38 @@
     }
 
     .detail-counters-for-partitions,
-    .detail-counters-for-workers {
+    .detail-counters-for-workers,
+    .detail-counters-for-sort {
       display: inline-block;
       margin-left: 10px;
       margin-top: 10px;
       vertical-align: top;
       background: $dark-gray3;
+    }
+  }
+
+  .cpu-label {
+    display: inline-block;
+    width: 120px;
+  }
+
+  .cpu-counter {
+    display: inline-block;
+    width: 80px;
+  }
+
+  .timing-value {
+    position: relative;
+    height: 100%;
+    padding: 10px 5px;
+    margin-right: 1px; // This is to allow to show a 1px wide .timing-bar bar right at "left: 99.9%"
+
+    .timing-bar {
+      position: absolute;
+      top: 10px;
+      height: 36px;
+      background: $druid-brand;
+      opacity: 0.15;
     }
   }
 }

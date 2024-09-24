@@ -348,7 +348,6 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
           >
             <button
               class="bp5-button bp5-minimal"
-              title=""
               type="button"
             >
               <span
@@ -1088,7 +1087,6 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
           >
             <button
               class="bp5-button bp5-minimal"
-              title=""
               type="button"
             >
               <span
@@ -1480,7 +1478,6 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
           >
             <button
               class="bp5-button bp5-minimal"
-              title=""
               type="button"
             >
               <span
@@ -1877,7 +1874,6 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
           >
             <button
               class="bp5-button bp5-minimal"
-              title=""
               type="button"
             >
               <span
