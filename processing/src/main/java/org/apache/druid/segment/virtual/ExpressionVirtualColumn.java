@@ -338,12 +338,6 @@ public class ExpressionVirtualColumn implements VirtualColumn
   }
 
   @Override
-  public boolean requiresColumn(String columnName)
-  {
-    return expressionAnalysis.get().getRequiredBindings().contains(columnName);
-  }
-
-  @Override
   public boolean usesDotNotation()
   {
     return false;

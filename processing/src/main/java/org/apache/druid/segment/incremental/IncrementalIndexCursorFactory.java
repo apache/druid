@@ -78,20 +78,18 @@ public class IncrementalIndexCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final IncrementalIndexRowSelector rowSelector;
-    final CursorBuildSpec buildSpec;
-    final String timeColumnName;
     final IncrementalIndex.ProjectionRowSelector projection = index.getProjection(spec);
     if (projection == null) {
-      rowSelector = index;
-      buildSpec = spec;
-      timeColumnName = ColumnHolder.TIME_COLUMN_NAME;
+      return new IncrementalIndexCursorHolder(index, spec, ColumnHolder.TIME_COLUMN_NAME, false);
     } else {
-      rowSelector = projection.getRowSelector();
-      buildSpec = projection.getCursorBuildSpec();
-      timeColumnName = projection.getTimeColumnName();
+      // currently we only have aggregated projections, so isPreAggregated is always true
+      return new IncrementalIndexCursorHolder(
+          projection.getRowSelector(),
+          projection.getCursorBuildSpec(),
+          projection.getTimeColumnName(),
+          true
+      );
     }
-    return new IncrementalIndexCursorHolder(rowSelector, buildSpec, timeColumnName, projection != null);
   }
 
   @Override
