@@ -33,10 +33,10 @@ public class DartWorkerConfig
    */
   private static final double DEFAULT_HEAP_FRACTION = 0.35;
 
-  public static int AUTO = -1;
+  public static final int AUTO = -1;
 
   @JsonProperty("concurrentQueries")
-  private int concurrentQueries = -1;
+  private int concurrentQueries = AUTO;
 
   @JsonProperty("heapFraction")
   private double heapFraction = DEFAULT_HEAP_FRACTION;

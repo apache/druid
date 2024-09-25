@@ -40,7 +40,7 @@ public class OutboxImplTest
   private OutboxImpl<String> outbox;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     outbox = new OutboxImpl<>();
   }

@@ -56,7 +56,7 @@ public class MessageRelaysTest
   private MessageRelays<String> messageRelays;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     outbox = new OutboxImpl<>();
     messageListener = new TestMessageListener();
@@ -77,7 +77,7 @@ public class MessageRelaysTest
   }
 
   @After
-  public void tearDown() throws Exception
+  public void tearDown()
   {
     messageRelays.stop();
     Assert.assertEquals(Collections.emptyList(), discovery.getListeners());
