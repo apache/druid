@@ -1065,7 +1065,7 @@ The following is a sample spec for a S3 warehouse source:
 
 ### Catalog Object
 
-The catalog object supports `local` and `hive` catalog types.
+The catalog object supports `rest`, `hive` and `local` catalog types.
 
 The following table lists the properties of a `local` catalog:
 
@@ -1086,9 +1086,18 @@ The following table lists the properties of a `hive` catalog:
 |catalogProperties|Map of any additional properties that needs to be attached to the catalog.|None|no|
 |caseSensitive|Toggle case sensitivity for column names during Iceberg table reads.|true|no|
 
+The following table lists the properties of a `rest` catalog:
+
+|Property|Description|Default|Required|
+|--------|-----------|-------|---------|
+|type|Set this value to `rest`.|None|yes|
+|catalogUri|The URI associated with the catalog's HTTP endpoint.|None|yes|
+|catalogProperties|Map of any additional properties that needs to be attached to the catalog.|None|no|
+
 ### Iceberg filter object
 
 This input source provides the following filters: `and`, `equals`, `interval`, and `or`. You can use these filters to filter out data files from a snapshot, reducing the number of files Druid has to ingest.
+It is strongly recommended to apply filtering only on Iceberg partition columns. When filtering on non-partition columns, Iceberg filters may return rows that do not fully match the expression. To address this, it may help to define an additional filter in the [`transformSpec`](./ingestion-spec.md#transformspec) to remove residual rows.
 
 `equals` Filter:
 

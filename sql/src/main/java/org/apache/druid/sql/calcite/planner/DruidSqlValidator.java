@@ -778,8 +778,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       if (!plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
         throw buildCalciteContextException(
             StringUtils.format(
-                "The query contains window functions; To run these window functions, specify [%s] in query context.",
-                PlannerContext.CTX_ENABLE_WINDOW_FNS
+                "The query contains window functions; They are not supported on engine[%s].",
+                plannerContext.getEngine().name()
             ),
             call
         );

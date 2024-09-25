@@ -233,7 +233,7 @@ exports[`TransformTable matches snapshot 1`] = `
           >
             <div
               class="table-cell timestamp"
-              title="1460366400000"
+              data-tooltip="1460366400000"
             >
               2016-04-11T09:20:00.000Z
             </div>
@@ -321,7 +321,7 @@ exports[`TransformTable matches snapshot 1`] = `
           >
             <div
               class="table-cell timestamp"
-              title="1460366460000"
+              data-tooltip="1460366460000"
             >
               2016-04-11T09:21:00.000Z
             </div>
@@ -409,7 +409,7 @@ exports[`TransformTable matches snapshot 1`] = `
           >
             <div
               class="table-cell timestamp"
-              title="1460366520000"
+              data-tooltip="1460366520000"
             >
               2016-04-11T09:22:00.000Z
             </div>

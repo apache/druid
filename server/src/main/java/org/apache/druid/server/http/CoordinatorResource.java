@@ -149,4 +149,13 @@ public class CoordinatorResource
         )
     ).build();
   }
+
+  @GET
+  @Path("/duties")
+  @ResourceFilters(StateResourceFilter.class)
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getStatusOfDuties()
+  {
+    return Response.ok(new CoordinatorDutyStatus(coordinator.getStatusOfDuties())).build();
+  }
 }

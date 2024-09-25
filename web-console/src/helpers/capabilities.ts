@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import type { DruidEngine } from '../druid-models';
 import { Api } from '../singletons';
 
 import { maybeGetClusterCapacity } from './index';
@@ -35,7 +36,7 @@ export type QueryType = 'none' | 'nativeOnly' | 'nativeAndSql';
 
 export interface CapabilitiesValue {
   queryType: QueryType;
-  multiStageQuery: boolean;
+  multiStageQueryTask: boolean;
   coordinator: boolean;
   overlord: boolean;
   maxTaskSlots?: number;
@@ -51,7 +52,7 @@ export class Capabilities {
   static NO_PROXY: Capabilities;
 
   private readonly queryType: QueryType;
-  private readonly multiStageQuery: boolean;
+  private readonly multiStageQueryTask: boolean;
   private readonly coordinator: boolean;
   private readonly overlord: boolean;
   private readonly maxTaskSlots?: number;
@@ -129,7 +130,7 @@ export class Capabilities {
     return true;
   }
 
-  static async detectMultiStageQuery(): Promise<boolean> {
+  static async detectMultiStageQueryTask(): Promise<boolean> {
     try {
       const resp = await Api.instance.get(`/druid/v2/sql/task/enabled?capabilities`);
       return Boolean(resp.data.enabled);
@@ -153,11 +154,11 @@ export class Capabilities {
       coordinator = overlord = await Capabilities.detectManagementProxy();
     }
 
-    const multiStageQuery = await Capabilities.detectMultiStageQuery();
+    const multiStageQueryTask = await Capabilities.detectMultiStageQueryTask();
 
     return new Capabilities({
       queryType,
-      multiStageQuery,
+      multiStageQueryTask,
       coordinator,
       overlord,
     });
@@ -177,7 +178,7 @@ export class Capabilities {
 
   constructor(value: CapabilitiesValue) {
     this.queryType = value.queryType;
-    this.multiStageQuery = value.multiStageQuery;
+    this.multiStageQueryTask = value.multiStageQueryTask;
     this.coordinator = value.coordinator;
     this.overlord = value.overlord;
     this.maxTaskSlots = value.maxTaskSlots;
@@ -186,7 +187,7 @@ export class Capabilities {
   public valueOf(): CapabilitiesValue {
     return {
       queryType: this.queryType,
-      multiStageQuery: this.multiStageQuery,
+      multiStageQueryTask: this.multiStageQueryTask,
       coordinator: this.coordinator,
       overlord: this.overlord,
       maxTaskSlots: this.maxTaskSlots,
@@ -243,8 +244,19 @@ export class Capabilities {
     return this.queryType === 'nativeAndSql';
   }
 
-  public hasMultiStageQuery(): boolean {
-    return this.multiStageQuery;
+  public hasMultiStageQueryTask(): boolean {
+    return this.multiStageQueryTask;
+  }
+
+  public getSupportedQueryEngines(): DruidEngine[] {
+    const queryEngines: DruidEngine[] = ['native'];
+    if (this.hasSql()) {
+      queryEngines.push('sql-native');
+    }
+    if (this.hasMultiStageQueryTask()) {
+      queryEngines.push('sql-msq-task');
+    }
+    return queryEngines;
   }
 
   public hasCoordinatorAccess(): boolean {
@@ -269,37 +281,37 @@ export class Capabilities {
 }
 Capabilities.FULL = new Capabilities({
   queryType: 'nativeAndSql',
-  multiStageQuery: true,
+  multiStageQueryTask: true,
   coordinator: true,
   overlord: true,
 });
 Capabilities.NO_SQL = new Capabilities({
   queryType: 'nativeOnly',
-  multiStageQuery: false,
+  multiStageQueryTask: false,
   coordinator: true,
   overlord: true,
 });
 Capabilities.COORDINATOR_OVERLORD = new Capabilities({
   queryType: 'none',
-  multiStageQuery: false,
+  multiStageQueryTask: false,
   coordinator: true,
   overlord: true,
 });
 Capabilities.COORDINATOR = new Capabilities({
   queryType: 'none',
-  multiStageQuery: false,
+  multiStageQueryTask: false,
   coordinator: true,
   overlord: false,
 });
 Capabilities.OVERLORD = new Capabilities({
   queryType: 'none',
-  multiStageQuery: false,
+  multiStageQueryTask: false,
   coordinator: false,
   overlord: true,
 });
 Capabilities.NO_PROXY = new Capabilities({
   queryType: 'nativeAndSql',
-  multiStageQuery: true,
+  multiStageQueryTask: true,
   coordinator: false,
   overlord: false,
 });

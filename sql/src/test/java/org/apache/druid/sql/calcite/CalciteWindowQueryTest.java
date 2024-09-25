@@ -37,7 +37,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.CalciteWindowQueryTest.WindowQueryTestInputClass.TestType;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.QueryVerification.QueryResultsVerifier;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -70,7 +69,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
   private static final Map<String, Object> DEFAULT_QUERY_CONTEXT = ImmutableMap.of(
-      PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
       QueryContexts.ENABLE_DEBUG, true,
       QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false
   );

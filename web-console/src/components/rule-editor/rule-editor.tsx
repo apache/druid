@@ -144,7 +144,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
           minimal
           icon={IconNames.PLUS}
           disabled={disabled}
-          title={disabled ? 'There are no tiers left to assign' : ''}
+          data-tooltip={disabled ? 'There are no tiers left to assign' : undefined}
         >
           Add historical tier replication
         </Button>

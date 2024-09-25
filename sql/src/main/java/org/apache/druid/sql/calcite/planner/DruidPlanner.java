@@ -64,7 +64,6 @@ import java.util.function.Function;
  */
 public class DruidPlanner implements Closeable
 {
-
   public static final Joiner SPACE_JOINER = Joiner.on(" ");
   public static final Joiner COMMA_JOINER = Joiner.on(", ");
 
@@ -148,6 +147,7 @@ public class DruidPlanner implements Closeable
     catch (SqlParseException e1) {
       throw translateException(e1);
     }
+    root = rewriteParameters(root);
     hook.captureSqlNode(root);
     handler = createHandler(root);
     handler.validate();
@@ -158,6 +158,7 @@ public class DruidPlanner implements Closeable
   private SqlStatementHandler createHandler(final SqlNode node)
   {
     SqlNode query = node;
+
     SqlExplain explain = null;
     if (query.getKind() == SqlKind.EXPLAIN) {
       explain = (SqlExplain) query;
@@ -177,6 +178,27 @@ public class DruidPlanner implements Closeable
       return new QueryHandler.SelectHandler(handlerContext, query, explain);
     }
     throw InvalidSqlInput.exception("Unsupported SQL statement [%s]", node.getKind());
+  }
+
+  /**
+   * Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
+   * {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link org.apache.calcite.sql.SqlLiteral}
+   *  replacement.
+   *
+   * @return a rewritten {@link SqlNode} with any dynamic parameters rewritten in the provided {@code original} node,
+   * if they were present.
+   */
+  private SqlNode rewriteParameters(final SqlNode original)
+  {
+    // Parameter replacement is done only if the client provides parameter values.
+    // If this is a PREPARE-only, then there will be no values even if the statement contains
+    // parameters. If this is a PLAN, then we'll catch later the case that the statement
+    // contains parameters, but no values were provided.
+    if (plannerContext.getParameters().isEmpty()) {
+      return original;
+    } else {
+      return original.accept(new SqlParameterizerShuttle(plannerContext)); // the rewrite happens here.
+    }
   }
 
   /**

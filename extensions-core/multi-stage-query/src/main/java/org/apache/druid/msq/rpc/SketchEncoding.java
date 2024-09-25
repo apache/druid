@@ -17,15 +17,23 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator.duty;
+package org.apache.druid.msq.rpc;
 
-import org.apache.druid.timeline.SegmentId;
 
-import java.util.Set;
+import org.apache.druid.msq.statistics.serde.ClusterByStatisticsSnapshotSerde;
 
-public interface SegmentDeleteHandler
+/**
+ * Determines the encoding of key collectors returned by {@link WorkerResource#httpFetchKeyStatistics} and
+ * {@link WorkerResource#httpFetchKeyStatisticsWithSnapshot}.
+ */
+public enum SketchEncoding
 {
-
-  int markSegmentsAsUnused(Set<SegmentId> segmentIds);
-
+  /**
+   * The key collector is encoded as a byte stream with {@link ClusterByStatisticsSnapshotSerde}.
+   */
+  OCTET_STREAM,
+  /**
+   * The key collector is encoded as json
+   */
+  JSON
 }
