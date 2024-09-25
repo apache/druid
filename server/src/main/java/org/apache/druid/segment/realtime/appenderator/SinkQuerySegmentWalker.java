@@ -61,8 +61,10 @@ import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.segment.realtime.sink.SinkSegmentReference;
 import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
+import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.IntegerPartitionChunk;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
@@ -91,6 +93,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final String dataSource;
 
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
+  private final VersionedIntervalTimeline<String, SegmentDescriptorOvershadowable> upgradeDescriptorTimeline;
   private final ObjectMapper objectMapper;
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
@@ -115,6 +118,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.sinkTimeline = Preconditions.checkNotNull(sinkTimeline, "sinkTimeline");
+    this.upgradeDescriptorTimeline = new VersionedIntervalTimeline<>(String.CASE_INSENSITIVE_ORDER);
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.conglomerate = Preconditions.checkNotNull(conglomerate, "conglomerate");
@@ -196,12 +200,25 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final LinkedHashMap<SegmentDescriptor, List<QueryRunner<T>>> allRunners = new LinkedHashMap<>();
 
     try {
-      for (final SegmentDescriptor newDescriptor : specs) {
-        final SegmentDescriptor descriptor = newIdToBasePendingSegment.getOrDefault(newDescriptor, newDescriptor);
-        final PartitionChunk<Sink> chunk = sinkTimeline.findChunk(
+      for (final SegmentDescriptor descriptor : specs) {
+        final PartitionChunk<SegmentDescriptorOvershadowable> descriptorChunk = upgradeDescriptorTimeline.findChunk(
             descriptor.getInterval(),
             descriptor.getVersion(),
             descriptor.getPartitionNumber()
+        );
+        final SegmentDescriptor baseDescriptor;
+        if (descriptorChunk != null) {
+          baseDescriptor = newIdToBasePendingSegment.getOrDefault(
+              descriptorChunk.getObject().segmentDescriptor,
+              descriptor
+          );
+        } else {
+          baseDescriptor = descriptor;
+        }
+        final PartitionChunk<Sink> chunk = sinkTimeline.findChunk(
+            baseDescriptor.getInterval(),
+            baseDescriptor.getVersion(),
+            baseDescriptor.getPartitionNumber()
         );
 
         if (chunk == null) {
@@ -366,8 +383,19 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       SegmentIdWithShardSpec upgradedPendingSegment
   )
   {
+    final SegmentDescriptor upgradedDescriptor = upgradedPendingSegment.asSegmentId().toDescriptor();
+    upgradeDescriptorTimeline.add(
+        upgradedDescriptor.getInterval(),
+        upgradedDescriptor.getVersion(),
+        IntegerPartitionChunk.make(
+            null,
+            null,
+            upgradedDescriptor.getPartitionNumber(),
+            new SegmentDescriptorOvershadowable(upgradedDescriptor)
+        )
+    );
     newIdToBasePendingSegment.put(
-        upgradedPendingSegment.asSegmentId().toDescriptor(),
+        upgradedDescriptor,
         basePendingSegment.asSegmentId().toDescriptor()
     );
   }
@@ -394,5 +422,45 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     // from full segment [foo_x_y_z partition 1], and is therefore useful if we ever want the cache to mix full segments
     // with subsegments (hydrants).
     return segmentId + "_H" + hydrantNumber;
+  }
+
+  private static class SegmentDescriptorOvershadowable implements Overshadowable<SegmentDescriptorOvershadowable>
+  {
+    private final SegmentDescriptor segmentDescriptor;
+
+    private SegmentDescriptorOvershadowable(SegmentDescriptor segmentDescriptor)
+    {
+      this.segmentDescriptor = segmentDescriptor;
+    }
+
+    @Override
+    public int getStartRootPartitionId()
+    {
+      return segmentDescriptor.getPartitionNumber();
+    }
+
+    @Override
+    public int getEndRootPartitionId()
+    {
+      return segmentDescriptor.getPartitionNumber() + 1;
+    }
+
+    @Override
+    public String getVersion()
+    {
+      return segmentDescriptor.getVersion();
+    }
+
+    @Override
+    public short getMinorVersion()
+    {
+      return 0;
+    }
+
+    @Override
+    public short getAtomicUpdateGroupSize()
+    {
+      return 1;
+    }
   }
 }
