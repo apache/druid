@@ -167,7 +167,7 @@ public class BoundFilter implements Filter
       @Override
       public int estimatedComputeCost()
       {
-        return rangeIndex.estimatedComputeCost();
+        return rangeIndex.estimatedComputeCost() + 1;
       }
 
       @Override
