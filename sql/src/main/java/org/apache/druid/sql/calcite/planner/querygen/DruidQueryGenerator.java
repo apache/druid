@@ -281,13 +281,12 @@ public class DruidQueryGenerator
         );
       }
 
-
       private SourceDesc getSource()
       {
-        if (source != null) {
-          return source;
+        if (source == null) {
+          source = realGetSource();
         }
-        return source = realGetSource();
+        return source;
       }
 
       /**
