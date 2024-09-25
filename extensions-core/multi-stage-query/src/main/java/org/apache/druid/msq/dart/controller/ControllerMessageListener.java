@@ -29,8 +29,8 @@ import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.server.DruidNode;
 
 /**
- * Listener for worker-to-controller messages. Also responsible for calling
- * {@link Controller#workerError(MSQErrorReport)} when a worker server goes away.
+ * Listener for worker-to-controller messages.
+ * Also responsible for calling {@link Controller#workerError(MSQErrorReport)} when a worker server goes away.
  */
 public class ControllerMessageListener implements MessageListener<ControllerMessage>
 {

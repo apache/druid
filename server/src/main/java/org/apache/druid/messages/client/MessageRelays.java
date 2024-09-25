@@ -23,7 +23,6 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
-import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -38,6 +37,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Manages a fleet of {@link MessageRelay}, one for each server discovered by a {@link DruidNodeDiscoveryProvider}.
@@ -49,29 +49,26 @@ public class MessageRelays<MessageType>
 
   @GuardedBy("serverRelays")
   private final Map<String, MessageRelay<MessageType>> serverRelays = new HashMap<>();
-  private final DruidNodeDiscoveryProvider discoveryProvider;
+  private final Supplier<DruidNodeDiscovery> discoverySupplier;
   private final MessageRelayFactory<MessageType> messageRelayFactory;
-  private final NodeRole nodeRole;
   private final MessageRelaysListener listener;
 
   private volatile DruidNodeDiscovery discovery;
 
   public MessageRelays(
-      final DruidNodeDiscoveryProvider discoveryProvider,
-      final MessageRelayFactory<MessageType> messageRelayFactory,
-      final NodeRole nodeRole
+      final Supplier<DruidNodeDiscovery> discoverySupplier,
+      final MessageRelayFactory<MessageType> messageRelayFactory
   )
   {
-    this.discoveryProvider = discoveryProvider;
+    this.discoverySupplier = discoverySupplier;
     this.messageRelayFactory = messageRelayFactory;
-    this.nodeRole = nodeRole;
     this.listener = new MessageRelaysListener();
   }
 
   @LifecycleStart
   public void start()
   {
-    discovery = discoveryProvider.getForNodeRole(nodeRole);
+    discovery = discoverySupplier.get();
     discovery.registerListener(listener);
   }
 

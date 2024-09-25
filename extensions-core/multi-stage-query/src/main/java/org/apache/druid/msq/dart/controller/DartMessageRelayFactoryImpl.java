@@ -25,17 +25,28 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.messages.client.MessageRelay;
-import org.apache.druid.messages.client.MessageRelayFactoryImpl;
+import org.apache.druid.messages.client.MessageRelayClientImpl;
+import org.apache.druid.messages.client.MessageRelayFactory;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
+import org.apache.druid.rpc.FixedServiceLocator;
+import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceLocation;
+import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.server.DruidNode;
 
 /**
- * Specialized {@link MessageRelayFactoryImpl} for Dart controllers.
+ * Production implementation of {@link MessageRelayFactory}.
  */
-public class DartMessageRelayFactoryImpl extends MessageRelayFactoryImpl<ControllerMessage>
+public class DartMessageRelayFactoryImpl implements MessageRelayFactory<ControllerMessage>
 {
+  private final String clientHost;
+  private final ControllerMessageListener messageListener;
+  private final ServiceClientFactory clientFactory;
+  private final String basePath;
+  private final ObjectMapper smileMapper;
+
   @Inject
   public DartMessageRelayFactoryImpl(
       @Self DruidNode selfNode,
@@ -44,19 +55,28 @@ public class DartMessageRelayFactoryImpl extends MessageRelayFactoryImpl<Control
       ControllerMessageListener messageListener
   )
   {
-    super(
-        selfNode.getHostAndPortToUse(),
-        messageListener,
-        clientFactory,
-        DartWorkerResource.PATH + "/relay",
-        smileMapper,
-        ControllerMessage.class
-    );
+    this.clientHost = selfNode.getHostAndPortToUse();
+    this.messageListener = messageListener;
+    this.clientFactory = clientFactory;
+    this.smileMapper = smileMapper;
+    this.basePath = DartWorkerResource.PATH + "/relay";
   }
 
   @Override
   public MessageRelay<ControllerMessage> newRelay(DruidNode clientNode)
   {
-    return super.newRelay(clientNode);
+    final ServiceLocation location = ServiceLocation.fromDruidNode(clientNode).withBasePath(basePath);
+    final ServiceClient client = clientFactory.makeClient(
+        clientNode.getHostAndPortToUse(),
+        new FixedServiceLocator(location),
+        StandardRetryPolicy.unlimited()
+    );
+
+    return new MessageRelay<>(
+        clientHost,
+        clientNode,
+        new MessageRelayClientImpl<>(client, smileMapper, ControllerMessage.class),
+        messageListener
+    );
   }
 }

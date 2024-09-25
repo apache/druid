@@ -35,6 +35,6 @@ public class DartMessageRelays extends MessageRelays<ControllerMessage>
       final MessageRelayFactory<ControllerMessage> messageRelayFactory
   )
   {
-    super(discoveryProvider, messageRelayFactory, NodeRole.HISTORICAL);
+    super(() -> discoveryProvider.getForNodeRole(NodeRole.HISTORICAL), messageRelayFactory);
   }
 }
