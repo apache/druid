@@ -20,7 +20,6 @@
 package org.apache.druid.quidem;
 
 import com.google.inject.Injector;
-import org.apache.commons.lang3.math.Fraction;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -56,25 +55,9 @@ import java.util.UUID;
 
 public class KttmNestedComponentSupplier extends StandardComponentSupplier
 {
-  public static class Micro extends KttmNestedComponentSupplier
-  {
-    public Micro(TempDirProducer tempDirProducer)
-    {
-      super(tempDirProducer, Fraction.getFraction(1, 1000));
-    }
-  }
-
-  private final Fraction fraction;
-
   public KttmNestedComponentSupplier(TempDirProducer tempDirProducer)
   {
-    this(tempDirProducer, Fraction.ONE);
-  }
-
-  public KttmNestedComponentSupplier(TempDirProducer tempDirProducer, Fraction fraction)
-  {
     super(tempDirProducer);
-    this.fraction = fraction;
   }
 
   @Override
@@ -138,14 +121,10 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     try {
       tmpDir = FileUtils.createTempDir("test-index-input-source");
       try {
-        InputSource inputSource = new ScaledResoureInputDataSource(
-            fraction,
-            ResourceInputSource.of(
-                TestIndex.class.getClassLoader(),
-                "kttm-nested-v2-2019-08-25.json"
-            )
+        InputSource inputSource = ResourceInputSource.of(
+            TestIndex.class.getClassLoader(),
+            "kttm-nested-v2-2019-08-25.json"
         );
-
         return IndexBuilder
             .create()
             .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())

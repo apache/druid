@@ -20,20 +20,32 @@
 package org.apache.druid.quidem;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ComponentSupplier;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
 
-@ComponentSupplier(KttmNestedComponentSupplier.Micro.class)
+@EnabledIf(value = "isReplaceWithDefault", disabledReason = "Needed to provide coverage in defaults mode")
+@ComponentSupplier(KttmNestedComponentSupplier.class)
 public class KttmNestedComponentSupplierTest extends BaseCalciteQueryTest
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
+  public static boolean isReplaceWithDefault()
+  {
+    return NullHandling.replaceWithDefault();
+  }
+
   @Test
   public void testDataset()
   {
     msqIncompatible();
     testBuilder()
         .sql("SELECT count(1),sum(session_length) from kttm_nested")
-        .expectedResults(ImmutableList.of(new Object[] {486L, 108277286L}))
+        .expectedResults(ImmutableList.of(new Object[] {465346L, 153573448620L}))
         .run();
   }
 }

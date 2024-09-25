@@ -252,7 +252,6 @@ public class DruidQuidemCommandHandler implements CommandHandler
       super(lines, content, DruidHook.CONVERTED_PLAN);
     }
   }
-
   static class MSQPlanCommand extends AbstractStringCaptureCommand
   {
     MSQPlanCommand(List<String> lines, List<String> content)
