@@ -260,7 +260,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
 
       final CursorHolder nextCursorHolder =
           cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null));
-      final Cursor nextCursor = cursorHolder.asCursor();
+      final Cursor nextCursor = nextCursorHolder.asCursor();
 
       if (nextCursor == null) {
         // No cursors!
