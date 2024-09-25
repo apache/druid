@@ -28,6 +28,7 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
+import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
@@ -51,6 +52,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -671,6 +673,78 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertTrue(manager.registerUpgradedPendingSegmentOnSupervisor("sss", pendingSegment));
 
     verifyAll();
+  }
+
+  @Test
+  public void testDefaultHandoffTaskGroupsEarly()
+  {
+    // Create an instance of stream supervisor without overriding handoffTaskGroupsEarly().
+    final StreamSupervisor streamSupervisor = new StreamSupervisor()
+    {
+
+      @Override
+      public void start()
+      {
+
+      }
+
+      @Override
+      public void stop(boolean stopGracefully)
+      {
+
+      }
+
+      @Override
+      public SupervisorReport getStatus()
+      {
+        return null;
+      }
+
+      @Override
+      public SupervisorStateManager.State getState()
+      {
+        return null;
+      }
+
+      @Override
+      public void reset(@Nullable DataSourceMetadata dataSourceMetadata)
+      {
+
+      }
+
+      @Override
+      public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
+      {
+
+      }
+
+      @Override
+      public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
+      {
+
+      }
+
+      @Override
+      public LagStats computeLagStats()
+      {
+        return null;
+      }
+
+      @Override
+      public int getActiveTaskGroupsCount()
+      {
+        return 0;
+      }
+    };
+
+    final Exception ex = Assert.assertThrows(
+        UnsupportedOperationException.class,
+        () -> streamSupervisor.handoffTaskGroupsEarly(ImmutableList.of(1))
+    );
+    Assert.assertEquals(
+        "Supervisor does not have the feature to handoff task groups early implemented",
+        ex.getMessage()
+    );
   }
 
   private static class TestSupervisorSpec implements SupervisorSpec
