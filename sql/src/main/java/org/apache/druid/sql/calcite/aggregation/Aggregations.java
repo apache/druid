@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.aggregation;
 
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -44,13 +45,13 @@ public class Aggregations
   /**
    * Get Druid expressions that correspond to "simple" aggregator inputs. This is used by standard sum/min/max
    * aggregators, which have the following properties:
-   *
+   * <p>
    * 1) They can take direct field accesses or expressions as inputs.
-   * 2) They cannot implicitly cast strings to numbers when using a direct field access.
+   * 2) With the exception of min/max aggregators, they cannot implicitly cast strings to numbers when using a direct field access.
+   *
    * @param plannerContext SQL planner context
    * @param call           aggregate call object
    * @param inputAccessor  gives access to input fields and schema
-   *
    * @return list of expressions corresponding to aggregator arguments, or null if any cannot be translated
    */
   @Nullable
@@ -60,12 +61,31 @@ public class Aggregations
       final InputAccessor inputAccessor
   )
   {
-    final List<DruidExpression> args = call
-        .getArgList()
-        .stream()
-        .map(i -> inputAccessor.getField(i))
-        .map(rexNode -> toDruidExpressionForNumericAggregator(plannerContext, inputAccessor.getInputRowSignature(), rexNode))
-        .collect(Collectors.toList());
+    final List<DruidExpression> args;
+    // Handle the case for min/max aggregators.
+    if (isStringAggregatorFunctions(call.getAggregation())) {
+      args = call
+          .getArgList()
+          .stream()
+          .map(i -> inputAccessor.getField(i))
+          .map(rexNode -> Expressions.toDruidExpression(
+              plannerContext,
+              inputAccessor.getInputRowSignature(),
+              rexNode
+          ))
+          .collect(Collectors.toList());
+    } else {
+      args = call
+          .getArgList()
+          .stream()
+          .map(i -> inputAccessor.getField(i))
+          .map(rexNode -> toDruidExpressionForNumericAggregator(
+              plannerContext,
+              inputAccessor.getInputRowSignature(),
+              rexNode
+          ))
+          .collect(Collectors.toList());
+    }
 
     if (args.stream().noneMatch(Objects::isNull)) {
       return args;
@@ -78,14 +98,13 @@ public class Aggregations
    * Translate a Calcite {@link RexNode} to a Druid expression for the aggregators that require numeric type inputs.
    * The returned expression can keep an explicit cast from strings to numbers when the column consumed by
    * the expression is the string type.
-   *
+   * <p>
    * Consider using {@link Expressions#toDruidExpression(PlannerContext, RowSignature, RexNode)} for projections
    * or the aggregators that don't require numeric inputs.
    *
    * @param plannerContext SQL planner context
    * @param rowSignature   signature of the rows to be extracted from
    * @param rexNode        expression meant to be applied on top of the rows
-   *
    * @return DruidExpression referring to fields in rowOrder, or null if not possible to translate
    */
   public static DruidExpression toDruidExpressionForNumericAggregator(
@@ -101,12 +120,20 @@ public class Aggregations
 
     if (druidExpression.isSimpleExtraction() &&
         (!druidExpression.isDirectColumnAccess()
-         || rowSignature.getColumnType(druidExpression.getDirectColumn()).map(type -> type.is(ValueType.STRING)).orElse(false))) {
+         || rowSignature.getColumnType(druidExpression.getDirectColumn())
+                        .map(type -> type.is(ValueType.STRING))
+                        .orElse(false))) {
       // Aggregators are unable to implicitly cast strings to numbers.
       // So remove the simple extraction, which forces the expression to be used instead of the direct column access.
       return druidExpression.map(simpleExtraction -> null, Function.identity());
     } else {
       return druidExpression;
     }
+  }
+
+  private static boolean isStringAggregatorFunctions(SqlAggFunction aggregation)
+  {
+    boolean caseSensitivity = false;
+    return aggregation.isName("MIN", caseSensitivity) || aggregation.isName("MAX", caseSensitivity);
   }
 }
