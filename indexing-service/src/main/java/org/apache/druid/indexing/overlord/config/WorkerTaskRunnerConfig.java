@@ -20,8 +20,6 @@
 package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import org.apache.druid.indexing.overlord.util.TaskSlotLimitsDeserializer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -35,8 +33,9 @@ public class WorkerTaskRunnerConfig
   private double parallelIndexTaskSlotRatio = 1;
 
   @JsonProperty
-  @JsonDeserialize(using = TaskSlotLimitsDeserializer.class)
-  private Map<String, Number> taskSlotLimits = new HashMap<>();
+  private Map<String, Integer> taskSlotLimits = new HashMap<>();
+  @JsonProperty
+  private Map<String, Double> taskSlotRatios = new HashMap<>();
 
   public String getMinWorkerVersion()
   {
@@ -45,7 +44,7 @@ public class WorkerTaskRunnerConfig
 
   /**
    * The number of task slots that a parallel indexing task can take is restricted using this config as a multiplier
-   *
+   * <p>
    * A value of 1 means no restriction on the number of slots ParallelIndexSupervisorTasks can occupy (default behaviour)
    * A value of 0 means ParallelIndexSupervisorTasks can occupy no slots.
    * Deadlocks can occur if the all task slots are occupied by ParallelIndexSupervisorTasks,
@@ -59,44 +58,34 @@ public class WorkerTaskRunnerConfig
   }
 
   /**
-   * The `taskSlotLimits` configuration is a map where each key is a task type,
-   * and the corresponding value represents the limit on the number of task slots
-   * that a task of that type can occupy on a worker.
+   * Returns a map where each key is a task type (`String`), and the value is an `Integer`
+   * representing the absolute limit on the number of task slots that tasks of this type can occupy.
    * <p>
-   * The key is a `String` that specifies the task type.
-   * The value can either be a Double or Integer:
+   * This absolute limit specifies the maximum number of task slots available to a specific task type.
    * <p>
-   * 1. A `Double` in the range [0, 1], representing a ratio of the available task slots
-   * that tasks of this type can occupy. For example, a value of 0.5 means that tasks
-   * of this type can occupy up to 50% of the task slots on a worker.
-   * A value of 0 means that tasks of this type can occupy no slots (i.e., they are effectively disabled).
-   * A value of 1.0 means no restriction, allowing tasks of this type to occupy all available slots.
-   * <p>
-   * 2. An `Integer` that is greater than or equal to 0, representing an absolute limit
-   * on the number of task slots that tasks of this type can occupy. For example, a value of 5
-   * means that tasks of this type can occupy up to 5 task slots on a worker.
-   * <p>
-   * If a task type is not present in the `taskSlotLimits` map, there is no restriction
-   * on the number of task slots it can occupy, meaning it can use all available slots.
-   * <p>
-   * Example:
-   * <p>
-   * taskSlotLimits = {
-   * "index_parallel": 0.5,  // 'index_parallel' can occupy up to 50% of task slots
-   * "query_controller": 3     // 'query_controller' can occupy up to 3 task slots
-   * }
-   * <p>
-   * This configuration allows for granular control over the allocation of task slots
-   * based on the specific needs of different task types, helping to prevent any one type
-   * of task from monopolizing worker resources and reducing the risk of deadlocks.
+   * If both an absolute limit and a ratio (from {@link #getTaskSlotRatios()}) are specified for the same task type,
+   * the effective limit will be the smaller of the two.
    *
-   * @return A map where the key is the task type (`String`), and the value is either a `Double` (0 to 1)
-   * representing the ratio of task slots available for that type, or an `Integer` (>= 0)
-   * representing the absolute limit of task slots for that type. If a task type is absent,
-   * it is not limited in terms of the number of task slots it can occupy.
+   * @return A map of task types with their corresponding absolute slot limits.
    */
-  public Map<String, Number> getTaskSlotLimits()
+  public Map<String, Integer> getTaskSlotLimits()
   {
     return taskSlotLimits;
+  }
+
+  /**
+   * Returns a map where each key is a task type (`String`), and the value is a `Double` which should be in the
+   * range [0, 1], representing the ratio of available task slots that tasks of this type can occupy.
+   * <p>
+   * This ratio defines the proportion of total task slots a task type can use, calculated as `ratio * totalSlots`.
+   * <p>
+   * If both a ratio and an absolute limit (from {@link #getTaskSlotLimits()}) are specified for the same task type,
+   * the effective limit will be the smaller of the two.
+   *
+   * @return A map of task types with their corresponding slot ratios.
+   */
+  public Map<String, Double> getTaskSlotRatios()
+  {
+    return taskSlotRatios;
   }
 }

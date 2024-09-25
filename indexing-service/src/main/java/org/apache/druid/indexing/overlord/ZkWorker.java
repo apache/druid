@@ -167,29 +167,6 @@ public class ZkWorker implements Closeable
     return currParallelIndexCapacityUsed;
   }
 
-  @JsonProperty("currTypeSpecificCapacityUsed")
-  public Map<String, Integer> getCurrTypeSpecificCapacityUsed()
-  {
-    return getCurrTypeSpecificCapacityUsed(getRunningTasks());
-  }
-
-  private Map<String, Integer> getCurrTypeSpecificCapacityUsed(Map<String, TaskAnnouncement> tasks)
-  {
-    Map<String, Integer> typeSpecificCapacityMap = new HashMap<>();
-    tasks.values()
-         .forEach(taskAnnouncement -> incrementTypeSpecificCapacity(taskAnnouncement.getTaskType(), taskAnnouncement.getTaskResource().getRequiredCapacity(), typeSpecificCapacityMap));
-    return typeSpecificCapacityMap;
-  }
-
-  public void incrementTypeSpecificCapacity(String type, int capacityToAdd, Map<String, Integer> typeSpecificCapacityMap)
-  {
-    if (typeSpecificCapacityMap.containsKey(type)) {
-      typeSpecificCapacityMap.put(type, typeSpecificCapacityMap.get(type) + capacityToAdd);
-    } else {
-      typeSpecificCapacityMap.put(type, capacityToAdd);
-    }
-  }
-
   @JsonProperty("availabilityGroups")
   public Set<String> getAvailabilityGroups()
   {

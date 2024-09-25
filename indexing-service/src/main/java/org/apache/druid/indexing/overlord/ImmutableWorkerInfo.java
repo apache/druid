@@ -22,16 +22,16 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
+import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.joda.time.DateTime;
-
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -46,11 +46,10 @@ import java.util.Set;
 @PublicApi
 public class ImmutableWorkerInfo
 {
-  private static final Logger logger = new Logger(ImmutableWorkerInfo.class);
   private final Worker worker;
   private final int currCapacityUsed;
   private final int currParallelIndexCapacityUsed;
-  private final Map<String, Integer> typeSpecificCapacityMap;
+  private final Map<String, Integer> currCapacityUsedByTaskType;
   private final ImmutableSet<String> availabilityGroups;
   private final ImmutableSet<String> runningTasks;
   private final DateTime lastCompletedTaskTime;
@@ -63,7 +62,7 @@ public class ImmutableWorkerInfo
       @JsonProperty("worker") Worker worker,
       @JsonProperty("currCapacityUsed") int currCapacityUsed,
       @JsonProperty("currParallelIndexCapacityUsed") int currParallelIndexCapacityUsed,
-      @JsonProperty("currTypeSpecificCapacityUsed") @Nullable Map<String, Integer> typeSpecificCapacityMap,
+      @JsonProperty("currCapacityUsedByTaskType") @Nullable Map<String, Integer> currCapacityUsedByTaskType,
       @JsonProperty("availabilityGroups") Set<String> availabilityGroups,
       @JsonProperty("runningTasks") Collection<String> runningTasks,
       @JsonProperty("lastCompletedTaskTime") DateTime lastCompletedTaskTime,
@@ -73,7 +72,7 @@ public class ImmutableWorkerInfo
     this.worker = worker;
     this.currCapacityUsed = currCapacityUsed;
     this.currParallelIndexCapacityUsed = currParallelIndexCapacityUsed;
-    this.typeSpecificCapacityMap = typeSpecificCapacityMap;
+    this.currCapacityUsedByTaskType = currCapacityUsedByTaskType;
     this.availabilityGroups = ImmutableSet.copyOf(availabilityGroups);
     this.runningTasks = ImmutableSet.copyOf(runningTasks);
     this.lastCompletedTaskTime = lastCompletedTaskTime;
@@ -84,13 +83,13 @@ public class ImmutableWorkerInfo
       Worker worker,
       int currCapacityUsed,
       int currParallelIndexCapacityUsed,
-      Map<String, Integer> typeSpecificCapacityMap,
+      Map<String, Integer> currCapacityUsedByTaskType,
       Set<String> availabilityGroups,
       Collection<String> runningTasks,
       DateTime lastCompletedTaskTime
   )
   {
-    this(worker, currCapacityUsed, currParallelIndexCapacityUsed, typeSpecificCapacityMap, availabilityGroups,
+    this(worker, currCapacityUsed, currParallelIndexCapacityUsed, currCapacityUsedByTaskType, availabilityGroups,
          runningTasks, lastCompletedTaskTime, null
     );
   }
@@ -127,7 +126,7 @@ public class ImmutableWorkerInfo
   {
     int currCapacityUsed = 0;
     int currParallelIndexCapacityUsed = 0;
-    Map<String, Integer> typeSpecificCapacityMap = new HashMap<>();
+    Map<String, Integer> currCapacityUsedByTaskType = new HashMap<>();
     ImmutableSet.Builder<String> taskIds = ImmutableSet.builder();
     ImmutableSet.Builder<String> availabilityGroups = ImmutableSet.builder();
 
@@ -145,7 +144,7 @@ public class ImmutableWorkerInfo
           currParallelIndexCapacityUsed += requiredCapacity;
         }
 
-        typeSpecificCapacityMap.merge(announcement.getTaskType(), 1, Integer::sum);
+        currCapacityUsedByTaskType.merge(announcement.getTaskType(), 1, Integer::sum);
 
         taskIds.add(taskId);
         availabilityGroups.add(taskResource.getAvailabilityGroup());
@@ -156,7 +155,7 @@ public class ImmutableWorkerInfo
         worker,
         currCapacityUsed,
         currParallelIndexCapacityUsed,
-        typeSpecificCapacityMap,
+        currCapacityUsedByTaskType,
         availabilityGroups.build(),
         taskIds.build(),
         lastCompletedTaskTime,
@@ -182,10 +181,10 @@ public class ImmutableWorkerInfo
     return currParallelIndexCapacityUsed;
   }
 
-  @JsonProperty("currTypeSpecificCapacityUsed")
-  public Map<String, Integer> getTypeSpecificCapacityMap()
+  @JsonProperty("currCapacityUsedByTaskType")
+  public Map<String, Integer> getCurrCapacityUsedByTaskType()
   {
-    return typeSpecificCapacityMap;
+    return currCapacityUsedByTaskType;
   }
 
   @JsonProperty("availabilityGroups")
@@ -223,13 +222,31 @@ public class ImmutableWorkerInfo
     return worker.getVersion().compareTo(minVersion) >= 0;
   }
 
-  public boolean canRunTask(Task task, double parallelIndexTaskSlotRatio)
+  /**
+   * Determines if a specific task can be executed on the worker based on
+   * various capacity, custom limits, and availability conditions.
+   * <p>
+   * returns true only if:
+   * <ul>
+   *   <li>The worker has sufficient capacity to handle the task.</li>
+   *   <li>The task is of the parallel index type and can operate within the permitted ratio of slots designated for that task type.</li>
+   *   <li>The the task can run under custom-defined limits for its type,
+   *   such as a maximum number of tasks allowed or a ratio of slots the task type can occupy.</li>
+   *   <li>The availability group of the task is currently available.</li>
+   * </ul>
+   */
+  public boolean canRunTask(Task task, WorkerTaskRunnerConfig config)
   {
-    return (worker.getCapacity() - getCurrCapacityUsed() >= task.getTaskResource().getRequiredCapacity()
-            && canRunParallelIndexTask(task, parallelIndexTaskSlotRatio)
-            && !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup()));
+    return (hasSufficientWorkerCapacity(task)
+            && canRunParallelIndexTask(task, config.getParallelIndexTaskSlotRatio())
+            && canRunTaskBasedOnCustomLimit(task, config.getTaskSlotLimits(), config.getTaskSlotRatios())
+            && isAvailabilityGroupAvailable(task));
   }
 
+
+  /**
+   * To be removed in future as it could be fully covered with the limits map.
+   */
   private boolean canRunParallelIndexTask(Task task, double parallelIndexTaskSlotRatio)
   {
     if (!task.getType().equals(ParallelIndexSupervisorTask.TYPE)) {
@@ -253,100 +270,66 @@ public class ImmutableWorkerInfo
     return workerParallelIndexCapacity;
   }
 
-  /**
-   * Determines if a specific task can be executed on the worker based on
-   * various capacity, custom limits, and availability conditions.
-   * <p>
-   * This method checks:
-   * <ul>
-   *   <li>Whether the worker has sufficient capacity to handle the task.</li>
-   *   <li>Whether the task can run under custom-defined limits for its type,
-   *   such as a maximum number of tasks allowed or a ratio of slots the task type can occupy.</li>
-   *   <li>Whether the availability group of the task is currently available.</li>
-   * </ul>
-   *
-   * @param task The {@link Task} to be executed. The task contains details such as required capacity
-   *             and its type.
-   * @param taskLimits A map containing custom limits for different task types. The key is a string
-   *                   representing the task type, and the value is a {@link Number} which can be:
-   *                   <ul>
-   *                     <li>A {@code Double} representing a ratio of available slots the task type can use (0 to 1).</li>
-   *                     <li>An {@code Integer} representing an absolute limit of slots the task type can occupy.</li>
-   *                   </ul>
-   *                   If the task type is not present in this map, the task can use all available slots.
-   * @return {@code true} if the task can run, meaning the worker has sufficient capacity,
-   *         the task type does not exceed custom limits, and the task's availability group is available.
-   *         Returns {@code false} otherwise.
-   */
-  public boolean canRunTask(Task task, Map<String, Number> taskLimits)
-  {
-    return hasSufficientWorkerCapacity(task)
-           && canRunTaskBasedOnCustomLimit(task, taskLimits)
-           && isAvailabilityGroupAvailable(task);
-  }
-
   private boolean hasSufficientWorkerCapacity(Task task)
   {
     int capacityRemaining = worker.getCapacity() - getCurrCapacityUsed();
     int requiredCapacity = task.getTaskResource().getRequiredCapacity();
-    boolean hasCapacity = capacityRemaining >= requiredCapacity;
-
-    if (!hasCapacity) {
-      logger.info("Insufficient worker capacity for task '%s'. Required: %s, Available: %s",
-                  task.getId(), requiredCapacity, capacityRemaining
-      );
-    }
-
-    return hasCapacity;
+    return capacityRemaining >= requiredCapacity;
   }
 
   private boolean isAvailabilityGroupAvailable(Task task)
   {
-    boolean isAvailable = !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup());
-
-    if (!isAvailable) {
-      logger.info("Availability group %s is not available for task '%s'.",
-                  task.getTaskResource().getAvailabilityGroup(), task.getId()
-      );
-    }
-
-    return isAvailable;
+    return !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup());
   }
 
-  private boolean canRunTaskBasedOnCustomLimit(Task task, Map<String, Number> limitsMap)
+  private boolean canRunTaskBasedOnCustomLimit(Task task, Map<String, Integer> limitsMap, Map<String, Double> ratiosMap)
   {
-    Number limit = limitsMap.get(task.getType());
+    final Integer limit = getLimitForTask(task.getType(), limitsMap, ratiosMap);
 
     if (limit == null) {
       return true; // No limit specified, so task can run
     }
 
-    int currentCapacityUsed = getTypeSpecificCapacityMap().getOrDefault(task.getType(), 0);
+    int currentCapacityUsed = getCurrCapacityUsedByTaskType().getOrDefault(task.getType(), 0);
     int requiredCapacity = task.getTaskResource().getRequiredCapacity();
 
-    boolean canRun;
-    if (limit instanceof Double) {
-      canRun = hasCapacityBasedOnRatio(limit.doubleValue(), currentCapacityUsed, requiredCapacity);
-      if (!canRun) {
-        logger.info("Task '%s' of type '%s' cannot run due to ratio limit. Current: %s, Required: %s, Limit: %s",
-                    task.getId(), task.getType(), currentCapacityUsed, requiredCapacity, limit.doubleValue()
-        );
-      }
-    } else {
-      canRun = hasCapacityBasedOnLimit(limit.intValue(), currentCapacityUsed, requiredCapacity);
-      if (!canRun) {
-        logger.info("Task '%s' of type '%s' cannot run due to limit. Current: %s, Required: %s, Limit: %s",
-                    task.getId(), task.getType(), currentCapacityUsed, requiredCapacity, limit.intValue()
-        );
-      }
-    }
-    return canRun;
+    return hasCapacityBasedOnLimit(limit, currentCapacityUsed, requiredCapacity);
   }
 
-  private boolean hasCapacityBasedOnRatio(double taskSlotRatio, int currentCapacityUsed, int requiredCapacity)
+  private Integer getLimitForTask(
+      String taskType,
+      Map<String, Integer> limitsMap,
+      Map<String, Double> ratiosMap
+  )
   {
-    int maxCapacityFromRatio = calculateTaskCapacityFromRatio(taskSlotRatio);
-    return maxCapacityFromRatio - currentCapacityUsed >= requiredCapacity;
+    Integer absoluteLimit = limitsMap.get(taskType);
+    Double ratioLimit = ratiosMap.get(taskType);
+
+    if (absoluteLimit == null && ratioLimit == null) {
+      return null;
+    }
+
+    // Validate the absolute limit if present
+    if (absoluteLimit != null) {
+      Preconditions.checkArgument(absoluteLimit >= 0, "Absolute limit for task %s must be non-negative.", taskType);
+    }
+
+    // Validate the ratio limit if present
+    if (ratioLimit != null) {
+      Preconditions.checkArgument(ratioLimit >= 0.0 && ratioLimit <= 1.0,
+                                  "Ratio for task %s must be between 0.0 and 1.0 inclusive.", taskType
+      );
+    }
+
+    final int totalCapacity = worker.getCapacity();
+
+    Integer ratioBasedLimit = ratioLimit != null ? calculateTaskCapacityFromRatio(ratioLimit, totalCapacity) : null;
+
+    if (absoluteLimit != null && ratioBasedLimit != null) {
+      return Math.min(absoluteLimit, ratioBasedLimit);
+    }
+
+    return absoluteLimit != null ? absoluteLimit : ratioBasedLimit;
   }
 
   private boolean hasCapacityBasedOnLimit(int limit, int currentCapacityUsed, int requiredCapacity)
@@ -354,9 +337,8 @@ public class ImmutableWorkerInfo
     return limit - currentCapacityUsed >= requiredCapacity;
   }
 
-  private int calculateTaskCapacityFromRatio(double taskSlotRatio)
+  private int calculateTaskCapacityFromRatio(double taskSlotRatio, int totalCapacity)
   {
-    int totalCapacity = worker.getCapacity();
     int workerParallelIndexCapacity = (int) Math.floor(taskSlotRatio * totalCapacity);
     return Math.max(1, Math.min(workerParallelIndexCapacity, totalCapacity));
   }
@@ -379,7 +361,7 @@ public class ImmutableWorkerInfo
     if (currParallelIndexCapacityUsed != that.currParallelIndexCapacityUsed) {
       return false;
     }
-    if (!typeSpecificCapacityMap.equals(that.typeSpecificCapacityMap)) {
+    if (!currCapacityUsedByTaskType.equals(that.currCapacityUsedByTaskType)) {
       return false;
     }
     if (!worker.equals(that.worker)) {
@@ -401,12 +383,8 @@ public class ImmutableWorkerInfo
 
   public Map<String, Integer> incrementTypeSpecificCapacity(String type, int capacityToAdd)
   {
-    Map<String, Integer> result = new HashMap<>(typeSpecificCapacityMap);
-    if (result.containsKey(type)) {
-      result.put(type, result.get(type) + capacityToAdd);
-    } else {
-      result.put(type, capacityToAdd);
-    }
+    Map<String, Integer> result = new HashMap<>(currCapacityUsedByTaskType);
+    result.merge(type, capacityToAdd, Integer::sum);
     return result;
   }
 
@@ -416,7 +394,7 @@ public class ImmutableWorkerInfo
     int result = worker.hashCode();
     result = 31 * result + currCapacityUsed;
     result = 31 * result + currParallelIndexCapacityUsed;
-    result = 31 * result + typeSpecificCapacityMap.hashCode();
+    result = 31 * result + currCapacityUsedByTaskType.hashCode();
     result = 31 * result + availabilityGroups.hashCode();
     result = 31 * result + runningTasks.hashCode();
     result = 31 * result + lastCompletedTaskTime.hashCode();
@@ -431,7 +409,7 @@ public class ImmutableWorkerInfo
            "worker=" + worker +
            ", currCapacityUsed=" + currCapacityUsed +
            ", currParallelIndexCapacityUsed=" + currParallelIndexCapacityUsed +
-           ", currTypeSpecificCapacityUsed=" + typeSpecificCapacityMap +
+           ", currCapacityUsedByTaskType=" + currCapacityUsedByTaskType +
            ", availabilityGroups=" + availabilityGroups +
            ", runningTasks=" + runningTasks +
            ", lastCompletedTaskTime=" + lastCompletedTaskTime +

@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.js.JavaScriptConfig;
 import org.easymock.EasyMock;
@@ -239,7 +240,7 @@ public class JavaScriptWorkerSelectStrategyTest
   private ImmutableWorkerInfo createMockWorker(int currCapacityUsed, boolean canRunTask, boolean isValidVersion)
   {
     ImmutableWorkerInfo worker = EasyMock.createMock(ImmutableWorkerInfo.class);
-    EasyMock.expect(worker.canRunTask(EasyMock.anyObject(Task.class), EasyMock.anyDouble())).andReturn(canRunTask).anyTimes();
+    EasyMock.expect(worker.canRunTask(EasyMock.anyObject(Task.class), EasyMock.anyObject(WorkerTaskRunnerConfig.class))).andReturn(canRunTask).anyTimes();
     EasyMock.expect(worker.getCurrCapacityUsed()).andReturn(currCapacityUsed).anyTimes();
     EasyMock.expect(worker.getCurrParallelIndexCapacityUsed()).andReturn(0).anyTimes();
     EasyMock.expect(worker.isValidVersion(EasyMock.anyString())).andReturn(isValidVersion).anyTimes();

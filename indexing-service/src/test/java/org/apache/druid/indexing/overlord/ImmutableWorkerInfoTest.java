@@ -27,6 +27,7 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
+import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -35,6 +36,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -211,7 +213,7 @@ public class ImmutableWorkerInfoTest
         ),
         3,
         0,
-        new HashMap<>(),
+        Collections.emptyMap(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:01Z"),
@@ -222,7 +224,7 @@ public class ImmutableWorkerInfoTest
         ),
         2,
         0,
-        new HashMap<>(),
+        Collections.emptyMap(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:02Z"),
@@ -237,11 +239,13 @@ public class ImmutableWorkerInfoTest
         new Worker("http", "testWorker2", "192.0.0.1", 10, "v1", WorkerConfig.DEFAULT_CATEGORY),
         6,
         0,
-        new HashMap<>(),
+        Collections.emptyMap(),
         ImmutableSet.of("grp1", "grp2"),
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:02Z")
     );
+
+    WorkerTaskRunnerConfig config = mock(WorkerTaskRunnerConfig.class);
 
 
     // Parallel index task
@@ -251,18 +255,20 @@ public class ImmutableWorkerInfoTest
     when(parallelIndexTask.getType()).thenReturn(ParallelIndexSupervisorTask.TYPE);
     when(parallelIndexTask.getTaskResource()).thenReturn(taskResource0);
 
-    Map<String, Number> taskLimitsMap = new HashMap<>();
+    Map<String, Double> taskRatiosMap = new HashMap<>();
+    Map<String, Integer> taskLimitsMap = new HashMap<>();
 
     // Since task satisifies parallel and total slot constraints, can run
-    taskLimitsMap.put(ParallelIndexSupervisorTask.TYPE, 0.5);
-    Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, taskLimitsMap));
+    when(config.getParallelIndexTaskSlotRatio()).thenReturn(0.5);
+    Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, config));
 
     // Since task fails the parallel slot constraint, it cannot run (3 > 1)
-    taskLimitsMap.put(ParallelIndexSupervisorTask.TYPE, 0.1);
-    Assert.assertFalse(workerInfo.canRunTask(parallelIndexTask, taskLimitsMap));
+    taskRatiosMap.put(ParallelIndexSupervisorTask.TYPE, 0.1);
+    when(config.getTaskSlotRatios()).thenReturn(taskRatiosMap);
+    Assert.assertFalse(workerInfo.canRunTask(parallelIndexTask, config));
 
-    taskLimitsMap.put(ParallelIndexSupervisorTask.TYPE, 1.0);
-    Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, taskLimitsMap));
+    taskRatiosMap.put(ParallelIndexSupervisorTask.TYPE, 1.0);
+    Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, config));
 
 
     // Some other indexing task
@@ -274,8 +280,8 @@ public class ImmutableWorkerInfoTest
 
     // Not a parallel index task ->  satisfies parallel index constraint
     // But does not satisfy the total slot constraint and cannot run (11 > 10)
-    taskLimitsMap.put(IndexTask.TYPE, 0.5);
-    Assert.assertFalse(workerInfo.canRunTask(anyOtherTask, taskLimitsMap));
+    taskRatiosMap.put(IndexTask.TYPE, 0.5);
+    Assert.assertFalse(workerInfo.canRunTask(anyOtherTask, config));
 
     // Task has an availability conflict ("grp1")
     TaskResource taskResource2 = mock(TaskResource.class);
@@ -286,8 +292,8 @@ public class ImmutableWorkerInfoTest
     when(grp1Task.getTaskResource()).thenReturn(taskResource2);
 
     // Satisifies parallel index and total index slot constraints but cannot run due availability
-    taskLimitsMap.put(RANDOM_TYPE, 0.3);
-    Assert.assertFalse(workerInfo.canRunTask(grp1Task, taskLimitsMap));
+    taskRatiosMap.put(RANDOM_TYPE, 0.3);
+    Assert.assertFalse(workerInfo.canRunTask(grp1Task, config));
 
     TaskResource taskResource3 = mock(TaskResource.class);
     when(taskResource1.getRequiredCapacity()).thenReturn(1);
@@ -300,13 +306,15 @@ public class ImmutableWorkerInfoTest
     mockStatusMap.put(MSQ_CONTROLLER_TYPE, 4);
 
     ImmutableWorkerInfo spyInfo = Mockito.spy(workerInfo);
-    when(spyInfo.getTypeSpecificCapacityMap()).thenReturn(mockStatusMap);
+    when(spyInfo.getCurrCapacityUsedByTaskType()).thenReturn(mockStatusMap);
     when(taskResource3.getRequiredCapacity()).thenReturn(1);
+    when(config.getTaskSlotLimits()).thenReturn(taskLimitsMap);
+
 
     taskLimitsMap.put(MSQ_CONTROLLER_TYPE, 4);
-    Assert.assertFalse(spyInfo.canRunTask(msqControllerTask, taskLimitsMap));
+    Assert.assertFalse(spyInfo.canRunTask(msqControllerTask, config));
     taskLimitsMap.put(MSQ_CONTROLLER_TYPE, 5);
-    Assert.assertTrue(spyInfo.canRunTask(msqControllerTask, taskLimitsMap));
+    Assert.assertTrue(spyInfo.canRunTask(msqControllerTask, config));
   }
 
   private void assertEqualsAndHashCode(ImmutableWorkerInfo o1, ImmutableWorkerInfo o2, boolean shouldMatch)
