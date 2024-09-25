@@ -29,6 +29,7 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import java.io.InputStream;
@@ -54,7 +55,8 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerTaskId,
-      StageId stageId
+      StageId stageId,
+      SketchEncoding sketchEncoding
   )
   {
     return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshot(stageId));
@@ -64,7 +66,8 @@ public class MSQTestWorkerClient implements WorkerClient
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
       StageId stageId,
-      long timeChunk
+      long timeChunk,
+      SketchEncoding sketchEncoding
   )
   {
     return Futures.immediateFuture(
