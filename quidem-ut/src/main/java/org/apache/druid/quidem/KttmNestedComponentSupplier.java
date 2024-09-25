@@ -60,23 +60,21 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
   {
     public Micro(TempDirProducer tempDirProducer)
     {
-      super(tempDirProducer, Fraction.getFraction(1, 1000), 1000);
+      super(tempDirProducer, Fraction.getFraction(1, 10000));
     }
   }
 
   private final Fraction fraction;
-  private final int maxRows;
 
   public KttmNestedComponentSupplier(TempDirProducer tempDirProducer)
   {
-    this(tempDirProducer, Fraction.ONE, Integer.MAX_VALUE);
+    this(tempDirProducer, Fraction.ONE);
   }
 
-  public KttmNestedComponentSupplier(TempDirProducer tempDirProducer, Fraction fraction, int maxRows)
+  public KttmNestedComponentSupplier(TempDirProducer tempDirProducer, Fraction fraction)
   {
     super(tempDirProducer);
     this.fraction = fraction;
-    this.maxRows = maxRows;
   }
 
   @Override
@@ -142,7 +140,6 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
       try {
         InputSource inputSource = new ScaledResoureInputDataSource(
             fraction,
-            maxRows,
             ResourceInputSource.of(
                 TestIndex.class.getClassLoader(),
                 "kttm-nested-v2-2019-08-25.json"
