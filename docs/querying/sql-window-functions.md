@@ -416,9 +416,6 @@ The number of rows considered for the `moving5` window for the `count5` column:
 - starts at a single row because there are no rows before the current one
 - grows up to five rows as defined by `ROWS BETWEEN 4 ROWS PRECEDING AND CURRENT ROW`
 
-## Window Functions specific context parameters
-- Window operators communicate results through `RowsAndColumns` objects. Set `enableRACOverWire` to `true` to enable the transfer of RACs over wire.
-
 ## Known issues
 
 The following are known issues with window functions:
