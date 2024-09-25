@@ -41,12 +41,10 @@ public class ScaledResoureInputDataSource extends AbstractInputSource
 {
   private final ResourceInputSource resourceInputSource;
   private final Fraction fraction;
-  private final int maxRows;
 
-  public ScaledResoureInputDataSource(Fraction fraction, int maxRows, ResourceInputSource resourceInputSource)
+  public ScaledResoureInputDataSource(Fraction fraction, ResourceInputSource resourceInputSource)
   {
     this.fraction = fraction;
-    this.maxRows = maxRows;
     this.resourceInputSource = resourceInputSource;
   }
 
@@ -66,7 +64,7 @@ public class ScaledResoureInputDataSource extends AbstractInputSource
   public InputSourceReader reader(InputRowSchema inputRowSchema, InputFormat inputFormat, File temporaryDirectory)
   {
     InputSourceReader reader = resourceInputSource.reader(inputRowSchema, inputFormat, temporaryDirectory);
-    return new FilteredReader(reader, this::filterPredicate, maxRows);
+    return new FilteredReader(reader, this::filterPredicate);
   }
 
   public boolean filterPredicate(InputRow inputRow)
@@ -76,68 +74,30 @@ public class ScaledResoureInputDataSource extends AbstractInputSource
 
   static class FilteredReader implements InputSourceReader
   {
-    private InputSourceReader reader;
-    private Predicate<InputRow> filterPredicate;
-    private int maxRows;
+    private final InputSourceReader reader;
+    private final Predicate<InputRow> filterPredicate;
 
-    public FilteredReader(InputSourceReader reader, Predicate<InputRow> filterPredicate, int maxRows)
+    public FilteredReader(InputSourceReader reader, Predicate<InputRow> filterPredicate)
     {
       this.reader = reader;
       this.filterPredicate = filterPredicate;
-      this.maxRows = maxRows;
     }
 
     @Override
     public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
     {
-      FilteringCloseableInputRowIterator filteredIterator = new FilteringCloseableInputRowIterator(
+      return new FilteringCloseableInputRowIterator(
           reader.read(inputStats),
           filterPredicate,
           NoopRowIngestionMeters.INSTANCE,
           new ParseExceptionHandler(NoopRowIngestionMeters.INSTANCE, false, 0, 0)
       );
-      return new LimitedCloseableIterator<>(filteredIterator, maxRows);
     }
 
     @Override
     public CloseableIterator<InputRowListPlusRawValues> sample() throws IOException
     {
       return reader.sample();
-    }
-  }
-
-  static class LimitedCloseableIterator<InputRow> implements CloseableIterator<InputRow>
-  {
-    private final CloseableIterator<InputRow> delegate;
-    private final int maxRows;
-    private int count = 0;
-
-    public LimitedCloseableIterator(CloseableIterator<InputRow> delegate, int maxRows)
-    {
-      this.delegate = delegate;
-      this.maxRows = maxRows;
-    }
-
-    @Override
-    public boolean hasNext()
-    {
-      return count < maxRows && delegate.hasNext();
-    }
-
-    @Override
-    public InputRow next()
-    {
-      if (count >= maxRows) {
-        throw new IllegalStateException("Exceeded maxRows");
-      }
-      count++;
-      return delegate.next();
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      delegate.close();
     }
   }
 }
