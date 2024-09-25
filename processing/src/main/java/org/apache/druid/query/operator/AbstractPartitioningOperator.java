@@ -29,12 +29,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-public abstract class BasePartitioningOperator implements Operator
+public abstract class AbstractPartitioningOperator implements Operator
 {
   protected final List<String> partitionColumns;
   protected final Operator child;
 
-  public BasePartitioningOperator(
+  public AbstractPartitioningOperator(
       List<String> partitionColumns,
       Operator child
   )

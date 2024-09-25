@@ -25,12 +25,12 @@ import java.util.List;
 /**
  * Base class for sort operators.
  */
-public abstract class BaseSortOperator implements Operator
+public abstract class AbstractSortOperator implements Operator
 {
   protected final Operator child;
   protected final List<ColumnWithDirection> sortColumns;
 
-  public BaseSortOperator(
+  public AbstractSortOperator(
       Operator child,
       List<ColumnWithDirection> sortColumns
   )

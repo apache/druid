@@ -35,8 +35,8 @@ import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.operator.BasePartitioningOperatorFactory;
-import org.apache.druid.query.operator.BaseSortOperatorFactory;
+import org.apache.druid.query.operator.AbstractPartitioningOperatorFactory;
+import org.apache.druid.query.operator.AbstractSortOperatorFactory;
 import org.apache.druid.query.operator.ColumnWithDirection;
 import org.apache.druid.query.operator.GlueingPartitioningOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
@@ -227,13 +227,13 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
   private ShuffleSpec findShuffleSpecForNextWindow(List<OperatorFactory> operatorFactories, int maxWorkerCount)
   {
-    BasePartitioningOperatorFactory partition = null;
-    BaseSortOperatorFactory sort = null;
+    AbstractPartitioningOperatorFactory partition = null;
+    AbstractSortOperatorFactory sort = null;
     for (OperatorFactory of : operatorFactories) {
-      if (of instanceof BasePartitioningOperatorFactory) {
-        partition = (BasePartitioningOperatorFactory) of;
-      } else if (of instanceof BaseSortOperatorFactory) {
-        sort = (BaseSortOperatorFactory) of;
+      if (of instanceof AbstractPartitioningOperatorFactory) {
+        partition = (AbstractPartitioningOperatorFactory) of;
+      } else if (of instanceof AbstractSortOperatorFactory) {
+        sort = (AbstractSortOperatorFactory) of;
       }
     }
 
@@ -332,11 +332,11 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     final List<OperatorFactory> operatorFactoryList = new ArrayList<>();
     final List<OperatorFactory> sortOperatorFactoryList = new ArrayList<>();
     for (OperatorFactory operatorFactory : operatorFactoryListFromQuery) {
-      if (operatorFactory instanceof BasePartitioningOperatorFactory) {
-        BasePartitioningOperatorFactory partition = (BasePartitioningOperatorFactory) operatorFactory;
+      if (operatorFactory instanceof AbstractPartitioningOperatorFactory) {
+        AbstractPartitioningOperatorFactory partition = (AbstractPartitioningOperatorFactory) operatorFactory;
         operatorFactoryList.add(new GlueingPartitioningOperatorFactory(partition.getPartitionColumns(), maxRowsMaterializedInWindow));
-      } else if (operatorFactory instanceof BaseSortOperatorFactory) {
-        BaseSortOperatorFactory sortOperatorFactory = (BaseSortOperatorFactory) operatorFactory;
+      } else if (operatorFactory instanceof AbstractSortOperatorFactory) {
+        AbstractSortOperatorFactory sortOperatorFactory = (AbstractSortOperatorFactory) operatorFactory;
         sortOperatorFactoryList.add(new PartitionSortOperatorFactory(sortOperatorFactory.getSortColumns()));
       } else {
         // Add all the PartitionSortOperator(s) before every window operator.

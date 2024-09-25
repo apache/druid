@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
-public class NaiveSortOperatorFactory extends BaseSortOperatorFactory
+public class NaiveSortOperatorFactory extends AbstractSortOperatorFactory
 {
   @JsonCreator
   public NaiveSortOperatorFactory(

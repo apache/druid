@@ -26,12 +26,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class BasePartitioningOperatorFactory implements OperatorFactory
+public abstract class AbstractPartitioningOperatorFactory implements OperatorFactory
 {
   protected final List<String> partitionColumns;
 
   @JsonCreator
-  public BasePartitioningOperatorFactory(
+  public AbstractPartitioningOperatorFactory(
       @JsonProperty("partitionColumns") List<String> partitionColumns
   )
   {
@@ -50,8 +50,8 @@ public abstract class BasePartitioningOperatorFactory implements OperatorFactory
   @Override
   public boolean validateEquivalent(OperatorFactory other)
   {
-    if (other instanceof BasePartitioningOperatorFactory) {
-      return partitionColumns.equals(((BasePartitioningOperatorFactory) other).getPartitionColumns());
+    if (other instanceof AbstractPartitioningOperatorFactory) {
+      return partitionColumns.equals(((AbstractPartitioningOperatorFactory) other).getPartitionColumns());
     }
     return false;
   }
@@ -71,7 +71,7 @@ public abstract class BasePartitioningOperatorFactory implements OperatorFactory
     if (obj == null || getClass() != obj.getClass()) {
       return false;
     }
-    BasePartitioningOperatorFactory other = (BasePartitioningOperatorFactory) obj;
+    AbstractPartitioningOperatorFactory other = (AbstractPartitioningOperatorFactory) obj;
     return Objects.equals(partitionColumns, other.partitionColumns);
   }
 

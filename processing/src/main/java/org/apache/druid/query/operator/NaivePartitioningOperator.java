@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Additionally, this assumes that data has been pre-sorted according to the partitioning columns.  If it is
  * given data that has not been pre-sorted, an exception is expected to be thrown.
  */
-public class NaivePartitioningOperator extends BasePartitioningOperator
+public class NaivePartitioningOperator extends AbstractPartitioningOperator
 {
   public NaivePartitioningOperator(
       List<String> partitionColumns,

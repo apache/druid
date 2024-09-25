@@ -43,7 +43,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * <p>
  * Additionally, this assumes that data has been pre-sorted according to the partitioning columns.
  */
-public class GlueingPartitioningOperator extends BasePartitioningOperator
+public class GlueingPartitioningOperator extends AbstractPartitioningOperator
 {
   private final int maxRowsMaterialized;
   private RowsAndColumns previousRac;

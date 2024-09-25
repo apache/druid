@@ -30,7 +30,7 @@ import java.util.List;
  * This operator sorts rows inside partitioned RACs, on the sort columns.
  * This operator expects to receive a "complete" partition of data. Each input RAC is expected to be a separate partition.
  */
-public class PartitionSortOperator extends BaseSortOperator
+public class PartitionSortOperator extends AbstractSortOperator
 {
   public PartitionSortOperator(
       Operator child,

@@ -25,12 +25,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class BaseSortOperatorFactory implements OperatorFactory
+public abstract class AbstractSortOperatorFactory implements OperatorFactory
 {
   protected final List<ColumnWithDirection> sortColumns;
 
   @JsonCreator
-  public BaseSortOperatorFactory(
+  public AbstractSortOperatorFactory(
       @JsonProperty("columns") List<ColumnWithDirection> sortColumns
   )
   {
@@ -49,8 +49,8 @@ public abstract class BaseSortOperatorFactory implements OperatorFactory
   @Override
   public boolean validateEquivalent(OperatorFactory other)
   {
-    if (other instanceof BaseSortOperatorFactory) {
-      return sortColumns.equals(((BaseSortOperatorFactory) other).getSortColumns());
+    if (other instanceof AbstractSortOperatorFactory) {
+      return sortColumns.equals(((AbstractSortOperatorFactory) other).getSortColumns());
     }
     return false;
   }
@@ -70,7 +70,7 @@ public abstract class BaseSortOperatorFactory implements OperatorFactory
     if (obj == null || getClass() != obj.getClass()) {
       return false;
     }
-    BaseSortOperatorFactory other = (BaseSortOperatorFactory) obj;
+    AbstractSortOperatorFactory other = (AbstractSortOperatorFactory) obj;
     return Objects.equals(sortColumns, other.sortColumns);
   }
 

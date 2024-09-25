@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Objects;
 
-public class GlueingPartitioningOperatorFactory extends BasePartitioningOperatorFactory
+public class GlueingPartitioningOperatorFactory extends AbstractPartitioningOperatorFactory
 {
   private final int maxRowsMaterialized;
 

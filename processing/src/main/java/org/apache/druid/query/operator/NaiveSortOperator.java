@@ -31,7 +31,7 @@ import java.util.List;
  * that it has to accumulate all of the data of its child operator first before it can sort.  This limitation
  * means that hopefully this operator is only planned in a very small number of circumstances.
  */
-public class NaiveSortOperator extends BaseSortOperator
+public class NaiveSortOperator extends AbstractSortOperator
 {
   public NaiveSortOperator(
       Operator child,
