@@ -24,7 +24,7 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ComponentSupplier;
 import org.junit.jupiter.api.Test;
 
-@ComponentSupplier(KttmNestedComponentSupplier.class)
+@ComponentSupplier(KttmNestedComponentSupplier.Micro.class)
 public class KttmNestedComponentSupplierTest extends BaseCalciteQueryTest
 {
   @Test

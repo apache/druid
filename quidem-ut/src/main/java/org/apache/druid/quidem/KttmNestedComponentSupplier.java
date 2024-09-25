@@ -20,7 +20,7 @@
 package org.apache.druid.quidem;
 
 import com.google.inject.Injector;
-import org.apache.commons.lang.math.Fraction;
+import org.apache.commons.lang3.math.Fraction;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -56,17 +56,26 @@ import java.util.UUID;
 
 public class KttmNestedComponentSupplier extends StandardComponentSupplier
 {
-  private Fraction fraction;
+  public static class Micro extends KttmNestedComponentSupplier {
+    public Micro(TempDirProducer tempDirProducer)
+    {
+      super(tempDirProducer, Fraction.getFraction(1, 10000), Integer.MAX_VALUE);
+    }
+  }
+
+  private final Fraction fraction;
+  private final int maxRows;
 
   public KttmNestedComponentSupplier(TempDirProducer tempDirProducer)
   {
-    this(tempDirProducer, Fraction.ONE);
+    this(tempDirProducer, Fraction.ONE, Integer.MAX_VALUE);
   }
 
-  public KttmNestedComponentSupplier(TempDirProducer tempDirProducer, Fraction fraction)
+  public KttmNestedComponentSupplier(TempDirProducer tempDirProducer, Fraction fraction, int maxRows)
   {
     super(tempDirProducer);
     this.fraction = fraction;
+    this.maxRows = maxRows;
   }
 
   @Override
@@ -132,6 +141,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
       try {
         InputSource inputSource = new ScaledResoureInputDataSource(
             fraction,
+            maxRows,
             ResourceInputSource.of(
                 TestIndex.class.getClassLoader(),
                 "kttm-nested-v2-2019-08-25.json"
