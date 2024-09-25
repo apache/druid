@@ -101,6 +101,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   private final VirtualColumns frameWriterVirtualColumns;
   private final Closer closer = Closer.create();
 
+  private CursorHolder cursorHolder;
   private Cursor cursor;
   private Segment segment;
   private final SimpleSettableOffset cursorOffset = new SimpleAscendingOffset(Integer.MAX_VALUE);
@@ -156,6 +157,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   @Override
   public void cleanup() throws IOException
   {
+    closer.register(cursorHolder);
     closer.register(frameWriter);
     closer.register(super::cleanup);
     closer.close();
@@ -302,16 +304,16 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
           );
         }
 
-        final CursorHolder cursorHolder = closer.register(
-            cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null))
-        );
+        final CursorHolder nextCursorHolder =
+            cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null));
         final Cursor nextCursor = cursorHolder.asCursor();
 
         if (nextCursor == null) {
           // no cursor
+          nextCursorHolder.close();
           return ReturnOrAwait.returnObject(Unit.instance());
         }
-        final long rowsFlushed = setNextCursor(nextCursor, frameSegment);
+        final long rowsFlushed = setNextCursor(nextCursorHolder, nextCursor, frameSegment);
 
         if (rowsFlushed > 0) {
           return ReturnOrAwait.runAgain();
@@ -415,9 +417,19 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     }
   }
 
-  private long setNextCursor(final Cursor cursor, final Segment segment) throws IOException
+  private long setNextCursor(
+      final CursorHolder cursorHolder,
+      final Cursor cursor,
+      final Segment segment
+  ) throws IOException
   {
     final long rowsFlushed = flushFrameWriter();
+    if (this.cursorHolder != null) {
+      // Close here, don't add to the processor-level Closer, to avoid leaking CursorHolders. We may generate many
+      // CursorHolders per instance of this processor, and we need to close them as we go, not all at the end.
+      this.cursorHolder.close();
+    }
+    this.cursorHolder = cursorHolder;
     this.cursor = cursor;
     this.segment = segment;
     this.cursorOffset.reset();
