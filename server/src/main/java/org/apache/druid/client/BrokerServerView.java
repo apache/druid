@@ -400,7 +400,7 @@ public class BrokerServerView implements TimelineServerView
   }
 
   @Override
-  public List<DruidServerMetadata> getDruidServerMetadata()
+  public List<DruidServerMetadata> getDruidServerMetadatas()
   {
     // Override default implementation for better performance.
     final List<DruidServerMetadata> retVal = new ArrayList<>(clients.size());

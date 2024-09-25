@@ -159,10 +159,7 @@ public class DartWorkerResource
    * by {@link #httpPostWorkOrder(WorkOrder, String, HttpServletRequest)}.
    */
   @Path("/workers/{queryId}")
-  public Object httpCallWorker(
-      @PathParam("queryId") final String queryId,
-      @Context final HttpServletRequest req
-  )
+  public Object httpCallWorker(@PathParam("queryId") final String queryId)
   {
     final WorkerResource resource = workerRunner.getWorkerResource(queryId);
 

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.server.DruidNode;
@@ -54,10 +55,13 @@ public class ControllerServerId
   {
     final Matcher matcher = PATTERN.matcher(s);
     if (matcher.matches()) {
-      return new ControllerServerId(matcher.group(1), Long.parseLong(matcher.group(2)));
-    } else {
-      throw new IAE("Invalid controllerId[%s]", s);
+      final Long epoch = Longs.tryParse(matcher.group(2));
+      if (epoch != null) {
+        return new ControllerServerId(matcher.group(1), epoch);
+      }
     }
+
+    throw new IAE("Invalid controllerId[%s]", s);
   }
 
   /**

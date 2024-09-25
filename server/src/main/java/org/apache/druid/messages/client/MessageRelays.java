@@ -52,7 +52,7 @@ public class MessageRelays<MessageType>
   private final DruidNodeDiscoveryProvider discoveryProvider;
   private final MessageRelayFactory<MessageType> messageRelayFactory;
   private final NodeRole nodeRole;
-  private final Listener listener;
+  private final MessageRelaysListener listener;
 
   private volatile DruidNodeDiscovery discovery;
 
@@ -65,7 +65,7 @@ public class MessageRelays<MessageType>
     this.discoveryProvider = discoveryProvider;
     this.messageRelayFactory = messageRelayFactory;
     this.nodeRole = nodeRole;
-    this.listener = new Listener();
+    this.listener = new MessageRelaysListener();
   }
 
   @LifecycleStart
@@ -99,7 +99,7 @@ public class MessageRelays<MessageType>
   /**
    * Discovery listener. Creates and tears down individual host relays.
    */
-  class Listener implements DruidNodeDiscovery.Listener
+  class MessageRelaysListener implements DruidNodeDiscovery.Listener
   {
     @Override
     public void nodesAdded(final Collection<DiscoveryDruidNode> nodes)

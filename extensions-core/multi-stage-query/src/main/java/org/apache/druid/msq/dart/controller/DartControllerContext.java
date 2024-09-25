@@ -120,7 +120,7 @@ public class DartControllerContext implements ControllerContext
       final MSQSpec querySpec
   )
   {
-    final List<DruidServerMetadata> servers = serverView.getDruidServerMetadata();
+    final List<DruidServerMetadata> servers = serverView.getDruidServerMetadatas();
 
     // Lock in the list of workers when creating the kernel config. There is a race here: the serverView itself is
     // allowed to float. If a segment moves to a new server that isn't part of our list after the WorkerManager is

@@ -19,6 +19,7 @@
 
 package org.apache.druid.rpc;
 
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -33,7 +34,7 @@ public class FixedServiceLocator implements ServiceLocator
 
   public FixedServiceLocator(final ServiceLocations locations)
   {
-    this.locations = locations;
+    this.locations = Preconditions.checkNotNull(locations);
   }
 
   public FixedServiceLocator(final ServiceLocation location)

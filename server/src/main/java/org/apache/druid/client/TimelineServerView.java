@@ -51,7 +51,7 @@ public interface TimelineServerView extends ServerView
   /**
    * Returns a snapshot of the current set of server metadata.
    */
-  default List<DruidServerMetadata> getDruidServerMetadata()
+  default List<DruidServerMetadata> getDruidServerMetadatas()
   {
     final List<ImmutableDruidServer> druidServers = getDruidServers();
     final List<DruidServerMetadata> metadatas = new ArrayList<>(druidServers.size());
