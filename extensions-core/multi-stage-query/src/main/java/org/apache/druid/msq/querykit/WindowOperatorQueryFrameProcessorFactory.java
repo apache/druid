@@ -59,20 +59,17 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   private final WindowOperatorQuery query;
   private final List<OperatorFactory> operatorList;
   private final RowSignature stageRowSignature;
-  private final int maxRowsMaterializedInWindow;
 
   @JsonCreator
   public WindowOperatorQueryFrameProcessorFactory(
       @JsonProperty("query") WindowOperatorQuery query,
       @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
-      @JsonProperty("stageRowSignature") RowSignature stageRowSignature,
-      @JsonProperty("maxRowsMaterializedInWindow") int maxRowsMaterializedInWindow
+      @JsonProperty("stageRowSignature") RowSignature stageRowSignature
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
     this.operatorList = Preconditions.checkNotNull(operatorFactoryList, "bad operator");
     this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
-    this.maxRowsMaterializedInWindow = maxRowsMaterializedInWindow;
   }
 
   @JsonProperty("query")
@@ -91,12 +88,6 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   public RowSignature getSignature()
   {
     return stageRowSignature;
-  }
-
-  @JsonProperty("maxRowsMaterializedInWindow")
-  public int getMaxRowsMaterializedInWindow()
-  {
-    return maxRowsMaterializedInWindow;
   }
 
   @Override
@@ -147,8 +138,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
               stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes),
               readableInput.getChannelFrameReader(),
               frameContext.jsonMapper(),
-              operatorList,
-              maxRowsMaterializedInWindow
+              operatorList
           );
         }
     );
@@ -170,8 +160,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       return false;
     }
     WindowOperatorQueryFrameProcessorFactory that = (WindowOperatorQueryFrameProcessorFactory) o;
-    return maxRowsMaterializedInWindow == that.maxRowsMaterializedInWindow
-           && Objects.equals(query, that.query)
+    return Objects.equals(query, that.query)
            && Objects.equals(operatorList, that.operatorList)
            && Objects.equals(stageRowSignature, that.stageRowSignature);
   }
@@ -179,6 +168,6 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, operatorList, stageRowSignature, maxRowsMaterializedInWindow);
+    return Objects.hash(query, operatorList, stageRowSignature);
   }
 }

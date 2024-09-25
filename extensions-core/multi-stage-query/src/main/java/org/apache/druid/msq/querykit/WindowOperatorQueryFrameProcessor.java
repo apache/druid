@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.Operator;
 import org.apache.druid.query.operator.OperatorFactory;
@@ -88,8 +89,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       FrameWriterFactory frameWriterFactory,
       FrameReader frameReader,
       ObjectMapper jsonMapper,
-      final List<OperatorFactory> operatorFactoryList,
-      final int maxRowsMaterializedInWindow
+      final List<OperatorFactory> operatorFactoryList
   )
   {
     this.inputChannel = inputChannel;
@@ -98,7 +98,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.operatorFactoryList = operatorFactoryList;
     this.frameRowsAndCols = new ArrayList<>();
     this.resultRowAndCols = new ArrayList<>();
-    this.maxRowsMaterialized = maxRowsMaterializedInWindow;
+    this.maxRowsMaterialized = MultiStageQueryContext.getMaxRowsMaterializedInWindow(query.context());
 
     this.frameReader = frameReader;
 

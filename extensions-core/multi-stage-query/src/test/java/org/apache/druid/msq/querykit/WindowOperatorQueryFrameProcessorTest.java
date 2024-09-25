@@ -39,6 +39,7 @@ import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -67,47 +68,26 @@ import java.util.Map;
 public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBase
 {
   @Test
-  public void testBatchingOfPartitionByKeys_singleBatch() throws Exception
+  public void testProcessorRun() throws Exception
   {
-    // With maxRowsMaterialized=100, we will get 1 frame:
-    // [1, 1, 2, 2, 2, 3, 3]
-    validateBatching(100, 1);
+    runProcessor(100, 1);
   }
 
   @Test
-  public void testBatchingOfPartitionByKeys_multipleBatches_1() throws Exception
-  {
-    // With maxRowsMaterialized=5, we will get 2 frames:
-    // [1, 1, 2, 2, 2]
-    // [3, 3]
-    validateBatching(5, 2);
-  }
-
-  @Test
-  public void testBatchingOfPartitionByKeys_multipleBatches_2() throws Exception
-  {
-    // With maxRowsMaterialized=4, we will get 3 frames:
-    // [1, 1]
-    // [2, 2, 2]
-    // [3, 3]
-    validateBatching(4, 3);
-  }
-
-  @Test
-  public void testBatchingOfPartitionByKeys_TooManyRowsInAWindowFault()
+  public void testMaxRowsMaterializedConstraint()
   {
     final RuntimeException e = Assert.assertThrows(
         RuntimeException.class,
-        () -> validateBatching(2, 3)
+        () -> runProcessor(2, 3)
     );
     MatcherAssert.assertThat(
         ((MSQException) e.getCause().getCause()).getFault(),
         CoreMatchers.instanceOf(TooManyRowsInAWindowFault.class)
     );
-    Assert.assertTrue(e.getMessage().contains("TooManyRowsInAWindow: Too many rows in a window (requested = 3, max = 2)"));
+    Assert.assertTrue(e.getMessage().contains("TooManyRowsInAWindow: Too many rows in a window (requested = 7, max = 2)"));
   }
 
-  public void validateBatching(int maxRowsMaterialized, int numFramesWritten) throws Exception
+  public void runProcessor(int maxRowsMaterialized, int expectedNumFramesWritten) throws Exception
   {
     final ReadableInput factChannel = buildWindowTestInputChannel();
 
@@ -141,7 +121,9 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
                      .context(new HashMap<>())
                      .build()),
         new LegacySegmentSpec(Intervals.ETERNITY),
-        new HashMap<>(),
+        new HashMap<>(
+            ImmutableMap.of(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW, maxRowsMaterialized)
+        ),
         outputSignature,
         ImmutableList.of(
             new WindowOperatorFactory(new WindowRowNumberProcessor("w0"))
@@ -169,8 +151,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
         new ObjectMapper(),
         ImmutableList.of(
             new WindowOperatorFactory(new WindowRowNumberProcessor("w0"))
-        ),
-        maxRowsMaterialized
+        )
     );
 
     exec.runFully(processor, null);
@@ -183,7 +164,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
     final List<List<Object>> rows = rowsFromProcessor.toList();
 
     long actualNumFrames = Arrays.stream(channelCounters.snapshot().getFrames()).findFirst().getAsLong();
-    Assert.assertEquals(numFramesWritten, actualNumFrames);
+    Assert.assertEquals(expectedNumFramesWritten, actualNumFrames);
     Assert.assertEquals(7, rows.size());
   }
 

@@ -200,6 +200,14 @@ public class MultiStageQueryContext
     );
   }
 
+  public static int getMaxRowsMaterializedInWindow(final QueryContext queryContext)
+  {
+    return queryContext.getInt(
+        MAX_ROWS_MATERIALIZED_IN_WINDOW,
+        Limits.MAX_ROWS_MATERIALIZED_IN_WINDOW
+    );
+  }
+
   public static int getMaxConcurrentStages(final QueryContext queryContext)
   {
     return queryContext.getInt(

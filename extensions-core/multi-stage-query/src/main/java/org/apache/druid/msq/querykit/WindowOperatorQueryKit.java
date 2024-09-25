@@ -26,7 +26,6 @@ import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
@@ -104,12 +103,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     final ShuffleSpec finalWindowStageShuffleSpec = resultShuffleSpecFactory.build(finalWindowClusterBy, false);
     final RowSignature finalWindowStageRowSignature = computeSignatureForFinalWindowStage(rowSignature, finalWindowClusterBy, segmentGranularity);
 
-    final int maxRowsMaterialized;
-    if (originalQuery.context() != null && originalQuery.context().containsKey(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW)) {
-      maxRowsMaterialized = (int) originalQuery.context().get(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW);
-    } else {
-      maxRowsMaterialized = Limits.MAX_ROWS_MATERIALIZED_IN_WINDOW;
-    }
+    final int maxRowsMaterialized = MultiStageQueryContext.getMaxRowsMaterializedInWindow(originalQuery.context());
 
     // There are multiple windows present in the query.
     // Create stages for each window in the query.
@@ -182,8 +176,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                          .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
                              queryToRun,
                              getOperatorFactoryListForStageDefinition(operatorList.get(i), maxRowsMaterialized),
-                             stageRowSignature,
-                             maxRowsMaterialized
+                             stageRowSignature
                          ))
       );
     }
