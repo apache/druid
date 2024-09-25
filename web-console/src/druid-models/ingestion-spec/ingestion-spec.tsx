@@ -398,6 +398,10 @@ export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
   return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
 }
 
+export function isFixedFormatSource(spec: Partial<IngestionSpec>): boolean {
+  return oneOf(deepGet(spec, 'spec.ioConfig.inputSource.type'), 'druid', 'delta');
+}
+
 export function getPossibleSystemFieldsForSpec(spec: Partial<IngestionSpec>): string[] {
   const inputSource = deepGet(spec, 'spec.ioConfig.inputSource');
   if (!inputSource) return [];
@@ -1615,6 +1619,9 @@ export function guessDataSourceNameFromInputSource(inputSource: InputSource): st
         (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
       return actualPath ? actualPath.path : uriPath ? filenameFromPath(uriPath) : undefined;
     }
+
+    case 'delta':
+      return inputSource.tablePath ? filenameFromPath(inputSource.tablePath) : undefined;
 
     case 'http':
       return Array.isArray(inputSource.uris) ? filenameFromPath(inputSource.uris[0]) : undefined;
