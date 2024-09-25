@@ -90,11 +90,12 @@ public class ScaledResoureInputDataSource extends AbstractInputSource
     @Override
     public CloseableIterator<InputRow> read(InputStats inputStats) throws IOException
     {
+      NoopRowIngestionMeters rowIngestionMeters = new NoopRowIngestionMeters();
       FilteringCloseableInputRowIterator filteredIterator = new FilteringCloseableInputRowIterator(
           reader.read(inputStats),
           filterPredicate,
-          NoopRowIngestionMeters.INSTANCE,
-          new ParseExceptionHandler(NoopRowIngestionMeters.INSTANCE, false, 0, 0)
+          rowIngestionMeters,
+          new ParseExceptionHandler(rowIngestionMeters, false, 0, 0)
       );
       return new LimitedCloseableIterator<>(filteredIterator, maxRows);
     }
