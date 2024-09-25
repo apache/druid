@@ -60,7 +60,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
   {
     public Micro(TempDirProducer tempDirProducer)
     {
-      super(tempDirProducer, Fraction.getFraction(1, 10000));
+      super(tempDirProducer, Fraction.getFraction(1, 1000));
     }
   }
 

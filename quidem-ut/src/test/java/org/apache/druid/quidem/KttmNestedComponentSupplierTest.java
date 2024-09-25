@@ -28,16 +28,12 @@ import org.junit.jupiter.api.Test;
 public class KttmNestedComponentSupplierTest extends BaseCalciteQueryTest
 {
   @Test
-  public void testInformationSchemaSchemata()
+  public void testDataset()
   {
     msqIncompatible();
     testBuilder()
         .sql("SELECT count(1),sum(session_length) from kttm_nested")
-        .expectedResults(
-            ImmutableList.of(
-                new Object[] {446L, 744194663L}
-            )
-        )
+        .expectedResults(ImmutableList.of(new Object[] {486L, 108277286L}))
         .run();
   }
 }

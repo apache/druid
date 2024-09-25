@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.parsers;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.Iterables;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import org.apache.druid.guice.annotations.ExtensionPoint;
@@ -196,6 +197,12 @@ public class ObjectFlatteners
                                    public Object setValue(final Object value)
                                    {
                                      throw new UnsupportedOperationException();
+                                   }
+
+                                   @Override
+                                   public int hashCode()
+                                   {
+                                     return Objects.hashCode(field, getValue());
                                    }
                                  };
                                }
