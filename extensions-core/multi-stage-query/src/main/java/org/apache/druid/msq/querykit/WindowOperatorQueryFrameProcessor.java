@@ -34,6 +34,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.error.MSQException;
@@ -54,6 +55,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -451,6 +453,14 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     int match = 0;
     for (String columnName : partitionColumnNames) {
       int i = frameReader.signature().indexOf(columnName);
+      if (ColumnType.STRING.equals(frameReader.signature().getColumnType(columnName).get()) && (row1.get(i) instanceof List || row2.get(i) instanceof List)) {
+        // special handling to reject MVDs
+        throw new UOE(
+            "Encountered a multi value column [%s]. Window processing does not support MVDs. "
+            + "Consider using UNNEST or MV_TO_ARRAY.",
+            columnName
+        );
+      }
       if (typeStrategies[i].compare(row1.get(i), row2.get(i)) == 0) {
         match++;
       }
