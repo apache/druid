@@ -1,0 +1,3 @@
+Tests mentioning this file contain queries which were recorded while using a BI tool that was issuing druid queries behind the scenes.
+
+As these tests are generated there shouldn't be a need to ever change the tests manually - unless there is some backward incompatible change.

@@ -1,3 +1,4 @@
+#The queries in this file were generated; see README.generated
 #started Wed Jul 10 19:19:15 IST 2024
 !use druidtest:///?componentSupplier=KttmNestedComponentSupplier
 !set outputformat mysql

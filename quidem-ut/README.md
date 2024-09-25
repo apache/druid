@@ -23,7 +23,7 @@ Enables to write sql level tests easily.
 Can be used to write tests against existing test backends (ComponentSupplier) - by doing so the testcases can be moved closer to the exercised codes.
 
 These tests might come from real usages of Druid by some external tool - by utilizing the capture mode of this module iq tests could be captured and validated later that they retain their results.
-By adding tests for those here could act as an early warning that something might have changed. The `kttm_*` tests contains queries that were recorded while using a BI tool that is issuing druid queries behind the scenes. 
+By adding tests for those here could act as an early warning that something might have changed.
 
 ## Usage
 
