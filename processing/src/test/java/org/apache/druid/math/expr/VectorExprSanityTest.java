@@ -272,6 +272,16 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testCastArraysRoundTrip()
+  {
+    testExpression("cast(cast(s1, 'ARRAY<STRING>'), 'STRING')", types);
+    testExpression("cast(cast(d1, 'ARRAY<DOUBLE>'), 'DOUBLE')", types);
+    testExpression("cast(cast(d1, 'ARRAY<STRING>'), 'DOUBLE')", types);
+    testExpression("cast(cast(l1, 'ARRAY<LONG>'), 'LONG')", types);
+    testExpression("cast(cast(l1, 'ARRAY<STRING>'), 'LONG')", types);
+  }
+
+  @Test
   public void testJsonFns()
   {
     testExpression("json_object('k1', s1, 'k2', l1)", types);
