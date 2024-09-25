@@ -124,7 +124,7 @@ public interface Controller
   /**
    * Returns whether this controller has a worker with the given ID.
    */
-  boolean hasWorker(final String workerId);
+  boolean hasWorker(String workerId);
 
   @Nullable
   TaskReport.ReportMap liveReports();

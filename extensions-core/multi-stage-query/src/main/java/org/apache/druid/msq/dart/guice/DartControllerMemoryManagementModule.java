@@ -39,7 +39,7 @@ public class DartControllerMemoryManagementModule implements DruidModule
    * Allocate up to 15% of memory for the MSQ framework. This accounts for additional overhead due to native queries,
    * the segment timeline, and lookups (which aren't accounted for by our {@link MemoryIntrospector}).
    */
-  public static final double USABLE_MEMORY_FRACTION = 0.2;
+  public static final double USABLE_MEMORY_FRACTION = 0.15;
 
   @Override
   public void configure(Binder binder)
