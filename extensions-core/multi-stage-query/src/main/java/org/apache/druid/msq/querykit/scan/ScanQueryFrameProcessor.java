@@ -223,7 +223,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         cursorYielder.close();
         return ReturnOrAwait.returnObject(handedOffSegments);
       } else {
-        final long rowsFlushed = setNextCursor(cursorYielder.get(), null);
+        final long rowsFlushed = setNextCursor(null, cursorYielder.get(), null);
         closer.register(cursorYielder);
         if (rowsFlushed > 0) {
           return ReturnOrAwait.runAgain();
@@ -258,16 +258,16 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         );
       }
 
-      final CursorHolder cursorHolder = closer.register(
-          cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null))
-      );
+      final CursorHolder nextCursorHolder =
+          cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null));
       final Cursor nextCursor = cursorHolder.asCursor();
 
       if (nextCursor == null) {
         // No cursors!
+        nextCursorHolder.close();
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
-        final long rowsFlushed = setNextCursor(nextCursor, segmentHolder.get().getSegment());
+        final long rowsFlushed = setNextCursor(nextCursorHolder, nextCursor, segmentHolder.get().getSegment());
         assert rowsFlushed == 0; // There's only ever one cursor when running with a segment
       }
     }
@@ -418,7 +418,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
   }
 
   private long setNextCursor(
-      final CursorHolder cursorHolder,
+      @Nullable final CursorHolder cursorHolder,
       final Cursor cursor,
       final Segment segment
   ) throws IOException
