@@ -20,6 +20,8 @@
 package org.apache.druid.quidem;
 
 import com.google.inject.Injector;
+import org.apache.commons.lang.math.Fraction;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -54,9 +56,17 @@ import java.util.UUID;
 
 public class KttmNestedComponentSupplier extends StandardComponentSupplier
 {
+  private Fraction fraction;
+
   public KttmNestedComponentSupplier(TempDirProducer tempDirProducer)
   {
+    this(tempDirProducer, Fraction.ONE);
+  }
+
+  public KttmNestedComponentSupplier(TempDirProducer tempDirProducer, Fraction fraction)
+  {
     super(tempDirProducer);
+    this.fraction = fraction;
   }
 
   @Override
@@ -79,7 +89,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     return walker;
   }
 
-  public static QueryableIndex makeKttmIndex(File tmpDir)
+  public QueryableIndex makeKttmIndex(File tmpDir)
   {
     try {
       final File directory = new File(tmpDir, StringUtils.format("kttm-index-%s", UUID.randomUUID()));
@@ -92,7 +102,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     }
   }
 
-  public static IncrementalIndex makeKttmNestedIndex()
+  public IncrementalIndex makeKttmNestedIndex()
   {
     final List<DimensionSchema> dimensions = Arrays.asList(
         new StringDimensionSchema("session"),
@@ -120,10 +130,14 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
     try {
       tmpDir = FileUtils.createTempDir("test-index-input-source");
       try {
-        ResourceInputSource inputSource = ResourceInputSource.of(
-            TestIndex.class.getClassLoader(),
-            "kttm-nested-v2-2019-08-25.json"
+        InputSource inputSource = new ScaledResoureInputDataSource(
+            fraction,
+            ResourceInputSource.of(
+                TestIndex.class.getClassLoader(),
+                "kttm-nested-v2-2019-08-25.json"
+            )
         );
+
         return IndexBuilder
             .create()
             .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
@@ -140,8 +154,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
             .inputFormat(NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT)
             .inputTmpDir(new File(tmpDir, "tmpKttm"))
             .buildIncrementalIndex();
-      }
-      finally {
+      } finally {
         FileUtils.deleteDirectory(tmpDir);
       }
     }

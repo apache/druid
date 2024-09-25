@@ -19,6 +19,7 @@
 
 package org.apache.druid.quidem;
 
+import org.apache.commons.lang.math.Fraction;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -37,14 +38,12 @@ import java.util.function.Predicate;
 
 public class ScaledResoureInputDataSource extends AbstractInputSource
 {
-  private int k;
-  private int n;
   private ResourceInputSource resourceInputSource;
+  private Fraction fraction;
 
-  public ScaledResoureInputDataSource(int k, int n, ResourceInputSource resourceInputSource)
+  public ScaledResoureInputDataSource(Fraction fraction, ResourceInputSource resourceInputSource)
   {
-    this.k = k;
-    this.n = n;
+    this.fraction = fraction;
     this.resourceInputSource = resourceInputSource;
   }
 
@@ -69,7 +68,7 @@ public class ScaledResoureInputDataSource extends AbstractInputSource
 
   public boolean filterPredicate(InputRow inputRow)
   {
-    return (Math.abs(inputRow.hashCode()) % n) < k;
+    return (Math.abs(inputRow.hashCode() % fraction.getDenominator())) < fraction.getNumerator();
   }
 
   static class FilteredReader implements InputSourceReader
