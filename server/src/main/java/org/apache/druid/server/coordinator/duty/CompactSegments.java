@@ -120,9 +120,11 @@ public class CompactSegments implements CoordinatorCustomDuty
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
+    // Coordinator supports only native engine for compaction
     run(
         params.getCompactionConfig(),
         params.getUsedSegmentsTimelinesPerDataSource(),
+        CompactionEngine.NATIVE,
         params.getCoordinatorStats()
     );
     return params;
@@ -131,6 +133,7 @@ public class CompactSegments implements CoordinatorCustomDuty
   public void run(
       DruidCompactionConfig dynamicConfig,
       Map<String, SegmentTimeline> dataSources,
+      CompactionEngine defaultEngine,
       CoordinatorRunStats stats
   )
   {
@@ -234,7 +237,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         currentRunAutoCompactionSnapshotBuilders,
         availableCompactionTaskSlots,
         iterator,
-        dynamicConfig.getEngine()
+        defaultEngine
     );
 
     stats.add(Stats.Compaction.MAX_SLOTS, compactionTaskCapacity);

@@ -50,6 +50,7 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.compaction.CompactionSimulateResult;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
@@ -928,6 +929,23 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     EasyMock.verify(serverInventoryView);
     EasyMock.verify(metadataRuleManager);
+  }
+
+  @Test
+  public void testSimulateRunWithEmptyDatasourceCompactionConfigs()
+  {
+    DruidDataSource dataSource = new DruidDataSource("dataSource", Collections.emptyMap());
+    DataSourcesSnapshot dataSourcesSnapshot =
+        new DataSourcesSnapshot(ImmutableMap.of(dataSource.getName(), dataSource.toImmutableDruidDataSource()));
+    EasyMock
+        .expect(segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments())
+        .andReturn(dataSourcesSnapshot)
+        .anyTimes();
+    EasyMock.replay(segmentsMetadataManager);
+    CompactionSimulateResult result = coordinator.simulateRunWithConfigUpdate(
+        new ClusterCompactionConfig(0.2, null, null, null)
+    );
+    Assert.assertEquals(Collections.emptyMap(), result.getCompactionStates());
   }
 
   private CountDownLatch createCountDownLatchAndSetPathChildrenCacheListenerWithLatch(
