@@ -59,7 +59,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
   public static class Micro extends KttmNestedComponentSupplier {
     public Micro(TempDirProducer tempDirProducer)
     {
-      super(tempDirProducer, Fraction.getFraction(1, 10000));
+      super(tempDirProducer, Fraction.getFraction(1, 10000), Integer.MAX_VALUE);
     }
   }
 
@@ -68,13 +68,14 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
 
   public KttmNestedComponentSupplier(TempDirProducer tempDirProducer)
   {
-    this(tempDirProducer, Fraction.ONE);
+    this(tempDirProducer, Fraction.ONE, Integer.MAX_VALUE);
   }
 
-  public KttmNestedComponentSupplier(TempDirProducer tempDirProducer, Fraction fraction)
+  public KttmNestedComponentSupplier(TempDirProducer tempDirProducer, Fraction fraction, int maxRows)
   {
     super(tempDirProducer);
     this.fraction = fraction;
+    this.maxRows = maxRows;
   }
 
   @Override
