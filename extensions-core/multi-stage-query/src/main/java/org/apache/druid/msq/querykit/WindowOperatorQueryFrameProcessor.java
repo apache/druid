@@ -66,9 +66,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private static final Logger log = new Logger(WindowOperatorQueryFrameProcessor.class);
 
   private final List<OperatorFactory> operatorFactoryList;
-  private final ArrayList<RowsAndColumns> frameRowsAndCols;
   private final ArrayList<RowsAndColumns> resultRowAndCols;
-  private int numRowsInFrameRowsAndCols;
+  private final RowsAndColumnsBuilder frameRowsAndColsBuilder;
   private final ReadableFrameChannel inputChannel;
   private final WritableFrameChannel outputChannel;
   private final FrameWriterFactory frameWriterFactory;
@@ -96,7 +95,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.outputChannel = outputChannel;
     this.frameWriterFactory = frameWriterFactory;
     this.operatorFactoryList = operatorFactoryList;
-    this.frameRowsAndCols = new ArrayList<>();
+    this.frameRowsAndColsBuilder = new RowsAndColumnsBuilder();
     this.resultRowAndCols = new ArrayList<>();
     this.maxRowsMaterialized = MultiStageQueryContext.getMaxRowsMaterializedInWindow(query.context());
 
@@ -160,9 +159,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       @Override
       public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
       {
-        RowsAndColumns rac = new ConcatRowsAndColumns(new ArrayList<>(frameRowsAndCols));
-        frameRowsAndCols.clear();
-        numRowsInFrameRowsAndCols = 0;
+        RowsAndColumns rac = frameRowsAndColsBuilder.build();
+        frameRowsAndColsBuilder.clear();
         ensureMaxRowsInAWindowConstraint(rac.numRows());
         receiver.push(rac);
 
@@ -196,9 +194,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       public void completed()
       {
         try {
-          // resultRowsAndCols has reference to frameRowsAndCols
-          // due to the chain of calls across the ops
-          // so we can clear after writing to output
           flushAllRowsAndCols(resultRowAndCols);
         }
         catch (IOException e) {
@@ -218,9 +213,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     AtomicInteger rowId = new AtomicInteger(0);
     createFrameWriterIfNeeded(rac, rowId);
     writeRacToFrame(rac, rowId);
-    frameRowsAndCols.clear();
     resultRowAndCols.clear();
-    numRowsInFrameRowsAndCols = 0;
+    frameRowsAndColsBuilder.clear();
   }
 
   /**
@@ -308,9 +302,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         null
     );
     // check if existing + newly added rows exceed guardrails
-    ensureMaxRowsInAWindowConstraint(frameRowsAndCols.size() + ldrc.numRows());
-    frameRowsAndCols.add(ldrc);
-    numRowsInFrameRowsAndCols += ldrc.numRows();
+    ensureMaxRowsInAWindowConstraint(frameRowsAndColsBuilder.getNumRows() + ldrc.numRows());
+    frameRowsAndColsBuilder.add(ldrc);
   }
 
   private void ensureMaxRowsInAWindowConstraint(int numRowsInWindow)
@@ -325,6 +318,40 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
   private boolean needToProcessBatch()
   {
-    return numRowsInFrameRowsAndCols >= maxRowsMaterialized / 2; // Can this be improved further?
+    return frameRowsAndColsBuilder.getNumRows() >= maxRowsMaterialized / 2; // Can this be improved further?
+  }
+
+  private static class RowsAndColumnsBuilder
+  {
+    private final List<RowsAndColumns> racList;
+    private int totalRows;
+
+    public RowsAndColumnsBuilder()
+    {
+      this.racList = new ArrayList<>();
+      this.totalRows = 0;
+    }
+
+    public void add(RowsAndColumns rac)
+    {
+      racList.add(rac);
+      totalRows += rac.numRows();
+    }
+
+    public int getNumRows()
+    {
+      return totalRows;
+    }
+
+    public RowsAndColumns build()
+    {
+      return new ConcatRowsAndColumns(new ArrayList<>(racList));
+    }
+
+    public void clear()
+    {
+      racList.clear();
+      totalRows = 0;
+    }
   }
 }
