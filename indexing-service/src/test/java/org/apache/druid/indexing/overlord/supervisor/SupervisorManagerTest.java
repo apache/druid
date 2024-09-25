@@ -63,10 +63,10 @@ public class SupervisorManagerTest extends EasyMockSupport
   private MetadataSupervisorManager metadataSupervisorManager;
 
   @Mock
-  private SeekableStreamSupervisor supervisor1;
+  private StreamSupervisor supervisor1;
 
   @Mock
-  private SeekableStreamSupervisor supervisor2;
+  private StreamSupervisor supervisor2;
 
   @Mock
   private Supervisor supervisor3;
