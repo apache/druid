@@ -31,16 +31,13 @@ public class KttmNestedComponentSupplierTest extends BaseCalciteQueryTest
   public void testInformationSchemaSchemata()
   {
     msqIncompatible();
-    testQuery(
-        "SELECT DISTINCT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA",
-        ImmutableList.of(),
-        ImmutableList.of(
-            new Object[]{"lookup"},
-            new Object[]{"view"},
-            new Object[]{"druid"},
-            new Object[]{"sys"},
-            new Object[]{"INFORMATION_SCHEMA"}
+    testBuilder()
+        .sql("SELECT count(1),sum(session_length) from kttm_nested")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {446L, 744194663L}
+            )
         )
-    );
+        .run();
   }
 }

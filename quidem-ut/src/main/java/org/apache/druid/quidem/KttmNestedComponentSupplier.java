@@ -56,10 +56,11 @@ import java.util.UUID;
 
 public class KttmNestedComponentSupplier extends StandardComponentSupplier
 {
-  public static class Micro extends KttmNestedComponentSupplier {
+  public static class Micro extends KttmNestedComponentSupplier
+  {
     public Micro(TempDirProducer tempDirProducer)
     {
-      super(tempDirProducer, Fraction.getFraction(1, 10000), Integer.MAX_VALUE);
+      super(tempDirProducer, Fraction.getFraction(1, 1000), 1000);
     }
   }
 
@@ -164,7 +165,8 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
             .inputFormat(NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT)
             .inputTmpDir(new File(tmpDir, "tmpKttm"))
             .buildIncrementalIndex();
-      } finally {
+      }
+      finally {
         FileUtils.deleteDirectory(tmpDir);
       }
     }
