@@ -31,8 +31,6 @@ public class NoopRowIngestionMeters implements RowIngestionMeters
 {
   private static final RowIngestionMetersTotals EMPTY_TOTALS = new RowIngestionMetersTotals(0, 0, 0, 0, 0);
 
-  public static final NoopRowIngestionMeters INSTANCE = new NoopRowIngestionMeters();
-
   @Override
   public long getProcessed()
   {
