@@ -417,7 +417,7 @@ The number of rows considered for the `moving5` window for the `count5` column:
 - grows up to five rows as defined by `ROWS BETWEEN 4 ROWS PRECEDING AND CURRENT ROW`
 
 ## Window Functions specific context parameters
-- Window operators communicate results through `RowsAndColumns` objects. To optimise the query time, set `enableRACOverWire` to `true`. This enables the transfer of RACs over wire.
+- Window operators communicate results through `RowsAndColumns` objects. Set `enableRACOverWire` to `true` to enable the transfer of RACs over wire.
 
 ## Known issues
 

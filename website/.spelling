@@ -2405,6 +2405,9 @@ ddSketch
 DDSketch
 druid-ddsketch
 numBins
+RowsAndColumns
+RACs
+enableRACOverWire
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
