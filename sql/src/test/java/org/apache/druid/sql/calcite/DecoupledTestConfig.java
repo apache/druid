@@ -96,7 +96,25 @@ public @interface DecoupledTestConfig
      * instead of  joining on condition (CAST("j0.k", 'DOUBLE') == "_j0.m1")
      * a vc was computed for CAST("j0.k", 'DOUBLE')
      */
-    EQUIV_PLAN_CAST_MATERIALIZED_EARLIER;
+    EQUIV_PLAN_CAST_MATERIALIZED_EARLIER,
+    /**
+     * Filter pushed down.
+     *
+     * Instead:
+     *  Filter -> Join -> Table
+     *  Join -> Filter -> Table
+     */
+    SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND,
+    /**
+     * Instead:
+     * Join (l=r && lCol='a') -> Gby
+     * Join (l=r) -> Gby[lCol='a]
+     */
+    FILTER_PUSHED_DOWN_FROM_JOIN_CAN_BE_MORE,
+    /**
+     * Strange things; needs more investigation
+     */
+    IRRELEVANT_SCANQUERY;
 
     public boolean isPresent()
     {

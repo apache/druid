@@ -1,0 +1,154 @@
+# testUsingSubqueryAsPartOfAndFilter@all_disabled@NullHandling=sql case-crc:5416b44a
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite false
+!set enableJoinFilterRewriteValueColumnFilters false
+!set enableRewriteJoinToFilter false
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT dim1, dim2, COUNT(*) FROM druid.foo
+WHERE dim2 IN (SELECT dim1 FROM druid.foo WHERE dim1 <> '')
+AND dim1 <> 'xxx'
+group by dim1, dim2 ORDER BY dim2;
++------+------+--------+
+| dim1 | dim2 | EXPR$2 |
++------+------+--------+
+| def  | abc  |      1 |
++------+------+--------+
+(1 row)
+
+!ok
+LogicalSort(sort0=[$1], dir0=[ASC])
+  LogicalAggregate(group=[{0, 1}], EXPR$2=[COUNT()])
+    LogicalJoin(condition=[=($1, $2)], joinType=[inner])
+      LogicalFilter(condition=[<>($0, 'xxx')])
+        LogicalProject(dim1=[$1], dim2=[$2])
+          LogicalTableScan(table=[[druid, foo]])
+      LogicalAggregate(group=[{1}])
+        LogicalFilter(condition=[<>($1, '')])
+          LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidSort(sort0=[$1], dir0=[ASC], druid=[logical])
+  DruidAggregate(group=[{0, 1}], EXPR$2=[COUNT()], druid=[logical])
+    DruidJoin(condition=[=($1, $2)], joinType=[inner])
+      DruidFilter(condition=[<>($0, 'xxx')])
+        DruidProject(dim1=[$1], dim2=[$2], druid=[logical])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidAggregate(group=[{1}], druid=[logical])
+        DruidFilter(condition=[<>($1, '')])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "equals",
+            "column" : "dim1",
+            "matchValueType" : "STRING",
+            "matchValue" : "xxx"
+          }
+        },
+        "columns" : [ "dim1", "dim2" ],
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "equals",
+            "column" : "dim1",
+            "matchValueType" : "STRING",
+            "matchValue" : ""
+          }
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "dim1",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d1",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ]
+  }
+}
+!nativePlan
