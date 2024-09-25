@@ -19,6 +19,7 @@
 
 package org.apache.druid.messages.server;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -102,6 +103,13 @@ public class OutboxImpl<MessageType> implements Outbox<MessageType>
     if (queue != null) {
       queue.stop();
     }
+  }
+
+  @VisibleForTesting
+  long getOutboxEpoch(final String clientHost)
+  {
+    final OutboxQueue<MessageType> queue = queues.get(clientHost);
+    return queue != null ? queue.epoch : MessageRelay.INIT;
   }
 
   /**
