@@ -54,6 +54,7 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -1501,7 +1502,8 @@ public class DruidQuery
         plannerContext.queryContextMap(),
         windowing.getSignature(),
         operators,
-        plannerContext.featureAvailable(EngineFeature.WINDOW_LEAF_OPERATOR) ? ImmutableList.of() : null
+        plannerContext.queryContext().getBoolean(PlannerContext.CTX_ENABLE_RAC_TRANSFER_OVER_WIRE, false)
+        && !plannerContext.featureAvailable(EngineFeature.WINDOW_LEAF_OPERATOR) ? null : ImmutableList.of()
     );
   }
 
