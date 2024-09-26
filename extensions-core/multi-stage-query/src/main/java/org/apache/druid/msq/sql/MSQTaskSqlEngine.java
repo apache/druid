@@ -387,7 +387,7 @@ public class MSQTaskSqlEngine implements SqlEngine
         final ColumnType oldDruidType = Calcites.getColumnTypeForRelDataType(oldSqlTypeField.getType());
         final RelDataType newSqlType = rootRel.getRowType().getFieldList().get(columnIndex).getType();
         final ColumnType newDruidType =
-            DimensionSchemaUtils.getDimensionType(Calcites.getColumnTypeForRelDataType(newSqlType), arrayIngestMode);
+            DimensionSchemaUtils.getDimensionType(columnName, Calcites.getColumnTypeForRelDataType(newSqlType), arrayIngestMode);
 
         if (newDruidType.isArray() && oldDruidType.is(ValueType.STRING)
             || (newDruidType.is(ValueType.STRING) && oldDruidType.isArray())) {
