@@ -168,12 +168,6 @@ The web console now supports the Kinesis input format.
 
 #### General ingestion
 
-#### Upgrading segments to higher versions
-
-**Asked Kashif for a better release note** When several segments share a load spec, Druid now considers every used and unused segment reference before killing files in deep storage.
-
-[#16667](https://github.com/apache/druid/pull/16667)
-
 #### Changed default for indexer task lock batch allocation wait time
 
 The default value for `druid.indexer.tasklock.batchAllocationWaitTime` is now 0.
