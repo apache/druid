@@ -1,0 +1,182 @@
+#The queries in this file were generated; see README.generated
+#started Wed Jul 10 19:08:31 IST 2024
+!use druidtest:///?componentSupplier=KttmNestedComponentSupplier
+!set outputformat mysql
+# Wed Jul 10 19:11:28 IST 2024
+SELECT
+MAX(CAST(t."__time" AS TIMESTAMP)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+GROUP BY ();
++-------------------------+
+| __VALUE__               |
++-------------------------+
+| 2019-08-25 23:59:59.686 |
++-------------------------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:11:28 IST 2024
+SELECT
+MAX(CAST(t."__time" AS TIMESTAMP)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+GROUP BY ();
++-------------------------+
+| __VALUE__               |
++-------------------------+
+| 2019-08-25 23:59:59.686 |
++-------------------------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:11:35 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v1"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY ();
++--------+----+
+| v0     | v1 |
++--------+----+
+| 465346 |  0 |
++--------+----+
+(1 row)
+
+!ok
+# Wed Jul 10 19:11:38 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(SUM(t."session_length") FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v1",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v2",
+(SUM(t."session_length") FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v3"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY ();
++--------+--------------+----+----+
+| v0     | v1           | v2 | v3 |
++--------+--------------+----+----+
+| 465346 | 153573448620 |  0 |    |
++--------+--------------+----+----+
+(1 row)
+
+!ok
+# Wed Jul 10 19:11:41 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(SUM(t."session_length") FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v1",
+(SUM(t."timezone_offset") FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v2",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v3",
+(SUM(t."session_length") FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v4",
+(SUM(t."timezone_offset") FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v5"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY ();
++--------+--------------+----------+----+----+----+
+| v0     | v1           | v2       | v3 | v4 | v5 |
++--------+--------------+----------+----+----+----+
+| 465346 | 153573448620 | 69683010 |  0 |    |    |
++--------+--------------+----------+----+----+----+
+(1 row)
+
+!ok
+# Wed Jul 10 19:11:43 IST 2024
+SELECT
+(COUNT(*)) AS "count",
+(SUM(t."session_length")) AS "sum_session_length",
+(SUM(t."timezone_offset")) AS "sum_timezone_offset"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY ();
++--------+--------------------+---------------------+
+| count  | sum_session_length | sum_timezone_offset |
++--------+--------------------+---------------------+
+| 465346 |       153573448620 |            69683010 |
++--------+--------------------+---------------------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:11:45 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(SUM(t."session_length") FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v1",
+(SUM(t."timezone_offset") FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v2",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 23:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 23:00:00'))) AS "v3",
+(SUM(t."session_length") FILTER (WHERE (TIMESTAMP '2019-08-24 23:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 23:00:00'))) AS "v4",
+(SUM(t."timezone_offset") FILTER (WHERE (TIMESTAMP '2019-08-24 23:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 23:00:00'))) AS "v5"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-24 23:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY ();
++--------+--------------+----------+--------+--------------+----------+
+| v0     | v1           | v2       | v3     | v4           | v5       |
++--------+--------------+----------+--------+--------------+----------+
+| 465346 | 153573448620 | 69683010 | 444865 | 140267784970 | 66401070 |
++--------+--------------+----------+--------+--------------+----------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:12:25 IST 2024
+SELECT
+TIME_FLOOR(CAST(t."__time" AS TIMESTAMP), 'PT6H', NULL, 'Etc/UTC') AS "__time",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "count",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 23:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 23:00:00'))) AS "_cmp_count",
+21600000 AS "MillisecondsInInterval"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-24 23:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY 1
+ORDER BY "__time" DESC
+LIMIT 101;
++-------------------------+--------+------------+------------------------+
+| __time                  | count  | _cmp_count | MillisecondsInInterval |
++-------------------------+--------+------------+------------------------+
+| 2019-08-25 18:00:00.000 | 210308 |     189827 |               21600000 |
+| 2019-08-25 12:00:00.000 | 146266 |     146266 |               21600000 |
+| 2019-08-25 06:00:00.000 |  36722 |      36722 |               21600000 |
+| 2019-08-25 00:00:00.000 |  72050 |      72050 |               21600000 |
++-------------------------+--------+------------+------------------------+
+(4 rows)
+
+!ok
+# Wed Jul 10 19:12:27 IST 2024
+SELECT
+TIME_FLOOR(CAST(t."__time" AS TIMESTAMP), 'PT1H', NULL, 'Etc/UTC') AS "__time",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 18:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "count",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 17:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 23:00:00'))) AS "_cmp_count",
+3600000 AS "MillisecondsInInterval"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 17:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY 1
+ORDER BY "__time" DESC
+LIMIT 101;
++-------------------------+-------+------------+------------------------+
+| __time                  | count | _cmp_count | MillisecondsInInterval |
++-------------------------+-------+------------+------------------------+
+| 2019-08-25 23:00:00.000 | 20481 |          0 |                3600000 |
+| 2019-08-25 22:00:00.000 | 23681 |      23681 |                3600000 |
+| 2019-08-25 21:00:00.000 | 29818 |      29818 |                3600000 |
+| 2019-08-25 20:00:00.000 | 43502 |      43502 |                3600000 |
+| 2019-08-25 19:00:00.000 | 45152 |      45152 |                3600000 |
+| 2019-08-25 18:00:00.000 | 47674 |      47674 |                3600000 |
+| 2019-08-25 17:00:00.000 |     0 |      57697 |                3600000 |
++-------------------------+-------+------------+------------------------+
+(7 rows)
+
+!ok
+# Wed Jul 10 19:12:27 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 18:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(SUM(t."session_length") FILTER (WHERE (TIMESTAMP '2019-08-25 18:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v1",
+(SUM(t."timezone_offset") FILTER (WHERE (TIMESTAMP '2019-08-25 18:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v2",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 17:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 23:00:00'))) AS "v3",
+(SUM(t."session_length") FILTER (WHERE (TIMESTAMP '2019-08-25 17:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 23:00:00'))) AS "v4",
+(SUM(t."timezone_offset") FILTER (WHERE (TIMESTAMP '2019-08-25 17:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 23:00:00'))) AS "v5"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 17:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY ();
++--------+-------------+----------+--------+-------------+----------+
+| v0     | v1          | v2       | v3     | v4          | v5       |
++--------+-------------+----------+--------+-------------+----------+
+| 210308 | 56477807055 | 39365775 | 247524 | 51198734605 | 48270540 |
++--------+-------------+----------+--------+-------------+----------+
+(1 row)
+
+!ok
