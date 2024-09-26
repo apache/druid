@@ -37,6 +37,7 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.input.ReadableInput;
@@ -85,8 +86,8 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       ImmutableList.of(
-                          new Interval("2001-01-01T00Z/2011-01-01T00Z"),
-                          new Interval("2011-01-02T00Z/2021-01-01T00Z")
+                          Intervals.of("2001-01-01T00Z/2011-01-01T00Z"),
+                          Intervals.of("2011-01-02T00Z/2021-01-01T00Z")
                       )
                   )
               )
@@ -184,8 +185,8 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
               .intervals(
                   new MultipleIntervalSegmentSpec(
                       ImmutableList.of(
-                          new Interval("2001-01-01T00Z/2011-01-01T00Z"),
-                          new Interval("2011-01-02T00Z/2021-01-01T00Z")
+                          Intervals.of("2001-01-01T00Z/2011-01-01T00Z"),
+                          Intervals.of("2011-01-02T00Z/2021-01-01T00Z")
                       )
                   )
               )
