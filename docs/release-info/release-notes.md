@@ -148,21 +148,21 @@ The web console now supports the Kinesis input format.
 
 #### Other web console improvements
 
-- Exposed hooks to customize the workbench view [#16749](https://github.com/apache/druid/pull/16749)
-- Fixed NPE due to null values in numeric columns [#16760](https://github.com/apache/druid/pull/16760)
-- Improved how the web console detects durable storage [#16493](https://github.com/apache/druid/pull/16493)
-- Restored the default WHERE filter to auto-generated SQL queries [#16608](https://github.com/apache/druid/pull/16608)
-- Added ability to hide workbench view toolbar in the **Query** view [#16785](https://github.com/apache/druid/pull/16785)
-- You can now submit a suspended supervisor using the SQL data loader [#16696](https://github.com/apache/druid/pull/16696)
-- You can now configure `serverQueryContext` to set the query context [#16868](https://github.com/apache/druid/pull/16868)
+- Added hooks to customize the workbench view [#16749](https://github.com/apache/druid/pull/16749)
+- Added the ability to hide workbench view toolbar in the **Query** view [#16785](https://github.com/apache/druid/pull/16785)
+- Added the ability to submit a suspended supervisor using the SQL data loader [#16696](https://github.com/apache/druid/pull/16696)
+- Added the ability to configure `serverQueryContext` to set the query context [#16868](https://github.com/apache/druid/pull/16868)
 - Added column mapping information to the explain plan [#16598](https://github.com/apache/druid/pull/16598)
-- You can now initiate handoff for a supervisor [#16586](https://github.com/apache/druid/pull/16586)
+- Added the ability to initiate handoff for a supervisor [#16586](https://github.com/apache/druid/pull/16586)
 - Added an option to `Use concurrent locks` and moved all insert and replace options to a separate submenu [#16899](https://github.com/apache/druid/pull/16899)
-- Improved the web console as follows:
+- Improved how the web console detects durable storage [#16493](https://github.com/apache/druid/pull/16493)
+- Made the following web console improvements:
   - Added titles to action menus
   - Improved the query-based ingestion counter calculation
   - Removed the filter clause on `__time`
   - Fixed scrolling in the `loadRules` editor [#16735](https://github.com/apache/druid/pull/16735)
+- Restored the default WHERE filter to auto-generated SQL queries [#16608](https://github.com/apache/druid/pull/16608)
+- Fixed NPE due to null values in numeric columns [#16760](https://github.com/apache/druid/pull/16760)
 
 ### Ingestion
 
@@ -199,10 +199,12 @@ Use this API for debugging or to view lock contention or observe any concurrent 
 - Added support for ingesting CSV format data into Kafka records when Kafka ingestion is enabled with `ioConfig.type = kafka` [#16630](https://github.com/apache/druid/pull/16630)
 - Added logging for sketches on workers [#16697](https://github.com/apache/druid/pull/16697)
 - Added the ability to sort segments by dimensions other than `__time` [#16849](https://github.com/apache/druid/pull/16849) [#16958](https://github.com/apache/druid/pull/16958)
+- Added the ability to optionally specify a `snapshotVersion` in the delta input source payload to ingest versioned snapshots from a Delta Lake table. When not specified, Druid ingests the latest snapshot from the table [#17004](https://github.com/apache/druid/pull/17004)
 - Removed obsolete tasks `index_realtime` and `index_realtime_appenderator` tasks&mdash;you can no longer use these tasks to ingest data [#16602](https://github.com/apache/druid/pull/16602)
 - Renamed `TaskStorageQueryAdapter` to `TaskQueryTool` and removed the `isAudited` method [#16750](https://github.com/apache/druid/pull/16750)
-- Fixed NPE in `CompactSegments` [#16713](https://github.com/apache/druid/pull/16713)
 - Improved Overlord performance by reducing redundant calls in SQL statements [#16839](https://github.com/apache/druid/pull/16839)
+- Improved `CustomExceptionMapper` so that it returns a correct failure message [#17016](https://github.com/apache/druid/pull/17016)
+- Fixed NPE in `CompactSegments` [#16713](https://github.com/apache/druid/pull/16713)
 
 #### SQL-based ingestion
 
@@ -252,9 +254,9 @@ This new API does a best effort attempt to triggerthe handoff for specified task
 ##### Other streaming ingestion improvements
 
 - Added a check for handing off upgraded real-time segments. This prevents data from being temporarily unavailable for queries during segment handoff [#16162](https://github.com/apache/druid/pull/16162)
-- Improved the user experience for autoscaling Kinesis. Switching to autoscaling based on max lag per shard from total lag for shard is now controlled by the `lagAggregate` config, defaulting to sum [#16334](https://github.com/apache/druid/pull/16334)
-- The Supervisor now doesn't change to a running state from idle if the Overlord restarts [#16844](https://github.com/apache/druid/pull/16844)
 - Added a Kinesis input format for timestamp and payload parsing [#16813](https://github.com/apache/druid/pull/16813)
+- Improved the user experience for autoscaling Kinesis. Switching to autoscaling based on max lag per shard from total lag for shard is now controlled by the `lagAggregate` config, defaulting to sum [#16334](https://github.com/apache/druid/pull/16334)
+- Improved the Supervisor so that it doesn't change to a running state from idle if the Overlord restarts [#16844](https://github.com/apache/druid/pull/16844)
 
 ### Querying
 
@@ -382,20 +384,21 @@ Added the following fields from the query-based ingestion task report to the res
 
 #### Other querying improvements
 
+- Druid now deduces type from aggregators when materializing subquery results [#16703](https://github.com/apache/druid/pull/16703)
+- Added the ability to define the segment granularity of a table in the catalog [#16680](https://github.com/apache/druid/pull/16680)
+- Added a way for columns to provide `GroupByVectorColumnSelectors`, which controls how the groupBy engine operates on them [#16338](https://github.com/apache/druid/pull/16338)
+- Added `sqlPlannerBloat` query context parameter to control whether two project operators get merged when inlining expressions [#16248](https://github.com/apache/druid/pull/16248)
 - Improved window function offsets for `ArrayListRowsAndColumns` [#16718](https://github.com/apache/druid/pull/16718)
 - Improved the fallback strategy when the Broker is unable to materialize the subquery's results as frames for estimating the bytes [#16679](https://github.com/apache/druid/pull/16679)
 - Improved how Druid executes queries that contain a LIMIT clause [#16643](https://github.com/apache/druid/pull/16643)
 - Improved the code style of `NestedDataOperatorConversions` to be consistent for each `SqlOperatorConversion` [#16695](https://github.com/apache/druid/pull/16695)
-- You can now define the segment granularity of a table in the catalog [#16680](https://github.com/apache/druid/pull/16680)
-- Added a way for columns to provide `GroupByVectorColumnSelectors`, which controls how the groupBy engine operates on them [#16338](https://github.com/apache/druid/pull/16338)
+- Improved window functions so that they reject multi-value dimensions during processing instead of failing to process them [#17002](https://github.com/apache/druid/pull/17002)
+- Improved async query by increasing its timeout to 5 seconds [#16656](https://github.com/apache/druid/pull/16656)
+- Improved error message when the requested number of rows in a window exceeds the maximum [#16906](https://github.com/apache/druid/pull/16906)
+- Improved numeric aggregations so that Druid now coerces complex types to number when possible, such as for `SpectatorHistogram` [#16564](https://github.com/apache/druid/pull/16564)
 - Fixed an issue that caused `maxSubqueryBytes` to fail when segments had missing columns [#16619](https://github.com/apache/druid/pull/16619)
 - Fixed an issue with the array type selector that caused the array aggregation over window frame to fail [#16653](https://github.com/apache/druid/pull/16653)
 - Fixed support for native window queries without a group by clause [#16753](https://github.com/apache/druid/pull/16753)
-- Increased the async query timeout to 5 seconds [#16656](https://github.com/apache/druid/pull/16656)
-- Improved error message when the requested number of rows in a window exceeds the maximum [#16906](https://github.com/apache/druid/pull/16906)
-- Druid now deduces type from aggregators when materializing subquery results [#16703](https://github.com/apache/druid/pull/16703)
-- New `sqlPlannerBloat` query context parameter controls whether two project operators get merged when inlining expressions [#16248](https://github.com/apache/druid/pull/16248)
-- For numeric aggregations, Druid now coerces complex types to number when possible, such as for `SpectatorHistogram` [#16564](https://github.com/apache/druid/pull/16564)
 
 ### Cluster management
 
@@ -548,9 +551,9 @@ You can now use the `caseSensitive` Boolean config to configure how Druid reads 
 
 #### Other extensions improvements
 
+- Added an informational entry to the supervisor log when task count is greater than the number of partitions [#16948](https://github.com/apache/druid/pull/16948)
 - Reduced logging in S3 output stream extension [#16853](https://github.com/apache/druid/pull/16853)
 - Reduced logging in basic security extension [#16767](https://github.com/apache/druid/pull/16767)
-- Added an informational entry to the supervisor log when task count is greater than the number of partitions [#16948](https://github.com/apache/druid/pull/16948)
 
 ### Documentation improvements
 
@@ -625,6 +628,12 @@ ZK-based segment loading is now disabled. ZK `servedSegmentsPath` was deprecated
 Segment-serving processes such as Peons, Historicals and Indexers no longer create ZK `loadQueuePath` entries. The `druid.zk.paths.loadQueuePath` and `druid.zk.paths.servedSegmentsPath` properties are no longer used.
 
 Move to HTTP-based segment loading first and then perform the version upgrade.
+
+#### `StorageAdapter` interface
+
+Replaced the `StorageAdapter` interface with the `CursorHolder` interface.
+
+[#17024](https://github.com/apache/druid/pull/17024)
 
 ### Developer notes
 
