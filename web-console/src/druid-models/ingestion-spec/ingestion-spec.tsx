@@ -1068,7 +1068,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Delta filter',
           type: 'json',
           placeholder: '{"type": "=", "column": "name", "value": "foo"}',
-          defaultValue: {},
           info: (
             <>
               <ExternalLink
@@ -1085,7 +1084,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Delta snapshot version',
           type: 'number',
           placeholder: '(latest)',
-          defaultValue: {},
+          zeroMeansUndefined: true,
           info: (
             <>
               The snapshot version to read from the Delta table. By default, the latest snapshot is
