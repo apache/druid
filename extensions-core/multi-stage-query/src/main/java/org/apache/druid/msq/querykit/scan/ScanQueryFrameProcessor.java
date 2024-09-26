@@ -40,6 +40,7 @@ import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -63,6 +64,8 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanResultValue;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
+import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.Cursor;
@@ -259,7 +262,12 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
       }
 
       final CursorHolder nextCursorHolder =
-          cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null));
+          cursorFactory.makeCursorHolder(
+              ScanQueryEngine.makeCursorBuildSpec(
+                  query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
+                  null
+              )
+          );
       final Cursor nextCursor = nextCursorHolder.asCursor();
 
       if (nextCursor == null) {
@@ -305,7 +313,12 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
         }
 
         final CursorHolder nextCursorHolder =
-            cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null));
+            cursorFactory.makeCursorHolder(
+                ScanQueryEngine.makeCursorBuildSpec(
+                    query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
+                    null
+                )
+            );
         final Cursor nextCursor = nextCursorHolder.asCursor();
 
         if (nextCursor == null) {
