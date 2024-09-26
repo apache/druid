@@ -162,7 +162,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
 
-  private static final int MAX_HISTORICAL_PARTITION_LAG_ENTRIES = 60;
+  private static final int MAX_HISTORICAL_PARTITION_LAG_ENTRIES = 30;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
 
@@ -4099,7 +4099,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Pair<StreamPartitionLagType, Map<PartitionIdType, Long>> partitionLag = getPartitionLag();
       if (Objects.nonNull(partitionLag) && MapUtils.isNotEmpty(partitionLag.rhs)) {
         historicalPartitionLagMap.put(sequenceLastUpdated, partitionLag.rhs);
-        while (historicalPartitionLagMap.size() >= MAX_HISTORICAL_PARTITION_LAG_ENTRIES) {
+        while (historicalPartitionLagMap.size() > MAX_HISTORICAL_PARTITION_LAG_ENTRIES) {
           historicalPartitionLagMap.remove(historicalPartitionLagMap.firstKey());
         }
       }
@@ -4497,27 +4497,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       Pair<StreamPartitionLagType, Map<PartitionIdType, Long>> partitionLagsPair = getPartitionLag();
 
       if (Objects.isNull(partitionLagsPair) || Objects.isNull(partitionLagsPair.rhs)) {
-        throw new ISE("Latest offsets have not been fetched");
+        log.warn("Latest offsets have not been fetched");
+        return;
       }
+
       final String type = spec.getType();
 
       BiConsumer<Map<PartitionIdType, Long>, String> emitFn = (partitionLags, suffix) -> {
         if (partitionLags == null) {
-          return;
-        }
-
-        // Try emitting lag even with stale metrics provided that none of the partitions has negative lag
-        final long staleMillis = sequenceLastUpdated == null
-            ? 0
-            : DateTimes.nowUtc().getMillis()
-              - (tuningConfig.getOffsetFetchPeriod().getMillis() + sequenceLastUpdated.getMillis());
-        if (staleMillis > 0 && partitionLags.values().stream().anyMatch(x -> x < 0)) {
-          // Log at most once every twenty supervisor runs to reduce noise in the logs
-          if ((staleMillis / getIoConfig().getPeriod().getMillis()) % 20 == 0) {
-            log.warn("Lag is negative and will not be emitted because topic offsets have become stale. "
-                     + "This will not impact data processing. "
-                     + "Offsets may become stale because of connectivity issues.");
-          }
           return;
         }
 

@@ -1607,41 +1607,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testEmitBothLag() throws Exception
-  {
-    expectEmitterSupervisor(false);
-
-    CountDownLatch latch = new CountDownLatch(1);
-    TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
-        latch,
-        TestEmittingTestSeekableStreamSupervisor.LAG,
-        ImmutableMap.of("1", 100L, "2", 250L, "3", 500L),
-        ImmutableMap.of("1", 10000L, "2", 15000L, "3", 20000L)
-    );
-
-
-    supervisor.start();
-
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
-
-
-    latch.await();
-
-    final Map<String, Object> dimFilters = ImmutableMap.of(DruidMetrics.TAGS, METRIC_TAGS);
-    emitter.verifyValue("ingest/test/lag", dimFilters, 850L);
-    emitter.verifyValue("ingest/test/maxLag", dimFilters, 500L);
-    emitter.verifyValue("ingest/test/avgLag", dimFilters, 283L);
-    emitter.verifyValue("ingest/test/lag/time", dimFilters, 45000L);
-    emitter.verifyValue("ingest/test/maxLag/time", dimFilters, 20000L);
-    emitter.verifyValue("ingest/test/avgLag/time", dimFilters, 15000L);
-    verifyAll();
-  }
-
-  @Test
   public void testEmitRecordLag() throws Exception
   {
     expectEmitterSupervisor(false);
@@ -1650,8 +1615,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
         TestEmittingTestSeekableStreamSupervisor.LAG,
-        ImmutableMap.of("1", 100L, "2", 250L, "3", 500L),
-        null
+        ImmutableMap.of("1", 100L, "2", 250L, "3", 500L)
     );
 
     supervisor.start();
@@ -1669,39 +1633,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     emitter.verifyValue("ingest/test/lag", dimFilters, 850L);
     emitter.verifyValue("ingest/test/maxLag", dimFilters, 500L);
     emitter.verifyValue("ingest/test/avgLag", dimFilters, 283L);
-    verifyAll();
-  }
-
-  @Test
-  public void testEmitTimeLag() throws Exception
-  {
-    expectEmitterSupervisor(false);
-
-    CountDownLatch latch = new CountDownLatch(1);
-    TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
-        latch,
-        TestEmittingTestSeekableStreamSupervisor.LAG,
-        null,
-        ImmutableMap.of("1", 10000L, "2", 15000L, "3", 20000L)
-    );
-
-
-    supervisor.start();
-
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
-
-
-    latch.await();
-
-    final Map<String, Object> dimFilters = ImmutableMap.of(DruidMetrics.TAGS, METRIC_TAGS);
-    emitter.verifyValue("ingest/test/lag/time", dimFilters, 45000L);
-    emitter.verifyValue("ingest/test/maxLag/time", dimFilters, 20000L);
-    emitter.verifyValue("ingest/test/avgLag/time", dimFilters, 15000L);
-
     verifyAll();
   }
 
@@ -1714,7 +1645,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
         TestEmittingTestSeekableStreamSupervisor.NOTICE_QUEUE,
-        null,
         null
     );
 
@@ -1747,7 +1677,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
         TestEmittingTestSeekableStreamSupervisor.NOTICE_PROCESS,
-        null,
         null
     );
     supervisor.start();
@@ -1778,8 +1707,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
         latch,
         TestEmittingTestSeekableStreamSupervisor.LAG,
-        ImmutableMap.of("1", 100L, "2", 250L, "3", 500L),
-        ImmutableMap.of("1", 10000L, "2", 15000L, "3", 20000L)
+        ImmutableMap.of("1", 100L, "2", 250L, "3", 500L)
     );
 
 
@@ -1797,9 +1725,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     emitter.verifyNotEmitted("ingest/test/lag");
     emitter.verifyNotEmitted("ingest/test/maxLag");
     emitter.verifyNotEmitted("ingest/test/avgLag");
-    emitter.verifyNotEmitted("ingest/test/lag/time");
-    emitter.verifyNotEmitted("ingest/test/maxLag/time");
-    emitter.verifyNotEmitted("ingest/test/avgLag/time");
 
     verifyAll();
   }
@@ -2449,7 +2374,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testStaleOffsetsNegativeLagNotEmitted() throws Exception
+  public void testStaleOffsetsNegativeLagEmitted() throws Exception
   {
     expectEmitterSupervisor(false);
 
@@ -2459,8 +2384,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         latch,
         TestEmittingTestSeekableStreamSupervisor.LAG,
         // Record lag must not be emitted
-        ImmutableMap.of("0", 10L, "1", -100L),
-        null
+        ImmutableMap.of("0", 10L, "1", -100L)
     );
     supervisor.start();
     // Forcibly set the offsets to be stale
@@ -2469,7 +2393,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     latch.await();
 
     supervisor.emitLag();
-    Assert.assertEquals(0, emitter.getEvents().size());
+    Assert.assertTrue(emitter.getEvents().size() > 0);
   }
 
   private void validateSupervisorStateAfterResetOffsets(
@@ -2978,8 +2902,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   private class TestEmittingTestSeekableStreamSupervisor extends BaseTestSeekableStreamSupervisor
   {
     private final CountDownLatch latch;
-    private final Map<String, Long> partitionsRecordLag;
-    private final Map<String, Long> partitionsTimeLag;
+    private final Map<String, Long> partitionsLag;
     private final byte metricFlag;
 
     private static final byte LAG = 0x01;
@@ -2990,21 +2913,19 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     TestEmittingTestSeekableStreamSupervisor(
         CountDownLatch latch,
         byte metricFlag,
-        Map<String, Long> partitionsRecordLag,
-        Map<String, Long> partitionsTimeLag
+        Map<String, Long> partitionsLag
     )
     {
       this.latch = latch;
       this.metricFlag = metricFlag;
-      this.partitionsRecordLag = partitionsRecordLag;
-      this.partitionsTimeLag = partitionsTimeLag;
+      this.partitionsLag = partitionsLag;
     }
 
     @Nullable
     @Override
     protected Pair<StreamPartitionLagType, Map<String, Long>> getPartitionLag()
     {
-      return Pair.of(StreamPartitionLagType.RECORD_LAG, partitionsRecordLag);
+      return Pair.of(StreamPartitionLagType.RECORD_LAG, partitionsLag);
     }
 
     @Override

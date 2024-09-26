@@ -307,7 +307,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
     supervisor = getDefaultSupervisor();
     Assert.assertNull(supervisor.getPartitionLag());
 
-    Assert.assertNull(supervisor.getLagPerPartition(null));
+    Assert.assertTrue(supervisor.getLagPerPartition(null).rhs.isEmpty());
     Assert.assertFalse(supervisor.isEndOfShard(null));
     Assert.assertFalse(supervisor.isShardExpirationMarker(null));
 
