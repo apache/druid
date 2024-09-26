@@ -40,6 +40,10 @@ import java.util.stream.Collectors;
  */
 public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
 {
+  public static String QUERY_WAIT_TIME = "query/wait/time";
+  public static String QUERY_SEGMENT_TIME = "query/segment/time";
+  public static String QUERY_SEGMENT_AND_CACHE_TIME = "query/segmentAndCache/time";
+
   protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
   protected final Map<String, Number> metrics = new HashMap<>();
 
@@ -229,19 +233,19 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   @Override
   public QueryMetrics<QueryType> reportWaitTime(long timeNs)
   {
-    return reportMillisTimeMetric("query/wait/time", timeNs);
+    return reportMillisTimeMetric(QUERY_WAIT_TIME, timeNs);
   }
 
   @Override
   public QueryMetrics<QueryType> reportSegmentTime(long timeNs)
   {
-    return reportMillisTimeMetric("query/segment/time", timeNs);
+    return reportMillisTimeMetric(QUERY_SEGMENT_TIME, timeNs);
   }
 
   @Override
   public QueryMetrics<QueryType> reportSegmentAndCacheTime(long timeNs)
   {
-    return reportMillisTimeMetric("query/segmentAndCache/time", timeNs);
+    return reportMillisTimeMetric(QUERY_SEGMENT_AND_CACHE_TIME, timeNs);
   }
 
   @Override
