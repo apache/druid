@@ -488,7 +488,7 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
         immutableWorker.getWorker(),
         immutableWorker.getCurrCapacityUsed() + 1,
         immutableWorker.getCurrParallelIndexCapacityUsed() + parallelIndexTaskCapacity,
-        immutableWorker.incrementTypeSpecificCapacity(task.getType(), taskCapacity),
+        immutableWorker.incrementCurrCapacityUsedByTaskType(task.getType(), taskCapacity),
         Sets.union(
             immutableWorker.getAvailabilityGroups(),
             Sets.newHashSet(

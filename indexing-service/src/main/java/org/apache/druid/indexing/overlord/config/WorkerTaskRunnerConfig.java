@@ -21,6 +21,8 @@ package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import javax.validation.constraints.Max;
+import javax.validation.constraints.Min;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -33,9 +35,7 @@ public class WorkerTaskRunnerConfig
   private double parallelIndexTaskSlotRatio = 1;
 
   @JsonProperty
-  private Map<String, Integer> taskSlotLimits = new HashMap<>();
-  @JsonProperty
-  private Map<String, Double> taskSlotRatios = new HashMap<>();
+  private Map<String, @Min(value = 0, message = "Task slot ratio for must be at least 0.") @Max(value = 1, message = "Task slot ratio cannot be greater than 1") Double> taskSlotRatiosPerWorker = new HashMap<>();
 
   public String getMinWorkerVersion()
   {
@@ -58,34 +58,12 @@ public class WorkerTaskRunnerConfig
   }
 
   /**
-   * Returns a map where each key is a task type (`String`), and the value is an `Integer`
-   * representing the absolute limit on the number of task slots that tasks of this type can occupy.
-   * <p>
-   * This absolute limit specifies the maximum number of task slots available to a specific task type.
-   * <p>
-   * If both an absolute limit and a ratio (from {@link #getTaskSlotRatios()}) are specified for the same task type,
-   * the effective limit will be the smaller of the two.
-   *
-   * @return A map of task types with their corresponding absolute slot limits.
+   * Map from task type to task slot ratio for that type per worker.
+   * A value of 0 for a task type indicates that the task type cannot occupy any slots.
+   * A value of 1 indicates that the task type may take up all available slots of a worker if available.
    */
-  public Map<String, Integer> getTaskSlotLimits()
+  public Map<String, Double> getTaskSlotRatiosPerWorker()
   {
-    return taskSlotLimits;
-  }
-
-  /**
-   * Returns a map where each key is a task type (`String`), and the value is a `Double` which should be in the
-   * range [0, 1], representing the ratio of available task slots that tasks of this type can occupy.
-   * <p>
-   * This ratio defines the proportion of total task slots a task type can use, calculated as `ratio * totalSlots`.
-   * <p>
-   * If both a ratio and an absolute limit (from {@link #getTaskSlotLimits()}) are specified for the same task type,
-   * the effective limit will be the smaller of the two.
-   *
-   * @return A map of task types with their corresponding slot ratios.
-   */
-  public Map<String, Double> getTaskSlotRatios()
-  {
-    return taskSlotRatios;
+    return taskSlotRatiosPerWorker;
   }
 }

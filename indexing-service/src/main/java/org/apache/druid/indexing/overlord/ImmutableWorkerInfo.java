@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.indexing.common.task.Task;
@@ -237,24 +236,9 @@ public class ImmutableWorkerInfo
    */
   public boolean canRunTask(Task task, WorkerTaskRunnerConfig config)
   {
-    return (hasSufficientWorkerCapacity(task)
-            && canRunParallelIndexTask(task, config.getParallelIndexTaskSlotRatio())
-            && canRunTaskBasedOnCustomLimit(task, config.getTaskSlotLimits(), config.getTaskSlotRatios())
-            && isAvailabilityGroupAvailable(task));
-  }
-
-
-  /**
-   * To be removed in future as it could be fully covered with the limits map.
-   */
-  private boolean canRunParallelIndexTask(Task task, double parallelIndexTaskSlotRatio)
-  {
-    if (!task.getType().equals(ParallelIndexSupervisorTask.TYPE)) {
-      return true;
-    }
-    return getWorkerParallelIndexCapacity(parallelIndexTaskSlotRatio) - getCurrParallelIndexCapacityUsed()
-           >= task.getTaskResource().getRequiredCapacity();
-
+    return (worker.getCapacity() - getCurrCapacityUsed() >= task.getTaskResource().getRequiredCapacity()
+            && canRunTaskBasedOnLimit(task, config))
+           && !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup());
   }
 
   private int getWorkerParallelIndexCapacity(double parallelIndexTaskSlotRatio)
@@ -270,71 +254,35 @@ public class ImmutableWorkerInfo
     return workerParallelIndexCapacity;
   }
 
-  private boolean hasSufficientWorkerCapacity(Task task)
+  private boolean canRunTaskBasedOnLimit(Task task, WorkerTaskRunnerConfig config)
   {
-    int capacityRemaining = worker.getCapacity() - getCurrCapacityUsed();
-    int requiredCapacity = task.getTaskResource().getRequiredCapacity();
-    return capacityRemaining >= requiredCapacity;
-  }
+    if (task.getType().equals(ParallelIndexSupervisorTask.TYPE) && config.getParallelIndexTaskSlotRatio() != 1) {
+      return getWorkerParallelIndexCapacity(config.getParallelIndexTaskSlotRatio()) - getCurrParallelIndexCapacityUsed()
+             >= task.getTaskResource().getRequiredCapacity();
+    }
 
-  private boolean isAvailabilityGroupAvailable(Task task)
-  {
-    return !getAvailabilityGroups().contains(task.getTaskResource().getAvailabilityGroup());
-  }
-
-  private boolean canRunTaskBasedOnCustomLimit(Task task, Map<String, Integer> limitsMap, Map<String, Double> ratiosMap)
-  {
-    final Integer limit = getLimitForTask(task.getType(), limitsMap, ratiosMap);
+    final Integer limit = getLimitForTask(task.getType(), config.getTaskSlotRatiosPerWorker());
 
     if (limit == null) {
       return true; // No limit specified, so task can run
     }
 
-    int currentCapacityUsed = getCurrCapacityUsedByTaskType().getOrDefault(task.getType(), 0);
-    int requiredCapacity = task.getTaskResource().getRequiredCapacity();
-
-    return hasCapacityBasedOnLimit(limit, currentCapacityUsed, requiredCapacity);
+    return limit - getCurrCapacityUsedByTaskType().getOrDefault(task.getType(), 0) >= task.getTaskResource()
+                                                                                          .getRequiredCapacity();
   }
 
   private Integer getLimitForTask(
       String taskType,
-      Map<String, Integer> limitsMap,
       Map<String, Double> ratiosMap
   )
   {
-    Integer absoluteLimit = limitsMap.get(taskType);
     Double ratioLimit = ratiosMap.get(taskType);
 
-    if (absoluteLimit == null && ratioLimit == null) {
+    if (ratioLimit == null) {
       return null;
     }
 
-    // Validate the absolute limit if present
-    if (absoluteLimit != null) {
-      Preconditions.checkArgument(absoluteLimit >= 0, "Absolute limit for task %s must be non-negative.", taskType);
-    }
-
-    // Validate the ratio limit if present
-    if (ratioLimit != null) {
-      Preconditions.checkArgument(ratioLimit >= 0.0 && ratioLimit <= 1.0,
-                                  "Ratio for task %s must be between 0.0 and 1.0 inclusive.", taskType
-      );
-    }
-
-    final int totalCapacity = worker.getCapacity();
-
-    Integer ratioBasedLimit = ratioLimit != null ? calculateTaskCapacityFromRatio(ratioLimit, totalCapacity) : null;
-
-    if (absoluteLimit != null && ratioBasedLimit != null) {
-      return Math.min(absoluteLimit, ratioBasedLimit);
-    }
-
-    return absoluteLimit != null ? absoluteLimit : ratioBasedLimit;
-  }
-
-  private boolean hasCapacityBasedOnLimit(int limit, int currentCapacityUsed, int requiredCapacity)
-  {
-    return limit - currentCapacityUsed >= requiredCapacity;
+    return calculateTaskCapacityFromRatio(ratioLimit, worker.getCapacity());
   }
 
   private int calculateTaskCapacityFromRatio(double taskSlotRatio, int totalCapacity)
@@ -381,10 +329,10 @@ public class ImmutableWorkerInfo
              : that.blacklistedUntil != null);
   }
 
-  public Map<String, Integer> incrementTypeSpecificCapacity(String type, int capacityToAdd)
+  public Map<String, Integer> incrementCurrCapacityUsedByTaskType(String taskType, int capacityToAdd)
   {
     Map<String, Integer> result = new HashMap<>(currCapacityUsedByTaskType);
-    result.merge(type, capacityToAdd, Integer::sum);
+    result.merge(taskType, capacityToAdd, Integer::sum);
     return result;
   }
 

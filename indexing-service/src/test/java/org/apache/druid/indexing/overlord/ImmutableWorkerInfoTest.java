@@ -256,7 +256,6 @@ public class ImmutableWorkerInfoTest
     when(parallelIndexTask.getTaskResource()).thenReturn(taskResource0);
 
     Map<String, Double> taskRatiosMap = new HashMap<>();
-    Map<String, Integer> taskLimitsMap = new HashMap<>();
 
     // Since task satisifies parallel and total slot constraints, can run
     when(config.getParallelIndexTaskSlotRatio()).thenReturn(0.5);
@@ -264,7 +263,8 @@ public class ImmutableWorkerInfoTest
 
     // Since task fails the parallel slot constraint, it cannot run (3 > 1)
     taskRatiosMap.put(ParallelIndexSupervisorTask.TYPE, 0.1);
-    when(config.getTaskSlotRatios()).thenReturn(taskRatiosMap);
+    when(config.getParallelIndexTaskSlotRatio()).thenReturn(1.0);
+    when(config.getTaskSlotRatiosPerWorker()).thenReturn(taskRatiosMap);
     Assert.assertFalse(workerInfo.canRunTask(parallelIndexTask, config));
 
     taskRatiosMap.put(ParallelIndexSupervisorTask.TYPE, 1.0);
@@ -303,17 +303,17 @@ public class ImmutableWorkerInfoTest
     when(msqControllerTask.getTaskResource()).thenReturn(taskResource3);
 
     Map<String, Integer> mockStatusMap = new HashMap<>();
-    mockStatusMap.put(MSQ_CONTROLLER_TYPE, 4);
+    mockStatusMap.put(MSQ_CONTROLLER_TYPE, 2);
 
     ImmutableWorkerInfo spyInfo = Mockito.spy(workerInfo);
     when(spyInfo.getCurrCapacityUsedByTaskType()).thenReturn(mockStatusMap);
-    when(taskResource3.getRequiredCapacity()).thenReturn(1);
-    when(config.getTaskSlotLimits()).thenReturn(taskLimitsMap);
+    when(taskResource3.getRequiredCapacity()).thenReturn(3);
+    when(config.getTaskSlotRatiosPerWorker()).thenReturn(taskRatiosMap);
 
 
-    taskLimitsMap.put(MSQ_CONTROLLER_TYPE, 4);
+    taskRatiosMap.put(MSQ_CONTROLLER_TYPE, 0.4);
     Assert.assertFalse(spyInfo.canRunTask(msqControllerTask, config));
-    taskLimitsMap.put(MSQ_CONTROLLER_TYPE, 5);
+    taskRatiosMap.put(MSQ_CONTROLLER_TYPE, 0.5);
     Assert.assertTrue(spyInfo.canRunTask(msqControllerTask, config));
   }
 
