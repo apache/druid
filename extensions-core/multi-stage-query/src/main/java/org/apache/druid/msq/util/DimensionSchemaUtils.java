@@ -27,7 +27,8 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -43,7 +44,7 @@ import javax.annotation.Nullable;
  */
 public class DimensionSchemaUtils
 {
-  private static final Logger LOG = new Logger(DimensionSchemaUtils.class);
+  private static final EmittingLogger LOG = new EmittingLogger(DimensionSchemaUtils.class);
 
   /**
    * Creates a dimension schema for creating {@link org.apache.druid.data.input.InputSourceReader}.
@@ -135,10 +136,13 @@ public class DimensionSchemaUtils
       ValueType elementType = queryType.getElementType().getType();
       if (elementType == ValueType.STRING) {
         if (arrayIngestMode == ArrayIngestMode.MVD) {
-          LOG.warn(
-              "Inserting a multi-value string column[%s] relying on deprecated ArrayIngestMode.MVD. This query should be rewritten to use the ARRAY_TO_MV operator to insert ARRAY types as multi-value strings.",
-              columnName
-          );
+          final String msgFormat = "Inserting a multi-value string column[%s] relying on deprecated"
+                                   + " ArrayIngestMode.MVD. This query should be rewritten to use the ARRAY_TO_MV"
+                                   + " operator to insert ARRAY types as multi-value strings.";
+          LOG.makeWarningAlert(msgFormat, columnName)
+             .severity(AlertEvent.Severity.DEPRECATED)
+             .addData("feature", "ArrayIngestMode.MVD")
+             .emit();
           return ColumnType.STRING;
         } else {
           return queryType;
