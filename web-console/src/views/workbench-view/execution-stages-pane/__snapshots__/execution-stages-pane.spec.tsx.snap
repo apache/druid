@@ -134,12 +134,12 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
             <span
               className="cpu-label"
             >
-              counter
+              Counter
             </span>
             <span
               className="cpu-counter"
             >
-              wall time
+              Wall time
             </span>
           </i>
         </React.Fragment>,
@@ -147,7 +147,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "className": "padded",
         "id": "cpu",
         "show": false,
-        "width": 220,
+        "width": 240,
       },
       {
         "Header": <React.Fragment>
