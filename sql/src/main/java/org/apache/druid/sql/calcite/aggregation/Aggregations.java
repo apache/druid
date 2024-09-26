@@ -47,7 +47,7 @@ public class Aggregations
    * aggregators, which have the following properties:
    * <p>
    * 1) They can take direct field accesses or expressions as inputs.
-   * 2) With the exception of min/max aggregators, they cannot implicitly cast strings to numbers when using a direct field access.
+   * 2) They cannot implicitly cast strings to numbers when using a direct field access.
    *
    * @param plannerContext SQL planner context
    * @param call           aggregate call object
@@ -61,31 +61,27 @@ public class Aggregations
       final InputAccessor inputAccessor
   )
   {
-    final List<DruidExpression> args;
-    // Handle the case for min/max aggregators.
-    if (isStringAggregatorFunctions(call.getAggregation())) {
-      args = call
-          .getArgList()
-          .stream()
-          .map(i -> inputAccessor.getField(i))
-          .map(rexNode -> Expressions.toDruidExpression(
-              plannerContext,
-              inputAccessor.getInputRowSignature(),
-              rexNode
-          ))
-          .collect(Collectors.toList());
-    } else {
-      args = call
-          .getArgList()
-          .stream()
-          .map(i -> inputAccessor.getField(i))
-          .map(rexNode -> toDruidExpressionForNumericAggregator(
-              plannerContext,
-              inputAccessor.getInputRowSignature(),
-              rexNode
-          ))
-          .collect(Collectors.toList());
-    }
+    final List<DruidExpression> args = call
+        .getArgList()
+        .stream()
+        .map(i -> inputAccessor.getField(i))
+        .map(rexNode -> {
+          // Check if the aggregations on Strings
+          if (isStringAggregatorFunctions(call.getAggregation())) {
+            return Expressions.toDruidExpression(
+                plannerContext,
+                inputAccessor.getInputRowSignature(),
+                rexNode
+            );
+          } else {
+            return toDruidExpressionForNumericAggregator(
+                plannerContext,
+                inputAccessor.getInputRowSignature(),
+                rexNode
+            );
+          }
+        })
+        .collect(Collectors.toList());
 
     if (args.stream().noneMatch(Objects::isNull)) {
       return args;
@@ -133,7 +129,7 @@ public class Aggregations
 
   private static boolean isStringAggregatorFunctions(SqlAggFunction aggregation)
   {
-    boolean caseSensitivity = false;
-    return aggregation.isName("MIN", caseSensitivity) || aggregation.isName("MAX", caseSensitivity);
+    final boolean CASE_SENSITIVITY = false;
+    return aggregation.isName("MIN", CASE_SENSITIVITY) || aggregation.isName("MAX", CASE_SENSITIVITY);
   }
 }
