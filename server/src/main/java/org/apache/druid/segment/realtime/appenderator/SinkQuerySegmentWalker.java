@@ -436,9 +436,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   }
 
   /**
-   * Emit query/segment/time, query/wait/time and query/segmentAndCache/Time for a sink.
-   * It accumulates query/segment/time and query/segmentAndCache/time for each hydrant at the level of sink.
-   * query/wait/time is the time take to process the first hydrant for the sink.
+   * Emit query/segment/time, query/wait/time and query/segmentAndCache/Time metrics for a Sink.
+   * It accumulates query/segment/time and query/segmentAndCache/time metric for each FireHydrant at the level of Sink.
+   * query/wait/time metric is the time taken to process the first FireHydrant for the Sink.
    */
   private static class SinkMetricsEmittingQueryRunner<T> implements QueryRunner<T> {
 
