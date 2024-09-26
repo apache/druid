@@ -32,7 +32,6 @@ import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
@@ -81,7 +80,6 @@ public class DartSqlResource extends SqlResource
   private final SqlLifecycleManager sqlLifecycleManager;
   private final DartSqlClients sqlClients;
   private final AuthorizerMapper authorizerMapper;
-  private final ResourcePermissionMapper permissionMapper;
   private final DefaultQueryConfig dartQueryConfig;
 
   @Inject
@@ -94,7 +92,6 @@ public class DartSqlResource extends SqlResource
       final DartSqlClients sqlClients,
       final ServerConfig serverConfig,
       final ResponseContextConfig responseContextConfig,
-      @Dart final ResourcePermissionMapper permissionMapper,
       @Self final DruidNode selfNode,
       @Dart final DefaultQueryConfig dartQueryConfig
   )
@@ -112,7 +109,6 @@ public class DartSqlResource extends SqlResource
     this.sqlLifecycleManager = sqlLifecycleManager;
     this.sqlClients = sqlClients;
     this.authorizerMapper = authorizerMapper;
-    this.permissionMapper = permissionMapper;
     this.dartQueryConfig = dartQueryConfig;
   }
 

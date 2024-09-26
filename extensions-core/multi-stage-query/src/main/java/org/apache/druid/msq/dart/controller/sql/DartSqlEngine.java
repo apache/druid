@@ -46,7 +46,6 @@ import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Semaphore;
 
 public class DartSqlEngine implements SqlEngine
 {
@@ -69,21 +68,18 @@ public class DartSqlEngine implements SqlEngine
   private final ControllerContext controllerContext;
   private final DartControllerRegistry controllerRegistry;
   private final DartControllerConfig controllerConfig;
-  private final Semaphore controllerSemaphore;
   private final ExecutorService controllerExecutor;
 
   public DartSqlEngine(
       ControllerContext controllerContext,
       DartControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
-      Semaphore controllerSemaphore,
       ExecutorService controllerExecutor
   )
   {
     this.controllerContext = controllerContext;
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
-    this.controllerSemaphore = controllerSemaphore;
     this.controllerExecutor = controllerExecutor;
   }
 
@@ -168,7 +164,6 @@ public class DartSqlEngine implements SqlEngine
         plannerContext,
         controllerRegistry,
         controllerConfig,
-        controllerSemaphore,
         controllerExecutor
     );
   }

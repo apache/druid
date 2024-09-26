@@ -57,7 +57,6 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 
 import java.util.Properties;
-import java.util.concurrent.Semaphore;
 
 /**
  * Primary module for Brokers. Checks {@link DartModules#isDartEnabled(Properties)} before installing itself.
@@ -151,7 +150,6 @@ public class DartControllerModule implements DruidModule
           controllerContext,
           controllerRegistry,
           controllerConfig,
-          new Semaphore(controllerConfig.getConcurrentQueries()),
           Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s")
       );
     }

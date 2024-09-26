@@ -71,7 +71,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 
 /**
@@ -103,12 +102,8 @@ public class DartQueryMaker implements QueryMaker
   private final DartControllerConfig controllerConfig;
 
   /**
-   * Semaphore to prevent more than {@link DartControllerConfig#getConcurrentQueries()} controllers running at once.
-   */
-  private final Semaphore controllerSemaphore;
-
-  /**
-   * Executor for {@link #runWithoutReport(ControllerHolder)}.
+   * Executor for {@link #runWithoutReport(ControllerHolder)}. Number of thread is equal to
+   * {@link DartControllerConfig#getConcurrentQueries()}, which limits the number of concurrent controllers.
    */
   private final ExecutorService controllerExecutor;
 
@@ -118,7 +113,6 @@ public class DartQueryMaker implements QueryMaker
       PlannerContext plannerContext,
       DartControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
-      Semaphore controllerSemaphore,
       ExecutorService controllerExecutor
   )
   {
@@ -127,7 +121,6 @@ public class DartQueryMaker implements QueryMaker
     this.plannerContext = plannerContext;
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
-    this.controllerSemaphore = controllerSemaphore;
     this.controllerExecutor = controllerExecutor;
   }
 
@@ -171,23 +164,12 @@ public class DartQueryMaker implements QueryMaker
     controllerRegistry.register(controllerHolder);
 
     try {
-      controllerSemaphore.acquire();
-    }
-    catch (InterruptedException e) {
-      // Error while acquiring semaphore; unregister controller.
-      controllerRegistry.remove(controllerHolder);
-      Thread.currentThread().interrupt();
-      throw new RuntimeException(e);
-    }
-
-    try {
       final Sequence<Object[]> results =
           fullReport ? runWithReport(controllerHolder) : runWithoutReport(controllerHolder);
       return QueryResponse.withEmptyContext(results);
     }
     catch (Throwable e) {
-      // Error while creating the result sequence; release semaphore and unregister controller.
-      controllerSemaphore.release();
+      // Error while creating the result sequence; unregister controller.
       controllerRegistry.remove(controllerHolder);
       throw e;
     }
@@ -228,7 +210,6 @@ public class DartQueryMaker implements QueryMaker
       throw new RuntimeException(e);
     }
     finally {
-      controllerSemaphore.release();
       controllerRegistry.remove(controllerHolder);
     }
   }
@@ -285,7 +266,6 @@ public class DartQueryMaker implements QueryMaker
           );
         }
         finally {
-          controllerSemaphore.release();
           controllerRegistry.remove(controllerHolder);
           Thread.currentThread().setName(threadName);
         }
