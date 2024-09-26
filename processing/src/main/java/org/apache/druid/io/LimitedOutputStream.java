@@ -51,7 +51,7 @@ public class LimitedOutputStream extends OutputStream
     this.exceptionMessageFn = exceptionMessageFn;
 
     if (limit < 0) {
-      throw DruidException.defensive("Limit[%s] must be greater than or equal to zero");
+      throw DruidException.defensive("Limit[%s] must be greater than or equal to zero", limit);
     }
   }
 
