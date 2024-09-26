@@ -34,8 +34,8 @@ public abstract class DoubleOutDoublesInFunctionVectorValueProcessor
   )
   {
     super(
-        CastToTypeVectorProcessor.cast(left, ExpressionType.DOUBLE),
-        CastToTypeVectorProcessor.cast(right, ExpressionType.DOUBLE),
+        CastToTypeVectorProcessor.cast(left, ExpressionType.DOUBLE, maxVectorSize),
+        CastToTypeVectorProcessor.cast(right, ExpressionType.DOUBLE, maxVectorSize),
         maxVectorSize
     );
   }

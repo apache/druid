@@ -56,7 +56,7 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.StreamSupervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
@@ -146,7 +146,7 @@ import java.util.stream.Stream;
  * @param <SequenceOffsetType> the type of the sequence number or offsets, for example, Kafka uses long offsets while Kinesis uses String sequence numbers
  */
 public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
-    implements Supervisor
+    implements StreamSupervisor
 {
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
   public static final String AUTOSCALER_SKIP_REASON_DIMENSION = "scalingSkipReason";
@@ -2482,43 +2482,67 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
   }
 
-  private void addDiscoveredTaskToPendingCompletionTaskGroups(
+  @VisibleForTesting
+  protected void addDiscoveredTaskToPendingCompletionTaskGroups(
       int groupId,
       String taskId,
       Map<PartitionIdType, SequenceOffsetType> startingPartitions
   )
   {
-    final CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingCompletionTaskGroups.computeIfAbsent(
+    final CopyOnWriteArrayList<TaskGroup> taskGroupList = pendingCompletionTaskGroups.compute(
         groupId,
-        k -> new CopyOnWriteArrayList<>()
+        (k, val) -> {
+          // Creating new pending completion task groups while compute so that read and writes are locked.
+          // To ensure synchronisatoin across threads, we need to do updates in compute so that we get only one task group for all replica tasks
+          if (val == null) {
+            val = new CopyOnWriteArrayList<>();
+          }
+
+          boolean isTaskGroupPresent = false;
+          for (TaskGroup taskGroup : val) {
+            if (taskGroup.startingSequences.equals(startingPartitions)) {
+              isTaskGroupPresent = true;
+              break;
+            }
+          }
+          if (!isTaskGroupPresent) {
+            log.info("Creating new pending completion task group [%s] for discovered task [%s].", groupId, taskId);
+
+            // reading the minimumMessageTime & maximumMessageTime from the publishing task and setting it here is not necessary as this task cannot
+            // change to a state where it will read any more events.
+            // This is a discovered task, so it would not have been assigned closed partitions initially.
+            TaskGroup newTaskGroup = new TaskGroup(
+                groupId,
+                ImmutableMap.copyOf(startingPartitions),
+                null,
+                Optional.absent(),
+                Optional.absent(),
+                null
+            );
+
+            newTaskGroup.tasks.put(taskId, new TaskData());
+            newTaskGroup.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
+
+            val.add(newTaskGroup);
+          }
+          return val;
+        }
     );
+
     for (TaskGroup taskGroup : taskGroupList) {
       if (taskGroup.startingSequences.equals(startingPartitions)) {
         if (taskGroup.tasks.putIfAbsent(taskId, new TaskData()) == null) {
-          log.info("Added discovered task [%s] to existing pending task group [%s]", taskId, groupId);
+          log.info("Added discovered task [%s] to existing pending completion task group [%s]. PendingCompletionTaskGroup: %s", taskId, groupId, taskGroup.taskIds());
         }
         return;
       }
     }
+  }
 
-    log.info("Creating new pending completion task group [%s] for discovered task [%s]", groupId, taskId);
-
-    // reading the minimumMessageTime & maximumMessageTime from the publishing task and setting it here is not necessary as this task cannot
-    // change to a state where it will read any more events.
-    // This is a discovered task, so it would not have been assigned closed partitions initially.
-    TaskGroup newTaskGroup = new TaskGroup(
-        groupId,
-        ImmutableMap.copyOf(startingPartitions),
-        null,
-        Optional.absent(),
-        Optional.absent(),
-        null
-    );
-
-    newTaskGroup.tasks.put(taskId, new TaskData());
-    newTaskGroup.completionTimeout = DateTimes.nowUtc().plus(ioConfig.getCompletionTimeout());
-
-    taskGroupList.add(newTaskGroup);
+  @VisibleForTesting
+  protected CopyOnWriteArrayList<TaskGroup> getPendingCompletionTaskGroups(int groupId)
+  {
+    return pendingCompletionTaskGroups.get(groupId);
   }
 
   // Sanity check to ensure that tasks have the same sequence name as their task group
@@ -2709,6 +2733,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     log.debug("Found [%d] partitions for stream [%s]", partitionIdsFromSupplier.size(), ioConfig.getStream());
 
+    final int configuredTaskCount = spec.getIoConfig().getTaskCount();
+    if (configuredTaskCount > partitionIdsFromSupplier.size()) {
+      log.warn("Configured task count[%s] for supervisor[%s] is greater than the number of partitions[%d].", configuredTaskCount, supervisorId, partitionIdsFromSupplier.size());
+    }
     Map<PartitionIdType, SequenceOffsetType> storedMetadata = getOffsetsFromMetadataStorage();
     Set<PartitionIdType> storedPartitions = storedMetadata.keySet();
     Set<PartitionIdType> closedPartitions = storedMetadata
@@ -3616,12 +3644,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return;
     }
 
-    Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
     final long nowTime = DateTimes.nowUtc().getMillis();
+    // if it is the first run and there is no lag observed when compared to the offsets from metadata storage stay idle
+    if (!stateManager.isAtLeastOneSuccessfulRun()) {
+      // Set previous sequences to the current offsets in metadata store
+      previousSequencesFromStream.clear();
+      previousSequencesFromStream.putAll(getOffsetsFromMetadataStorage());
+
+      // Force update partition lag since the reporting thread might not have run yet
+      updatePartitionLagFromStream();
+    }
+
+    Map<PartitionIdType, SequenceOffsetType> latestSequencesFromStream = getLatestSequencesFromStream();
     final boolean idle;
     final long idleTime;
-    if (lastActiveTimeMillis > 0
-        && previousSequencesFromStream.equals(latestSequencesFromStream)
+    if (previousSequencesFromStream.equals(latestSequencesFromStream)
         && computeTotalLag() == 0) {
       idleTime = nowTime - lastActiveTimeMillis;
       idle = true;
@@ -4210,7 +4247,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     return activeTaskMap.build();
   }
-
 
   /**
    * creates a specific task IOConfig instance for Kafka/Kinesis

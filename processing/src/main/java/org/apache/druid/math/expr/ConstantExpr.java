@@ -127,6 +127,11 @@ abstract class ConstantExpr<T> implements Expr
     return new ExprEvalBasedConstantExpr<T>(realEval());
   }
 
+  @Override
+  public <E> ExprVectorProcessor<E> asVectorProcessor(VectorInputBindingInspector inspector)
+  {
+    return VectorProcessors.constant(value, inspector.getMaxVectorSize(), outputType);
+  }
   /**
    * Constant expression based on a concreate ExprEval.
    *
@@ -247,12 +252,6 @@ class LongExpr extends ConstantExpr<Long>
   }
 
   @Override
-  public String toString()
-  {
-    return String.valueOf(value);
-  }
-
-  @Override
   protected ExprEval realEval()
   {
     return ExprEval.ofLong(value);
@@ -327,12 +326,6 @@ class DoubleExpr extends ConstantExpr<Double>
   DoubleExpr(Double value)
   {
     super(ExpressionType.DOUBLE, Preconditions.checkNotNull(value, "value"));
-  }
-
-  @Override
-  public String toString()
-  {
-    return String.valueOf(value);
   }
 
   @Override
@@ -427,7 +420,7 @@ class StringExpr extends ConstantExpr<String>
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorProcessors.constant(value, inspector.getMaxVectorSize());
+    return VectorProcessors.constant(value, inspector.getMaxVectorSize(), ExpressionType.STRING);
   }
 
   @Override
@@ -469,12 +462,6 @@ class ArrayExpr extends ConstantExpr<Object[]>
   protected ExprEval realEval()
   {
     return ExprEval.ofArray(outputType, value);
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return false;
   }
 
   @Override
@@ -557,12 +544,6 @@ class ComplexExpr extends ConstantExpr<Object>
   protected ExprEval realEval()
   {
     return ExprEval.ofComplex(outputType, value);
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return false;
   }
 
   @Override

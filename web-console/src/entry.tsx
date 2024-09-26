@@ -28,10 +28,11 @@ import { createRoot } from 'react-dom/client';
 import { bootstrapJsonParse } from './bootstrap/json-parser';
 import { bootstrapReactTable } from './bootstrap/react-table-defaults';
 import { ConsoleApplication } from './console-application';
+import type { QueryContext } from './druid-models';
 import type { Links } from './links';
 import { setLinkOverrides } from './links';
 import { Api, UrlBaser } from './singletons';
-import { setLocalStorageNamespace } from './utils';
+import { initMouseTooltip, setLocalStorageNamespace } from './utils';
 
 import './entry.scss';
 
@@ -55,11 +56,16 @@ interface ConsoleConfig {
   // A set of custom headers name/value to set on every AJAX request
   customHeaders?: Record<string, string>;
 
-  // The query context to set if the user does not have one saved in local storage, defaults to {}
-  defaultQueryContext?: Record<string, any>;
+  baseQueryContext?: QueryContext;
+
+  // The query context to set one new query tabs
+  defaultQueryContext?: QueryContext;
 
   // Extra context properties that will be added to all query requests
-  mandatoryQueryContext?: Record<string, any>;
+  mandatoryQueryContext?: QueryContext;
+
+  // The default context that is set by the server
+  serverQueryContext?: QueryContext;
 
   // Allow for link overriding to different docs
   linkOverrides?: Links;
@@ -104,11 +110,15 @@ QueryRunner.defaultQueryExecutor = (payload, isSql, cancelToken) => {
 createRoot(container).render(
   <OverlaysProvider>
     <ConsoleApplication
+      baseQueryContext={consoleConfig.baseQueryContext}
       defaultQueryContext={consoleConfig.defaultQueryContext}
       mandatoryQueryContext={consoleConfig.mandatoryQueryContext}
+      serverQueryContext={consoleConfig.serverQueryContext}
     />
   </OverlaysProvider>,
 );
+
+initMouseTooltip();
 
 // ---------------------------------
 // Taken from https://hackernoon.com/removing-that-ugly-focus-ring-and-keeping-it-too-6c8727fefcd2

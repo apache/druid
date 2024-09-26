@@ -22,13 +22,15 @@ package org.apache.druid.msq.guice;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.MemoryIntrospectorImpl;
+import org.apache.druid.msq.exec.ProcessingBuffersProvider;
+import org.apache.druid.msq.indexing.IndexerProcessingBuffersProvider;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.utils.JvmUtils;
@@ -42,37 +44,51 @@ import org.apache.druid.utils.JvmUtils;
 public class IndexerMemoryManagementModule implements DruidModule
 {
   /**
-   * Allocate up to 75% of memory for MSQ-related stuff (if all running tasks are MSQ tasks).
+   * Allocate up to 60% of memory for the MSQ framework (if all running tasks are MSQ tasks). This does not include the
+   * memory allocated to {@link #PROCESSING_MEMORY_FRACTION}.
    */
-  private static final double USABLE_MEMORY_FRACTION = 0.75;
+  private static final double MSQ_MEMORY_FRACTION = 0.60;
+
+  /**
+   * Allocate up to 15% of memory for processing buffers for MSQ tasks.
+   */
+  private static final double PROCESSING_MEMORY_FRACTION = 0.15;
 
   @Override
   public void configure(Binder binder)
   {
-    // Nothing to do.
+    TaskMemoryManagementConfig.bind(binder);
   }
 
   @Provides
-  @LazySingleton
-  public Bouncer makeProcessorBouncer(final DruidProcessingConfig processingConfig)
-  {
-    return new Bouncer(processingConfig.getNumThreads());
-  }
-
-  @Provides
-  @LazySingleton
+  @ManageLifecycle
   public MemoryIntrospector createMemoryIntrospector(
       final LookupExtractorFactoryContainerProvider lookupProvider,
+      final TaskMemoryManagementConfig taskMemoryManagementConfig,
       final DruidProcessingConfig processingConfig,
       final WorkerConfig workerConfig
   )
   {
     return new MemoryIntrospectorImpl(
-        lookupProvider,
         JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(),
-        USABLE_MEMORY_FRACTION,
+        MSQ_MEMORY_FRACTION,
         workerConfig.getCapacity(),
-        processingConfig.getNumThreads()
+        PeonMemoryManagementModule.getNumThreads(taskMemoryManagementConfig, processingConfig),
+        lookupProvider
+    );
+  }
+
+  @Provides
+  @LazySingleton
+  public ProcessingBuffersProvider createProcessingBuffersProvider(
+      final MemoryIntrospector memoryIntrospector,
+      final WorkerConfig workerConfig
+  )
+  {
+    return new IndexerProcessingBuffersProvider(
+        (long) (JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes() * PROCESSING_MEMORY_FRACTION),
+        workerConfig.getCapacity(),
+        memoryIntrospector.numProcessingThreads()
     );
   }
 }

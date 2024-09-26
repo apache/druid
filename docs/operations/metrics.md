@@ -119,6 +119,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`query/failed/count`|Number of failed queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/timeout/count`|Number of timed out queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
+|`mergeBuffer/pendingRequests`|Number of requests waiting to acquire a batch of buffers from the merge buffer pool.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 
 ### Jetty
 
@@ -382,6 +383,9 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 |`metadatacache/finalizedSchemaPayload/count`|Number of finalized segment schema cached.||Depends on the number of distinct schema in the cluster.|
 |`metadatacache/temporaryMetadataQueryResults/count`|Number of segments for which schema was fetched by executing segment metadata query.||Eventually it should be 0.|
 |`metadatacache/temporaryPublishedMetadataQueryResults/count`|Number of segments for which schema is cached after back filling in the database.||This value gets reset after each database poll. Eventually it should be 0.|
+|`metadatacache/deepStorageOnly/segment/count`|Number of available segments present only in deep storage.|`dataSource`||
+|`metadatacache/deepStorageOnly/refresh/count`|Number of deep storage only segments with cached schema.|`dataSource`||
+|`metadatacache/deepStorageOnly/process/time`|Time taken in milliseconds to process deep storage only segment schema.||Under a minute|
 
 ## General Health
 
@@ -504,6 +508,8 @@ These metrics are only available if the `OshiSysMonitor` module is included.
 |`sys/tcpv4/out/rsts`|Total "out reset" packets sent to reset the connection||Generally 0|
 |`sys/tcpv4/retrans/segs`|Total segments re-transmitted||Varies|
 
+If you want to enable only some of these metrics categories you could specify `druid.monitoring.sys.categories`.
+Possible values are `mem`, `swap`, `fs`, `disk`, `net`, `cpu`, `sys`, and `tcp`.
 
 ## S3 multi-part upload
 

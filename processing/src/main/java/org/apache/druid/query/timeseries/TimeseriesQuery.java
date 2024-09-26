@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Ordering;
 import org.apache.commons.lang.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
@@ -68,6 +69,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   private final DimFilter dimFilter;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
+  private final boolean descending;
   private final int limit;
 
   @JsonCreator
@@ -84,7 +86,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, descending, context, granularity);
+    super(dataSource, querySegmentSpec, context, granularity);
 
     // The below should be executed after context is initialized.
     final String timestampField = getTimestampResultField();
@@ -97,6 +99,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         this.aggregatorSpecs,
         postAggregatorSpecs == null ? ImmutableList.of() : postAggregatorSpecs
     );
+    this.descending = descending;
     this.limit = (limit == 0) ? Integer.MAX_VALUE : limit;
     Preconditions.checkArgument(this.limit > 0, "limit must be greater than 0");
   }
@@ -148,12 +151,20 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return postAggregatorSpecs;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean isDescending()
+  {
+    return descending;
+  }
+
   @JsonProperty("limit")
   @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = LimitJsonIncludeFilter.class)
   public int getLimit()
   {
     return limit;
   }
+
 
   public boolean isGrandTotal()
   {
@@ -191,9 +202,15 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         virtualColumns,
         dimFilter,
         Collections.emptyList(),
-        aggregatorSpecs,
-        Collections.emptyList()
+        aggregatorSpecs
     );
+  }
+
+  @Override
+  public Ordering<Result<TimeseriesResultValue>> getResultOrdering()
+  {
+    Ordering<Result<TimeseriesResultValue>> retVal = Ordering.natural();
+    return descending ? retVal.reverse() : retVal;
   }
 
   @Override
@@ -224,6 +241,11 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public TimeseriesQuery withDimFilter(DimFilter dimFilter)
   {
     return Druids.TimeseriesQueryBuilder.copy(this).filters(dimFilter).build();
+  }
+
+  public TimeseriesQuery withAggregatorSpecs(List<AggregatorFactory> aggregatorSpecs)
+  {
+    return Druids.TimeseriesQueryBuilder.copy(this).aggregators(aggregatorSpecs).build();
   }
 
   public TimeseriesQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)

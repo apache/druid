@@ -93,6 +93,10 @@ The request body takes the following properties:
         {
             "type": "VARCHAR",
             "value": "bar"
+        },
+        {
+            "type": "ARRAY",
+            "value": [-25.7, null, 36.85]
         }
     ]
     ```
@@ -929,7 +933,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
                         "context": {
                             "__resultFormat": "array",
                             "__user": "allowAll",
-                            "enableWindowing": true,
                             "executionMode": "async",
                             "finalize": true,
                             "maxNumTasks": 2,

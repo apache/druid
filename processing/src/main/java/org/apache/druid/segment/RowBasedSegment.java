@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.timeline.SegmentId;
@@ -34,18 +35,20 @@ import javax.annotation.Nullable;
 public class RowBasedSegment<RowType> implements Segment
 {
   private final SegmentId segmentId;
-  private final StorageAdapter storageAdapter;
+  private final Sequence<RowType> rowSequence;
+  private final RowAdapter<RowType> rowAdapter;
+  private final RowSignature rowSignature;
 
   /**
    * Create a row-based segment.
    *
    * The provided "rowIterable" must be in time-order according to the provided {@link RowAdapter#timestampFunction()}.
-   * The cursor returned by {@link RowBasedStorageAdapter#makeCursors} makes no attempt to verify this, and callers
-   * will expect it.
+   * The cursor returned by {@link RowBasedCursorFactory#makeCursorHolder(CursorBuildSpec)} makes no attempt to verify
+   * this, and callers will expect it.
    *
    * The provided "rowSignature" will be used for reporting available columns and their capabilities to users of
-   * {@link #asStorageAdapter()}. Note that the {@link ColumnSelectorFactory} implementation returned by this segment's
-   * storage adapter will allow creation of selectors on any field, using the {@link RowAdapter#columnFunction} for that
+   * {@link #asCursorFactory()}. Note that the {@link ColumnSelectorFactory} implementation returned by this segment's
+   * cursor factory will allow creation of selectors on any field, using the {@link RowAdapter#columnFunction} for that
    * field, even if it doesn't appear in "rowSignature".
    *
    * @param segmentId    segment identifier; will be returned by {@link #getId()}
@@ -62,11 +65,9 @@ public class RowBasedSegment<RowType> implements Segment
   )
   {
     this.segmentId = Preconditions.checkNotNull(segmentId, "segmentId");
-    this.storageAdapter = new RowBasedStorageAdapter<>(
-        rowSequence,
-        rowAdapter,
-        rowSignature
-    );
+    this.rowSignature = Preconditions.checkNotNull(rowSignature, "rowSignature");
+    this.rowSequence = Preconditions.checkNotNull(rowSequence, "rowSequence");
+    this.rowAdapter = Preconditions.checkNotNull(rowAdapter, "rowAdapter");
   }
 
   @Override
@@ -80,7 +81,7 @@ public class RowBasedSegment<RowType> implements Segment
   @Nonnull
   public Interval getDataInterval()
   {
-    return storageAdapter.getInterval();
+    return Intervals.ETERNITY;
   }
 
   @Nullable
@@ -91,10 +92,9 @@ public class RowBasedSegment<RowType> implements Segment
   }
 
   @Override
-  @Nonnull
-  public StorageAdapter asStorageAdapter()
+  public CursorFactory asCursorFactory()
   {
-    return storageAdapter;
+    return new RowBasedCursorFactory<>(rowSequence, rowAdapter, rowSignature);
   }
 
   @Override

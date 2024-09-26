@@ -52,6 +52,7 @@ import org.apache.druid.segment.index.SimpleImmutableBitmapIndex;
 import org.apache.druid.segment.index.semantic.ArrayElementIndexes;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nonnull;
@@ -97,7 +98,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.STRING_DICTIONARY_FILE_NAME
+            ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
         );
 
         stringDictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
@@ -108,7 +109,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.ENCODED_VALUE_COLUMN_FILE_NAME
+            ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME
         );
         final CompressedVSizeColumnarIntsSupplier ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
             encodedValueColumn,
@@ -117,22 +118,22 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         final ByteBuffer longDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME
+            ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME
         );
         final ByteBuffer doubleDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME
+            ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
         );
         final ByteBuffer arrayElementDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.ARRAY_ELEMENT_DICTIONARY_FILE_NAME
+            ColumnSerializerUtils.ARRAY_ELEMENT_DICTIONARY_FILE_NAME
         );
         final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.BITMAP_INDEX_FILE_NAME
+            ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME
         );
         final GenericIndexed<ImmutableBitmap> valueIndexes = GenericIndexed.read(
             valueIndexBuffer,
@@ -142,7 +143,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         final ByteBuffer elementIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.ARRAY_ELEMENT_BITMAP_INDEX_FILE_NAME
+            ColumnSerializerUtils.ARRAY_ELEMENT_BITMAP_INDEX_FILE_NAME
         );
         final GenericIndexed<ImmutableBitmap> arrayElementIndexes = GenericIndexed.read(
             elementIndexBuffer,
@@ -166,7 +167,7 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         final ByteBuffer arrayDictionarybuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.ARRAY_DICTIONARY_FILE_NAME
+            ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME
         );
         arrayDictionarySupplier = FrontCodedIntArrayIndexed.read(
             arrayDictionarybuffer,
@@ -362,6 +363,11 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
       final FrontCodedIntArrayIndexed dictionary = arrayDictionarySupplier.get();
       return new SimpleBitmapColumnIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -427,6 +433,11 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
 
       return new SimpleBitmapColumnIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)

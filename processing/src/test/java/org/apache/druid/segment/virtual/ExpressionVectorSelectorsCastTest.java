@@ -24,8 +24,9 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -115,16 +116,11 @@ public class ExpressionVectorSelectorsCastTest
             )
         )
     );
-    final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(index);
-    VectorCursor cursor = storageAdapter.makeVectorCursor(
-        null,
-        index.getDataInterval(),
-        virtualColumns,
-        false,
-        512,
-        null
-    );
-    closer.register(cursor);
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+    final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                     .setVirtualColumns(virtualColumns)
+                                                     .build();
+    VectorCursor cursor = closer.register(cursorFactory.makeCursorHolder(buildSpec)).asVectorCursor();
 
     ColumnCapabilities capabilities = INDEX.getColumnCapabilities(column);
 

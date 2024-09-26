@@ -108,6 +108,7 @@ public class QueryValidatorTest
         Collections.singletonList(() -> inputFiles), // Slice with a large number of inputFiles
         null,
         null,
+        null,
         null
     );
 
@@ -125,7 +126,7 @@ public class QueryValidatorTest
     QueryValidator.validateWorkOrder(workOrder);
   }
 
-  private static QueryDefinition createQueryDefinition(int numColumns, int numWorkers)
+  public static QueryDefinition createQueryDefinition(int numColumns, int numWorkers)
   {
     QueryDefinitionBuilder builder = QueryDefinition.builder(UUID.randomUUID().toString());
 

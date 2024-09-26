@@ -45,7 +45,7 @@ export function basicActionsToMenu(
           intent={intent}
           onClick={onAction}
           disabled={Boolean(disabledReason)}
-          title={disabledReason}
+          data-super-title={disabledReason}
         />
       ))}
     </Menu>

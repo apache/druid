@@ -59,7 +59,6 @@ import './header-bar.scss';
 const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
 
 export type HeaderActiveTab =
-  | null
   | 'data-loader'
   | 'streaming-data-loader'
   | 'classic-batch-data-loader'
@@ -93,7 +92,7 @@ const DruidLogo = React.memo(function DruidLogo() {
 });
 
 export interface HeaderBarProps {
-  active: HeaderActiveTab;
+  active: HeaderActiveTab | null;
   capabilities: Capabilities;
   onUnrestrict(capabilities: Capabilities): void;
 }
@@ -107,7 +106,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const [overlordDynamicConfigDialogOpen, setOverlordDynamicConfigDialogOpen] = useState(false);
   const [compactionDynamicConfigDialogOpen, setCompactionDynamicConfigDialogOpen] = useState(false);
 
-  const showSplitDataLoaderMenu = capabilities.hasMultiStageQuery();
+  const showSplitDataLoaderMenu = capabilities.hasMultiStageQueryTask();
 
   const loadDataViewsMenuActive = oneOf(
     active,
@@ -361,6 +360,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
             minimal
             icon={IconNames.MORE}
             active={moreViewsMenuActive}
+            data-tooltip="More views"
           />
         </Popover>
       </NavbarGroup>
@@ -408,10 +408,10 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           </Popover>
         )}
         <Popover content={configMenu} position={Position.BOTTOM_RIGHT}>
-          <Button className="header-entry" minimal icon={IconNames.COG} />
+          <Button className="header-entry" minimal icon={IconNames.COG} data-tooltip="Settings" />
         </Popover>
         <Popover content={helpMenu} position={Position.BOTTOM_RIGHT}>
-          <Button className="header-entry" minimal icon={IconNames.HELP} />
+          <Button className="header-entry" minimal icon={IconNames.HELP} data-tooltip="Help" />
         </Popover>
       </NavbarGroup>
       {aboutDialogOpen && <AboutDialog onClose={() => setAboutDialogOpen(false)} />}

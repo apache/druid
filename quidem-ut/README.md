@@ -20,7 +20,10 @@
 # Quidem UT
 
 Enables to write sql level tests easily.
-Can be used to write tests against existing test backends (ComponentSupplier) - by doing so the testcases can be moved closer to the excercised codes.
+Can be used to write tests against existing test backends (ComponentSupplier) - by doing so the testcases can be moved closer to the exercised codes.
+
+These tests might come from real usages of Druid by some external tool - by utilizing the capture mode of this module iq tests could be captured and validated later that they retain their results.
+By adding tests for those here could act as an early warning that something might have changed.
 
 ## Usage
 
@@ -39,11 +42,9 @@ sdk install maven
 # run mvn to see if it works
 mvn --version
 
-# download druid sourcces (FIXME: change this to the main repo/branch before merging)
-git clone --branch quidem-record https://github.com/kgyrtkirk/druid
+# download druid sources
+git clone https://github.com/apache/druid
 ```
-
-
 
 
 ### Running these tests
@@ -71,4 +72,6 @@ git clone --branch quidem-record https://github.com/kgyrtkirk/druid
 * after finished with the usage of the broker ; a new `record-123.iq` file will be in the project's worktree - it will contain all the executed statements
   * running `dev/quidem -Dquidem.overwrite` updates the resultsets of all `iq` files around there
   * rename the testfile to have a more descriptive name
+
+
 

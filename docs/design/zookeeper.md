@@ -41,7 +41,7 @@ The operations that happen over ZK are
 1.  [Coordinator](../design/coordinator.md) leader election
 2.  Segment "publishing" protocol from [Historical](../design/historical.md)
 3.  [Overlord](../design/overlord.md) leader election
-4.  [Overlord](../design/overlord.md) and [MiddleManager](../design/middlemanager.md) task management
+4.  [Overlord](../design/overlord.md) and [Middle Manager](../design/middlemanager.md) task management
 
 ## Coordinator Leader Election
 
@@ -53,7 +53,7 @@ ${druid.zk.paths.coordinatorPath}/_COORDINATOR
 
 ## Segment "publishing" protocol from Historical and Realtime
 
-The `announcementsPath` and `servedSegmentsPath` are used for this.
+The `announcementsPath` and `liveSegmentsPath` are used for this.
 
 All [Historical](../design/historical.md) processes publish themselves on the `announcementsPath`, specifically, they will create an ephemeral znode at
 
@@ -64,13 +64,13 @@ ${druid.zk.paths.announcementsPath}/${druid.host}
 Which signifies that they exist. They will also subsequently create a permanent znode at
 
 ```
-${druid.zk.paths.servedSegmentsPath}/${druid.host}
+${druid.zk.paths.liveSegmentsPath}/${druid.host}
 ```
 
 And as they load up segments, they will attach ephemeral znodes that look like
 
 ```
-${druid.zk.paths.servedSegmentsPath}/${druid.host}/_segment_identifier_
+${druid.zk.paths.liveSegmentsPath}/${druid.host}/_segment_identifier_
 ```
 
 Processes like the [Coordinator](../design/coordinator.md) and [Broker](../design/broker.md) can then watch these paths to see which processes are currently serving which segments.

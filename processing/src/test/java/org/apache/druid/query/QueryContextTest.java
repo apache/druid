@@ -465,12 +465,6 @@ public class QueryContextTest
     }
 
     @Override
-    public boolean isDescending()
-    {
-      return false;
-    }
-
-    @Override
     public Ordering<Integer> getResultOrdering()
     {
       return Ordering.natural();

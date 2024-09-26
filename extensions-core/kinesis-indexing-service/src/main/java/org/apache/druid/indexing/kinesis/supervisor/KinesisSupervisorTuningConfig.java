@@ -76,6 +76,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -113,7 +114,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
       @JsonProperty("intermediateHandoffPeriod") Period intermediateHandoffPeriod,
       @JsonProperty("repartitionTransitionDuration") Period repartitionTransitionDuration,
       @JsonProperty("offsetFetchPeriod") Period offsetFetchPeriod,
-      @JsonProperty("useListShards") Boolean useListShards
+      @JsonProperty("useListShards") Boolean useListShards,
+      @JsonProperty("maxColumnsToMerge") Integer maxColumnsToMerge
   )
   {
     super(
@@ -143,7 +145,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         maxSavedParseExceptions,
         maxRecordsPerPoll,
         maxBytesPerPoll,
-        intermediateHandoffPeriod
+        intermediateHandoffPeriod,
+        maxColumnsToMerge
     );
 
     this.workerThreads = workerThreads;
@@ -244,6 +247,7 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
            ", intermediateHandoffPeriod=" + getIntermediateHandoffPeriod() +
            ", repartitionTransitionDuration=" + getRepartitionTransitionDuration() +
            ", useListShards=" + isUseListShards() +
+           ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
            '}';
   }
 
@@ -277,7 +281,8 @@ public class KinesisSupervisorTuningConfig extends KinesisIndexTaskTuningConfig
         getMaxSavedParseExceptions(),
         getMaxRecordsPerPollConfigured(),
         getMaxBytesPerPollConfigured(),
-        getIntermediateHandoffPeriod()
+        getIntermediateHandoffPeriod(),
+        getMaxColumnsToMerge()
     );
   }
 }

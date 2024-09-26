@@ -26,7 +26,6 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -37,7 +36,7 @@ import java.util.List;
  * This is used to test the base cursor of an UnnestCursor.
  * Usages can be found in tests of {@link UnnestColumnValueSelectorCursor} in {@link UnnestColumnValueSelectorCursorTest}
  * However this cannot help with {@link UnnestDimensionCursor}.
- * Tests for {@link UnnestDimensionCursor} are done alongside tests for {@link UnnestStorageAdapterTest}
+ * Tests for {@link UnnestDimensionCursor} are done alongside tests for {@link UnnestCursorFactoryTest}
  */
 public class ListCursor implements Cursor
 {
@@ -187,12 +186,6 @@ public class ListCursor implements Cursor
         return null;
       }
     };
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override

@@ -21,6 +21,8 @@ package org.apache.druid.spectator.histogram;
 
 import org.apache.druid.segment.column.ComplexColumn;
 
+import javax.annotation.Nullable;
+
 public class SpectatorHistogramIndexBasedComplexColumn implements ComplexColumn
 {
   private final SpectatorHistogramIndexed index;
@@ -45,6 +47,7 @@ public class SpectatorHistogramIndexBasedComplexColumn implements ComplexColumn
   }
 
   @Override
+  @Nullable
   public Object getRowValue(int rowNum)
   {
     return index.get(rowNum);

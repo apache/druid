@@ -21,6 +21,7 @@ package org.apache.druid.sql.hook;
 
 import com.google.errorprone.annotations.Immutable;
 import org.apache.calcite.rel.RelNode;
+import org.apache.druid.query.Query;
 import java.util.Objects;
 
 /**
@@ -35,6 +36,9 @@ public interface DruidHook<T>
   HookKey<RelNode> LOGICAL_PLAN = new HookKey<>("logicalPlan", RelNode.class);
   HookKey<RelNode> DRUID_PLAN = new HookKey<>("druidPlan", RelNode.class);
   HookKey<String> SQL = new HookKey<>("sql", String.class);
+  HookKey<String> MSQ_PLAN = new HookKey<>("msqPlan", String.class);
+  @SuppressWarnings("rawtypes")
+  HookKey<Query> NATIVE_PLAN = new HookKey<>("nativePlan", Query.class);
 
   @Immutable
   class HookKey<T>

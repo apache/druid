@@ -18,17 +18,16 @@
 
 import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult } from '@druid-toolkit/query';
 import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
-import type { ComponentProps, JSX } from 'react';
+import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import SplitterLayout from 'react-splitter-layout';
 import { useStore } from 'zustand';
 
 import { Loader, QueryErrorPane } from '../../../components';
 import type { CapacityInfo, DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
-import { Execution, WorkbenchQuery } from '../../../druid-models';
+import { DEFAULT_SERVER_QUERY_CONTEXT, Execution, WorkbenchQuery } from '../../../druid-models';
 import {
   executionBackgroundStatusCheck,
   reattachTaskExecution,
@@ -60,6 +59,7 @@ import { FlexibleQueryInput } from '../flexible-query-input/flexible-query-input
 import { IngestSuccessPane } from '../ingest-success-pane/ingest-success-pane';
 import { metadataStateStore } from '../metadata-state-store';
 import { ResultTablePane } from '../result-table-pane/result-table-pane';
+import type { RunPanelProps } from '../run-panel/run-panel';
 import { RunPanel } from '../run-panel/run-panel';
 import { workStateStore } from '../work-state-store';
 
@@ -69,22 +69,30 @@ const queryRunner = new QueryRunner({
   inflateDateStrategy: 'none',
 });
 
-export interface QueryTabProps {
+export interface QueryTabProps
+  extends Pick<
+    RunPanelProps,
+    | 'maxTasksMenuHeader'
+    | 'enginesLabelFn'
+    | 'maxTasksLabelFn'
+    | 'fullClusterCapacityLabelFn'
+    | 'maxTasksOptions'
+    | 'hiddenOptions'
+  > {
   query: WorkbenchQuery;
   id: string;
   mandatoryQueryContext: QueryContext | undefined;
+  baseQueryContext: QueryContext | undefined;
+  serverQueryContext: QueryContext;
   columnMetadata: readonly ColumnMetadata[] | undefined;
   onQueryChange(newQuery: WorkbenchQuery): void;
   onQueryTab(newQuery: WorkbenchQuery, tabName?: string): void;
-  onDetails(id: string, initTab?: ExecutionDetailsTab): void;
+  onDetails(execution: Execution, initTab?: ExecutionDetailsTab): void;
   queryEngines: DruidEngine[];
   runMoreMenu: JSX.Element;
   clusterCapacity: number | undefined;
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
-  maxTaskMenuHeader?: JSX.Element;
-  enginesLabelFn?: ComponentProps<typeof RunPanel>['enginesLabelFn'];
-  maxTaskLabelFn?: ComponentProps<typeof RunPanel>['maxTaskLabelFn'];
 }
 
 export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
@@ -93,6 +101,8 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     id,
     columnMetadata,
     mandatoryQueryContext,
+    baseQueryContext,
+    serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
     onQueryChange,
     onQueryTab,
     onDetails,
@@ -101,9 +111,12 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     clusterCapacity,
     goToTask,
     getClusterCapacity,
-    maxTaskMenuHeader,
+    maxTasksMenuHeader,
     enginesLabelFn,
-    maxTaskLabelFn,
+    maxTasksLabelFn,
+    maxTasksOptions,
+    fullClusterCapacityLabelFn,
+    hiddenOptions,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
@@ -192,10 +205,13 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
         ExecutionStateCache.deleteState(id);
         const { engine, query, prefixLines, cancelQueryId } = q.getApiQuery();
 
+        const startTime = new Date();
         switch (engine) {
           case 'sql-msq-task':
             return await submitTaskQuery({
               query,
+              context: mandatoryQueryContext,
+              baseQueryContext,
               prefixLines,
               cancelToken,
               preserveOnTermination: true,
@@ -221,43 +237,43 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
             onQueryChange(props.query.changeLastExecution(undefined));
 
-            const startTime = new Date();
-            let result: QueryResult;
-            try {
-              const resultPromise = queryRunner.runQuery({
+            const executionPromise = queryRunner
+              .runQuery({
                 query,
                 extraQueryContext: mandatoryQueryContext,
+                defaultQueryContext: baseQueryContext,
                 cancelToken: new axios.CancelToken(cancelFn => {
                   nativeQueryCancelFnRef.current = cancelFn;
                 }),
-              });
-              WorkbenchRunningPromises.storePromise(id, {
-                promise: resultPromise,
-                prefixLines,
-                startTime,
-              });
+              })
+              .then(
+                queryResult => Execution.fromResult(engine, queryResult),
+                e => {
+                  const druidError = new DruidError(e, prefixLines);
+                  druidError.queryDuration = Date.now() - startTime.valueOf();
+                  throw druidError;
+                },
+              );
 
-              result = await resultPromise;
+            WorkbenchRunningPromises.storePromise(id, {
+              executionPromise,
+              startTime,
+            });
+
+            let execution: Execution;
+            try {
+              execution = await executionPromise;
               nativeQueryCancelFnRef.current = undefined;
             } catch (e) {
               nativeQueryCancelFnRef.current = undefined;
-              const druidError = new DruidError(e, prefixLines);
-              druidError.queryDuration = Date.now() - startTime.valueOf();
-              throw druidError;
+              throw e;
             }
 
-            return Execution.fromResult(engine, result);
+            return execution;
           }
         }
       } else if (WorkbenchRunningPromises.isWorkbenchRunningPromise(q)) {
-        let result: QueryResult;
-        try {
-          result = await q.promise;
-        } catch (e) {
-          throw new DruidError(e, q.prefixLines);
-        }
-
-        return Execution.fromResult('sql-native', result);
+        return await q.executionPromise;
       } else {
         switch (q.engine) {
           case 'sql-msq-task':
@@ -367,8 +383,6 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     queryManager.runQuery(effectiveQuery);
   });
 
-  const statsTaskId: string | undefined = execution?.id;
-
   const onUserCancel = (message?: string) => {
     queryManager.cancelCurrent(message);
     nativeQueryCancelFnRef.current?.();
@@ -404,10 +418,14 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               running={executionState.loading}
               queryEngines={queryEngines}
               clusterCapacity={clusterCapacity}
+              defaultQueryContext={{ ...serverQueryContext, ...baseQueryContext }}
               moreMenu={runMoreMenu}
-              maxTaskMenuHeader={maxTaskMenuHeader}
+              maxTasksMenuHeader={maxTasksMenuHeader}
               enginesLabelFn={enginesLabelFn}
-              maxTaskLabelFn={maxTaskLabelFn}
+              maxTasksLabelFn={maxTasksLabelFn}
+              maxTasksOptions={maxTasksOptions}
+              fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
+              hiddenOptions={hiddenOptions}
             />
             {executionState.isLoading() && (
               <ExecutionTimerPanel
@@ -420,7 +438,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               <ExecutionSummaryPanel
                 execution={execution}
                 queryErrorDuration={executionState.error?.queryDuration}
-                onExecutionDetail={() => onDetails(statsTaskId!)}
+                onExecutionDetail={() => onDetails(execution!)}
                 onReset={() => {
                   queryManager.reset();
                   onQueryChange(props.query.changeLastExecution(undefined));
@@ -457,8 +475,8 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                 {execution.stages && (
                   <ExecutionStagesPane
                     execution={execution}
-                    onErrorClick={() => onDetails(statsTaskId!, 'error')}
-                    onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
+                    onErrorClick={() => onDetails(execution, 'error')}
+                    onWarningClick={() => onDetails(execution, 'warnings')}
                     goToTask={goToTask}
                   />
                 )}
@@ -476,8 +494,8 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                 </div>
                 <ExecutionStagesPane
                   execution={execution}
-                  onErrorClick={() => onDetails(statsTaskId!, 'error')}
-                  onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
+                  onErrorClick={() => onDetails(execution, 'error')}
+                  onWarningClick={() => onDetails(execution, 'warnings')}
                   goToTask={goToTask}
                 />
               </div>

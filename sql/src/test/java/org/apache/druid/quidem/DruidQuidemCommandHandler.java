@@ -34,7 +34,6 @@ import org.apache.calcite.util.Util;
 import org.apache.druid.query.Query;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.rel.DruidRel;
-import org.apache.druid.sql.calcite.util.QueryLogHook;
 import org.apache.druid.sql.hook.DruidHook;
 import org.apache.druid.sql.hook.DruidHook.HookKey;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
@@ -45,11 +44,9 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class DruidQuidemCommandHandler implements CommandHandler
 {
-
   @Override
   public Command parseCommand(List<String> lines, List<String> content, String line)
   {
@@ -64,6 +61,9 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
     if (line.startsWith("nativePlan")) {
       return new NativePlanCommand(lines, content);
+    }
+    if (line.startsWith("msqPlan")) {
+      return new MSQPlanCommand(lines, content);
     }
     return null;
   }
@@ -80,33 +80,63 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
 
     @Override
-    public final String describe(Context x)
+    public final String describe(Context context)
     {
-      return commandName() + " [sql: " + x.previousSqlCommand().sql + "]";
+      return commandName() + " [sql: " + context.previousSqlCommand().sql + "]";
     }
 
     @Override
-    public final void execute(Context x, boolean execute)
+    public final void execute(Context context, boolean execute)
     {
       if (execute) {
         try {
-          executeExplain(x);
+          executeExplain(context);
         }
         catch (Exception e) {
           throw new Error(e);
         }
       } else {
-        x.echo(content);
+        context.echo(content);
       }
-      x.echo(lines);
+      context.echo(lines);
     }
 
-    protected final void executeQuery(Context x)
+    protected final <T> List<T> executeExplainCollectHookValues(Context context, HookKey<T> hook) throws IOException
     {
-      final SqlCommand sqlCommand = x.previousSqlCommand();
+      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(context);
+      List<T> logged = new ArrayList<>();
+      try (Closeable unhook = dhp.withHook(hook, (key, value) -> {
+        logged.add(value);
+      })) {
+        executeExplainQuery(context);
+      }
+      return logged;
+    }
+
+    protected final void executeQuery(Context context)
+    {
+      final SqlCommand sqlCommand = context.previousSqlCommand();
+      executeQuery(context, sqlCommand.sql);
+    }
+
+    protected final void executeExplainQuery(Context context)
+    {
+      boolean isExplainSupported = DruidConnectionExtras.unwrapOrThrow(context.connection()).isExplainSupported();
+
+      final SqlCommand sqlCommand = context.previousSqlCommand();
+
+      if (isExplainSupported) {
+        executeQuery(context, "explain plan for " + sqlCommand.sql);
+      } else {
+        executeQuery(context, sqlCommand.sql);
+      }
+    }
+
+    protected final void executeQuery(Context context, String sql)
+    {
       try (
-          final Statement statement = x.connection().createStatement();
-          final ResultSet resultSet = statement.executeQuery(sqlCommand.sql)) {
+          final Statement statement = context.connection().createStatement();
+          final ResultSet resultSet = statement.executeQuery(sql)) {
         // throw away all results
         while (resultSet.next()) {
           Util.discard(false);
@@ -117,7 +147,12 @@ public class DruidQuidemCommandHandler implements CommandHandler
       }
     }
 
-    protected abstract void executeExplain(Context x) throws Exception;
+    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context context)
+    {
+      return DruidConnectionExtras.unwrapOrThrow(context.connection()).getDruidHookDispatcher();
+    }
+
+    protected abstract void executeExplain(Context context) throws Exception;
   }
 
   /** Command that prints the plan for the current query. */
@@ -129,27 +164,18 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
 
     @Override
-    protected void executeExplain(Context x) throws Exception
+    @SuppressWarnings("rawtypes")
+    protected void executeExplain(Context context) throws Exception
     {
-      DruidConnectionExtras connectionExtras = (DruidConnectionExtras) x.connection();
+      DruidConnectionExtras connectionExtras = DruidConnectionExtras.unwrapOrThrow(context.connection());
       ObjectMapper objectMapper = connectionExtras.getObjectMapper();
-      QueryLogHook qlh = new QueryLogHook(objectMapper);
-      qlh.logQueriesForGlobal(
-          () -> {
-            executeQuery(x);
-          }
-      );
 
-      List<Query<?>> queries = qlh.getRecordedQueries();
+      List<Query> logged = executeExplainCollectHookValues(context, DruidHook.NATIVE_PLAN);
 
-      queries = queries
-          .stream()
-          .map(q -> BaseCalciteQueryTest.recursivelyClearContext(q, objectMapper))
-          .collect(Collectors.toList());
-
-      for (Query<?> query : queries) {
+      for (Query<?> query : logged) {
+        query = BaseCalciteQueryTest.recursivelyClearContext(query, objectMapper);
         String str = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(query);
-        x.echo(ImmutableList.of(str));
+        context.echo(ImmutableList.of(str));
       }
     }
   }
@@ -168,28 +194,38 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
 
     @Override
-    protected final void executeExplain(Context x) throws IOException
+    protected final void executeExplain(Context context) throws IOException
     {
-      DruidHookDispatcher dhp = unwrapDruidHookDispatcher(x);
-      List<RelNode> logged = new ArrayList<>();
-      try (Closeable unhook = dhp.withHook(hook, (key, relNode) -> {
-        logged.add(relNode);
-      })) {
-        executeQuery(x);
-      }
+      List<RelNode> logged = executeExplainCollectHookValues(context, hook);
 
       for (RelNode node : logged) {
         if (node instanceof DruidRel<?>) {
-          node = ((DruidRel) node).unwrapLogicalPlan();
+          node = ((DruidRel<?>) node).unwrapLogicalPlan();
         }
         String str = RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT, SqlExplainLevel.EXPPLAN_ATTRIBUTES);
-        x.echo(ImmutableList.of(str));
+        context.echo(ImmutableList.of(str));
       }
     }
+  }
 
-    protected final DruidHookDispatcher unwrapDruidHookDispatcher(Context x)
+  /**
+   * Handles plan commands captured via {@link Hook}.
+   */
+  abstract static class AbstractStringCaptureCommand extends AbstractPlanCommand
+  {
+    HookKey<String> hook;
+
+    AbstractStringCaptureCommand(List<String> lines, List<String> content, DruidHook.HookKey<String> hook)
     {
-      return DruidConnectionExtras.unwrapOrThrow(x.connection()).getDruidHookDispatcher();
+      super(lines, content);
+      this.hook = hook;
+    }
+
+    @Override
+    protected final void executeExplain(Context context) throws IOException
+    {
+      List<String> logged = executeExplainCollectHookValues(context, hook);
+      context.echo(logged);
     }
   }
 
@@ -214,6 +250,13 @@ public class DruidQuidemCommandHandler implements CommandHandler
     ConvertedPlanCommand(List<String> lines, List<String> content)
     {
       super(lines, content, DruidHook.CONVERTED_PLAN);
+    }
+  }
+  static class MSQPlanCommand extends AbstractStringCaptureCommand
+  {
+    MSQPlanCommand(List<String> lines, List<String> content)
+    {
+      super(lines, content, DruidHook.MSQ_PLAN);
     }
   }
 }

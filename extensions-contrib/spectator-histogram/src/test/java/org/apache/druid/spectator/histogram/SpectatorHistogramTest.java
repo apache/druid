@@ -267,6 +267,7 @@ public class SpectatorHistogramTest
   {
     SegmentWriteOutMedium medium = new OnHeapMemorySegmentWriteOutMedium();
     SpectatorHistogramObjectStrategy strategy = new SpectatorHistogramObjectStrategy();
+    Assert.assertFalse(strategy.readRetainsBufferReference());
     SpectatorHistogramSerializer serializer = SpectatorHistogramSerializer.create(medium, "test", strategy);
     serializer.open();
 

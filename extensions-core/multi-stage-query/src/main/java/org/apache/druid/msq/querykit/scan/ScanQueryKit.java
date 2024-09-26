@@ -33,12 +33,13 @@ import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
-import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.Query;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -85,24 +86,20 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
   // partition without a ClusterBy, we don't need to necessarily create it via the resultShuffleSpecFactory provided
   @Override
   public QueryDefinition makeQueryDefinition(
-      final String queryId,
+      final QueryKitSpec queryKitSpec,
       final ScanQuery originalQuery,
-      final QueryKit<Query<?>> queryKit,
       final ShuffleSpecFactory resultShuffleSpecFactory,
-      final int maxWorkerCount,
       final int minStageNumber
   )
   {
-    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
+    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
-        queryKit,
-        queryId,
+        queryKitSpec,
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
         null,
-        maxWorkerCount,
         minStageNumber,
         false
     );
@@ -120,35 +117,17 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     final List<KeyColumn> clusterByColumns = new ArrayList<>();
 
     // Add regular orderBys.
-    for (final ScanQuery.OrderBy orderBy : queryToRun.getOrderBys()) {
+    for (final OrderBy orderBy : queryToRun.getOrderBys()) {
       clusterByColumns.add(
           new KeyColumn(
               orderBy.getColumnName(),
-              orderBy.getOrder() == ScanQuery.Order.DESCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
+              orderBy.getOrder() == Order.DESCENDING ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
           )
       );
     }
 
-    // Update partition by of next window
-    final RowSignature signatureSoFar = signatureBuilder.build();
-    boolean addShuffle = true;
-    if (originalQuery.getContext().containsKey(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL)) {
-      final ClusterBy windowClusterBy = (ClusterBy) originalQuery.getContext()
-                                                                 .get(MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL);
-      for (KeyColumn c : windowClusterBy.getColumns()) {
-        if (!signatureSoFar.contains(c.columnName())) {
-          addShuffle = false;
-          break;
-        }
-      }
-      if (addShuffle) {
-        clusterByColumns.addAll(windowClusterBy.getColumns());
-      }
-    } else {
-      // Add partition boosting column.
-      clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
-      signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
-    }
+    clusterByColumns.add(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
+    signatureBuilder.add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
 
     final ClusterBy clusterBy =
         QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);
@@ -160,22 +139,32 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
     );
 
     ShuffleSpec scanShuffleSpec;
-    if (!hasLimitOrOffset) {
-      // If there is no limit spec, apply the final shuffling here itself. This will ensure partition sizes etc are respected.
-      scanShuffleSpec = finalShuffleSpec;
-    } else {
+    if (hasLimitOrOffset) {
       // If there is a limit spec, check if there are any non-boost columns to sort in.
-      boolean requiresSort = clusterByColumns.stream()
-                                             .anyMatch(keyColumn -> !QueryKitUtils.PARTITION_BOOST_COLUMN.equals(keyColumn.columnName()));
+      boolean requiresSort =
+          clusterByColumns.stream()
+                          .anyMatch(keyColumn -> !QueryKitUtils.PARTITION_BOOST_COLUMN.equals(keyColumn.columnName()));
       if (requiresSort) {
         // If yes, do a sort into a single partition.
-        scanShuffleSpec = ShuffleSpecFactories.singlePartition().build(clusterBy, false);
+        final long limitHint;
+
+        if (queryToRun.isLimited()
+            && queryToRun.getScanRowsOffset() + queryToRun.getScanRowsLimit() > 0 /* overflow check */) {
+          limitHint = queryToRun.getScanRowsOffset() + queryToRun.getScanRowsLimit();
+        } else {
+          limitHint = ShuffleSpec.UNLIMITED;
+        }
+
+        scanShuffleSpec = ShuffleSpecFactories.singlePartitionWithLimit(limitHint).build(clusterBy, false);
       } else {
         // If the only clusterBy column is the boost column, we just use a mix shuffle to avoid unused shuffling.
         // Note that we still need the boost column to be present in the row signature, since the limit stage would
         // need it to be populated to do its own shuffling later.
         scanShuffleSpec = MixShuffleSpec.instance();
       }
+    } else {
+      // If there is no limit spec, apply the final shuffling here itself. This will ensure partition sizes etc are respected.
+      scanShuffleSpec = finalShuffleSpec;
     }
 
     queryDefBuilder.add(
@@ -184,7 +173,10 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
                        .shuffleSpec(scanShuffleSpec)
                        .signature(signatureToUse)
-                       .maxWorkerCount(dataSourcePlan.isSingleWorker() ? 1 : maxWorkerCount)
+                       .maxWorkerCount(
+                           dataSourcePlan.isSingleWorker()
+                           ? 1
+                           : queryKitSpec.getMaxWorkerCount(dataSourcePlan.getInputSpecs()))
                        .processorFactory(new ScanQueryFrameProcessorFactory(queryToRun))
     );
 

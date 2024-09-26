@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
@@ -161,29 +160,6 @@ public class NoopSupervisorSpec implements SupervisorSpec
       @Override
       public void reset(DataSourceMetadata dataSourceMetadata)
       {
-      }
-
-      @Override
-      public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
-      {
-      }
-
-      @Override
-      public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
-      {
-
-      }
-
-      @Override
-      public LagStats computeLagStats()
-      {
-        return new LagStats(0, 0, 0);
-      }
-
-      @Override
-      public int getActiveTaskGroupsCount()
-      {
-        return -1;
       }
     };
   }
