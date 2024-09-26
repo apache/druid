@@ -235,6 +235,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public QueryMetrics<QueryType> reportQueryPlanningTime(long timeNs)
+  {
+    return reportMillisTimeMetric("query/planningTime", timeNs);
+  }
+
+  @Override
   public QueryMetrics<QueryType> reportQueryBytes(long byteCount)
   {
     return reportMetric("query/bytes", byteCount);

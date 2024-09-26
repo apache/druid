@@ -281,6 +281,14 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportQueryTime(long timeNs);
 
   /**
+   * Registers "query planning time" metric.
+   *
+   * Measures the time taken to plan the query. This includes time spent in determining segments for the given
+   * time interval and determining the Data nodes responsible for the segments.
+   */
+  QueryMetrics<QueryType> reportQueryPlanningTime(long timeNs);
+
+  /**
    * Registers "query bytes" metric.
    *
    * Measures the total number of bytes written by the query server thread to the response output stream.

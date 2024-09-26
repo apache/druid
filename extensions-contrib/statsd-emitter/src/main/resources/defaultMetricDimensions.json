@@ -1,5 +1,6 @@
 {
   "query/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer"},
+  "query/planningTime" : { "dimensions" : ["dataSource", "type"], "type" : "timer"},
   "query/bytes" : { "dimensions" : ["dataSource", "type"], "type" : "count"},
   "query/node/time" : { "dimensions" : ["server"], "type" : "timer"},
   "query/node/ttfb" : { "dimensions" : ["server"], "type" : "timer"},
