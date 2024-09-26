@@ -93,8 +93,6 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
     processQuery: async ({ inputSource, suggestedInputFormat }, cancelToken) => {
       const fixedFormat = FIXED_FORMAT_FOR_SOURCE['delta'];
 
-      let sampleLines: string[];
-
       const sampleSpec: SampleSpec = {
         type: 'index_parallel',
         spec: {
@@ -126,8 +124,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
       };
 
       const sampleResponse = await postToSampler(sampleSpec, 'input-source-step', cancelToken);
-
-      sampleLines = filterMap(
+      const sampleLines = filterMap(
         sampleResponse.data,
         fixedFormat ? l => l.input : l => (l.input ? l.input.raw : undefined),
       );
