@@ -20,17 +20,13 @@
 package org.apache.druid.msq.dart.controller.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
-import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.messages.MessageBatch;
-import org.apache.druid.messages.client.MessageRelay;
-import org.apache.druid.messages.client.MessageRelayClient;
-import org.apache.druid.messages.client.MessageRelayClientImpl;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
+import org.apache.druid.msq.dart.controller.http.GetQueriesResponse;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -41,20 +37,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.HttpHeaders;
-import java.util.Collections;
+import javax.ws.rs.core.MediaType;
 
 public class DartSqlClientImplTest
 {
-  private ObjectMapper smileMapper;
+  private ObjectMapper jsonMapper;
   private MockServiceClient serviceClient;
-  private MessageRelayClient<String> messageRelayClient;
+  private DartSqlClient dartSqlClient;
 
   @BeforeEach
   public void setup()
   {
-    smileMapper = new DefaultObjectMapper(new SmileFactory(), null);
+    jsonMapper = new DefaultObjectMapper();
     serviceClient = new MockServiceClient();
-    messageRelayClient = new MessageRelayClientImpl<>(serviceClient, smileMapper, String.class);
+    dartSqlClient = new DartSqlClientImpl(serviceClient, jsonMapper);
   }
 
   @AfterEach
@@ -64,32 +60,38 @@ public class DartSqlClientImplTest
   }
 
   @Test
-  public void test_getMessages_ok() throws Exception
+  public void test_getMessages_all() throws Exception
   {
-    final MessageBatch<String> batch = new MessageBatch<>(ImmutableList.of("foo", "bar"), 123, 0);
-
-    serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/outbox/me/messages?epoch=-1&watermark=0"),
-        HttpResponseStatus.OK,
-        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
-        smileMapper.writeValueAsBytes(batch)
+    final GetQueriesResponse getQueriesResponse = new GetQueriesResponse(
+        ImmutableList.of(new DartQueryInfo("sid", "did", "SELECT 1", "", "", DateTimes.of("2000")))
     );
 
-    final ListenableFuture<MessageBatch<String>> result = messageRelayClient.getMessages("me", MessageRelay.INIT, 0);
-    Assertions.assertEquals(batch, result.get());
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(getQueriesResponse)
+    );
+
+    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(false);
+    Assertions.assertEquals(getQueriesResponse, result.get());
   }
 
   @Test
-  public void test_getMessages_noContent() throws Exception
+  public void test_getMessages_selfOnly() throws Exception
   {
-    serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/outbox/me/messages?epoch=-1&watermark=0"),
-        HttpResponseStatus.NO_CONTENT,
-        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, SmileMediaTypes.APPLICATION_JACKSON_SMILE),
-        ByteArrays.EMPTY_ARRAY
+    final GetQueriesResponse getQueriesResponse = new GetQueriesResponse(
+        ImmutableList.of(new DartQueryInfo("sid", "did", "SELECT 1", "", "", DateTimes.of("2000")))
     );
 
-    final ListenableFuture<MessageBatch<String>> result = messageRelayClient.getMessages("me", MessageRelay.INIT, 0);
-    Assertions.assertEquals(new MessageBatch<>(Collections.emptyList(), MessageRelay.INIT, 0), result.get());
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/?selfOnly"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(getQueriesResponse)
+    );
+
+    final ListenableFuture<GetQueriesResponse> result = dartSqlClient.getRunningQueries(true);
+    Assertions.assertEquals(getQueriesResponse, result.get());
   }
 }

@@ -83,6 +83,7 @@ import org.mockito.MockitoAnnotations;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -327,6 +328,31 @@ public class DartSqlResourceTest extends MSQTestBase
                 remoteQueryInfo
             )
         ),
+        sqlResource.doGetRunningQueries(null, httpServletRequest)
+    );
+  }
+
+  /**
+   * Test where a superuser calls {@link DartSqlResource#doGetRunningQueries} with selfOnly disabled, and where the
+   * remote server has a problem.
+   */
+  @Test
+  public void test_getRunningQueries_global_remoteError_superUser()
+  {
+    Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(makeAuthenticationResult(CalciteTests.TEST_SUPERUSER_NAME));
+
+    // REGULAR_USER_NAME runs a query locally.
+    final ControllerHolder localHolder = setUpMockRunningQuery(REGULAR_USER_NAME);
+
+    // Remote call fails.
+    Mockito.when(dartSqlClient.getRunningQueries(true))
+           .thenReturn(Futures.immediateFailedFuture(new IOException("something went wrong")));
+
+    // We only see local queries, because the remote call failed. (The entire call doesn't fail; we see what we
+    // were able to fetch.)
+    Assertions.assertEquals(
+        new GetQueriesResponse(ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder))),
         sqlResource.doGetRunningQueries(null, httpServletRequest)
     );
   }

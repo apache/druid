@@ -154,12 +154,15 @@ public class DartSqlResource extends SqlResource
     // Add queries from all other servers, if "selfOnly" is not set.
     if (selfOnly == null) {
       final List<GetQueriesResponse> otherQueries = FutureUtils.getUnchecked(
-          Futures.allAsList(Iterables.transform(sqlClients.getAllClients(), client -> client.getRunningQueries(true))),
+          Futures.successfulAsList(
+              Iterables.transform(sqlClients.getAllClients(), client -> client.getRunningQueries(true))),
           true
       );
 
       for (final GetQueriesResponse response : otherQueries) {
-        queries.addAll(response.getQueries());
+        if (response != null) {
+          queries.addAll(response.getQueries());
+        }
       }
     }
 
