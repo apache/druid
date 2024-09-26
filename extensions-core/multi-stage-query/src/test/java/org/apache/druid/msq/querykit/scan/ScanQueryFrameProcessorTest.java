@@ -59,7 +59,6 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.timeline.SegmentId;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
