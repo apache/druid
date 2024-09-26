@@ -435,9 +435,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     return segmentId + "_H" + hydrantNumber;
   }
 
-  public static class SinkMetricsEmittingQueryRunner<T> implements QueryRunner<T> {
-
-    private static final Logger log = new Logger(SinkMetricsEmittingQueryRunner.class);
+  /**
+   * Emit query/segment/time, query/wait/time and query/segmentAndCache/Time for a sink.
+   * It accumulates query/segment/time and query/segmentAndCache/time for each hydrant at the level of sink.
+   * query/wait/time is the time take to process the first hydrant for the sink.
+   */
+  private static class SinkMetricsEmittingQueryRunner<T> implements QueryRunner<T> {
 
     private final ServiceEmitter emitter;
     private final QueryToolChest<T, ? extends Query<T>> queryToolChest;
