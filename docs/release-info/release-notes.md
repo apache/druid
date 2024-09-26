@@ -205,6 +205,7 @@ Use this API for debugging or to view lock contention or observe any concurrent 
 - Improved Overlord performance by reducing redundant calls in SQL statements [#16839](https://github.com/apache/druid/pull/16839)
 - Improved `CustomExceptionMapper` so that it returns a correct failure message [#17016](https://github.com/apache/druid/pull/17016)
 - Fixed NPE in `CompactSegments` [#16713](https://github.com/apache/druid/pull/16713)
+- Fixed Parquet reader to ensure that Druid reads the required columns for a filter from the Parquet data files [#16874](https://github.com/apache/druid/pull/16874)
 
 #### SQL-based ingestion
 
