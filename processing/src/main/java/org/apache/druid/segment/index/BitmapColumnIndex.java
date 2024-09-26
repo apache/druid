@@ -36,12 +36,12 @@ public interface BitmapColumnIndex
   ColumnIndexCapabilities getIndexCapabilities();
 
   /**
-   * Returns an estimated cost for computing the bitmap result.
+   * Returns an estimated cost for computing the bitmap result. Generally this is equivalent to number of bitmap union
+   * or intersection operations need to be performed. E.x. null value index bitmap has a cost of 0, non-null value index
+   * bitmap union with null bitmap has a cost of 1, range (size of 10) scanning index bitmap union with null bitmap has
+   * a cost of 10.
    */
-  default int estimatedComputeCost()
-  {
-    return Integer.MAX_VALUE;
-  }
+  int estimatedComputeCost();
 
   /**
    * Compute a bitmap result wrapped with the {@link BitmapResultFactory} representing the rows matched by this index.
