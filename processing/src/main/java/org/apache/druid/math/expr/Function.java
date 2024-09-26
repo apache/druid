@@ -2026,7 +2026,8 @@ public interface Function extends NamedFunction
     {
       return CastToTypeVectorProcessor.cast(
           args.get(0).asVectorProcessor(inspector),
-          ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()))
+          ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())),
+          inspector.getMaxVectorSize()
       );
     }
   }
@@ -3357,19 +3358,24 @@ public interface Function extends NamedFunction
     @Override
     public ExprEval apply(List<Expr> args, Expr.ObjectBinding bindings)
     {
-      // this is copied from 'BaseMapFunction.applyMap', need to find a better way to consolidate, or construct arrays,
-      // or.. something...
       final int length = args.size();
       Object[] out = new Object[length];
 
-      ExpressionType arrayType = null;
-
+      ExpressionType arrayElementType = null;
+      final ExprEval[] outEval = new ExprEval[length];
       for (int i = 0; i < length; i++) {
-        ExprEval<?> evaluated = args.get(i).eval(bindings);
-        arrayType = setArrayOutput(arrayType, out, i, evaluated);
+        outEval[i] = args.get(i).eval(bindings);
+        if (outEval[i].value() != null) {
+          arrayElementType = ExpressionTypeConversion.leastRestrictiveType(arrayElementType, outEval[i].type());
+        }
       }
-
-      return ExprEval.ofArray(arrayType, out);
+      if (arrayElementType == null) {
+        arrayElementType = NullHandling.sqlCompatible() ? ExpressionType.LONG : ExpressionType.STRING;
+      }
+      for (int i = 0; i < length; i++) {
+        out[i] = outEval[i].castTo(arrayElementType).value();
+      }
+      return ExprEval.ofArray(ExpressionTypeFactory.getInstance().ofArray(arrayElementType), out);
     }
 
     @Override
@@ -3393,28 +3399,6 @@ public interface Function extends NamedFunction
         type = ExpressionTypeConversion.leastRestrictiveType(type, arg.getOutputType(inspector));
       }
       return type == null ? null : ExpressionTypeFactory.getInstance().ofArray(type);
-    }
-
-    /**
-     * Set an array element to the output array, checking for null if the array is numeric. If the type of the evaluated
-     * array element does not match the array element type, this method will attempt to call {@link ExprEval#castTo}
-     * to the array element type, else will set the element as is. If the type of the array is unknown, it will be
-     * detected and defined from the first element. Returns the type of the array, which will be identical to the input
-     * type, unless the input type was null.
-     */
-    static ExpressionType setArrayOutput(@Nullable ExpressionType arrayType, Object[] out, int i, ExprEval evaluated)
-    {
-      if (arrayType == null) {
-        arrayType = ExpressionTypeFactory.getInstance().ofArray(evaluated.type());
-      }
-      if (arrayType.getElementType().isNumeric() && evaluated.isNumericNull()) {
-        out[i] = null;
-      } else if (!evaluated.asArrayType().equals(arrayType)) {
-        out[i] = evaluated.castTo((ExpressionType) arrayType.getElementType()).value();
-      } else {
-        out[i] = evaluated.value();
-      }
-      return arrayType;
     }
   }
 
@@ -3954,6 +3938,9 @@ public interface Function extends NamedFunction
         return ExprEval.ofLongBoolean(Arrays.asList(array1).containsAll(Arrays.asList(array2)));
       } else {
         final Object elem = rhsExpr.castTo((ExpressionType) array1Type.getElementType()).value();
+        if (elem == null && rhsExpr.value() != null) {
+          return ExprEval.ofLongBoolean(false);
+        }
         return ExprEval.ofLongBoolean(Arrays.asList(array1).contains(elem));
       }
     }

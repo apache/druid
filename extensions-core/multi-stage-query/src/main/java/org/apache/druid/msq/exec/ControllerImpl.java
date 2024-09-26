@@ -633,7 +633,8 @@ public class ControllerImpl implements Controller
     this.workerSketchFetcher = new WorkerSketchFetcher(
         netClient,
         workerManager,
-        queryKernelConfig.isFaultTolerant()
+        queryKernelConfig.isFaultTolerant(),
+        MultiStageQueryContext.getSketchEncoding(querySpec.getQuery().context())
     );
     closer.register(workerSketchFetcher::close);
 

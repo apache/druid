@@ -60,7 +60,7 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
   public boolean doMonitor(ServiceEmitter emitter)
   {
     final Memory memory = new Memory(cgroupDiscoverer);
-    final Memory.MemoryStat stat = memory.snapshot();
+    final Memory.MemoryStat stat = memory.snapshot(memoryUsageFile(), memoryLimitFile());
     final ServiceMetricEvent.Builder builder = builder();
     MonitorUtils.addDimensionsToBuilder(builder, dimensions);
     emitter.emit(builder.setMetric("cgroup/memory/usage/bytes", stat.getUsage()));
@@ -76,5 +76,15 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
       value.forEach((k, v) -> emitter.emit(builder.setMetric(StringUtils.format("cgroup/memory_numa/%s/pages", k), v)));
     });
     return true;
+  }
+
+  public String memoryUsageFile()
+  {
+    return "memory.usage_in_bytes";
+  }
+
+  public String memoryLimitFile()
+  {
+    return "memory.limit_in_bytes";
   }
 }

@@ -264,7 +264,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     localStorageSetJson(LocalStorageKeys.WORKBENCH_TASK_PANEL, false);
   };
 
-  private readonly handleDetails = (id: string, initTab?: ExecutionDetailsTab) => {
+  private readonly handleDetailsWithId = (id: string, initTab?: ExecutionDetailsTab) => {
     this.setState({
       details: { id, initTab },
     });
@@ -273,6 +273,15 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   private getInitWorkbenchQuery(): WorkbenchQuery {
     return WorkbenchQuery.blank().changeQueryContext(this.props.defaultQueryContext || {});
   }
+
+  private readonly handleDetailsWithExecution = (
+    execution: Execution,
+    initTab?: ExecutionDetailsTab,
+  ) => {
+    this.setState({
+      details: { id: execution.id, initExecution: execution, initTab },
+    });
+  };
 
   private getInitTab(): TabEntry {
     return {
@@ -513,7 +522,11 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           const currentId = tabEntry.id;
           const active = currentTabEntry === tabEntry;
           return (
-            <div key={i} className={classNames('tab-button', { active })}>
+            <div
+              key={i}
+              className={classNames('tab-button', { active })}
+              data-tooltip={tabEntry.tabName}
+            >
               {active ? (
                 <Popover
                   position="bottom"
@@ -590,7 +603,6 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                   <Button
                     className="tab-name"
                     text={tabEntry.tabName}
-                    title={tabEntry.tabName}
                     minimal
                     onDoubleClick={() => this.setState({ renamingTab: tabEntry })}
                   />
@@ -599,7 +611,6 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                 <Button
                   className="tab-name"
                   text={tabEntry.tabName}
-                  title={tabEntry.tabName}
                   minimal
                   onClick={() => {
                     localStorageSet(LocalStorageKeys.WORKBENCH_LAST_TAB, currentId);
@@ -610,7 +621,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               <Button
                 className="tab-close"
                 icon={IconNames.CROSS}
-                title={`Close tab '${tabEntry.tabName}`}
+                data-tooltip={`Close tab: ${tabEntry.tabName}`}
                 small
                 minimal
                 onClick={() => {
@@ -628,8 +639,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           );
         })}
         <Button
-          className="add-tab"
+          className="new-tab"
           icon={IconNames.PLUS}
+          data-tooltip="New tab"
           minimal
           onClick={() => {
             this.handleNewTab(this.getInitWorkbenchQuery());
@@ -657,17 +669,16 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           }}
           minimal
         />
-        {!showRecentQueryTaskPanel && (
-          <Button
-            icon={IconNames.DRAWER_RIGHT}
-            minimal
-            title="Show recent query task panel"
-            onClick={() => {
-              this.setState({ showRecentQueryTaskPanel: true });
-              localStorageSetJson(LocalStorageKeys.WORKBENCH_TASK_PANEL, true);
-            }}
-          />
-        )}
+        <Button
+          icon={IconNames.DRAWER_RIGHT}
+          minimal
+          data-tooltip="Open recent query task panel"
+          onClick={() => {
+            const n = !showRecentQueryTaskPanel;
+            this.setState({ showRecentQueryTaskPanel: n });
+            localStorageSetJson(LocalStorageKeys.WORKBENCH_TASK_PANEL, n);
+          }}
+        />
       </ButtonGroup>
     );
   }
@@ -713,7 +724,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           columnMetadata={columnMetadataState.getSomeData()}
           onQueryChange={this.handleQueryChange}
           onQueryTab={this.handleNewTab}
-          onDetails={this.handleDetails}
+          onDetails={this.handleDetailsWithExecution}
           queryEngines={queryEngines}
           clusterCapacity={capabilities.getMaxTaskSlots()}
           goToTask={goToTask}
@@ -850,7 +861,6 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   };
 
   render() {
-    const { queryEngines } = this.props;
     const { columnMetadataState, showRecentQueryTaskPanel } = this.state;
     const query = this.getCurrentQuery();
 
@@ -862,11 +872,12 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       defaultTables = parsedQuery.getUsedTableNames();
     }
 
+    const showRightPanel = showRecentQueryTaskPanel;
     return (
       <div
         className={classNames('workbench-view app-view', {
           'hide-column-tree': columnMetadataState.isError(),
-          'hide-work-history': !showRecentQueryTaskPanel,
+          'hide-right-panel': !showRightPanel,
         })}
       >
         {!columnMetadataState.isError() && (
@@ -882,13 +893,17 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           />
         )}
         {this.renderCenterPanel()}
-        {showRecentQueryTaskPanel && queryEngines.includes('sql-msq-task') && (
-          <RecentQueryTaskPanel
-            onClose={this.handleRecentQueryTaskPanelClose}
-            onExecutionDetails={this.handleDetails}
-            onChangeQuery={this.handleQueryStringChange}
-            onNewTab={this.handleNewTab}
-          />
+        {showRightPanel && (
+          <div className="recent-panel">
+            {showRecentQueryTaskPanel && (
+              <RecentQueryTaskPanel
+                onClose={this.handleRecentQueryTaskPanelClose}
+                onExecutionDetails={this.handleDetailsWithId}
+                onChangeQuery={this.handleQueryStringChange}
+                onNewTab={this.handleNewTab}
+              />
+            )}
+          </div>
         )}
         {this.renderExecutionDetailsDialog()}
         {this.renderExplainDialog()}

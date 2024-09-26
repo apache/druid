@@ -296,6 +296,9 @@ export type SchemaMode = 'fixed' | 'string-only-discovery' | 'type-aware-discove
 export type ArrayMode = 'arrays' | 'multi-values';
 
 export const DEFAULT_FORCE_SEGMENT_SORT_BY_TIME = true;
+export const DEFAULT_SCHEMA_MODE: SchemaMode = 'fixed';
+export const DEFAULT_ARRAY_MODE: ArrayMode = 'arrays';
+
 export function getForceSegmentSortByTime(spec: Partial<IngestionSpec>): boolean {
   return (
     deepGet(spec, 'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime') ??

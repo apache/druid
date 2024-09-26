@@ -373,19 +373,4 @@ public class WorkerResource
     return Response.status(Response.Status.OK).entity(worker.getCounters()).build();
   }
 
-  /**
-   * Determines the encoding of key collectors returned by {@link #httpFetchKeyStatistics} and
-   * {@link #httpFetchKeyStatisticsWithSnapshot}.
-   */
-  public enum SketchEncoding
-  {
-    /**
-     * The key collector is encoded as a byte stream with {@link ClusterByStatisticsSnapshotSerde}.
-     */
-    OCTET_STREAM,
-    /**
-     * The key collector is encoded as json
-     */
-    JSON
-  }
 }

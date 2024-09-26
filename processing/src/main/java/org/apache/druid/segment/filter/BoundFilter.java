@@ -149,8 +149,6 @@ public class BoundFilter implements Filter
       BitmapColumnIndex rangeIndex
   )
   {
-
-
     final BitmapColumnIndex nullBitmap;
     final NullValueIndex nulls = indexSupplier.as(NullValueIndex.class);
     if (nulls == null) {
@@ -164,6 +162,12 @@ public class BoundFilter implements Filter
       public ColumnIndexCapabilities getIndexCapabilities()
       {
         return rangeIndex.getIndexCapabilities().merge(nullBitmap.getIndexCapabilities());
+      }
+
+      @Override
+      public int estimatedComputeCost()
+      {
+        return rangeIndex.estimatedComputeCost() + 1;
       }
 
       @Override

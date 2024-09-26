@@ -16,7 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Intent, Popover, Tab, Tabs } from '@blueprintjs/core';
+import {
+  Button,
+  Classes,
+  Dialog,
+  Intent,
+  Popover,
+  Tab,
+  Tabs,
+  TabsExpander,
+} from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
@@ -111,7 +120,7 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
             panelClassName="panel"
           />
         ))}
-        <Tabs.Expander />
+        <TabsExpander />
       </Tabs>
     );
   }

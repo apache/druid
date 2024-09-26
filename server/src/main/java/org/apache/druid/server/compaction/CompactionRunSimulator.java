@@ -27,6 +27,7 @@ import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
@@ -75,7 +76,8 @@ public class CompactionRunSimulator
    */
   public CompactionSimulateResult simulateRunWithConfig(
       DruidCompactionConfig compactionConfig,
-      Map<String, SegmentTimeline> datasourceTimelines
+      Map<String, SegmentTimeline> datasourceTimelines,
+      CompactionEngine defaultEngine
   )
   {
     final Table compactedIntervals
@@ -138,13 +140,14 @@ public class CompactionRunSimulator
 
     // Unlimited task slots to ensure that simulator does not skip any interval
     final DruidCompactionConfig configWithUnlimitedTaskSlots = compactionConfig.withClusterConfig(
-        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null, null)
+        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null)
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();
     new CompactSegments(simulationStatusTracker, readOnlyOverlordClient).run(
         configWithUnlimitedTaskSlots,
         datasourceTimelines,
+        defaultEngine,
         stats
     );
 

@@ -99,6 +99,9 @@ public class VectorValueMatcherColumnProcessorFactory implements VectorColumnPro
   )
   {
     if (capabilities.is(ValueType.STRING)) {
+      if (capabilities.hasMultipleValues().isTrue()) {
+        return new MultiValueStringObjectVectorValueMatcher(selector);
+      }
       return new StringObjectVectorValueMatcher(selector);
     }
     return new ObjectVectorValueMatcher(selector);
