@@ -629,15 +629,10 @@ Segment-serving processes such as Peons, Historicals and Indexers no longer crea
 
 Move to HTTP-based segment loading first and then perform the version upgrade.
 
-#### `StorageAdapter` interface
-
-Replaced the `StorageAdapter` interface with the `CursorHolder` interface.
-
-[#17024](https://github.com/apache/druid/pull/17024)
-
 ### Developer notes
 
 - Fixed the `hibernate-validator` warning displayed during maven build [#16746](https://github.com/apache/druid/pull/16746)
+- Replaced the `StorageAdapter` interface with the `CursorHolder` interface [#17024](https://github.com/apache/druid/pull/17024)
 
 #### Dependency updates
 
