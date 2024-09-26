@@ -21,10 +21,8 @@ package org.apache.druid.msq.dart.controller;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.joda.time.DateTime;
-
-import javax.annotation.Nullable;
 
 /**
  * Holder for {@link Controller}, stored in {@link DartControllerRegistry}.
@@ -34,22 +32,21 @@ public class ControllerHolder
   private final Controller controller;
   private final String sqlQueryId;
   private final String sql;
-  @Nullable
-  private final String identity;
+  private final AuthenticationResult authenticationResult;
   private final DateTime startTime;
 
   public ControllerHolder(
       final Controller controller,
       final String sqlQueryId,
       final String sql,
-      final String identity,
+      final AuthenticationResult authenticationResult,
       final DateTime startTime
   )
   {
     this.controller = Preconditions.checkNotNull(controller, "controller");
     this.sqlQueryId = Preconditions.checkNotNull(sqlQueryId, "sqlQueryId");
-    this.sql = MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(Preconditions.checkNotNull(sql, "sql"));
-    this.identity = identity;
+    this.sql = sql;
+    this.authenticationResult = authenticationResult;
     this.startTime = Preconditions.checkNotNull(startTime, "startTime");
   }
 
@@ -68,10 +65,9 @@ public class ControllerHolder
     return sql;
   }
 
-  @Nullable
-  public String getIdentity()
+  public AuthenticationResult getAuthenticationResult()
   {
-    return identity;
+    return authenticationResult;
   }
 
   public DateTime getStartTime()

@@ -98,6 +98,7 @@ public class DartControllerContext implements ControllerContext
       @Self final DruidNode selfNode,
       final ControllerServerId selfId,
       @EscalatedGlobal final ServiceClientFactory serviceClientFactory,
+      final MemoryIntrospector memoryIntrospector,
       final BrokerServerView serverView,
       final ServiceEmitter emitter
   )
@@ -109,7 +110,7 @@ public class DartControllerContext implements ControllerContext
     this.selfId = selfId;
     this.serviceClientFactory = serviceClientFactory;
     this.serverView = serverView;
-    this.memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
+    this.memoryIntrospector = memoryIntrospector;
     this.metricBuilder = new ServiceMetricEvent.Builder();
     this.emitter = emitter;
   }

@@ -28,6 +28,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.worker.DartProcessingBuffersProvider;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.MemoryIntrospectorImpl;
@@ -65,6 +66,7 @@ public class DartWorkerMemoryManagementModule implements DruidModule
   }
 
   @Provides
+  @Dart
   @LazySingleton
   public ProcessingBuffersProvider createProcessingBuffersProvider(
       @Merging final BlockingPool<ByteBuffer> mergeBufferPool,

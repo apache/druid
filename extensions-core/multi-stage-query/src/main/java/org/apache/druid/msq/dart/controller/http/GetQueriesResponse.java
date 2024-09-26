@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Class returned by {@link DartSqlResource#doGetRunningQueries}, the "list all queries" API.
@@ -41,5 +42,32 @@ public class GetQueriesResponse
   public List<DartQueryInfo> getQueries()
   {
     return queries;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    GetQueriesResponse response = (GetQueriesResponse) o;
+    return Objects.equals(queries, response.queries);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(queries);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "GetQueriesResponse{" +
+           "queries=" + queries +
+           '}';
   }
 }

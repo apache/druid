@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Response from {@link DartWorkerResource#httpGetWorkers(HttpServletRequest)}, the "get all workers" API.
@@ -40,5 +41,24 @@ public class GetWorkersResponse
   public List<DartWorkerInfo> getWorkers()
   {
     return workers;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    GetWorkersResponse that = (GetWorkersResponse) o;
+    return Objects.equals(workers, that.workers);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(workers);
   }
 }

@@ -78,7 +78,7 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
       GroupingEngine groupingEngine,
       @Dart DataSegmentProvider dataSegmentProvider,
       MemoryIntrospector memoryIntrospector,
-      ProcessingBuffersProvider processingBuffersProvider,
+      @Dart ProcessingBuffersProvider processingBuffersProvider,
       Outbox<ControllerMessage> outbox
   )
   {

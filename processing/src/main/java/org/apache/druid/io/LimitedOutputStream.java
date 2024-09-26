@@ -19,6 +19,7 @@
 
 package org.apache.druid.io;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IOE;
 
 import java.io.IOException;
@@ -48,6 +49,10 @@ public class LimitedOutputStream extends OutputStream
     this.out = out;
     this.limit = limit;
     this.exceptionMessageFn = exceptionMessageFn;
+
+    if (limit < 0) {
+      throw DruidException.defensive("Limit[%s] must be greater than or equal to zero");
+    }
   }
 
   @Override

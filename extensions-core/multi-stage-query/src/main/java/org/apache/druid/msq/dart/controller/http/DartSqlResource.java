@@ -32,15 +32,18 @@ import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.msq.rpc.MSQResourceUtils;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
+import org.apache.druid.server.security.Resource;
+import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.HttpStatement;
 import org.apache.druid.sql.SqlLifecycleManager;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -59,9 +62,11 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -137,7 +142,12 @@ public class DartSqlResource extends SqlResource
       @Context final HttpServletRequest req
   )
   {
-    MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
+    final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
+    final Access stateReadAccess = AuthorizationUtils.authorizeAllResourceActions(
+        authenticationResult,
+        Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
+        authorizerMapper
+    );
 
     final List<DartQueryInfo> queries =
         controllerRegistry.getAllHolders()
@@ -157,7 +167,27 @@ public class DartSqlResource extends SqlResource
       }
     }
 
-    return new GetQueriesResponse(queries);
+    final GetQueriesResponse response;
+    if (stateReadAccess.isAllowed()) {
+      // User can READ STATE, so they can see all running queries, as well as authentication details.
+      response = new GetQueriesResponse(queries);
+    } else {
+      // User cannot READ STATE, so they can see only their own queries, without authentication details.
+      response = new GetQueriesResponse(
+          queries.stream()
+                 .filter(
+                     query ->
+                         authenticationResult.getAuthenticatedBy() != null
+                         && authenticationResult.getIdentity() != null
+                         && Objects.equals(authenticationResult.getAuthenticatedBy(), query.getAuthenticator())
+                         && Objects.equals(authenticationResult.getIdentity(), query.getIdentity()))
+                 .map(DartQueryInfo::withoutAuthenticationResult)
+                 .collect(Collectors.toList())
+      );
+    }
+
+    AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
+    return response;
   }
 
   /**

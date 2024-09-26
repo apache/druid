@@ -25,6 +25,8 @@ import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.joda.time.DateTime;
 
+import java.util.Objects;
+
 /**
  * Class included in {@link GetWorkersResponse}.
  */
@@ -70,7 +72,7 @@ public class DartWorkerInfo
    * Controller server that manages this query.
    */
   @JsonProperty
-  public ControllerServerId getControllerHost()
+  public ControllerServerId getControllerServerId()
   {
     return controllerServerId;
   }
@@ -83,5 +85,27 @@ public class DartWorkerInfo
   public DateTime getStartTime()
   {
     return startTime;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    DartWorkerInfo that = (DartWorkerInfo) o;
+    return Objects.equals(dartQueryId, that.dartQueryId)
+           && Objects.equals(workerId, that.workerId)
+           && Objects.equals(controllerServerId, that.controllerServerId)
+           && Objects.equals(startTime, that.startTime);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dartQueryId, workerId, controllerServerId, startTime);
   }
 }
