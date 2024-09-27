@@ -301,6 +301,11 @@
                 <artifactId>commons-logging</artifactId>
                 <version>1.1.1</version>
             </dependency>
+            <dependency>
+                <groupId>commons-lang</groupId>
+                <artifactId>commons-lang</artifactId>
+                <version>2.6</version>
+            </dependency>
            <dependency>
                <groupId>commons-net</groupId>
                <artifactId>commons-net</artifactId>
@@ -502,6 +507,10 @@
                   <exclusion>
                     <groupId>com.google.guava</groupId>
                     <artifactId>guava</artifactId>
+                  </exclusion>
+                  <exclusion>
+                      <groupId>net.hydromatic</groupId>
+                      <artifactId>aggdesigner-algorithm</artifactId>
                   </exclusion>
                 </exclusions>
             </dependency>
