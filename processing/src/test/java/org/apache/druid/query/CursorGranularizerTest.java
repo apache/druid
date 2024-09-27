@@ -321,7 +321,7 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testGranularizeFilteredClipped()
+  public void testGranularizeFilteredClippedAndPartialOverlap()
   {
     final CursorBuildSpec filtered = CursorBuildSpec.builder()
                                                     .setFilter(new EqualityFilter("y", ColumnType.STRING, "1", null))
