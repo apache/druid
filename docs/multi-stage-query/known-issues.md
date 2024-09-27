@@ -77,6 +77,6 @@ The following known issues and limitations affect automatic compaction with the 
 
 - The `metricSpec` field is only supported for idempotent aggregators. For more information, see [Idempotent aggregators](../data-management/automatic-compaction.md#idempotent-aggregators).
 - Only dynamic and range-based partitioning are supported
-- Set `rollup`  to `true` if `metricSpec` is not empty or null. If `metricSpec` is empty or null, set `rollup` to `false`.
-- You cannot group on multi-value dimensions
+- Set `rollup`  to `true` if and only if `metricSpec` is not empty or null.
+- You can only partition on string dimensions. However, multi-valued string dimensions are not supported.
 - The `maxTotalRows` config is not supported in `DynamicPartitionsSpec`. Use `maxRowsPerSegment` instead.
