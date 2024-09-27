@@ -355,6 +355,12 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     @Override
     public void get(int[] out, int start, int length)
     {
+      get(out, 0, start, length);
+    }
+
+    @Override
+    public void get(int[] out, int offset, int start, int length)
+    {
       int p = 0;
 
       while (p < length) {
@@ -374,10 +380,9 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
             break;
           }
 
-          out[i] = _get(buffer, bigEndian, index - currBufferStart);
+          out[offset + i] = _get(buffer, bigEndian, index - currBufferStart);
         }
 
-        assert i > p;
         p = i;
       }
     }
