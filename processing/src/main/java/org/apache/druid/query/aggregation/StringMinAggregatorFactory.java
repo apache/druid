@@ -23,42 +23,18 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
-import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
-import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnCapabilities;
-import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
 
-public class StringMinAggregatorFactory extends AggregatorFactory
+public class StringMinAggregatorFactory extends SimpleStringAggregatorFactory
 {
   private static final Comparator<String> VALUE_COMPARATOR = Comparator.nullsLast(Comparator.naturalOrder());
 
-  public static final int DEFAULT_MAX_STRING_SIZE = 1024;
-  private final int maxStringBytes;
-  private final String name;
-
-  @Nullable
-  private final String fieldName;
   private final boolean aggregateMultipleValues;
-  @Nullable
-  private final String expression;
-  private final ExprMacroTable macroTable;
-  private final Supplier<Expr> fieldExpression;
   private final Supplier<byte[]> cacheKey;
 
   @JsonCreator
@@ -71,29 +47,9 @@ public class StringMinAggregatorFactory extends AggregatorFactory
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name.");
-    Preconditions.checkArgument(
-        fieldName == null ^ expression == null,
-        "Must have a valid, non-null fieldName or expression"
-    );
-
-    this.macroTable = macroTable;
-    this.name = name;
-    this.fieldName = fieldName;
-
-    if (maxStringBytes == null) {
-      this.maxStringBytes = DEFAULT_MAX_STRING_SIZE;
-    } else {
-      if (maxStringBytes < 0) {
-        throw new IAE("maxStringBytes must be greater than 0");
-      }
-
-      this.maxStringBytes = maxStringBytes;
-    }
+    super(macroTable, name, fieldName, expression, maxStringBytes);
 
     this.aggregateMultipleValues = aggregateMultipleValues == null || aggregateMultipleValues;
-    this.expression = expression;
-    this.fieldExpression = Parser.lazyParse(expression, macroTable);
     this.cacheKey = AggregatorUtil.getSimpleAggregatorCacheKeySupplier(
         AggregatorUtil.STRING_MIN_CACHE_TYPE_ID,
         fieldName,
@@ -101,56 +57,57 @@ public class StringMinAggregatorFactory extends AggregatorFactory
     );
   }
 
-  public StringMinAggregatorFactory(String name, String fieldName, Integer maxStringBytes, boolean aggregateMultipleValues)
+  public StringMinAggregatorFactory(
+      String name,
+      String fieldName,
+      Integer maxStringBytes,
+      boolean aggregateMultipleValues
+  )
   {
     this(name, fieldName, maxStringBytes, aggregateMultipleValues, null, ExprMacroTable.nil());
   }
 
-  @Override
-  public Aggregator factorize(ColumnSelectorFactory metricFactory)
+  public StringMinAggregatorFactory(
+      String name,
+      String fieldName
+  )
   {
-    @SuppressWarnings("unchecked")
-    BaseObjectColumnValueSelector<String> selector = metricFactory.makeColumnValueSelector(fieldName);
+    this(name, fieldName, null, true, null, ExprMacroTable.nil());
+  }
+
+//  @Override
+//  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
+//  {
+//    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
+//    // null capabilities mean the column doesn't exist, so in vector engines the selector will never be multi-value
+//    // canVectorize ensures that nonnull capabilities => dict-encoded string
+//    if (capabilities != null && capabilities.hasMultipleValues().isMaybeTrue()) {
+//      return new StringMinVectorAggregator(
+//          null,
+//          selectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
+//          maxStringBytes,
+//          aggregateMultipleValues
+//      );
+//    } else {
+//      return new StringMinVectorAggregator(
+//          selectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
+//          null,
+//          maxStringBytes,
+//          aggregateMultipleValues
+//      );
+//    }
+//  }
+
+  @Override
+  protected Aggregator buildAggregator(BaseObjectColumnValueSelector<String> selector)
+  {
     return new StringMinAggregator(selector, maxStringBytes);
   }
 
   @Override
-  public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+  protected BufferAggregator buildBufferAggregator(BaseObjectColumnValueSelector<String> selector)
   {
-    @SuppressWarnings("unchecked")
-    BaseObjectColumnValueSelector<String> selector = metricFactory.makeColumnValueSelector(fieldName);
     return new StringMinBufferAggregator(selector, maxStringBytes);
-  }
-
-  @Override
-  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
-  {
-    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-    // null capabilities mean the column doesn't exist, so in vector engines the selector will never be multi-value
-    // canVectorize ensures that nonnull capabilities => dict-encoded string
-    if (capabilities != null && capabilities.hasMultipleValues().isMaybeTrue()) {
-      return new StringMinVectorAggregator(
-          null,
-          selectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
-          maxStringBytes,
-          aggregateMultipleValues
-      );
-    } else {
-      return new StringMinVectorAggregator(
-          selectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
-          null,
-          maxStringBytes,
-          aggregateMultipleValues
-      );
-    }
-  }
-
-  @Override
-  public boolean canVectorize(ColumnInspector columnInspector)
-  {
-    final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
-    return capabilities == null
-           || (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Override
@@ -184,60 +141,22 @@ public class StringMinAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public Object deserialize(Object object)
-  {
-    return object.toString(); // Assuming the object can be converted to a String
-  }
-
-  @Nullable
-  @Override
-  public Object finalizeComputation(@Nullable Object object)
-  {
-    return object;
-  }
-
-  @Override
   public String getName()
   {
     return name;
   }
 
   @Override
-  public List<String> requiredFields()
-  {
-    return fieldName != null
-           ? Collections.singletonList(fieldName)
-           : fieldExpression.get().analyzeInputs().getRequiredBindingsList();
-  }
-
-  @Override
-  public ColumnType getIntermediateType()
-  {
-    return ColumnType.STRING;
-  }
-
-  @Override
-  public ColumnType getResultType()
-  {
-    return ColumnType.STRING;
-  }
-
-  @Override
-  public int getMaxIntermediateSize()
-  {
-    return Integer.BYTES + maxStringBytes;
-  }
-
-  @Override
-  public int guessAggregatorHeapFootprint(long rows)
-  {
-    return getMaxIntermediateSize();
-  }
-
-  @Override
   public AggregatorFactory withName(String newName)
   {
-    return new StringMinAggregatorFactory(newName, fieldName, maxStringBytes, aggregateMultipleValues);
+    return new StringMinAggregatorFactory(
+        newName,
+        fieldName,
+        maxStringBytes,
+        aggregateMultipleValues,
+        expression,
+        macroTable
+    );
   }
 
   @Override
@@ -246,35 +165,6 @@ public class StringMinAggregatorFactory extends AggregatorFactory
     return cacheKey.get();
   }
 
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    StringMinAggregatorFactory that = (StringMinAggregatorFactory) o;
-
-    if (!Objects.equals(fieldName, that.fieldName)) {
-      return false;
-    }
-    if (!Objects.equals(name, that.name)) {
-      return false;
-    }
-    if (!Objects.equals(maxStringBytes, that.maxStringBytes)) {
-      return false;
-    }
-    return Objects.equals(aggregateMultipleValues, that.aggregateMultipleValues);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(fieldName, name, maxStringBytes, aggregateMultipleValues);
-  }
 
   @Override
   public String toString()

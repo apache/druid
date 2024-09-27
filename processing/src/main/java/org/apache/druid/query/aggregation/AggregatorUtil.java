@@ -244,11 +244,10 @@ public class AggregatorUtil
   /**
    * Only one of fieldName and fieldExpression should be non-null
    */
-  static ColumnValueSelector<?> makeColumnValueSelectorWithStringDefault(
+  static ColumnValueSelector<String> makeColumnValueSelectorWithStringDefault(
       final ColumnSelectorFactory columnSelectorFactory,
       @Nullable final String fieldName,
-      @Nullable final Expr fieldExpression,
-      final String nullValue
+      @Nullable final Expr fieldExpression
   )
   {
     if ((fieldName == null) == (fieldExpression == null)) {
@@ -263,12 +262,14 @@ public class AggregatorUtil
           fieldExpression
       );
 
-      class ExpressionStringColumnSelector extends ObjectColumnSelector<String> implements BaseObjectColumnValueSelector<String> {
+      class ExpressionStringColumnSelector extends ObjectColumnSelector<String>
+          implements BaseObjectColumnValueSelector<String>
+      {
         @Override
         public String getObject()
         {
           final ExprEval<?> exprEval = baseSelector.getObject();
-          return exprEval == null ? nullValue : exprEval.asString();
+          return exprEval == null ? null : exprEval.asString();
         }
 
         @Override
