@@ -340,20 +340,10 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 
   private Snapshot getSnapshotForTable(final Table table, final Engine engine)
   {
-    // Setting the LogStore class loader before calling the Delta Kernel snapshot API is required as a workaround with
-    // the 3.2.0 Delta Kernel because the Kernel library cannot instantiate the LogStore class otherwise. Please see
-    // https://github.com/delta-io/delta/issues/3299 for details. This workaround can be removed once the issue is fixed.
-    final ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
-    try {
-      Thread.currentThread().setContextClassLoader(LogStore.class.getClassLoader());
-      if (snapshotVersion != null) {
-        return table.getSnapshotAsOfVersion(engine, snapshotVersion);
-      } else {
-        return table.getLatestSnapshot(engine);
-      }
-    }
-    finally {
-      Thread.currentThread().setContextClassLoader(currCtxCl);
+    if (snapshotVersion != null) {
+      return table.getSnapshotAsOfVersion(engine, snapshotVersion);
+    } else {
+      return table.getLatestSnapshot(engine);
     }
   }
 
