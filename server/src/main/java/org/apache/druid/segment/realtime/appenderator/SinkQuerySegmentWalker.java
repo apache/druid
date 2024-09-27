@@ -34,12 +34,12 @@ import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.SequenceWrapper;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.CPUTimeMetricQueryRunner;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
@@ -90,10 +90,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.ObjLongConsumer;
 import java.util.stream.Collectors;
-
-import static org.apache.druid.query.DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME;
-import static org.apache.druid.query.DefaultQueryMetrics.QUERY_SEGMENT_TIME;
-import static org.apache.druid.query.DefaultQueryMetrics.QUERY_WAIT_TIME;
 
 /**
  * Query handler for indexing tasks.
@@ -212,9 +208,9 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final ConcurrentHashMap<String, Map<String, AtomicLong>> segmentMetrics = new ConcurrentHashMap<>();
 
     final Map<String, ObjLongConsumer<? super QueryMetrics<?>>> metricsToReport = new HashMap<>();
-    metricsToReport.put(QUERY_SEGMENT_TIME, QueryMetrics::reportSegmentTime);
-    metricsToReport.put(QUERY_SEGMENT_AND_CACHE_TIME, QueryMetrics::reportSegmentAndCacheTime);
-    metricsToReport.put(QUERY_WAIT_TIME, QueryMetrics::reportWaitTime);
+    metricsToReport.put(DefaultQueryMetrics.QUERY_SEGMENT_TIME, QueryMetrics::reportSegmentTime);
+    metricsToReport.put(DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME, QueryMetrics::reportSegmentAndCacheTime);
+    metricsToReport.put(DefaultQueryMetrics.QUERY_WAIT_TIME, QueryMetrics::reportWaitTime);
 
     try {
       for (final SegmentDescriptor newDescriptor : specs) {
@@ -260,7 +256,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                         factory.createRunner(segmentReference.getSegment()),
                         metricsToReport,
                         segmentMetrics,
-                        Collections.singleton(QUERY_SEGMENT_TIME),
+                        Collections.singleton(DefaultQueryMetrics.QUERY_SEGMENT_TIME),
                         sinkSegmentId.toString(),
                         false
                     );
@@ -305,7 +301,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                         runner,
                         metricsToReport,
                         segmentMetrics,
-                        new HashSet<>(Arrays.asList(QUERY_WAIT_TIME, QUERY_SEGMENT_AND_CACHE_TIME)),
+                        new HashSet<>(
+                            Arrays.asList(
+                                DefaultQueryMetrics.QUERY_WAIT_TIME,
+                                DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME
+                            )
+                        ),
                         sinkSegmentId.toString(),
                         false
                     );
@@ -440,8 +441,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
    * It accumulates query/segment/time and query/segmentAndCache/time metric for each FireHydrant at the level of Sink.
    * query/wait/time metric is the time taken to process the first FireHydrant for the Sink.
    */
-  private static class SinkMetricsEmittingQueryRunner<T> implements QueryRunner<T> {
-
+  private static class SinkMetricsEmittingQueryRunner<T> implements QueryRunner<T>
+  {
     private final ServiceEmitter emitter;
     private final QueryToolChest<T, ? extends Query<T>> queryToolChest;
     private final QueryRunner<T> queryRunner;
@@ -501,7 +502,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
             {
               if (!report) {
                 for (String metric : metricsToCompute) {
-                  if (QUERY_WAIT_TIME.equals(metric)) {
+                  if (DefaultQueryMetrics.QUERY_WAIT_TIME.equals(metric)) {
                     long waitTimeNs = startTimeNs - creationTimeNs;
                     // segment wait time is the time taken to start processing the first hydrant for the segment
                     segmentMetrics.computeIfAbsent(segmentId, metrics -> new HashMap<>())
