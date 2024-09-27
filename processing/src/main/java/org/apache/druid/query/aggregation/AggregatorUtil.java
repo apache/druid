@@ -170,7 +170,7 @@ public class AggregatorUtil
 
   // String min / max aggregator
   public static final byte STRING_MIN_CACHE_TYPE_ID = 0x51;
-//  public static final byte STRING_MAX_CACHE_TYPE_ID = 0x52;
+  public static final byte STRING_MAX_CACHE_TYPE_ID = 0x52;
 
   /**
    * Given a list of PostAggregators and the name of an output column, returns the minimal list of PostAggregators

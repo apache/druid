@@ -67,37 +67,6 @@ public class StringMinAggregatorFactory extends SimpleStringAggregatorFactory
     this(name, fieldName, maxStringBytes, aggregateMultipleValues, null, ExprMacroTable.nil());
   }
 
-  public StringMinAggregatorFactory(
-      String name,
-      String fieldName
-  )
-  {
-    this(name, fieldName, null, true, null, ExprMacroTable.nil());
-  }
-
-//  @Override
-//  public VectorAggregator factorizeVector(VectorColumnSelectorFactory selectorFactory)
-//  {
-//    ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
-//    // null capabilities mean the column doesn't exist, so in vector engines the selector will never be multi-value
-//    // canVectorize ensures that nonnull capabilities => dict-encoded string
-//    if (capabilities != null && capabilities.hasMultipleValues().isMaybeTrue()) {
-//      return new StringMinVectorAggregator(
-//          null,
-//          selectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
-//          maxStringBytes,
-//          aggregateMultipleValues
-//      );
-//    } else {
-//      return new StringMinVectorAggregator(
-//          selectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
-//          null,
-//          maxStringBytes,
-//          aggregateMultipleValues
-//      );
-//    }
-//  }
-
   @Override
   protected Aggregator buildAggregator(BaseObjectColumnValueSelector<String> selector)
   {
