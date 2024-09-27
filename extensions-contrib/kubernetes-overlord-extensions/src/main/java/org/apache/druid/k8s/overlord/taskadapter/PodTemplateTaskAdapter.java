@@ -20,7 +20,6 @@
 package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -28,17 +27,13 @@ import io.fabric8.kubernetes.api.model.EnvVarBuilder;
 import io.fabric8.kubernetes.api.model.EnvVarSourceBuilder;
 import io.fabric8.kubernetes.api.model.ObjectFieldSelector;
 import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
-import io.fabric8.kubernetes.client.utils.Serialization;
 import org.apache.commons.io.IOUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
-import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
@@ -46,24 +41,15 @@ import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
 import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.KubernetesOverlordUtils;
-import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
-import org.apache.druid.k8s.overlord.execution.PodTemplateSelectStrategy;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.tasklogs.TaskLogs;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Properties;
-import java.util.Set;
 
 /**
  * A PodTemplate {@link TaskAdapter} to transform tasks to kubernetes jobs and kubernetes pods to tasks
@@ -85,33 +71,28 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
 
-  private static final String TASK_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX + ".k8s.podTemplate.";
-
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
   private final TaskConfig taskConfig;
   private final DruidNode node;
   private final ObjectMapper mapper;
-  private final HashMap<String, PodTemplate> templates;
   private final TaskLogs taskLogs;
-  private final Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
+  private final PodTemplateSelector podTemplateSelector;
 
   public PodTemplateTaskAdapter(
       KubernetesTaskRunnerConfig taskRunnerConfig,
       TaskConfig taskConfig,
       DruidNode node,
       ObjectMapper mapper,
-      Properties properties,
       TaskLogs taskLogs,
-      Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef
+      PodTemplateSelector podTemplateSelector
   )
   {
     this.taskRunnerConfig = taskRunnerConfig;
     this.taskConfig = taskConfig;
     this.node = node;
     this.mapper = mapper;
-    this.templates = initializePodTemplates(properties);
     this.taskLogs = taskLogs;
-    this.dynamicConfigRef = dynamicConfigRef;
+    this.podTemplateSelector = podTemplateSelector;
   }
 
   /**
@@ -130,15 +111,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   @Override
   public Job fromTask(Task task) throws IOException
   {
-    PodTemplateSelectStrategy podTemplateSelectStrategy;
-    KubernetesTaskRunnerDynamicConfig dynamicConfig = dynamicConfigRef.get();
-    if (dynamicConfig == null || dynamicConfig.getPodTemplateSelectStrategy() == null) {
-      podTemplateSelectStrategy = KubernetesTaskRunnerDynamicConfig.DEFAULT_STRATEGY;
-    } else {
-      podTemplateSelectStrategy = dynamicConfig.getPodTemplateSelectStrategy();
-    }
-
-    PodTemplateWithName podTemplateWithName = podTemplateSelectStrategy.getPodTemplateForTask(task, templates);
+    PodTemplateWithName podTemplateWithName = podTemplateSelector.getPodTemplateForTask(task).get();
 
     return new JobBuilder()
         .withNewMetadata()
@@ -222,51 +195,6 @@ public class PodTemplateTaskAdapter implements TaskAdapter
       throw DruidException.defensive().build("No task_id annotation found on pod spec for job [%s]", from.getMetadata().getName());
     }
     return new K8sTaskId(taskId);
-  }
-
-  private HashMap<String, PodTemplate> initializePodTemplates(Properties properties)
-  {
-    Set<String> taskAdapterTemplateKeys = getTaskAdapterTemplates(properties);
-    if (!taskAdapterTemplateKeys.contains("base")) {
-      throw new IAE("Pod template task adapter requires a base pod template to be specified under druid.indexer.runner.k8s.podTemplate.base");
-    }
-
-    HashMap<String, PodTemplate> podTemplateMap = new HashMap<>();
-    for (String taskAdapterTemplateKey : taskAdapterTemplateKeys) {
-      Optional<PodTemplate> template = loadPodTemplate(taskAdapterTemplateKey, properties);
-      template.ifPresent(podTemplate -> podTemplateMap.put(taskAdapterTemplateKey, podTemplate));
-    }
-    return podTemplateMap;
-  }
-
-  private static Set<String> getTaskAdapterTemplates(Properties properties)
-  {
-    Set<String> taskAdapterTemplates = new HashSet<>();
-
-    for (String runtimeProperty : properties.stringPropertyNames()) {
-      if (runtimeProperty.startsWith(TASK_PROPERTY)) {
-        String[] taskAdapterPropertyPaths = runtimeProperty.split("\\.");
-        taskAdapterTemplates.add(taskAdapterPropertyPaths[taskAdapterPropertyPaths.length - 1]);
-      }
-    }
-
-    return taskAdapterTemplates;
-  }
-
-  private Optional<PodTemplate> loadPodTemplate(String key, Properties properties)
-  {
-    String property = TASK_PROPERTY + key;
-    String podTemplateFile = properties.getProperty(property);
-    if (podTemplateFile == null) {
-      throw new IAE("Pod template file not specified for [%s]", property);
-
-    }
-    try {
-      return Optional.of(Serialization.unmarshal(Files.newInputStream(new File(podTemplateFile).toPath()), PodTemplate.class));
-    }
-    catch (Exception e) {
-      throw new IAE(e, "Failed to load pod template file for [%s] at [%s]", property, podTemplateFile);
-    }
   }
 
   private Collection<EnvVar> getEnv(Task task) throws IOException
