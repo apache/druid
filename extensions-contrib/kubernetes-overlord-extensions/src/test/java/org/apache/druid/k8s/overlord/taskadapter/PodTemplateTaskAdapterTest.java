@@ -144,7 +144,7 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
-  public void test_fromTask_withoutAnnotations_throwsDruidException() throws IOException
+  public void test_fromTask_withoutAnnotations_throwsDruidException()
   {
     TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
 
