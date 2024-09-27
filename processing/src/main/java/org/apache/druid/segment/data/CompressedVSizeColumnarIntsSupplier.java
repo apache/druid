@@ -383,6 +383,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
           out[offset + i] = _get(buffer, bigEndian, index - currBufferStart);
         }
 
+        assert i > p;
         p = i;
       }
     }
