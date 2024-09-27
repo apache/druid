@@ -40,9 +40,9 @@ import java.util.stream.Collectors;
  */
 public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMetrics<QueryType>
 {
-  public static String QUERY_WAIT_TIME = "query/wait/time";
-  public static String QUERY_SEGMENT_TIME = "query/segment/time";
-  public static String QUERY_SEGMENT_AND_CACHE_TIME = "query/segmentAndCache/time";
+  public static final String QUERY_WAIT_TIME = "query/wait/time";
+  public static final String QUERY_SEGMENT_TIME = "query/segment/time";
+  public static final String QUERY_SEGMENT_AND_CACHE_TIME = "query/segmentAndCache/time";
 
   protected final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
   protected final Map<String, Number> metrics = new HashMap<>();
