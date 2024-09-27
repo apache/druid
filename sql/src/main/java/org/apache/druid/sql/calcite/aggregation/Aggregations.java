@@ -129,7 +129,7 @@ public class Aggregations
 
   private static boolean isStringAggregatorFunctions(SqlAggFunction aggregation)
   {
-    final boolean CASE_SENSITIVITY = false;
-    return aggregation.isName("MIN", CASE_SENSITIVITY) || aggregation.isName("MAX", CASE_SENSITIVITY);
+    final boolean caseSensitivity = false;
+    return aggregation.isName("MIN", caseSensitivity) || aggregation.isName("MAX", caseSensitivity);
   }
 }

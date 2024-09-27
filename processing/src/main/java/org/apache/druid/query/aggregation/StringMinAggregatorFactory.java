@@ -19,12 +19,16 @@
 
 package org.apache.druid.query.aggregation;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
@@ -47,20 +51,33 @@ public class StringMinAggregatorFactory extends AggregatorFactory
   public static final int DEFAULT_MAX_STRING_SIZE = 1024;
   private final int maxStringBytes;
   private final String name;
+
+  @Nullable
   private final String fieldName;
   private final boolean aggregateMultipleValues;
+  @Nullable
+  private final String expression;
+  private final ExprMacroTable macroTable;
+  private final Supplier<Expr> fieldExpression;
+  private final Supplier<byte[]> cacheKey;
 
   @JsonCreator
   public StringMinAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
+      @JsonProperty("fieldName") @Nullable String fieldName,
       @JsonProperty("maxStringBytes") @Nullable Integer maxStringBytes,
-      @JsonProperty("aggregateMultipleValues") @Nullable final Boolean aggregateMultipleValues
+      @JsonProperty("aggregateMultipleValues") @Nullable final Boolean aggregateMultipleValues,
+      @JsonProperty("expression") @Nullable String expression,
+      @JacksonInject ExprMacroTable macroTable
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name.");
-    Preconditions.checkNotNull(fieldName, "Must have a valid, non-null field name.");
+    Preconditions.checkArgument(
+        fieldName == null ^ expression == null,
+        "Must have a valid, non-null fieldName or expression"
+    );
 
+    this.macroTable = macroTable;
     this.name = name;
     this.fieldName = fieldName;
 
@@ -75,11 +92,18 @@ public class StringMinAggregatorFactory extends AggregatorFactory
     }
 
     this.aggregateMultipleValues = aggregateMultipleValues == null || aggregateMultipleValues;
+    this.expression = expression;
+    this.fieldExpression = Parser.lazyParse(expression, macroTable);
+    this.cacheKey = AggregatorUtil.getSimpleAggregatorCacheKeySupplier(
+        AggregatorUtil.STRING_MIN_CACHE_TYPE_ID,
+        fieldName,
+        fieldExpression
+    );
   }
 
-  public StringMinAggregatorFactory(String name, String fieldName)
+  public StringMinAggregatorFactory(String name, String fieldName, Integer maxStringBytes, boolean aggregateMultipleValues)
   {
-    this(name, fieldName, null, null);
+    this(name, fieldName, maxStringBytes, aggregateMultipleValues, null, ExprMacroTable.nil());
   }
 
   @Override
@@ -181,7 +205,9 @@ public class StringMinAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return Collections.singletonList(fieldName);
+    return fieldName != null
+           ? Collections.singletonList(fieldName)
+           : fieldExpression.get().analyzeInputs().getRequiredBindingsList();
   }
 
   @Override
@@ -217,10 +243,7 @@ public class StringMinAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    return new CacheKeyBuilder(AggregatorUtil.STRING_MIN_CACHE_TYPE_ID)
-        .appendString(fieldName)
-        .appendInt(maxStringBytes)
-        .build();
+    return cacheKey.get();
   }
 
   @Override

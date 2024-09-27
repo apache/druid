@@ -67,7 +67,7 @@ public class MinSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleMinAggregatorFactory(name, fieldName, null, macroTable);
       case STRING:
-        return new StringMinAggregatorFactory(name, fieldName);
+        return new StringMinAggregatorFactory(name, fieldName, null, true, null, macroTable);
       default:
         throw SimpleSqlAggregator.badTypeException(fieldName, "MIN", aggregationType);
     }
