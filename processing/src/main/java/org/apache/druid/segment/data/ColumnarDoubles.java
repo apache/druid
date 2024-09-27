@@ -47,9 +47,7 @@ public interface ColumnarDoubles extends Closeable
 
   default void get(double[] out, int start, int length)
   {
-    for (int i = 0; i < length; i++) {
-      out[i] = get(i + start);
-    }
+    get(out, 0, start, length);
   }
 
   default void get(double[] out, int offset, int start, int length)
