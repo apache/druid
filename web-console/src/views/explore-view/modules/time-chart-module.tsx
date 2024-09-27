@@ -275,7 +275,6 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
               params.areas[0].coordRange[0],
               params.areas[0].coordRange[1],
               timeGranularity,
-              // context.timezone, // ToDo:???
             )
           : { start: params.areas[0].coordRange[0], end: params.areas[0].coordRange[1] };
 
