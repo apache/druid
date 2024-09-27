@@ -266,8 +266,8 @@ public class ImmutableWorkerInfo
       return true; // No limit specified, so task can run
     }
 
-    return limit - getCurrCapacityUsedByTaskType().getOrDefault(task.getType(), 0) >= task.getTaskResource()
-                                                                                          .getRequiredCapacity();
+    return limit - getCurrCapacityUsedByTaskType().getOrDefault(task.getType(), 0)
+                       >= task.getTaskResource().getRequiredCapacity();
   }
 
   private Integer getMaxCapacityForTaskType(
