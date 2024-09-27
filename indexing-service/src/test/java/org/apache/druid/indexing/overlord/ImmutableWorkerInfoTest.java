@@ -244,10 +244,6 @@ public class ImmutableWorkerInfoTest
         ImmutableSet.of("task1", "task2"),
         DateTimes.of("2015-01-01T01:01:02Z")
     );
-
-    WorkerTaskRunnerConfig config = mock(WorkerTaskRunnerConfig.class);
-
-
     // Parallel index task
     TaskResource taskResource0 = mock(TaskResource.class);
     when(taskResource0.getRequiredCapacity()).thenReturn(3);
@@ -258,13 +254,11 @@ public class ImmutableWorkerInfoTest
     Map<String, Double> taskRatiosMap = new HashMap<>();
 
     // Since task satisifies parallel and total slot constraints, can run
-    when(config.getParallelIndexTaskSlotRatio()).thenReturn(0.5);
-    Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, config));
+    Assert.assertTrue(workerInfo.canRunTask(parallelIndexTask, createConfigInstanceWithArgs(0.5, null)));
 
     // Since task fails the parallel slot constraint, it cannot run (3 > 1)
     taskRatiosMap.put(ParallelIndexSupervisorTask.TYPE, 0.1);
-    when(config.getParallelIndexTaskSlotRatio()).thenReturn(1.0);
-    when(config.getTaskSlotRatiosPerWorker()).thenReturn(taskRatiosMap);
+    WorkerTaskRunnerConfig config = createConfigInstanceWithArgs(1.0, taskRatiosMap);
     Assert.assertFalse(workerInfo.canRunTask(parallelIndexTask, config));
 
     taskRatiosMap.put(ParallelIndexSupervisorTask.TYPE, 1.0);
@@ -308,13 +302,26 @@ public class ImmutableWorkerInfoTest
     ImmutableWorkerInfo spyInfo = Mockito.spy(workerInfo);
     when(spyInfo.getCurrCapacityUsedByTaskType()).thenReturn(mockStatusMap);
     when(taskResource3.getRequiredCapacity()).thenReturn(3);
-    when(config.getTaskSlotRatiosPerWorker()).thenReturn(taskRatiosMap);
-
 
     taskRatiosMap.put(MSQ_CONTROLLER_TYPE, 0.4);
     Assert.assertFalse(spyInfo.canRunTask(msqControllerTask, config));
     taskRatiosMap.put(MSQ_CONTROLLER_TYPE, 0.5);
     Assert.assertTrue(spyInfo.canRunTask(msqControllerTask, config));
+  }
+
+  private WorkerTaskRunnerConfig createConfigInstanceWithArgs (double parallelIndexRatio, Map<String, Double> taskSlotRatioPerWorker){
+
+    return new WorkerTaskRunnerConfig() {
+      @Override
+      public Map<String, Double> getTaskSlotRatiosPerWorker() {
+        return taskSlotRatioPerWorker;
+      }
+
+      @Override
+      public double getParallelIndexTaskSlotRatio(){
+        return parallelIndexRatio;
+      }
+    };
   }
 
   private void assertEqualsAndHashCode(ImmutableWorkerInfo o1, ImmutableWorkerInfo o2, boolean shouldMatch)

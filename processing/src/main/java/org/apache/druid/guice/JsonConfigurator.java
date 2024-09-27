@@ -161,7 +161,7 @@ public class JsonConfigurator
             Path.Node next = iter.next();
             if (next.getKind() == ElementKind.PROPERTY) {
               final String fieldName = next.getName();
-              final Field theField = getFieldFromHierarchy(beanClazz, fieldName);
+              final Field theField = beanClazz.getDeclaredField(fieldName);
 
               if (theField.getAnnotation(JacksonInject.class) != null) {
                 path = new StringBuilder(StringUtils.format(" -- Injected field[%s] not bound!?", fieldName));
@@ -205,32 +205,6 @@ public class JsonConfigurator
 
     return config;
   }
-
-  // To have a detailed error message instead of noSuchFieldException if problematic field is in the superclass
-  private Field getFieldFromHierarchy(Class<?> beanClass, String fieldName) throws NoSuchFieldException
-  {
-    Class<?> currentClass = beanClass;
-    while (currentClass != null) {
-      Field field = getFieldIfExists(currentClass, fieldName);
-      if (field != null) {
-        return field;
-      }
-      currentClass = currentClass.getSuperclass();
-    }
-    throw new NoSuchFieldException("Field '" + fieldName + "' not found in class hierarchy of " + beanClass.getName());
-  }
-
-  @Nullable
-  private Field getFieldIfExists(Class<?> beanClass, String fieldName)
-  {
-    for (Field field : beanClass.getDeclaredFields()) {
-      if (field.getName().equals(fieldName)) {
-        return field;
-      }
-    }
-    return null;
-  }
-
 
   private static void hieraricalPutValue(
       String propertyPrefix,

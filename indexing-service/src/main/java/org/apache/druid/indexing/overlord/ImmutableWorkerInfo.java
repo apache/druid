@@ -181,6 +181,7 @@ public class ImmutableWorkerInfo
   }
 
   @JsonProperty("currCapacityUsedByTaskType")
+  @Nullable
   public Map<String, Integer> getCurrCapacityUsedByTaskType()
   {
     return currCapacityUsedByTaskType;
@@ -225,12 +226,10 @@ public class ImmutableWorkerInfo
    * Determines if a specific task can be executed on the worker based on
    * various capacity, custom limits, and availability conditions.
    * <p>
-   * returns true only if:
+   * Returns true only if:
    * <ul>
    *   <li>The worker has sufficient capacity to handle the task.</li>
-   *   <li>The task is of the parallel index type and can operate within the permitted ratio of slots designated for that task type.</li>
-   *   <li>The the task can run under custom-defined limits for its type,
-   *   such as a maximum number of tasks allowed or a ratio of slots the task type can occupy.</li>
+   *   <li>Task slot ratio for this task type has not been exhausted on this worker.</li>
    *   <li>The availability group of the task is currently available.</li>
    * </ul>
    */
@@ -256,12 +255,12 @@ public class ImmutableWorkerInfo
 
   private boolean canRunTaskBasedOnLimit(Task task, WorkerTaskRunnerConfig config)
   {
-    if (task.getType().equals(ParallelIndexSupervisorTask.TYPE) && config.getParallelIndexTaskSlotRatio() != 1) {
+    if (task.getType().equals(ParallelIndexSupervisorTask.TYPE) && config.getParallelIndexTaskSlotRatio() < 1) {
       return getWorkerParallelIndexCapacity(config.getParallelIndexTaskSlotRatio()) - getCurrParallelIndexCapacityUsed()
              >= task.getTaskResource().getRequiredCapacity();
     }
 
-    final Integer limit = getLimitForTask(task.getType(), config.getTaskSlotRatiosPerWorker());
+    final Integer limit = getMaxCapacityForTaskType(task.getType(), config.getTaskSlotRatiosPerWorker());
 
     if (limit == null) {
       return true; // No limit specified, so task can run
@@ -271,24 +270,18 @@ public class ImmutableWorkerInfo
                                                                                           .getRequiredCapacity();
   }
 
-  private Integer getLimitForTask(
+  private Integer getMaxCapacityForTaskType(
       String taskType,
       Map<String, Double> ratiosMap
   )
   {
-    Double ratioLimit = ratiosMap.get(taskType);
+    Double taskSlotRatio = ratiosMap.get(taskType);
 
-    if (ratioLimit == null) {
+    if (taskSlotRatio == null) {
       return null;
     }
-
-    return calculateTaskCapacityFromRatio(ratioLimit, worker.getCapacity());
-  }
-
-  private int calculateTaskCapacityFromRatio(double taskSlotRatio, int totalCapacity)
-  {
-    int workerParallelIndexCapacity = (int) Math.floor(taskSlotRatio * totalCapacity);
-    return Math.max(1, Math.min(workerParallelIndexCapacity, totalCapacity));
+    int totalCapacity = worker.getCapacity();
+    return  Math.max(1, Math.min((int) Math.floor(taskSlotRatio * totalCapacity),totalCapacity));
   }
 
   @Override

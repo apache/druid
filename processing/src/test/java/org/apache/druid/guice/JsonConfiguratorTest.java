@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.ProvisionException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -34,26 +33,31 @@ import org.junit.contrib.java.lang.system.EnvironmentVariables;
 import org.junit.contrib.java.lang.system.RestoreSystemProperties;
 
 import javax.validation.ConstraintViolation;
-import javax.validation.Path;
 import javax.validation.Validator;
 import javax.validation.executable.ExecutableValidator;
 import javax.validation.metadata.BeanDescriptor;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 public class JsonConfiguratorTest
 {
   private static final String PROP_PREFIX = "test.property.prefix.";
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private final Properties properties = new Properties();
+
   @Rule
   public final RestoreSystemProperties restoreSystemProperties = new RestoreSystemProperties();
+
   @Rule
   public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+
+  @Before
+  public void setUp()
+  {
+    jsonMapper.registerSubtypes(MappableObject.class);
+  }
+
   final Validator validator = new Validator()
   {
     @Override
@@ -97,66 +101,6 @@ public class JsonConfiguratorTest
       return null;
     }
   };
-  final Validator violatedValidator = new Validator()
-  {
-    @Override
-    public <T> Set<ConstraintViolation<T>> validate(T object, Class<?>... groups)
-    {
-      ConstraintViolation<T> violation = mock(ConstraintViolation.class);
-      Path path = mock(Path.class);
-      Path.Node propertyNode = mock(Path.PropertyNode.class);
-      Iterator<Path.Node> singletonIterator = Collections.singleton(propertyNode).iterator();
-      when(propertyNode.getName()).thenReturn("parentProp");
-      when(path.iterator()).thenReturn(singletonIterator);
-      when(violation.getMessage()).thenReturn("Validation error in parent class");
-      when(violation.getRootBeanClass()).thenReturn((Class<T>) Child.class);
-      when(violation.getPropertyPath()).thenReturn(path);
-      return ImmutableSet.of(violation);
-    }
-
-    @Override
-    public <T> Set<ConstraintViolation<T>> validateProperty(T object, String propertyName, Class<?>... groups)
-    {
-      return ImmutableSet.of();
-    }
-
-    @Override
-    public <T> Set<ConstraintViolation<T>> validateValue(
-        Class<T> beanType,
-        String propertyName,
-        Object value,
-        Class<?>... groups
-    )
-    {
-      return ImmutableSet.of();
-    }
-
-    @Override
-    public BeanDescriptor getConstraintsForClass(Class<?> clazz)
-    {
-      return null;
-    }
-
-    @Override
-    public <T> T unwrap(Class<T> type)
-    {
-      return null;
-    }
-
-    @Override
-    public ExecutableValidator forExecutables()
-    {
-      return null;
-    }
-  };
-  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  private final Properties properties = new Properties();
-
-  @Before
-  public void setUp()
-  {
-    jsonMapper.registerSubtypes(MappableObject.class, Parent.class, Child.class);
-  }
 
   @Test
   public void testTest()
@@ -289,19 +233,6 @@ public class JsonConfiguratorTest
         () -> configurator.configurate(properties, PROP_PREFIX, MappableObject.class)
     );
   }
-
-  @Test
-  public void testValidationErrorInParentClass()
-  {
-    final JsonConfigurator configurator = new JsonConfigurator(jsonMapper, violatedValidator);
-    properties.setProperty(PROP_PREFIX + "childProp", "2");
-    properties.setProperty(PROP_PREFIX + "parentProp", "3");
-    Assert.assertThrows(
-        "test.property.prefix. - Validation error in parent class",
-        ProvisionException.class,
-        () -> configurator.configurate(properties, PROP_PREFIX, Child.class)
-    );
-  }
 }
 
 class MappableObject
@@ -369,30 +300,5 @@ class MappableObject
     int result = prop1 != null ? prop1.hashCode() : 0;
     result = 31 * result + (prop1List != null ? prop1List.hashCode() : 0);
     return result;
-  }
-}
-
-class Parent
-{
-
-  @JsonProperty("parentProp")
-  private Integer parentProp;
-
-  @JsonProperty
-  public Integer getParentProp()
-  {
-    return parentProp;
-  }
-}
-
-class Child extends Parent
-{
-  @JsonProperty("childProp")
-  private Integer childProp;
-
-  @JsonProperty
-  public Integer getChildProp()
-  {
-    return childProp;
   }
 }

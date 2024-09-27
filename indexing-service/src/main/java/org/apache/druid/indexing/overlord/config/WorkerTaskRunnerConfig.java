@@ -21,8 +21,6 @@ package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.validation.constraints.Max;
-import javax.validation.constraints.Min;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,7 +33,7 @@ public class WorkerTaskRunnerConfig
   private double parallelIndexTaskSlotRatio = 1;
 
   @JsonProperty
-  private Map<String, @Min(value = 0, message = "Task slot ratio for must be at least 0.") @Max(value = 1, message = "Task slot ratio cannot be greater than 1") Double> taskSlotRatiosPerWorker = new HashMap<>();
+  private Map<String, Double> taskSlotRatiosPerWorker = new HashMap<>();
 
   public String getMinWorkerVersion()
   {
