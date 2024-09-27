@@ -22,7 +22,7 @@ title: "Automatic compaction"
   ~ under the License.
   -->
 
-In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks managed by the [Druid Coordinator](../design/coordinator.md) or the [Overlord](../design/overlord.md).
+In Apache Druid, compaction is a special type of ingestion task that reads data from a Druid datasource and writes it back into the same datasource. A common use case for this is to [optimally size segments](../operations/segment-optimization.md) after ingestion to improve query performance. Automatic compaction, or auto-compaction, refers to the system for automatic execution of compaction tasks issued by Druid itself.
 
 You can specify whether Druid uses the native engine on the Coordinator or the multi-stage query (MSQ) task engine or native engine on the Overlord. Using the Overlord and MSQ task engine for compaction provides faster compaction times as well as better memory tuning and usage. Both methods use the same syntax, but you use different methods to submit the automatic compaction.
 
@@ -34,11 +34,11 @@ As a best practice, you should set up auto-compaction for all Druid datasources.
 
 This topic guides you through setting up automatic compaction for your Druid cluster. See the [examples](#examples) for common use cases for automatic compaction.
 
-## Coordinator-based
+## Enable automatic compaction using Coordinator duties
 
 The Coordinator [indexing period](../configuration/index.md#coordinator-operation), `druid.coordinator.period.indexingPeriod`, controls the frequency of compaction tasks.
 The default indexing period is 30 minutes, meaning that the Coordinator first checks for segments to compact at most 30 minutes from when auto-compaction is enabled.
-This time period affects other Coordinator duties including merge and conversion tasks.
+This time period also affects other Coordinator duties such as cleanup of unused segments and stale pending segments.
 To configure the auto-compaction time period without interfering with `indexingPeriod`, see [Set frequency of compaction runs](#compaction-frequency).
 
 At every invocation of auto-compaction, the Coordinator initiates a [segment search](../design/coordinator.md#segment-search-policy-in-automatic-compaction) to determine eligible segments to compact.
@@ -178,7 +178,7 @@ The MSQ task engine is available as a compaction engine if you configure compact
 * Have the [MSQ  task engine extension loaded](../multi-stage-query/index.md#load-the-extension).
 * In your Overlord runtime properties, set the following properties:
   *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor task
-  *  `druid.supervisor.compaction.defaultEngine` to `msq` to specify the MSQ task engine as the compaction engine
+  *  `druid.supervisor.compaction.engine` to `msq` to specify the MSQ task engine as the compaction engine
 * Have at least two compaction task slots available or set `compactionConfig.taskContext.maxNumTasks` to two or more. The MSQ task engine requires at least two tasks to run, one controller task and one worker task.
 
 You can use [MSQ task engine context parameters](../multi-stage-query/) in `compactionConfig.taskContext` when configuring your datasource for automatic compaction, such as setting the maximum number of tasks using the `compactionConfig.taskContext.maxNumTasks` parameter. Some of the MSQ task engine context parameters overlap with automatic compaction parameters. When these settings overlap, set one or the other.
@@ -237,7 +237,7 @@ When using the MSQ task engine for auto-compaction, keep the following limitatio
 - The `metricSpec` field is only supported for idempotent aggregators. For more information, see [Idempotent aggregators](#idempotent-aggregators).
 - Only dynamic and range-based partitioning are supported
 - Set `rollup`  to `true` if `metricSpec` is not empty or null. If `metricSpec` is empty or null, set `rollup` to `false`.
-- You cannot group on multi-value dimensions
+- You can only partition on string dimensions. However, multi-valued string dimensions are not supported.
 - The `maxTotalRows` config is not supported in `DynamicPartitionsSpec`. Use `maxRowsPerSegment` instead.
 
 #### Idempotent aggregators
