@@ -280,6 +280,59 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
           timeBoundaryInspector,
           Order.ASCENDING,
           Granularities.HOUR,
+          interval
+      );
+
+      final ColumnSelectorFactory selectorFactory = cursor.getColumnSelectorFactory();
+      final ColumnValueSelector xSelector = selectorFactory.makeColumnValueSelector("x");
+      final Sequence<List<String>> theSequence =
+          Sequences.simple(granularizer.getBucketIterable())
+                   .map(bucketInterval -> {
+                     List<String> bucket = new ArrayList<>();
+                     if (!granularizer.advanceToBucket(bucketInterval)) {
+                       return bucket;
+                     }
+                     while (!cursor.isDone()) {
+                       bucket.add((String) xSelector.getObject());
+                       if (!granularizer.advanceCursorWithinBucket()) {
+                         break;
+                       }
+                     }
+                     return bucket;
+                   });
+
+      List<List<String>> granularized = theSequence.toList();
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("a", "c"),
+              ImmutableList.of("e"),
+              ImmutableList.of(),
+              ImmutableList.of("g", "i"),
+              ImmutableList.of(),
+              ImmutableList.of(),
+              ImmutableList.of("k"),
+              ImmutableList.of(),
+              ImmutableList.of(),
+              ImmutableList.of()
+          ),
+          granularized
+      );
+    }
+  }
+
+  @Test
+  public void testGranularizeFilteredClipped()
+  {
+    final CursorBuildSpec filtered = CursorBuildSpec.builder()
+                                                    .setFilter(new EqualityFilter("y", ColumnType.STRING, "1", null))
+                                                    .build();
+    try (CursorHolder cursorHolder = cursorFactory.makeCursorHolder(filtered)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      CursorGranularizer granularizer = CursorGranularizer.create(
+          cursor,
+          timeBoundaryInspector,
+          Order.ASCENDING,
+          Granularities.HOUR,
           Intervals.of("2024-01-01T08:00Z/2024-01-03T00:00Z")
       );
 
