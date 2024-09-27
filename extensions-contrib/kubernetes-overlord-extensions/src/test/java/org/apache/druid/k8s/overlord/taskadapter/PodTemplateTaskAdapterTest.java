@@ -186,7 +186,7 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
-  public void test_getTaskId_noAnnotations() throws IOException
+  public void test_getTaskId_noAnnotations()
   {
     TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
@@ -206,7 +206,7 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
-  public void test_getTaskId_missingTaskIdAnnotation() throws IOException
+  public void test_getTaskId_missingTaskIdAnnotation()
   {
     TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
@@ -227,7 +227,7 @@ public class PodTemplateTaskAdapterTest
   }
 
   @Test
-  public void test_toTask_withoutTaskAnnotation_throwsIOE() throws IOException
+  public void test_toTask_withoutTaskAnnotation_throwsIOE()
   {
     TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
 
