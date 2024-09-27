@@ -20,7 +20,6 @@
 package org.apache.druid.msq.dart.controller;
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.msq.exec.Controller;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -50,14 +49,9 @@ public class DartControllerRegistryImpl implements DartControllerRegistry
 
   @Nullable
   @Override
-  public Controller get(final String queryId)
+  public ControllerHolder get(final String queryId)
   {
-    final ControllerHolder holder = controllerMap.get(queryId);
-    if (holder != null) {
-      return holder.getController();
-    } else {
-      return null;
-    }
+    return controllerMap.get(queryId);
   }
 
   @Override

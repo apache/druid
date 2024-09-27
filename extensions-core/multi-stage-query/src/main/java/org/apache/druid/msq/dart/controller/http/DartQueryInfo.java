@@ -41,6 +41,7 @@ public class DartQueryInfo
   private final String authenticator;
   private final String identity;
   private final DateTime startTime;
+  private final String state;
 
   @JsonCreator
   public DartQueryInfo(
@@ -49,7 +50,8 @@ public class DartQueryInfo
       @JsonProperty("sql") final String sql,
       @JsonProperty("authenticator") final String authenticator,
       @JsonProperty("identity") final String identity,
-      @JsonProperty("startTime") final DateTime startTime
+      @JsonProperty("startTime") final DateTime startTime,
+      @JsonProperty("state") final String state
   )
   {
     this.sqlQueryId = Preconditions.checkNotNull(sqlQueryId, "sqlQueryId");
@@ -58,6 +60,7 @@ public class DartQueryInfo
     this.authenticator = authenticator;
     this.identity = identity;
     this.startTime = startTime;
+    this.state = state;
   }
 
   public static DartQueryInfo fromControllerHolder(final ControllerHolder holder)
@@ -68,7 +71,8 @@ public class DartQueryInfo
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(holder.getSql()),
         holder.getAuthenticationResult().getAuthenticatedBy(),
         holder.getAuthenticationResult().getIdentity(),
-        holder.getStartTime()
+        holder.getStartTime(),
+        holder.getState().toString()
     );
   }
 
@@ -130,12 +134,18 @@ public class DartQueryInfo
     return startTime;
   }
 
+  @JsonProperty
+  public String getState()
+  {
+    return state;
+  }
+
   /**
    * Returns a copy of this instance with {@link #getAuthenticator()} and {@link #getIdentity()} nulled.
    */
   public DartQueryInfo withoutAuthenticationResult()
   {
-    return new DartQueryInfo(sqlQueryId, dartQueryId, sql, null, null, startTime);
+    return new DartQueryInfo(sqlQueryId, dartQueryId, sql, null, null, startTime, state);
   }
 
   @Override
@@ -153,13 +163,14 @@ public class DartQueryInfo
            && Objects.equals(sql, that.sql)
            && Objects.equals(authenticator, that.authenticator)
            && Objects.equals(identity, that.identity)
-           && Objects.equals(startTime, that.startTime);
+           && Objects.equals(startTime, that.startTime)
+           && Objects.equals(state, that.state);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(sqlQueryId, dartQueryId, sql, authenticator, identity, startTime);
+    return Objects.hash(sqlQueryId, dartQueryId, sql, authenticator, identity, startTime, state);
   }
 
   @Override
@@ -172,6 +183,7 @@ public class DartQueryInfo
            ", authenticator='" + authenticator + '\'' +
            ", identity='" + identity + '\'' +
            ", startTime=" + startTime +
+           ", state=" + state +
            '}';
   }
 }

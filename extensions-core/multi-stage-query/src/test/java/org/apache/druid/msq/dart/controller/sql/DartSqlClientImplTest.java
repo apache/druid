@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.controller.http.GetQueriesResponse;
 import org.apache.druid.rpc.MockServiceClient;
@@ -63,7 +64,17 @@ public class DartSqlClientImplTest
   public void test_getMessages_all() throws Exception
   {
     final GetQueriesResponse getQueriesResponse = new GetQueriesResponse(
-        ImmutableList.of(new DartQueryInfo("sid", "did", "SELECT 1", "", "", DateTimes.of("2000")))
+        ImmutableList.of(
+            new DartQueryInfo(
+                "sid",
+                "did",
+                "SELECT 1",
+                "",
+                "",
+                DateTimes.of("2000"),
+                ControllerHolder.State.RUNNING.toString()
+            )
+        )
     );
 
     serviceClient.expectAndRespond(
@@ -81,7 +92,17 @@ public class DartSqlClientImplTest
   public void test_getMessages_selfOnly() throws Exception
   {
     final GetQueriesResponse getQueriesResponse = new GetQueriesResponse(
-        ImmutableList.of(new DartQueryInfo("sid", "did", "SELECT 1", "", "", DateTimes.of("2000")))
+        ImmutableList.of(
+            new DartQueryInfo(
+                "sid",
+                "did",
+                "SELECT 1",
+                "",
+                "",
+                DateTimes.of("2000"),
+                ControllerHolder.State.RUNNING.toString()
+            )
+        )
     );
 
     serviceClient.expectAndRespond(

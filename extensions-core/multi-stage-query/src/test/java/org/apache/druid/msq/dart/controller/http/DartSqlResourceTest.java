@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.DartControllerRegistryImpl;
@@ -41,6 +42,9 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
+import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.MSQErrorReport;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestControllerContext;
@@ -86,6 +90,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -243,11 +248,17 @@ public class DartSqlResourceTest extends MSQTestBase
   void tearDown() throws Exception
   {
     mockCloser.close();
+
+    // shutdown(), not shutdownNow(), to ensure controllers stop timely on their own.
     controllerExecutor.shutdown();
 
     if (!controllerExecutor.awaitTermination(1, TimeUnit.MINUTES)) {
       throw new IAE("controllerExecutor.awaitTermination() timed out");
     }
+
+    // Ensure that controllerRegistry has nothing in it at the conclusion of each test. Verifies that controllers
+    // are fully cleaned up.
+    Assertions.assertEquals(0, controllerRegistry.getAllHolders().size(), "controllerRegistry.getAllHolders().size()");
   }
 
   @Test
@@ -272,6 +283,8 @@ public class DartSqlResourceTest extends MSQTestBase
         new GetQueriesResponse(Collections.singletonList(DartQueryInfo.fromControllerHolder(holder))),
         sqlResource.doGetRunningQueries("", httpServletRequest)
     );
+
+    controllerRegistry.remove(holder);
   }
 
   /**
@@ -285,7 +298,7 @@ public class DartSqlResourceTest extends MSQTestBase
            .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
 
     final ControllerHolder holder = setUpMockRunningQuery(REGULAR_USER_NAME);
-    setUpMockRunningQuery(DIFFERENT_REGULAR_USER_NAME);
+    final ControllerHolder holder2 = setUpMockRunningQuery(DIFFERENT_REGULAR_USER_NAME);
 
     // Regular users can see only their own queries, without authentication details.
     Assertions.assertEquals(2, controllerRegistry.getAllHolders().size());
@@ -294,6 +307,9 @@ public class DartSqlResourceTest extends MSQTestBase
             Collections.singletonList(DartQueryInfo.fromControllerHolder(holder).withoutAuthenticationResult())),
         sqlResource.doGetRunningQueries("", httpServletRequest)
     );
+
+    controllerRegistry.remove(holder);
+    controllerRegistry.remove(holder2);
   }
 
   /**
@@ -315,7 +331,8 @@ public class DartSqlResourceTest extends MSQTestBase
         "SELECT 2",
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
-        DateTimes.of("2000")
+        DateTimes.of("2000"),
+        ControllerHolder.State.RUNNING.toString()
     );
     Mockito.when(dartSqlClient.getRunningQueries(true))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
@@ -330,6 +347,8 @@ public class DartSqlResourceTest extends MSQTestBase
         ),
         sqlResource.doGetRunningQueries(null, httpServletRequest)
     );
+
+    controllerRegistry.remove(localHolder);
   }
 
   /**
@@ -355,6 +374,8 @@ public class DartSqlResourceTest extends MSQTestBase
         new GetQueriesResponse(ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder))),
         sqlResource.doGetRunningQueries(null, httpServletRequest)
     );
+
+    controllerRegistry.remove(localHolder);
   }
 
   /**
@@ -377,7 +398,8 @@ public class DartSqlResourceTest extends MSQTestBase
         "SELECT 2",
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
-        DateTimes.of("2000")
+        DateTimes.of("2000"),
+        ControllerHolder.State.RUNNING.toString()
     );
     Mockito.when(dartSqlClient.getRunningQueries(true))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
@@ -388,6 +410,8 @@ public class DartSqlResourceTest extends MSQTestBase
             ImmutableList.of(DartQueryInfo.fromControllerHolder(localHolder).withoutAuthenticationResult())),
         sqlResource.doGetRunningQueries(null, httpServletRequest)
     );
+
+    controllerRegistry.remove(localHolder);
   }
 
   /**
@@ -401,7 +425,7 @@ public class DartSqlResourceTest extends MSQTestBase
            .thenReturn(makeAuthenticationResult(DIFFERENT_REGULAR_USER_NAME));
 
     // REGULAR_USER_NAME runs a query locally.
-    setUpMockRunningQuery(REGULAR_USER_NAME);
+    final ControllerHolder holder = setUpMockRunningQuery(REGULAR_USER_NAME);
 
     // DIFFERENT_REGULAR_USER_NAME runs a query remotely.
     final DartQueryInfo remoteQueryInfo = new DartQueryInfo(
@@ -410,7 +434,8 @@ public class DartSqlResourceTest extends MSQTestBase
         "SELECT 2",
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
-        DateTimes.of("2000")
+        DateTimes.of("2000"),
+        ControllerHolder.State.RUNNING.toString()
     );
     Mockito.when(dartSqlClient.getRunningQueries(true))
            .thenReturn(Futures.immediateFuture(new GetQueriesResponse(Collections.singletonList(remoteQueryInfo))));
@@ -420,6 +445,8 @@ public class DartSqlResourceTest extends MSQTestBase
         new GetQueriesResponse(ImmutableList.of(remoteQueryInfo.withoutAuthenticationResult())),
         sqlResource.doGetRunningQueries(null, httpServletRequest)
     );
+
+    controllerRegistry.remove(holder);
   }
 
   @Test
@@ -519,6 +546,22 @@ public class DartSqlResourceTest extends MSQTestBase
   @Test
   public void test_doPost_regularUser_thenCancelQuery() throws Exception
   {
+    run_test_doPost_regularUser_fullReport_thenCancelQuery(false);
+  }
+
+  @Test
+  public void test_doPost_regularUser_fullReport_thenCancelQuery() throws Exception
+  {
+    run_test_doPost_regularUser_fullReport_thenCancelQuery(true);
+  }
+
+  /**
+   * Helper for {@link #test_doPost_regularUser_thenCancelQuery()} and
+   * {@link #test_doPost_regularUser_fullReport_thenCancelQuery()}. We need to do cancellation tests with and
+   * without the "fullReport" parameter, because {@link DartQueryMaker} has a separate pathway for each one.
+   */
+  private void run_test_doPost_regularUser_fullReport_thenCancelQuery(final boolean fullReport) throws Exception
+  {
     final MockAsyncContext asyncContext = new MockAsyncContext();
     final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
     asyncContext.response = asyncResponse;
@@ -550,7 +593,7 @@ public class DartSqlResourceTest extends MSQTestBase
         false,
         false,
         false,
-        ImmutableMap.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId),
+        ImmutableMap.of(QueryContexts.CTX_SQL_QUERY_ID, sqlQueryId, DartSqlEngine.CTX_FULL_REPORT, fullReport),
         Collections.emptyList()
     );
 
@@ -571,26 +614,53 @@ public class DartSqlResourceTest extends MSQTestBase
       // Now that the cancellation request has been accepted, we can cancel the sleepFuture and allow the
       // controller to be canceled.
       sleepFuture.cancel(true);
+      doPostExec.shutdown();
     }
-    finally {
+    catch (Throwable e) {
       doPostExec.shutdownNow();
+      throw e;
+    }
 
-      if (!doPostExec.awaitTermination(1, TimeUnit.MINUTES)) {
-        throw new ISE("doPost timed out");
-      }
+    if (!doPostExec.awaitTermination(1, TimeUnit.MINUTES)) {
+      throw new ISE("doPost timed out");
     }
 
     Assertions.assertNull(doPostFuture.get());
-    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+
+    if (fullReport) {
+      Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
+
+      final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
+          asyncResponse.baos.toByteArray(),
+          new TypeReference<List<List<TaskReport.ReportMap>>>() {}
+      );
+
+      Assertions.assertEquals(1, reportMaps.size());
+      final MSQTaskReport report =
+          (MSQTaskReport) Iterables.getOnlyElement(Iterables.getOnlyElement(reportMaps)).get(MSQTaskReport.REPORT_KEY);
+      final MSQErrorReport errorReport = report.getPayload().getStatus().getErrorReport();
+
+      Assertions.assertNotNull(errorReport);
+      Assertions.assertEquals(CanceledFault.instance(), errorReport.getFault());
+    } else {
+      Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+
+      // Ensure MSQ fault (CanceledFault) is properly translated to a DruidException and then properly serialized.
+      final Map<String, Object> e = objectMapper.readValue(
+          asyncResponse.baos.toByteArray(),
+          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+      );
+      Assertions.assertEquals("CANCELED", e.get("category"));
+      Assertions.assertEquals(
+          MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.instance()),
+          e.get("errorMessage")
+      );
+    }
   }
 
   @Test
   public void test_cancelQuery_regularUser_unknownQuery()
   {
-    final MockAsyncContext asyncContext = new MockAsyncContext();
-    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
-    asyncContext.response = asyncResponse;
-
     Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
            .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
 

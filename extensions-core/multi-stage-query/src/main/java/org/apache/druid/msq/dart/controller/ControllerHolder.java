@@ -21,19 +21,41 @@ package org.apache.druid.msq.dart.controller;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.joda.time.DateTime;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Holder for {@link Controller}, stored in {@link DartControllerRegistry}.
  */
 public class ControllerHolder
 {
+  public enum State
+  {
+    /**
+     * Query has been accepted, but not yet {@link Controller#run(QueryListener)}.
+     */
+    ACCEPTED,
+
+    /**
+     * Query has had {@link Controller#run(QueryListener)} called.
+     */
+    RUNNING,
+
+    /**
+     * Query has been canceled.
+     */
+    CANCELED
+  }
+
   private final Controller controller;
   private final String sqlQueryId;
   private final String sql;
   private final AuthenticationResult authenticationResult;
   private final DateTime startTime;
+  private final AtomicReference<State> state = new AtomicReference<>(State.ACCEPTED);
 
   public ControllerHolder(
       final Controller controller,
@@ -73,5 +95,37 @@ public class ControllerHolder
   public DateTime getStartTime()
   {
     return startTime;
+  }
+
+  public State getState()
+  {
+    return state.get();
+  }
+
+  /**
+   * Places this holder into {@link State#CANCELED}. Calls {@link Controller#stop()} if it was previously in
+   * state {@link State#RUNNING}.
+   */
+  public void cancel()
+  {
+    if (state.getAndSet(State.CANCELED) == State.RUNNING) {
+      controller.stop();
+    }
+  }
+
+  /**
+   * Calls {@link Controller#run(QueryListener)}, and returns true, if this holder was previously in state
+   * {@link State#ACCEPTED}. Otherwise returns false.
+   *
+   * @return whether {@link Controller#run(QueryListener)} was called.
+   */
+  public boolean run(final QueryListener listener) throws Exception
+  {
+    if (state.compareAndSet(State.ACCEPTED, State.RUNNING)) {
+      controller.run(listener);
+      return true;
+    } else {
+      return false;
+    }
   }
 }

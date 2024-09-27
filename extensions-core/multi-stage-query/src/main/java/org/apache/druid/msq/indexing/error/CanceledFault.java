@@ -21,6 +21,7 @@ package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 
 @JsonTypeName(CanceledFault.CODE)
 public class CanceledFault extends BaseMSQFault
@@ -37,5 +38,13 @@ public class CanceledFault extends BaseMSQFault
   public static CanceledFault instance()
   {
     return INSTANCE;
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.CANCELED)
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 }

@@ -22,6 +22,7 @@ package org.apache.druid.msq.dart.controller.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.segment.TestHelper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -42,7 +43,8 @@ public class GetQueriesResponseTest
                 "SELECT 1",
                 "auth",
                 "anon",
-                DateTimes.of("2000")
+                DateTimes.of("2000"),
+                ControllerHolder.State.RUNNING.toString()
             )
         )
     );

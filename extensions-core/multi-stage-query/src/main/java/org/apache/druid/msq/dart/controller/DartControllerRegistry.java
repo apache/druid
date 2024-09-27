@@ -42,10 +42,10 @@ public interface DartControllerRegistry
   void remove(ControllerHolder holder);
 
   /**
-   * Return a specific controller, or null if it doesn't exist.
+   * Return a specific controller holder, or null if it doesn't exist.
    */
   @Nullable
-  Controller get(String queryId);
+  ControllerHolder get(String queryId);
 
   /**
    * Returns all actively-running {@link Controller}.

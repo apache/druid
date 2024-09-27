@@ -19,17 +19,17 @@
 
 package org.apache.druid.msq.dart.controller.sql;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.common.base.Throwables;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.io.LimitedOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Either;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
@@ -43,7 +43,8 @@ import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.TaskReportQueryListener;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
-import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
@@ -54,12 +55,9 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlResults;
-import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -70,7 +68,6 @@ import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 /**
@@ -178,35 +175,42 @@ public class DartQueryMaker implements QueryMaker
   /**
    * Run a query and return the full report, buffered in memory up to
    * {@link DartControllerConfig#getMaxQueryReportSize()}.
+   *
+   * Calls {@link DartControllerRegistry#remove(ControllerHolder)} to deregister the controller before returning.
    */
   private Sequence<Object[]> runWithReport(final ControllerHolder controllerHolder)
   {
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    final TaskReportQueryListener queryListener = new TaskReportQueryListener(
-        TaskReportMSQDestination.instance(),
-        () -> new LimitedOutputStream(
-            baos,
-            controllerConfig.getMaxQueryReportSize(),
-            limit -> StringUtils.format(
-                "maxQueryReportSize[%,d] exceeded. "
-                + "Try limiting the result set for your query, or run it with %s[false]",
-                limit,
-                DartSqlEngine.CTX_FULL_REPORT
-            )
-        ),
-        plannerContext.getJsonMapper(),
-        controllerHolder.getController().queryId(),
-        Collections.emptyMap()
-    );
-
     try {
-      controllerHolder.getController().run(queryListener);
+      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+      final TaskReportQueryListener queryListener = new TaskReportQueryListener(
+          TaskReportMSQDestination.instance(),
+          () -> new LimitedOutputStream(
+              baos,
+              controllerConfig.getMaxQueryReportSize(),
+              limit -> StringUtils.format(
+                  "maxQueryReportSize[%,d] exceeded. "
+                  + "Try limiting the result set for your query, or run it with %s[false]",
+                  limit,
+                  DartSqlEngine.CTX_FULL_REPORT
+              )
+          ),
+          plannerContext.getJsonMapper(),
+          controllerHolder.getController().queryId(),
+          Collections.emptyMap()
+      );
 
-      final Map<String, Object> reportAsMap =
-          plannerContext.getJsonMapper().readValue(baos.toByteArray(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
-      return Sequences.simple(Collections.singletonList(new Object[]{reportAsMap}));
+      if (controllerHolder.run(queryListener)) {
+        final Map<String, Object> reportAsMap =
+            plannerContext.getJsonMapper().readValue(baos.toByteArray(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+        return Sequences.simple(Collections.singletonList(new Object[]{reportAsMap}));
+      } else {
+        // Controller was canceled before it ran.
+        throw MSQErrorReport.fromFault(controllerHolder.getController().queryId(), null, null, CanceledFault.INSTANCE)
+                            .toDruidException();
+      }
     }
     catch (Exception e) {
+      Throwables.throwIfUnchecked(e);
       throw new RuntimeException(e);
     }
     finally {
@@ -216,10 +220,20 @@ public class DartQueryMaker implements QueryMaker
 
   /**
    * Run a query and return the results only, streamed back using {@link ResultIteratorMaker}.
+   *
+   * Arranges for {@link DartControllerRegistry#remove(ControllerHolder)} to be called upon completion (either
+   * success or failure).
    */
   private Sequence<Object[]> runWithoutReport(final ControllerHolder controllerHolder)
   {
-    return new BaseSequence<>(new ResultIteratorMaker(controllerHolder));
+    try {
+      return new BaseSequence<>(new ResultIteratorMaker(controllerHolder));
+    }
+    catch (Throwable e) {
+      // Error while creating the result sequence; unregister controller.
+      controllerRegistry.remove(controllerHolder);
+      throw e;
+    }
   }
 
   /**
@@ -228,21 +242,22 @@ public class DartQueryMaker implements QueryMaker
   class ResultIteratorMaker implements BaseSequence.IteratorMaker<Object[], ResultIterator>
   {
     private final ControllerHolder controllerHolder;
+    private final ResultIterator resultIterator = new ResultIterator();
+    private boolean made;
 
     public ResultIteratorMaker(ControllerHolder holder)
     {
       this.controllerHolder = holder;
+      submitController();
     }
 
-    @Override
-    public ResultIterator make()
+    /**
+     * Submits the controller to the executor in the constructor, and remove it from the registry when the
+     * future resolves.
+     */
+    private void submitController()
     {
-      final ResultIterator iter = new ResultIterator();
-
-      // This separate thread is needed because we need to return a Sequence that streams results. If the
-      // QueryMaker interface was changed to use an object that pushes out results rather than returning a Sequence,
-      // then we wouldn't need this separate thread.
-      final Future<?> controllerFuture = controllerExecutor.submit(() -> {
+      controllerExecutor.submit(() -> {
         final Controller controller = controllerHolder.getController();
         final String threadName = Thread.currentThread().getName();
 
@@ -255,7 +270,14 @@ public class DartQueryMaker implements QueryMaker
                   controller.queryId()
               )
           );
-          controller.run(iter);
+          if (!controllerHolder.run(resultIterator)) {
+            // Controller was canceled before it ran. Push a cancellation error to the resultIterator, so the sequence
+            // returned by "runWithoutReport" can resolve.
+            resultIterator.pushError(
+                MSQErrorReport.fromFault(controllerHolder.getController().queryId(), null, null, CanceledFault.INSTANCE)
+                              .toDruidException()
+            );
+          }
         }
         catch (Exception e) {
           log.warn(
@@ -270,29 +292,32 @@ public class DartQueryMaker implements QueryMaker
           Thread.currentThread().setName(threadName);
         }
       });
+    }
 
-      iter.attach(() -> {
-        controllerFuture.cancel(false);
+    @Override
+    public ResultIterator make()
+    {
+      if (made) {
+        throw new ISE("Cannot call make() more than once");
+      }
 
-        if (!iter.complete) {
-          controllerHolder.getController().stop();
-        }
-      });
-
-      return iter;
+      made = true;
+      return resultIterator;
     }
 
     @Override
     public void cleanup(final ResultIterator iterFromMake)
     {
-      CloseableUtils.closeAndWrapExceptions(iterFromMake);
+      if (!iterFromMake.complete) {
+        controllerHolder.cancel();
+      }
     }
   }
 
   /**
    * Helper for {@link ResultIteratorMaker}, which is in turn a helper for {@link #runWithoutReport(ControllerHolder)}.
    */
-  static class ResultIterator implements Iterator<Object[]>, QueryListener, Closeable
+  static class ResultIterator implements Iterator<Object[]>, QueryListener
   {
     /**
      * Number of rows to buffer from {@link #onResultRow(Object[])}.
@@ -309,9 +334,6 @@ public class DartQueryMaker implements QueryMaker
      */
     @Nullable
     private Either<Throwable, Object[]> current;
-
-    @GuardedBy("closer")
-    private final Closer closer = Closer.create();
 
     private volatile boolean complete;
 
@@ -341,7 +363,16 @@ public class DartQueryMaker implements QueryMaker
         }
       }
 
-      return Optional.ofNullable(current.valueOrThrow());
+      if (current.isValue()) {
+        return Optional.ofNullable(current.valueOrThrow());
+      } else {
+        // Don't use valueOrThrow to throw errors; here we *don't* want the wrapping in RuntimeException
+        // that Either.valueOrThrow does. We want the original DruidException to be propagated to the user, if
+        // there is one.
+        final Throwable e = current.error();
+        Throwables.throwIfUnchecked(e);
+        throw new RuntimeException(e);
+      }
     }
 
     @Override
@@ -389,30 +420,20 @@ public class DartQueryMaker implements QueryMaker
         if (statusReport.getStatus().isSuccess()) {
           rowBuffer.put(Either.value(null));
         } else {
-          rowBuffer.put(Either.error(new MSQException(statusReport.getErrorReport().getFault())));
+          pushError(statusReport.getErrorReport().toDruidException());
         }
       }
       catch (InterruptedException e) {
-        // Can't fix this by putting an error, because the rowBuffer isn't accepting new entries.
-        // Give up, allow controller.run() to fail.
+        // Can't fix this by pushing an error, because the rowBuffer isn't accepting new entries.
+        // Give up, allow controllerHolder.run() to fail.
         Thread.currentThread().interrupt();
         throw new RuntimeException(e);
       }
     }
 
-    private void attach(final Closeable closeable)
+    public void pushError(final Throwable e) throws InterruptedException
     {
-      synchronized (closer) {
-        closer.register(closeable);
-      }
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-      synchronized (closer) {
-        closer.close();
-      }
+      rowBuffer.put(Either.error(e));
     }
   }
 }

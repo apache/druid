@@ -28,10 +28,10 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.Dart;
+import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
-import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
@@ -246,10 +246,10 @@ public class DartSqlResource extends SqlResource
         final HttpStatement stmt = (HttpStatement) cancelable;
         final Object dartQueryId = stmt.context().get(DartSqlEngine.CTX_DART_QUERY_ID);
         if (dartQueryId instanceof String) {
-          final Controller controller = controllerRegistry.get((String) dartQueryId);
-          if (controller != null) {
+          final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
+          if (holder != null) {
             found = true;
-            controller.stop();
+            holder.cancel();
           }
         }
       }

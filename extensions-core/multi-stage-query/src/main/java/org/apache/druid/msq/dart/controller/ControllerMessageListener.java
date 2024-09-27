@@ -59,9 +59,9 @@ public class ControllerMessageListener implements MessageListener<ControllerMess
   @Override
   public void messageReceived(ControllerMessage message)
   {
-    final Controller controller = controllerRegistry.get(message.getQueryId());
-    if (controller != null) {
-      message.handle(controller);
+    final ControllerHolder holder = controllerRegistry.get(message.getQueryId());
+    if (holder != null) {
+      message.handle(holder.getController());
     }
   }
 
