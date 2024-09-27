@@ -177,10 +177,7 @@ public class KubernetesOverlordModule implements DruidModule
   }
 
   /**
-   * Provides a TaskRunnerFactory instance suitable for environments without Zookeeper.
-   * In such environments, the standard RemoteTaskRunnerFactory may not be operational.
-   * Depending on the workerType defined in KubernetesAndWorkerTaskRunnerConfig,
-   * this method selects and returns an appropriate TaskRunnerFactory implementation.
+   * Provides a TaskAdapter instance for the KubernetesTaskRunner.
    */
   @Provides
   @LazySingleton
