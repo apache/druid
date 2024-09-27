@@ -83,7 +83,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private final FrameWriterFactory frameWriterFactory;
   private final FrameReader frameReader;
   private final int maxRowsMaterialized;
-  private long currentAllocatorCapacity; // Used for generating FrameRowTooLargeException if needed
   private Cursor frameCursor = null;
   private Supplier<ResultRow> rowSupplierFromFrameCursor;
   private ResultRow outputRow = null;
@@ -98,6 +97,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
   private final ArrayList<ResultRow> rowsToProcess;
   private int lastPartitionIndex = -1;
+
+  final AtomicInteger rowId = new AtomicInteger(0);
 
   public WindowOperatorQueryFrameProcessor(
       WindowOperatorQuery query,
@@ -155,7 +156,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   }
 
   @Override
-  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs)
+  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws IOException
   {
     /*
      There are 2 scenarios:
@@ -222,30 +223,68 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         final Frame frame = inputChannel.read();
         convertRowFrameToRowsAndColumns(frame);
         return ReturnOrAwait.runAgain();
-      } else if (inputChannel.isFinished()) {
-        runAllOpsOnMultipleRac(frameRowsAndCols);
-        return ReturnOrAwait.returnObject(Unit.instance());
-      } else {
-        return ReturnOrAwait.awaitAll(inputChannels().size());
       }
+
+      if (inputChannel.isFinished()) {
+        // If there are rows pending flush, flush them and run again.
+        if (frameHasRowsPendingFlush()) {
+          return flushRACsAndRunAgain();
+        }
+
+        // If no rows are flushed yet, process all rows.
+        if (rowId.get() == 0) {
+          runAllOpsOnMultipleRac(frameRowsAndCols);
+        }
+
+        // If there are still rows pending after operations, run again.
+        if (frameHasRowsPendingFlush()) {
+          return ReturnOrAwait.runAgain();
+        }
+        return ReturnOrAwait.returnObject(Unit.instance());
+      }
+      return ReturnOrAwait.awaitAll(inputChannels().size());
     }
 
     // Scenario 2: All window functions in the query have OVER() clause with a PARTITION BY
     if (frameCursor == null || frameCursor.isDone()) {
       if (readableInputs.isEmpty()) {
         return ReturnOrAwait.awaitAll(1);
-      } else if (inputChannel.canRead()) {
+      }
+
+      if (inputChannel.canRead()) {
         final Frame frame = inputChannel.read();
         frameCursor = FrameProcessors.makeCursor(frame, frameReader);
         makeRowSupplierFromFrameCursor();
       } else if (inputChannel.isFinished()) {
-        // Handle any remaining data.
-        lastPartitionIndex = rowsToProcess.size() - 1;
-        processRowsUpToLastPartition();
+        // If we have some rows pending processing, process them.
+        // We run it again as it's possible that frame writer's capacity got reached and some output rows are
+        // pending flush to the output channel.
+        if (!rowsToProcess.isEmpty()) {
+          lastPartitionIndex = rowsToProcess.size() - 1;
+          processRowsUpToLastPartition();
+          return ReturnOrAwait.runAgain();
+        }
+
+        // This handles the rows pending flush to the output channel, if we have any.
+        if (frameHasRowsPendingFlush()) {
+          return flushRACsAndRunAgain();
+        }
+         else {
+           clearRACBuffers();
+        }
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         return ReturnOrAwait.runAgain();
       }
+    }
+
+    // This helps us avoid OOM issues, as it ensures that we don't keep accumulating the processed rows in-memory, if
+    // the rate of processing of the rows is higher than the allowed capacity of frame writer in each iteration of runIncrementally.
+    if (frameHasRowsPendingFlush()) {
+      return flushRACsAndRunAgain();
+    }
+    else {
+      clearRACBuffers();
     }
 
     while (!frameCursor.isDone()) {
@@ -256,17 +295,20 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       } else if (comparePartitionKeys(outputRow, currentRow, partitionColumnNames)) {
         // Add current row to the same batch of rows for processing.
         rowsToProcess.add(currentRow);
-        if (rowsToProcess.size() > maxRowsMaterialized) {
-          // We don't want to materialize more than maxRowsMaterialized rows at any point in time, so process the pending batch.
-          processRowsUpToLastPartition();
-        }
-        ensureMaxRowsInAWindowConstraint(rowsToProcess.size());
       } else {
         lastPartitionIndex = rowsToProcess.size() - 1;
         outputRow = currentRow.copy();
+        rowsToProcess.add(currentRow);
+      }
+
+      frameCursor.advance();
+
+      if (rowsToProcess.size() > maxRowsMaterialized) {
+        // We don't want to materialize more than maxRowsMaterialized rows at any point in time, so process the pending batch.
+        processRowsUpToLastPartition();
+        ensureMaxRowsInAWindowConstraint(rowsToProcess.size());
         return ReturnOrAwait.runAgain();
       }
-      frameCursor.advance();
     }
     return ReturnOrAwait.runAgain();
   }
@@ -313,19 +355,10 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       public void completed()
       {
         try {
-          // resultRowsAndCols has reference to frameRowsAndCols
-          // due to the chain of calls across the ops
-          // so we can clear after writing to output
-          flushAllRowsAndCols(resultRowAndCols);
-          frameRowsAndCols.clear();
-
+          flushAllRowsAndCols(resultRowAndCols, rowId);
         }
         catch (IOException e) {
           throw new RuntimeException(e);
-        }
-        finally {
-          frameRowsAndCols.clear();
-          resultRowAndCols.clear();
         }
       }
     });
@@ -333,12 +366,12 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
   /**
    * @param resultRowAndCols Flush the list of {@link RowsAndColumns} to a frame
+   * @param rowId An AtomicInteger representing the current row ID
    * @throws IOException
    */
-  private void flushAllRowsAndCols(ArrayList<RowsAndColumns> resultRowAndCols) throws IOException
+  private void flushAllRowsAndCols(ArrayList<RowsAndColumns> resultRowAndCols, AtomicInteger rowId) throws IOException
   {
     RowsAndColumns rac = new ConcatRowsAndColumns(resultRowAndCols);
-    AtomicInteger rowId = new AtomicInteger(0);
     createFrameWriterIfNeeded(rac, rowId);
     writeRacToFrame(rac, rowId);
   }
@@ -355,7 +388,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       final ColumnSelectorFactory frameWriterColumnSelectorFactoryWithVirtualColumns =
           frameWriterVirtualColumns.wrap(frameWriterColumnSelectorFactory);
       frameWriter = frameWriterFactory.newFrameWriter(frameWriterColumnSelectorFactoryWithVirtualColumns);
-      currentAllocatorCapacity = frameWriterFactory.allocatorCapacity();
     }
   }
 
@@ -367,19 +399,26 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   public void writeRacToFrame(RowsAndColumns rac, AtomicInteger rowId) throws IOException
   {
     final int numRows = rac.numRows();
-    rowId.set(0);
     while (rowId.get() < numRows) {
-      final boolean didAddToFrame = frameWriter.addSelection();
-      if (didAddToFrame) {
+      if (frameWriter.addSelection()) {
+        incrementBoostColumn();
         rowId.incrementAndGet();
-        partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
-      } else if (frameWriter.getNumRows() == 0) {
-        throw new FrameRowTooLargeException(currentAllocatorCapacity);
-      } else {
+      } else if (frameWriter.getNumRows() > 0) {
         flushFrameWriter();
-        return;
+        createFrameWriterIfNeeded(rac, rowId);
+
+        if (frameWriter.addSelection()) {
+          incrementBoostColumn();
+          rowId.incrementAndGet();
+          return;
+        } else {
+          throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
+        }
+      } else {
+        throw new FrameRowTooLargeException(frameWriterFactory.allocatorCapacity());
       }
     }
+
     flushFrameWriter();
   }
 
@@ -520,5 +559,40 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
           maxRowsMaterialized
       ));
     }
+  }
+
+  /**
+   * Increments the value of the partition boosting column. It should be called once the row value has been written
+   * to the frame
+   */
+  private void incrementBoostColumn()
+  {
+    partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
+  }
+
+  /**
+   * @return true if frame has rows pending flush to the output channel, false otherwise.
+   */
+  private boolean frameHasRowsPendingFlush()
+  {
+    return frameWriter != null && frameWriter.getNumRows() > 0;
+  }
+
+  /**
+   * Flushes the rows in resultRowAndCols starting with rowId. We return a signal to run again as it's possible
+   * that we weren't able to flush all the rows to the output channel due to frame writer's capacity.
+   * @return A ReturnOrAwait object signaling that the processing should run again.
+   */
+  private ReturnOrAwait<Object> flushRACsAndRunAgain() throws IOException
+  {
+    flushAllRowsAndCols(resultRowAndCols, rowId);
+    return ReturnOrAwait.runAgain();
+  }
+
+  private void clearRACBuffers()
+  {
+    frameRowsAndCols.clear();
+    resultRowAndCols.clear();
+    rowId.set(0);
   }
 }

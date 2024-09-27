@@ -66,6 +66,99 @@ import java.util.Map;
 
 public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBase
 {
+  private static final List<Map<String, Object>> inputRows = ImmutableList.of(
+      ImmutableMap.of("added", 1L, "cityName", "city1"),
+      ImmutableMap.of("added", 1L, "cityName", "city2"),
+      ImmutableMap.of("added", 2L, "cityName", "city3"),
+      ImmutableMap.of("added", 2L, "cityName", "city4"),
+      ImmutableMap.of("added", 2L, "cityName", "city5"),
+      ImmutableMap.of("added", 3L, "cityName", "city6"),
+      ImmutableMap.of("added", 3L, "cityName", "city7")
+  );
+
+  @Test
+  public void testFrameWriterReachingCapacity() throws IOException
+  {
+    // This test validates that all output outputRows are flushed to the output channel even if frame writer's
+    // capacity is reached, by subsequent iterations of runIncrementally.
+    final ReadableInput factChannel = buildWindowTestInputChannel();
+
+    RowSignature inputSignature = RowSignature.builder()
+                                              .add("cityName", ColumnType.STRING)
+                                              .add("added", ColumnType.LONG)
+                                              .build();
+
+    FrameReader frameReader = FrameReader.create(inputSignature);
+
+    RowSignature outputSignature = RowSignature.builder()
+                                               .addAll(inputSignature)
+                                               .add("w0", ColumnType.LONG)
+                                               .build();
+
+    final WindowOperatorQuery query = new WindowOperatorQuery(
+        new QueryDataSource(
+            Druids.newScanQueryBuilder()
+                  .dataSource(new TableDataSource("test"))
+                  .intervals(new LegacySegmentSpec(Intervals.ETERNITY))
+                  .columns("cityName", "added")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .context(new HashMap<>())
+                  .build()),
+        new LegacySegmentSpec(Intervals.ETERNITY),
+        new HashMap<>(),
+        outputSignature,
+        ImmutableList.of(
+            new WindowOperatorFactory(new WindowRowNumberProcessor("w0"))
+        ),
+        ImmutableList.of()
+    );
+
+    final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
+        FrameWriters.makeRowBasedFrameWriterFactory(
+            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            outputSignature,
+            Collections.emptyList(),
+            false
+        ),
+        inputRows.size() / 4 // This forces frameWriter's capacity to be reached.
+    );
+
+    final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
+    final WindowOperatorQueryFrameProcessor processor = new WindowOperatorQueryFrameProcessor(
+        query,
+        factChannel.getChannel(),
+        outputChannel.writable(),
+        frameWriterFactory,
+        frameReader,
+        new ObjectMapper(),
+        ImmutableList.of(
+            new WindowOperatorFactory(new WindowRowNumberProcessor("w0"))
+        ),
+        inputSignature,
+        100,
+        ImmutableList.of("added")
+    );
+
+    exec.runFully(processor, null);
+
+    final Sequence<List<Object>> rowsFromProcessor = FrameTestUtil.readRowsFromFrameChannel(
+        outputChannel.readable(),
+        FrameReader.create(outputSignature)
+    );
+
+    List<List<Object>> outputRows = rowsFromProcessor.toList();
+    Assert.assertEquals(inputRows.size(), outputRows.size());
+
+    for (int i = 0; i < inputRows.size(); i++) {
+      Map<String, Object> inputRow = inputRows.get(i);
+      List<Object> outputRow = outputRows.get(i);
+
+      Assert.assertEquals("cityName should match", inputRow.get("cityName"), outputRow.get(0));
+      Assert.assertEquals("added should match", inputRow.get("added"), outputRow.get(1));
+      Assert.assertEquals("row_number() should be correct", (long) i + 1, outputRow.get(2));
+    }
+  }
+
   @Test
   public void testBatchingOfPartitionByKeys_singleBatch() throws Exception
   {
@@ -195,18 +288,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
                                               .add("cityName", ColumnType.STRING)
                                               .add("added", ColumnType.LONG)
                                               .build();
-
-    List<Map<String, Object>> rows = ImmutableList.of(
-        ImmutableMap.of("added", 1L, "cityName", "city1"),
-        ImmutableMap.of("added", 1L, "cityName", "city2"),
-        ImmutableMap.of("added", 2L, "cityName", "city3"),
-        ImmutableMap.of("added", 2L, "cityName", "city4"),
-        ImmutableMap.of("added", 2L, "cityName", "city5"),
-        ImmutableMap.of("added", 3L, "cityName", "city6"),
-        ImmutableMap.of("added", 3L, "cityName", "city7")
-    );
-
-    return makeChannelFromRows(rows, inputSignature, Collections.emptyList());
+    return makeChannelFromRows(inputRows, inputSignature, Collections.emptyList());
   }
 
   private ReadableInput makeChannelFromRows(
