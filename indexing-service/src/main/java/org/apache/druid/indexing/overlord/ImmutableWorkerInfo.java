@@ -281,7 +281,7 @@ public class ImmutableWorkerInfo
       return null;
     }
     int totalCapacity = worker.getCapacity();
-    return  Math.max(1, Math.min((int) Math.floor(taskSlotRatio * totalCapacity),totalCapacity));
+    return Math.max(1, Math.min((int) Math.floor(taskSlotRatio * totalCapacity), totalCapacity));
   }
 
   @Override

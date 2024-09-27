@@ -309,16 +309,23 @@ public class ImmutableWorkerInfoTest
     Assert.assertTrue(spyInfo.canRunTask(msqControllerTask, config));
   }
 
-  private WorkerTaskRunnerConfig createConfigInstanceWithArgs (double parallelIndexRatio, Map<String, Double> taskSlotRatioPerWorker){
+  private WorkerTaskRunnerConfig createConfigInstanceWithArgs(
+      double parallelIndexRatio,
+      Map<String, Double> taskSlotRatioPerWorker
+  )
+  {
 
-    return new WorkerTaskRunnerConfig() {
+    return new WorkerTaskRunnerConfig()
+    {
       @Override
-      public Map<String, Double> getTaskSlotRatiosPerWorker() {
+      public Map<String, Double> getTaskSlotRatiosPerWorker()
+      {
         return taskSlotRatioPerWorker;
       }
 
       @Override
-      public double getParallelIndexTaskSlotRatio(){
+      public double getParallelIndexTaskSlotRatio()
+      {
         return parallelIndexRatio;
       }
     };
