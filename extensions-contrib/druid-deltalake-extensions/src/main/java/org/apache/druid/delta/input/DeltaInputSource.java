@@ -42,7 +42,6 @@ import io.delta.kernel.types.StructField;
 import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
 import io.delta.kernel.utils.FileStatus;
-import io.delta.storage.LogStore;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
