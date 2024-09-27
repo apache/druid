@@ -24,9 +24,8 @@ import com.google.common.collect.Maps;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
@@ -109,7 +108,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
           return ProcessedValue.NULL_LITERAL;
         }
         catch (IOException e) {
-          throw new RE(e, "Failed to write field [%s], unhandled value", fieldPath);
+          throw DruidException.defensive(e, "Failed to write field [%s], unhandled value", fieldPath);
         }
       }
       return ProcessedValue.NULL_LITERAL;
@@ -134,7 +133,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
             return ProcessedValue.NULL_LITERAL;
           }
           catch (IOException e) {
-            throw new RE(e, "Failed to write field [%s] value [%s]", fieldPath, array);
+            throw DruidException.defensive(e, "Failed to write field [%s] value [%s]", fieldPath, array);
           }
         }
       }
@@ -309,7 +308,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
               globalDictionaryIdLookup
           );
         } else {
-          throw new ISE("Invalid field type [%s], how did this happen?", type);
+          throw DruidException.defensive("Invalid field type [%s], how did this happen?", type);
         }
       } else {
         writer = new VariantFieldColumnWriter(
@@ -334,7 +333,9 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   ) throws IOException
   {
     if (dictionarySerialized) {
-      throw new ISE("String dictionary already serialized for column [%s], cannot serialize again", name);
+      throw DruidException.defensive(
+          "String dictionary already serialized for column [%s], cannot serialize again", name
+      );
     }
 
     // null is always 0
@@ -375,10 +376,16 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   @Override
   public void serialize(ColumnValueSelector<? extends StructuredData> selector) throws IOException
   {
+    serialize(StructuredData.wrap(selector.getObject()));
+  }
+
+  public void serialize(StructuredData data) throws IOException
+  {
     if (!dictionarySerialized) {
-      throw new ISE("Must serialize value dictionaries before serializing values for column [%s]", name);
+      throw DruidException.defensive(
+          "Must serialize value dictionaries before serializing values for column [%s]", name
+      );
     }
-    StructuredData data = StructuredData.wrap(selector.getObject());
     if (data == null) {
       nullRowsBitmap.add(rowCount);
     }
