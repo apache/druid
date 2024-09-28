@@ -23,6 +23,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 
 import { useQueryManager } from '../../../hooks';
 import { formatEmpty } from '../../../utils';
+import { Issue } from '../components';
 import { highlightStore } from '../highlight-store/highlight-store';
 import type { ExpressionMeta } from '../models';
 import { ModuleRepository } from '../module-repository/module-repository';
@@ -89,7 +90,7 @@ ModuleRepository.registerModule<BarChartParameterValues>({
         .changeLimitValue(limit);
     }, [querySource, where, splitColumn, measure, measureToSort, limit]);
 
-    const [dataState] = useQueryManager({
+    const [sourceDataState] = useQueryManager({
       query: dataQuery,
       processQuery: async (query: SqlQuery) => {
         return (await runSqlQuery(query)).toObjectArray();
@@ -135,7 +136,7 @@ ModuleRepository.registerModule<BarChartParameterValues>({
 
     useEffect(() => {
       const myChart = chartRef.current;
-      const data = dataState.data;
+      const data = sourceDataState.data;
       if (!myChart || !data) return;
 
       myChart.off('click');
@@ -171,7 +172,7 @@ ModuleRepository.registerModule<BarChartParameterValues>({
               : undefined,
         });
       });
-    }, [dataState.data]);
+    }, [sourceDataState.data]);
 
     useEffect(() => {
       const myChart = chartRef.current;
@@ -191,14 +192,18 @@ ModuleRepository.registerModule<BarChartParameterValues>({
       }
     }, [stage]);
 
+    const errorMessage = sourceDataState.getErrorMessage();
     return (
-      <div
-        className="bar-chart-module module"
-        ref={container => {
-          if (chartRef.current || !container) return;
-          chartRef.current = setupChart(container);
-        }}
-      />
+      <div className="bar-chart-module module">
+        <div
+          className="echart-container"
+          ref={container => {
+            if (chartRef.current || !container) return;
+            chartRef.current = setupChart(container);
+          }}
+        />
+        {errorMessage && <Issue issue={errorMessage} />}
+      </div>
     );
   },
 });

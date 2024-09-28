@@ -23,6 +23,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 
 import { useQueryManager } from '../../../hooks';
 import { formatEmpty, formatNumber } from '../../../utils';
+import { Issue } from '../components';
 import { highlightStore } from '../highlight-store/highlight-store';
 import type { ExpressionMeta } from '../models';
 import { ModuleRepository } from '../module-repository/module-repository';
@@ -112,7 +113,7 @@ ModuleRepository.registerModule<PieChartParameterValues>({
       };
     }, [querySource, where, splitColumn, measure, limit, showOthers]);
 
-    const [dataState] = useQueryManager({
+    const [sourceDataState] = useQueryManager({
       query: dataQueries,
       processQuery: async ({ mainQuery, splitExpression, othersPartialQuery }) => {
         const result = await runSqlQuery(mainQuery);
@@ -173,7 +174,7 @@ ModuleRepository.registerModule<PieChartParameterValues>({
 
     useEffect(() => {
       const myChart = chartRef.current;
-      const data = dataState.data;
+      const data = sourceDataState.data;
       if (!myChart || !data) return;
 
       myChart.off('click');
@@ -215,7 +216,7 @@ ModuleRepository.registerModule<PieChartParameterValues>({
               },
         });
       });
-    }, [dataState.data]);
+    }, [sourceDataState.data]);
 
     useEffect(() => {
       const myChart = chartRef.current;
@@ -239,14 +240,18 @@ ModuleRepository.registerModule<PieChartParameterValues>({
       }
     }, [stage]);
 
+    const errorMessage = sourceDataState.getErrorMessage();
     return (
-      <div
-        className="pie-chart-module module"
-        ref={container => {
-          if (chartRef.current || !container) return;
-          chartRef.current = setupChart(container);
-        }}
-      />
+      <div className="pie-chart-module module">
+        <div
+          className="echart-container"
+          ref={container => {
+            if (chartRef.current || !container) return;
+            chartRef.current = setupChart(container);
+          }}
+        />
+        {errorMessage && <Issue issue={errorMessage} />}
+      </div>
     );
   },
 });

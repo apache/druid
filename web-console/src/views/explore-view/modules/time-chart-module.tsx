@@ -22,7 +22,13 @@ import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
 
 import { useQueryManager } from '../../../hooks';
-import { prettyFormatIsoDateTick, prettyFormatIsoDateWithMsIfNeeded } from '../../../utils';
+import {
+  formatInteger,
+  formatNumber,
+  prettyFormatIsoDateTick,
+  prettyFormatIsoDateWithMsIfNeeded,
+} from '../../../utils';
+import { Issue } from '../components';
 import { highlightStore } from '../highlight-store/highlight-store';
 import type { ExpressionMeta } from '../models';
 import { ModuleRepository } from '../module-repository/module-repository';
@@ -197,8 +203,12 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
             type: 'cross',
             label: {
               backgroundColor: '#6a7985',
-              formatter({ value }: any) {
-                return prettyFormatIsoDateWithMsIfNeeded(new Date(value).toISOString());
+              formatter(d: any) {
+                if (d.axisDimension === 'x') {
+                  return prettyFormatIsoDateWithMsIfNeeded(new Date(d.value).toISOString());
+                } else {
+                  return Math.abs(d.value) < 1 ? formatNumber(d.value) : formatInteger(d.value);
+                }
               },
             },
           },
@@ -403,14 +413,18 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       }
     }, [stage]);
 
+    const errorMessage = sourceDataState.getErrorMessage();
     return (
-      <div
-        className="time-chart-module module"
-        ref={container => {
-          if (chartRef.current || !container) return;
-          chartRef.current = setupChart(container);
-        }}
-      />
+      <div className="time-chart-module module">
+        <div
+          className="echart-container"
+          ref={container => {
+            if (chartRef.current || !container) return;
+            chartRef.current = setupChart(container);
+          }}
+        />
+        {errorMessage && <Issue issue={errorMessage} />}
+      </div>
     );
   },
 });
