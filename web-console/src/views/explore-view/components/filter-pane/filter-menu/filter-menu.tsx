@@ -70,6 +70,7 @@ const DEFAULT_PATTERN_TYPES: FilterPatternType[] = [
   'timeRelative',
   'timeInterval',
 ];
+
 function getPattenTypesForColumn(column: Column | undefined): FilterPatternType[] {
   if (!column) return DEFAULT_PATTERN_TYPES;
 
@@ -77,7 +78,6 @@ function getPattenTypesForColumn(column: Column | undefined): FilterPatternType[
     case 'TIMESTAMP':
       return ['timeRelative', 'timeInterval', 'numberRange', 'values', 'contains', 'regexp'];
 
-    case 'VARCHAR':
     case 'BOOLEAN':
       return ['values', 'contains', 'regexp', 'numberRange'];
 
@@ -86,7 +86,7 @@ function getPattenTypesForColumn(column: Column | undefined): FilterPatternType[
     case 'FLOAT':
       return ['numberRange', 'values'];
 
-    default:
+    default: //  VARCHAR also gets default
       return DEFAULT_PATTERN_TYPES;
   }
 }
@@ -321,11 +321,13 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
                       icon={IconNames.FILTER}
                       active={!negated}
                       onClick={() => setPattern({ ...pattern, negated: false })}
+                      data-tooltip="Include"
                     />
                     <Button
                       icon={IconNames.FILTER_REMOVE}
                       active={negated}
                       onClick={() => setPattern({ ...pattern, negated: true })}
+                      data-tooltip="Exclude"
                     />
                   </ButtonGroup>
                 </FormGroup>
