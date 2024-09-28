@@ -43,7 +43,7 @@ export interface SqlInputProps {
 export interface SqlInputState {
   quotedCompletions: Ace.Completion[];
   unquotedCompletions: Ace.Completion[];
-  prevColumn?: readonly Column[];
+  prevColumns?: readonly Column[];
 }
 
 export class SqlInput extends React.PureComponent<SqlInputProps, SqlInputState> {
@@ -79,14 +79,17 @@ export class SqlInput extends React.PureComponent<SqlInputProps, SqlInputState> 
     );
   }
 
-  static getDerivedStateFromProps(props: SqlInputProps, state: SqlInputState) {
+  static getDerivedStateFromProps(
+    props: SqlInputProps,
+    state: SqlInputState,
+  ): Partial<SqlInputState> | null {
     const { columns } = props;
 
-    if (columns && columns !== state.prevColumn) {
+    if (columns && columns !== state.prevColumns) {
       return {
         quotedCompletions: SqlInput.getCompletions(columns, true),
         unquotedCompletions: SqlInput.getCompletions(columns, false),
-        prevColumnMetadata: columns,
+        prevColumns: columns,
       };
     }
     return null;

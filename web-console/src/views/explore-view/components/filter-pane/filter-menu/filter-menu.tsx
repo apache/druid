@@ -29,7 +29,13 @@ import {
   Position,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { FilterPattern, FilterPatternType, QueryResult, SqlQuery } from '@druid-toolkit/query';
+import type {
+  Column,
+  FilterPattern,
+  FilterPatternType,
+  QueryResult,
+  SqlQuery,
+} from '@druid-toolkit/query';
 import {
   C,
   changeFilterPatternType,
@@ -56,14 +62,44 @@ import { ValuesFilterControl } from './values-filter-control/values-filter-contr
 
 import './filter-menu.scss';
 
-const PATTERN_TYPE_TO_NAME: Partial<Record<FilterPatternType, string>> = {
+const DEFAULT_PATTERN_TYPES: FilterPatternType[] = [
+  'values',
+  'contains',
+  'regexp',
+  'numberRange',
+  'timeRelative',
+  'timeInterval',
+];
+function getPattenTypesForColumn(column: Column | undefined): FilterPatternType[] {
+  if (!column) return DEFAULT_PATTERN_TYPES;
+
+  switch (column.sqlType) {
+    case 'TIMESTAMP':
+      return ['timeRelative', 'timeInterval', 'numberRange', 'values', 'contains', 'regexp'];
+
+    case 'VARCHAR':
+    case 'BOOLEAN':
+      return ['values', 'contains', 'regexp', 'numberRange'];
+
+    case 'BIGINT':
+    case 'DOUBLE':
+    case 'FLOAT':
+      return ['numberRange', 'values'];
+
+    default:
+      return DEFAULT_PATTERN_TYPES;
+  }
+}
+
+const PATTERN_TYPE_TO_NAME: Record<FilterPatternType, string> = {
   values: 'Values',
   contains: 'Contains',
   regexp: 'Regular expression',
-  // mvContains: 'Multi-value contains',
+  mvContains: 'Multi-value contains',
   numberRange: 'Number range',
-  timeInterval: 'Time interval',
   timeRelative: 'Time relative',
+  timeInterval: 'Time interval',
+  custom: 'Custom',
 };
 
 type FilterMenuTab = 'compose' | 'sql';
@@ -270,9 +306,11 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
                       )
                     }
                   >
-                    {Object.entries(PATTERN_TYPE_TO_NAME).map(([type, name]) => (
+                    {getPattenTypesForColumn(
+                      querySource.columns.find(c => c.name === pattern.column),
+                    ).map(type => (
                       <option key={type} value={type}>
-                        {name}
+                        {PATTERN_TYPE_TO_NAME[type]}
                       </option>
                     ))}
                   </HTMLSelect>
