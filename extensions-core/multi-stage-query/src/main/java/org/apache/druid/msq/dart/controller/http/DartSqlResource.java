@@ -62,6 +62,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -149,6 +150,7 @@ public class DartSqlResource extends SqlResource
         controllerRegistry.getAllHolders()
                           .stream()
                           .map(DartQueryInfo::fromControllerHolder)
+                          .sorted(Comparator.comparing(DartQueryInfo::getStartTime))
                           .collect(Collectors.toList());
 
     // Add queries from all other servers, if "selfOnly" is not set.

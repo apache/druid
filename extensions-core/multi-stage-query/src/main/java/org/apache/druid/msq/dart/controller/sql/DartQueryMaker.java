@@ -20,6 +20,7 @@
 package org.apache.druid.msq.dart.controller.sql;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.Iterators;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.io.LimitedOutputStream;
 import org.apache.druid.java.util.common.DateTimes;
@@ -29,7 +30,6 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
@@ -67,7 +67,9 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 
 /**
@@ -157,7 +159,8 @@ public class DartQueryMaker implements QueryMaker
         DartSqlEngine.CTX_FULL_REPORT_DEFAULT
     );
 
-    // Register controller before acquiring the semaphore, so it shows up in "active controllers" lists.
+    // Register controller before submitting anything to controllerExeuctor, so it shows up in
+    // "active controllers" lists.
     controllerRegistry.register(controllerHolder);
 
     try {
@@ -176,46 +179,77 @@ public class DartQueryMaker implements QueryMaker
    * Run a query and return the full report, buffered in memory up to
    * {@link DartControllerConfig#getMaxQueryReportSize()}.
    *
-   * Calls {@link DartControllerRegistry#remove(ControllerHolder)} to deregister the controller before returning.
+   * Arranges for {@link DartControllerRegistry#remove(ControllerHolder)} to be called upon completion (either
+   * success or failure).
    */
   private Sequence<Object[]> runWithReport(final ControllerHolder controllerHolder)
   {
-    try {
-      final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      final TaskReportQueryListener queryListener = new TaskReportQueryListener(
-          TaskReportMSQDestination.instance(),
-          () -> new LimitedOutputStream(
-              baos,
-              controllerConfig.getMaxQueryReportSize(),
-              limit -> StringUtils.format(
-                  "maxQueryReportSize[%,d] exceeded. "
-                  + "Try limiting the result set for your query, or run it with %s[false]",
-                  limit,
-                  DartSqlEngine.CTX_FULL_REPORT
-              )
-          ),
-          plannerContext.getJsonMapper(),
-          controllerHolder.getController().queryId(),
-          Collections.emptyMap()
-      );
+    final Future<Map<String, Object>> reportFuture;
 
-      if (controllerHolder.run(queryListener)) {
-        final Map<String, Object> reportAsMap =
-            plannerContext.getJsonMapper().readValue(baos.toByteArray(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
-        return Sequences.simple(Collections.singletonList(new Object[]{reportAsMap}));
-      } else {
-        // Controller was canceled before it ran.
-        throw MSQErrorReport.fromFault(controllerHolder.getController().queryId(), null, null, CanceledFault.INSTANCE)
-                            .toDruidException();
+    // Run in controllerExecutor. Control doesn't really *need* to be moved to another thread, but we have to
+    // use the controllerExecutor anyway, to ensure we respect the concurrentQueries configuration.
+    reportFuture = controllerExecutor.submit(() -> {
+      try {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        final TaskReportQueryListener queryListener = new TaskReportQueryListener(
+            TaskReportMSQDestination.instance(),
+            () -> new LimitedOutputStream(
+                baos,
+                controllerConfig.getMaxQueryReportSize(),
+                limit -> StringUtils.format(
+                    "maxQueryReportSize[%,d] exceeded. "
+                    + "Try limiting the result set for your query, or run it with %s[false]",
+                    limit,
+                    DartSqlEngine.CTX_FULL_REPORT
+                )
+            ),
+            plannerContext.getJsonMapper(),
+            controllerHolder.getController().queryId(),
+            Collections.emptyMap()
+        );
+
+        if (controllerHolder.run(queryListener)) {
+          return plannerContext.getJsonMapper()
+                               .readValue(baos.toByteArray(), JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT);
+        } else {
+          // Controller was canceled before it ran.
+          throw MSQErrorReport
+              .fromFault(controllerHolder.getController().queryId(), null, null, CanceledFault.INSTANCE)
+              .toDruidException();
+        }
       }
-    }
-    catch (Exception e) {
-      Throwables.throwIfUnchecked(e);
-      throw new RuntimeException(e);
-    }
-    finally {
-      controllerRegistry.remove(controllerHolder);
-    }
+      finally {
+        controllerRegistry.remove(controllerHolder);
+      }
+    });
+
+    // Return a sequence that reads one row (the report) from reportFuture.
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<Object[], Iterator<Object[]>>()
+        {
+          @Override
+          public Iterator<Object[]> make()
+          {
+            try {
+              return Iterators.singletonIterator(new Object[]{reportFuture.get()});
+            }
+            catch (InterruptedException e) {
+              throw new RuntimeException(e);
+            }
+            catch (ExecutionException e) {
+              // Unwrap ExecutionExceptions, so errors such as DruidException are serialized properly.
+              Throwables.throwIfUnchecked(e.getCause());
+              throw new RuntimeException(e.getCause());
+            }
+          }
+
+          @Override
+          public void cleanup(Iterator<Object[]> iterFromMake)
+          {
+            // Nothing to do.
+          }
+        }
+    );
   }
 
   /**
@@ -226,14 +260,7 @@ public class DartQueryMaker implements QueryMaker
    */
   private Sequence<Object[]> runWithoutReport(final ControllerHolder controllerHolder)
   {
-    try {
-      return new BaseSequence<>(new ResultIteratorMaker(controllerHolder));
-    }
-    catch (Throwable e) {
-      // Error while creating the result sequence; unregister controller.
-      controllerRegistry.remove(controllerHolder);
-      throw e;
-    }
+    return new BaseSequence<>(new ResultIteratorMaker(controllerHolder));
   }
 
   /**

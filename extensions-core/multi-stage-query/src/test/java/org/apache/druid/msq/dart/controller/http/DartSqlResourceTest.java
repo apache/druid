@@ -43,7 +43,6 @@ import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.indexing.error.CanceledFault;
-import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -625,37 +624,20 @@ public class DartSqlResourceTest extends MSQTestBase
       throw new ISE("doPost timed out");
     }
 
+    // Wait for the SQL POST to come back.
     Assertions.assertNull(doPostFuture.get());
+    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
 
-    if (fullReport) {
-      Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
-
-      final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
-          asyncResponse.baos.toByteArray(),
-          new TypeReference<List<List<TaskReport.ReportMap>>>() {}
-      );
-
-      Assertions.assertEquals(1, reportMaps.size());
-      final MSQTaskReport report =
-          (MSQTaskReport) Iterables.getOnlyElement(Iterables.getOnlyElement(reportMaps)).get(MSQTaskReport.REPORT_KEY);
-      final MSQErrorReport errorReport = report.getPayload().getStatus().getErrorReport();
-
-      Assertions.assertNotNull(errorReport);
-      Assertions.assertEquals(CanceledFault.instance(), errorReport.getFault());
-    } else {
-      Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
-
-      // Ensure MSQ fault (CanceledFault) is properly translated to a DruidException and then properly serialized.
-      final Map<String, Object> e = objectMapper.readValue(
-          asyncResponse.baos.toByteArray(),
-          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-      );
-      Assertions.assertEquals("CANCELED", e.get("category"));
-      Assertions.assertEquals(
-          MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.instance()),
-          e.get("errorMessage")
-      );
-    }
+    // Ensure MSQ fault (CanceledFault) is properly translated to a DruidException and then properly serialized.
+    final Map<String, Object> e = objectMapper.readValue(
+        asyncResponse.baos.toByteArray(),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+    Assertions.assertEquals("CANCELED", e.get("category"));
+    Assertions.assertEquals(
+        MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.instance()),
+        e.get("errorMessage")
+    );
   }
 
   @Test
