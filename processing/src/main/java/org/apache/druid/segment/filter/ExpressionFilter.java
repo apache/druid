@@ -121,18 +121,18 @@ public class ExpressionFilter implements Filter
       case STRING:
         return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
             ColumnCapabilitiesImpl.createSimpleSingleValueStringColumnCapabilities(),
-            ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
+            ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr, null)
         ).makeMatcher(predicateFactory);
       case ARRAY:
         return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
             ColumnCapabilitiesImpl.createDefault().setType(ExpressionType.toColumnType(outputType)).setHasNulls(true),
-            ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
+            ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr, null)
         ).makeMatcher(predicateFactory);
       default:
         if (ExpressionType.NESTED_DATA.equals(outputType)) {
           return VectorValueMatcherColumnProcessorFactory.instance().makeObjectProcessor(
               ColumnCapabilitiesImpl.createDefault().setType(ExpressionType.toColumnType(outputType)).setHasNulls(true),
-              ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr)
+              ExpressionVectorSelectors.makeVectorObjectSelector(factory, theExpr, null)
           ).makeMatcher(predicateFactory);
         }
         throw new UOE("Vectorized expression matchers not implemented for type: [%s]", outputType);

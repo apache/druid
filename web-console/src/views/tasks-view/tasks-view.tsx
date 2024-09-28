@@ -414,8 +414,11 @@ ORDER BY
             }),
             Cell: row => {
               if (row.aggregated) return '';
-              const { status } = row.original;
-              const errorMsg = row.original.error_msg;
+              const { status, error_msg } = row.original;
+              const errorMsg =
+                error_msg && !TASK_CANCELED_ERROR_MESSAGES.includes(error_msg)
+                  ? error_msg
+                  : undefined;
               return (
                 <TableFilterableCell
                   field="status"
@@ -423,10 +426,10 @@ ORDER BY
                   filters={filters}
                   onFiltersChange={onFiltersChange}
                 >
-                  <span title={errorMsg}>
+                  <span data-tooltip={errorMsg}>
                     <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
                     {status}
-                    {errorMsg && !TASK_CANCELED_ERROR_MESSAGES.includes(errorMsg) && (
+                    {errorMsg && (
                       <a onClick={() => this.setState({ alertErrorMsg: errorMsg })}>&nbsp;?</a>
                     )}
                   </span>

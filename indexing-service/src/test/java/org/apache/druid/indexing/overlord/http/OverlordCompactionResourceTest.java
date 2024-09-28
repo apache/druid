@@ -44,9 +44,9 @@ import java.util.Map;
 public class OverlordCompactionResourceTest
 {
   private static final CompactionSupervisorConfig SUPERVISOR_ENABLED
-      = new CompactionSupervisorConfig(true);
+      = new CompactionSupervisorConfig(true, null);
   private static final CompactionSupervisorConfig SUPERVISOR_DISABLED
-      = new CompactionSupervisorConfig(false);
+      = new CompactionSupervisorConfig(false, null);
 
   private CompactionScheduler scheduler;
 

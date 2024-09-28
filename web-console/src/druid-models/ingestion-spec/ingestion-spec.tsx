@@ -296,6 +296,9 @@ export type SchemaMode = 'fixed' | 'string-only-discovery' | 'type-aware-discove
 export type ArrayMode = 'arrays' | 'multi-values';
 
 export const DEFAULT_FORCE_SEGMENT_SORT_BY_TIME = true;
+export const DEFAULT_SCHEMA_MODE: SchemaMode = 'fixed';
+export const DEFAULT_ARRAY_MODE: ArrayMode = 'arrays';
+
 export function getForceSegmentSortByTime(spec: Partial<IngestionSpec>): boolean {
   return (
     deepGet(spec, 'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime') ??
@@ -393,6 +396,10 @@ export function isStreamingSpec(spec: Partial<IngestionSpec>): boolean {
 
 export function isDruidSource(spec: Partial<IngestionSpec>): boolean {
   return deepGet(spec, 'spec.ioConfig.inputSource.type') === 'druid';
+}
+
+export function isFixedFormatSource(spec: Partial<IngestionSpec>): boolean {
+  return oneOf(deepGet(spec, 'spec.ioConfig.inputSource.type'), 'druid', 'delta');
 }
 
 export function getPossibleSystemFieldsForSpec(spec: Partial<IngestionSpec>): string[] {
@@ -1061,7 +1068,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Delta filter',
           type: 'json',
           placeholder: '{"type": "=", "column": "name", "value": "foo"}',
-          defaultValue: {},
           info: (
             <>
               <ExternalLink
@@ -1078,7 +1084,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Delta snapshot version',
           type: 'number',
           placeholder: '(latest)',
-          defaultValue: {},
+          zeroMeansUndefined: true,
           info: (
             <>
               The snapshot version to read from the Delta table. By default, the latest snapshot is
@@ -1612,6 +1618,9 @@ export function guessDataSourceNameFromInputSource(inputSource: InputSource): st
         (inputSource.uris || EMPTY_ARRAY)[0] || (inputSource.prefixes || EMPTY_ARRAY)[0];
       return actualPath ? actualPath.path : uriPath ? filenameFromPath(uriPath) : undefined;
     }
+
+    case 'delta':
+      return inputSource.tablePath ? filenameFromPath(inputSource.tablePath) : undefined;
 
     case 'http':
       return Array.isArray(inputSource.uris) ? filenameFromPath(inputSource.uris[0]) : undefined;

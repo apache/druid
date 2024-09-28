@@ -1073,7 +1073,7 @@ public class RemoteTaskRunnerTest
     EasyMock.expect(worker.getHost()).andReturn("host").atLeastOnce();
     EasyMock.replay(worker);
     ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
-    Capture<EmittingLogger.EmittingAlertBuilder> capturedArgument = Capture.newInstance();
+    Capture<EmittingLogger.LoggingAlertBuilder> capturedArgument = Capture.newInstance();
     emitter.emit(EasyMock.capture(capturedArgument));
     EasyMock.expectLastCall().atLeastOnce();
     EmittingLogger.registerEmitter(emitter);

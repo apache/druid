@@ -46,6 +46,7 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.Interval;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -236,6 +237,11 @@ public class IndexBuilder
 
   public File buildMMappedIndexFile()
   {
+    return buildMMappedIndexFile(null);
+  }
+
+  public File buildMMappedIndexFile(@Nullable Interval dataInterval)
+  {
     Preconditions.checkNotNull(indexMerger, "indexMerger");
     Preconditions.checkNotNull(tmpDir, "tmpDir");
     try (final IncrementalIndex incrementalIndex = buildIncrementalIndex()) {
@@ -244,6 +250,7 @@ public class IndexBuilder
               indexIO.loadIndex(
                   indexMerger.persist(
                       incrementalIndex,
+                      dataInterval == null ? incrementalIndex.getInterval() : dataInterval,
                       new File(
                           tmpDir,
                           StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))
@@ -276,7 +283,17 @@ public class IndexBuilder
   public QueryableIndex buildMMappedIndex()
   {
     try {
-      return indexIO.loadIndex(buildMMappedIndexFile());
+      return indexIO.loadIndex(buildMMappedIndexFile(null));
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public QueryableIndex buildMMappedIndex(Interval dataInterval)
+  {
+    try {
+      return indexIO.loadIndex(buildMMappedIndexFile(dataInterval));
     }
     catch (IOException e) {
       throw new RuntimeException(e);

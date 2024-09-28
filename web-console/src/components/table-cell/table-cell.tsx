@@ -97,8 +97,8 @@ export const TableCell = React.memo(function TableCell(props: TableCellProps) {
   } else if (value instanceof Date) {
     const dateValue = value.valueOf();
     return (
-      <div className="table-cell timestamp" title={String(value.valueOf())}>
-        {isNaN(dateValue) ? 'Unusable date' : value.toISOString()}
+      <div className="table-cell timestamp" data-tooltip={String(value.valueOf())}>
+        {isNaN(dateValue) ? 'Invalid date' : value.toISOString()}
       </div>
     );
   } else if (isSimpleArray(value)) {
