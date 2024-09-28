@@ -71,6 +71,7 @@ public class ColumnTypeNotSupportedFault extends BaseMSQFault
   {
     return DruidException.forPersona(DruidException.Persona.USER)
                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                         .withErrorCode(getErrorCode())
                          .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 

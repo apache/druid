@@ -45,6 +45,7 @@ public class CanceledFault extends BaseMSQFault
   {
     return DruidException.forPersona(DruidException.Persona.USER)
                          .ofCategory(DruidException.Category.CANCELED)
+                         .withErrorCode(getErrorCode())
                          .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 }

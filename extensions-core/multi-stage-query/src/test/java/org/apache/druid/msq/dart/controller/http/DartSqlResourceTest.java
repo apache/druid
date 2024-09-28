@@ -43,6 +43,8 @@ import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.indexing.error.CanceledFault;
+import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
+import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.test.MSQTestBase;
@@ -76,6 +78,8 @@ import org.apache.druid.sql.calcite.view.NoopViewManager;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -504,6 +508,41 @@ public class DartSqlResourceTest extends MSQTestBase
   }
 
   @Test
+  public void test_doPost_regularUser_runtimeError() throws IOException
+  {
+    final MockAsyncContext asyncContext = new MockAsyncContext();
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+
+    Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
+    Mockito.when(httpServletRequest.startAsync())
+           .thenReturn(asyncContext);
+
+    final SqlQuery sqlQuery = new SqlQuery(
+        "SELECT U&'\\0000'",
+        ResultFormat.ARRAY,
+        false,
+        false,
+        false,
+        Collections.emptyMap(),
+        Collections.emptyList()
+    );
+
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
+    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+
+    final Map<String, Object> e = objectMapper.readValue(
+        asyncResponse.baos.toByteArray(),
+        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+    );
+
+    Assertions.assertEquals("InvalidNullByte", e.get("errorCode"));
+    Assertions.assertEquals("RUNTIME_FAILURE", e.get("category"));
+    MatcherAssert.assertThat((String) e.get("errorMessage"), CoreMatchers.startsWith("InvalidNullByte: "));
+  }
+
+  @Test
   public void test_doPost_regularUser_fullReport() throws Exception
   {
     final MockAsyncContext asyncContext = new MockAsyncContext();
@@ -540,6 +579,44 @@ public class DartSqlResourceTest extends MSQTestBase
 
     Assertions.assertEquals(1, results.size());
     Assertions.assertArrayEquals(new Object[]{2}, results.get(0));
+  }
+
+  @Test
+  public void test_doPost_regularUser_runtimeError_fullReport() throws Exception
+  {
+    final MockAsyncContext asyncContext = new MockAsyncContext();
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+
+    Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
+    Mockito.when(httpServletRequest.startAsync())
+           .thenReturn(asyncContext);
+
+    final SqlQuery sqlQuery = new SqlQuery(
+        "SELECT U&'\\0000'",
+        ResultFormat.ARRAY,
+        false,
+        false,
+        false,
+        ImmutableMap.of(DartSqlEngine.CTX_FULL_REPORT, true),
+        Collections.emptyList()
+    );
+
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
+    Assertions.assertEquals(Response.Status.OK.getStatusCode(), asyncResponse.getStatus());
+
+    final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
+        asyncResponse.baos.toByteArray(),
+        new TypeReference<List<List<TaskReport.ReportMap>>>() {}
+    );
+
+    Assertions.assertEquals(1, reportMaps.size());
+    final MSQTaskReport report =
+        (MSQTaskReport) Iterables.getOnlyElement(Iterables.getOnlyElement(reportMaps)).get(MSQTaskReport.REPORT_KEY);
+    final MSQErrorReport errorReport = report.getPayload().getStatus().getErrorReport();
+    Assertions.assertNotNull(errorReport);
+    MatcherAssert.assertThat(errorReport.getFault(), CoreMatchers.instanceOf(InvalidNullByteFault.class));
   }
 
   @Test
@@ -633,6 +710,7 @@ public class DartSqlResourceTest extends MSQTestBase
         asyncResponse.baos.toByteArray(),
         JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
     );
+    Assertions.assertEquals("Canceled", e.get("errorCode"));
     Assertions.assertEquals("CANCELED", e.get("category"));
     Assertions.assertEquals(
         MSQFaultUtils.generateMessageWithErrorCode(CanceledFault.instance()),
