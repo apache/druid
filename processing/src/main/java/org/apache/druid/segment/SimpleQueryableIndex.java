@@ -49,6 +49,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   private final Map<String, Supplier<ColumnHolder>> columns;
   private final SmooshedFileMapper fileMapper;
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
+  private final List<OrderBy> ordering;
 
   public SimpleQueryableIndex(
       Interval dataInterval,
@@ -83,6 +84,14 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     } else {
       this.dimensionHandlers = () -> initDimensionHandlers(availableDimensions);
     }
+
+    final Metadata metadata = getMetadata();
+    if (metadata != null && metadata.getOrdering() != null) {
+      this.ordering = metadata.getOrdering();
+    } else {
+      // When sort order isn't set in metadata.drd, assume the segment is sorted by __time.
+      this.ordering = Cursors.ascendingTimeOrder();
+    }
   }
 
   @Override
@@ -112,13 +121,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   @Override
   public List<OrderBy> getOrdering()
   {
-    final Metadata metadata = getMetadata();
-    if (metadata != null && metadata.getOrdering() != null) {
-      return metadata.getOrdering();
-    } else {
-      // When sort order isn't set in metadata.drd, assume the segment is sorted by __time.
-      return Cursors.ascendingTimeOrder();
-    }
+    return ordering;
   }
 
   @Override
