@@ -185,7 +185,7 @@ public class DartControllerContext implements ControllerContext
   @Override
   public InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager)
   {
-    return DartTableInputSpecSlicer.createFromWorkerManager((DartWorkerManager) workerManager, serverView);
+    return DartTableInputSpecSlicer.createFromWorkerIds(workerManager.getWorkerIds(), serverView);
   }
 
   @Override

@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.msq.dart.worker.QueryableDataSegment;
 import org.apache.druid.msq.dart.worker.WorkerId;
+import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
@@ -75,13 +76,11 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
     this.serverView = serverView;
   }
 
-  public static DartTableInputSpecSlicer createFromWorkerManager(
-      final DartWorkerManager workerManager,
+  public static DartTableInputSpecSlicer createFromWorkerIds(
+      final List<String> workerIds,
       final TimelineServerView serverView
   )
   {
-    final List<String> workerIds = workerManager.getWorkerIds();
-
     final Object2IntMap<String> reverseWorkers = new Object2IntOpenHashMap<>();
     reverseWorkers.defaultReturnValue(UNKNOWN);
 
@@ -155,7 +154,13 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
     throw new UnsupportedOperationException();
   }
 
-  private int findWorkerForServerSelector(final ServerSelector serverSelector, final int maxNumSlices)
+  /**
+   * Return the worker ID that corresponds to a particular {@link ServerSelector}, or {@link #UNKNOWN} if none does.
+   *
+   * @param serverSelector the server selector
+   * @param maxNumSlices   maximum number of worker IDs to use
+   */
+  int findWorkerForServerSelector(final ServerSelector serverSelector, final int maxNumSlices)
   {
     final QueryableDruidServer<?> server = serverSelector.pick(null);
 
@@ -177,7 +182,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    * Pull the list of {@link DataSegment} that we should query, along with a clipping interval for each one, and
    * a worker to get it from.
    */
-  public static Set<QueryableDataSegment> findQueryableDataSegments(
+  static Set<QueryableDataSegment> findQueryableDataSegments(
       final TableInputSpec tableInputSpec,
       final TimelineLookup<?, ServerSelector> timeline,
       final ToIntFunction<ServerSelector> toWorkersFunction
@@ -219,7 +224,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    *
    * @throws IllegalStateException if any provided segments do not match the provided datasource
    */
-  public static List<InputSlice> makeSegmentSlices(
+  static List<InputSlice> makeSegmentSlices(
       final String dataSource,
       final List<List<QueryableDataSegment>> assignments
   )
@@ -246,7 +251,10 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
     return retVal;
   }
 
-  private static RichSegmentDescriptor toRichSegmentDescriptor(final QueryableDataSegment segment)
+  /**
+   * Returns a {@link RichSegmentDescriptor}, which is used by {@link SegmentsInputSlice}.
+   */
+  static RichSegmentDescriptor toRichSegmentDescriptor(final QueryableDataSegment segment)
   {
     return new RichSegmentDescriptor(
         segment.getSegment().getInterval(),
@@ -260,23 +268,23 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    * Whether to include a segment from the timeline. Segments are included if they are not tombstones, and are also not
    * purely realtime segments.
    */
-  private static boolean shouldIncludeSegment(final ServerSelector serverSelector)
+  static boolean shouldIncludeSegment(final ServerSelector serverSelector)
   {
     if (serverSelector.getSegment().isTombstone()) {
       return false;
     }
 
     int numRealtimeServers = 0;
-    int numNonRealtimeServers = 0;
+    int numOtherServers = 0;
 
     for (final DruidServerMetadata server : serverSelector.getAllServers()) {
-      if (server.isSegmentReplicationTarget()) {
-        numNonRealtimeServers++;
-      } else {
+      if (SegmentSource.REALTIME.getUsedServerTypes().contains(server.getType())) {
         numRealtimeServers++;
+      } else {
+        numOtherServers++;
       }
     }
 
-    return numNonRealtimeServers > 0 || (numNonRealtimeServers + numRealtimeServers == 0);
+    return numOtherServers > 0 || (numOtherServers + numRealtimeServers == 0);
   }
 }

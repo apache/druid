@@ -51,7 +51,7 @@ public class WorkerId
   private final String queryId;
   private final String fullString;
 
-  WorkerId(final String scheme, final String hostAndPort, final String queryId)
+  public WorkerId(final String scheme, final String hostAndPort, final String queryId)
   {
     this.scheme = Preconditions.checkNotNull(scheme, "scheme");
     this.hostAndPort = Preconditions.checkNotNull(hostAndPort, "hostAndPort");

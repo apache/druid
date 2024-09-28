@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.dart.worker;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -55,6 +56,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @ManageLifecycle
@@ -116,7 +118,7 @@ public class DartWorkerRunner
       if (!activeControllerHosts.contains(controllerServerId.getHost())) {
         throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                             .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                            .build("Received startWorker requested for unknown controller[%s]", controllerServerId);
+                            .build("Received startWorker request for unknown controller[%s]", controllerServerId);
       }
 
       final WorkerHolder existingHolder = workerMap.get(queryId);
@@ -128,6 +130,7 @@ public class DartWorkerRunner
         final WorkerResource resource = new WorkerResource(worker, permissionMapper, authorizerMapper);
         holder = new WorkerHolder(worker, controllerServerId, resource, DateTimes.nowUtc());
         workerMap.put(queryId, holder);
+        this.notifyAll();
         newHolder = true;
       }
     }
@@ -150,6 +153,7 @@ public class DartWorkerRunner
         finally {
           synchronized (this) {
             workerMap.remove(queryId, holder);
+            this.notifyAll();
           }
 
           Thread.currentThread().setName(originalThreadName);
@@ -161,7 +165,7 @@ public class DartWorkerRunner
   }
 
   /**
-   * Synchronizes with controller state.
+   * Stops a worker.
    */
   public void stopWorker(final String queryId)
   {
@@ -243,9 +247,22 @@ public class DartWorkerRunner
   }
 
   /**
+   * Method for testing. Waits for the set of queries to match a given predicate.
+   */
+  @VisibleForTesting
+  void awaitQuerySet(Predicate<Set<String>> queryIdsPredicate) throws InterruptedException
+  {
+    synchronized (this) {
+      while (!queryIdsPredicate.test(workerMap.keySet())) {
+        wait();
+      }
+    }
+  }
+
+  /**
    * Creates the {@link #baseTempDir}, and removes any items in it that still exist.
    */
-  private void createAndCleanTempDirectory()
+  void createAndCleanTempDirectory()
   {
     try {
       FileUtils.mkdirp(baseTempDir);
