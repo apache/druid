@@ -22,7 +22,6 @@ import {
   Intent,
   Menu,
   MenuItem,
-  NumericInput,
   Popover,
   SegmentedControl,
   Tag,
@@ -33,7 +32,12 @@ import { SqlColumn } from '@druid-toolkit/query';
 import type { JSX } from 'react';
 import React from 'react';
 
-import { AutoForm, FormGroupWithInfo, PopoverText } from '../../../../components';
+import {
+  AutoForm,
+  FancyNumericInput,
+  FormGroupWithInfo,
+  PopoverText,
+} from '../../../../components';
 import { AppToaster } from '../../../../singletons';
 import { filterMap } from '../../../../utils';
 import type { OptionValue, ParameterDefinition, QuerySource } from '../../models';
@@ -108,9 +112,9 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
       case 'number':
         return {
           element: (
-            <NumericInput
-              value={(effectiveValue as string) ?? ''}
-              onValueChange={v => onValueChange(v)}
+            <FancyNumericInput
+              value={effectiveValue}
+              onValueChange={onValueChange}
               placeholder={parameter.placeholder}
               fill
               min={parameter.min}
