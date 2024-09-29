@@ -17,13 +17,13 @@
  */
 
 import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
-import { IconNames } from '@blueprintjs/icons';
-import classNames from 'classnames';
+import { type IconName, IconNames } from '@blueprintjs/icons';
 import copy from 'copy-to-clipboard';
 import React, { useCallback, useState } from 'react';
 import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
+import type { DartQueryEntry } from '../../../druid-models';
 import { useClock, useInterval, useQueryManager } from '../../../hooks';
 import { Api, AppToaster } from '../../../singletons';
 import { formatDuration, prettyFormatIsoDate } from '../../../utils';
@@ -33,11 +33,17 @@ import { workStateStore } from '../work-state-store';
 
 import './current-dart-panel.scss';
 
-interface CurrentDartEntry {
-  sqlQueryId: string;
-  sql: string;
-  identity: string;
-  startTime: string;
+function stateToIconAndColor(status: DartQueryEntry['state']): [IconName, string] {
+  switch (status) {
+    case 'RUNNING':
+      return [IconNames.REFRESH, '#2167d5'];
+    case 'ACCEPTED':
+      return [IconNames.CIRCLE, '#d5631a'];
+    case 'CANCELED':
+      return [IconNames.DISABLE, '#8d8d8d'];
+    default:
+      return [IconNames.CIRCLE, '#8d8d8d'];
+  }
 }
 
 export interface CurrentViberPanelProps {
@@ -57,7 +63,7 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
     useCallback(state => state.version, []),
   );
 
-  const [currentDartState, queryManager] = useQueryManager<number, CurrentDartEntry[]>({
+  const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
     query: workStateVersion,
     processQuery: async _ => {
       return (await Api.instance.get('/druid/v2/sql/dart')).data.queries;
@@ -70,16 +76,16 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
 
   const now = useClock();
 
-  const currentDart = currentDartState.getSomeData();
+  const dartQueryEntries = dartQueryEntriesState.getSomeData();
   return (
     <div className="current-dart-panel">
       <div className="title">
         Current Dart queries
         <Button className="close-button" icon={IconNames.CROSS} minimal onClick={onClose} />
       </div>
-      {currentDart ? (
+      {dartQueryEntries ? (
         <div className="work-entries">
-          {currentDart.map(w => {
+          {dartQueryEntries.map(w => {
             const menu = (
               <Menu>
                 <MenuItem
@@ -112,30 +118,40 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
 
             const duration = now.valueOf() - new Date(w.startTime).valueOf();
 
+            const [icon, color] = stateToIconAndColor(w.state);
             return (
               <Popover className="work-entry" key={w.sqlQueryId} position="left" content={menu}>
                 <div>
                   <div className="line1">
                     <Icon
-                      className="status-icon"
-                      icon={IconNames.ROCKET_SLANT}
-                      style={{ color: '#2167d5' }}
+                      className={'status-icon ' + w.state.toLowerCase()}
+                      icon={icon}
+                      style={{ color }}
                     />
                     <div className="timing">
                       {prettyFormatIsoDate(w.startTime) +
-                        (duration > 0 ? ` (${formatDuration(duration)})` : '')}
+                        (w.state === 'RUNNING' && duration > 0
+                          ? ` (${formatDuration(duration)})`
+                          : '')}
                     </div>
                   </div>
                   <div className="line2">
-                    <Icon className="output-icon" icon={IconNames.APPLICATION} />
-                    <div className={classNames('output-datasource')}>select query</div>
+                    <Icon className="identity-icon" icon={IconNames.MUGSHOT} />
+                    <div className="identity-identity" data-tooltip="Identity">
+                      {w.identity}
+                    </div>
+                    {w.authenticator && (
+                      <div className="identity-authenticator" data-tooltip="Authenticator">
+                        {`(${w.authenticator})`}
+                      </div>
+                    )}
                   </div>
                 </div>
               </Popover>
             );
           })}
         </div>
-      ) : currentDartState.isLoading() ? (
+      ) : dartQueryEntriesState.isLoading() ? (
         <Loader />
       ) : undefined}
       {confirmCancelId && (

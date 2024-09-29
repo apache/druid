@@ -99,17 +99,14 @@
         overflow: hidden;
       }
 
-      .output-icon {
-        margin-right: 5px;
+      .identity-icon {
         opacity: 0.6;
       }
 
-      .output-datasource {
+      .identity-identity,
+      .identity-authenticator {
+        margin-left: 5px;
         display: inline-block;
-
-        &.query {
-          font-style: italic;
-        }
       }
 
       .query-indicator {
