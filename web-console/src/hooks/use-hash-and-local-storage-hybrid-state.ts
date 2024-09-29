@@ -18,7 +18,7 @@
 
 import * as JSONBig from 'json-bigint-native';
 import type { Dispatch, SetStateAction } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { LocalStorageKeys } from '../utils';
 import {
@@ -57,9 +57,27 @@ export function useHashAndLocalStorageHybridState<T>(
 
   const setValue: Dispatch<SetStateAction<T>> = (value: T | ((prevState: T) => T)) => {
     const valueToStore = value instanceof Function ? value(state) : value;
-    location.hash = encodeHashState(prefix, value);
+    window.history.pushState(null, '', encodeHashState(prefix, value));
     setState(valueToStore);
     localStorageSetJson(key, valueToStore);
   };
+
+  // Listen for "popstate" event (triggered by browser back/forward navigation)
+  useEffect(() => {
+    const handlePopState = () => {
+      const valueToInflate = decodeHashState(prefix, window.location.hash);
+      if (typeof valueToInflate === 'undefined') return;
+      const value = inflateFn ? inflateFn(valueToInflate) : valueToInflate;
+      setState(value);
+      localStorageSetJson(key, value);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   return [state, setValue];
 }
