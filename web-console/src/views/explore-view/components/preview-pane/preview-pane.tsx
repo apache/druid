@@ -59,7 +59,7 @@ export const PreviewPane = React.memo(function PreviewPane(props: PreviewPanePro
             <div className="preview-values">
               {previewValues.map((v, i) => (
                 <div className="preview-value" key={i}>
-                  {v}
+                  {String(v)}
                 </div>
               ))}
             </div>

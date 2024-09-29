@@ -57,7 +57,10 @@ export const MeasureDialog = React.memo(function MeasureDialog(props: MeasureDia
       .changeWithParts([SqlWithPart.simple('t', QuerySource.stripToBaseSource(querySource.query))])
       .addSelect(L('Overall').as('label'))
       .addSelect(expression.as('value'))
-      .addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`)
+      .applyIf(
+        querySource.baseColumns.find(column => column.isTimeColumn()),
+        q => q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),
+      )
       .toString();
   }, [querySource.query, formula]);
 

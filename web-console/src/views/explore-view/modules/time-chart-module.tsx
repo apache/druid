@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { C, F, L, SqlCase, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { C, F, L, SqlCase, SqlQuery } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
@@ -122,10 +122,10 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
     const { querySource, where, setWhere, parameterValues, stage, runSqlQuery } = props;
     const chartRef = useRef<ECharts>();
 
-    const timeColumnName = '__time'; // this should probably be a parameter
+    const timeColumnName = querySource.columns.find(column => column.sqlType === 'TIMESTAMP')?.name;
     const timeGranularity =
       parameterValues.timeGranularity === 'auto'
-        ? getAutoGranularity(where, timeColumnName)
+        ? getAutoGranularity(where, timeColumnName || '__time')
         : parameterValues.timeGranularity;
 
     const { splitColumn, numberToStack, showOthers, measure, snappyHighlight } = parameterValues;
@@ -143,6 +143,10 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
     const [sourceDataState] = useQueryManager({
       query: dataQuery,
       processQuery: async ({ baseQuery, measure, splitExpression, numberToStack, showOthers }) => {
+        if (!timeColumnName) {
+          throw new Error(`Must have a column of type TIMESTAMP for the time chart to work`);
+        }
+
         const vs = splitExpression
           ? (
               await runSqlQuery(
@@ -305,12 +309,13 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
             });
           },
           onSave: () => {
+            if (!timeColumnName) return;
             setWhere(
               where.changeClauseInWhere(
-                SqlExpression.parse(
-                  `TIME_IN_INTERVAL(${C(
-                    timeColumnName,
-                  )}, '${start.toISOString()}/${end.toISOString()}')`,
+                F(
+                  'TIME_IN_INTERVAL',
+                  C(timeColumnName),
+                  `${start.toISOString()}/${end.toISOString()}`,
                 ),
               ),
             );

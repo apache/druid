@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { C, F, L, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { C, F, L, SqlQuery } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
@@ -72,9 +72,10 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
     const { querySource, where, setWhere, parameterValues, stage, runSqlQuery } = props;
     const chartRef = useRef<ECharts>();
 
+    const timeColumnName = querySource.columns.find(column => column.sqlType === 'TIMESTAMP')?.name;
     const timeGranularity =
       parameterValues.timeGranularity === 'auto'
-        ? getAutoGranularity(where, '__time')
+        ? getAutoGranularity(where, timeColumnName || '__time')
         : parameterValues.timeGranularity;
 
     const { measures } = parameterValues;
@@ -84,7 +85,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
 
       return SqlQuery.from(source)
         .addWhere(where)
-        .addSelect(F.timeFloor(C('__time'), L(timeGranularity)).as('time'), {
+        .addSelect(F.timeFloor(C(timeColumnName || '__time'), L(timeGranularity)).as('time'), {
           addToGroupBy: 'end',
           addToOrderBy: 'end',
           direction: 'ASC',
@@ -95,6 +96,10 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
     const [sourceDataState] = useQueryManager({
       query: dataQuery,
       processQuery: async (query: SqlQuery) => {
+        if (!timeColumnName) {
+          throw new Error(`Must have a column of type TIMESTAMP for the multi-axis chart to work`);
+        }
+
         return (await runSqlQuery(query)).toObjectArray();
       },
     });
@@ -240,10 +245,13 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
             });
           },
           onSave: () => {
+            if (!timeColumnName) return;
             setWhere(
               where.changeClauseInWhere(
-                SqlExpression.parse(
-                  `TIME_IN_INTERVAL(${C('__time')}, '${start.toISOString()}/${end.toISOString()}')`,
+                F(
+                  'TIME_IN_INTERVAL',
+                  C(timeColumnName),
+                  `${start.toISOString()}/${end.toISOString()}`,
                 ),
               ),
             );

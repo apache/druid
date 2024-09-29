@@ -17,7 +17,7 @@
  */
 
 import { Button, Classes, Dialog, FormGroup, InputGroup, Intent, Tag } from '@blueprintjs/core';
-import { type QueryResult, sql, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { type QueryResult, F, sql, SqlExpression, SqlQuery } from '@druid-toolkit/query';
 import React, { useMemo, useState } from 'react';
 
 import { AppToaster } from '../../../../../singletons';
@@ -47,11 +47,14 @@ export const ColumnDialog = React.memo(function ColumnDialog(props: ColumnDialog
     const expression = SqlExpression.maybeParse(formula);
     if (!expression) return;
     return SqlQuery.from(QuerySource.stripToBaseSource(querySource.query))
-      .addSelect(expression.as('v'), { addToGroupBy: 'end' })
-      .addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`)
+      .addSelect(F.cast(expression, 'VARCHAR').as('v'), { addToGroupBy: 'end' })
+      .applyIf(
+        querySource.baseColumns.find(column => column.isTimeColumn()),
+        q => q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),
+      )
       .changeLimitValue(100)
       .toString();
-  }, [querySource.query, formula]);
+  }, [querySource, formula]);
 
   return (
     <Dialog
