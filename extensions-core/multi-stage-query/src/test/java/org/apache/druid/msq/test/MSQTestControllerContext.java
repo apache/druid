@@ -37,6 +37,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -55,6 +56,7 @@ import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
 import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicer;
+import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
@@ -107,6 +109,7 @@ public class MSQTestControllerContext implements ControllerContext
   private Controller controller;
   private final WorkerMemoryParameters workerMemoryParameters;
   private final QueryContext queryContext;
+  private final MSQControllerTask controllerTask;
 
   public MSQTestControllerContext(
       ObjectMapper mapper,
@@ -114,7 +117,7 @@ public class MSQTestControllerContext implements ControllerContext
       TaskActionClient taskActionClient,
       WorkerMemoryParameters workerMemoryParameters,
       List<ImmutableSegmentLoadInfo> loadedSegments,
-      QueryContext queryContext
+      MSQControllerTask controllerTask
   )
   {
     this.mapper = mapper;
@@ -134,7 +137,8 @@ public class MSQTestControllerContext implements ControllerContext
                                              .collect(Collectors.toList())
     );
     this.workerMemoryParameters = workerMemoryParameters;
-    this.queryContext = queryContext;
+    this.controllerTask = controllerTask;
+    this.queryContext = controllerTask.getQuerySpec().getQuery().context();
   }
 
   OverlordClient overlordClient = new NoopOverlordClient()
@@ -320,6 +324,12 @@ public class MSQTestControllerContext implements ControllerContext
   public TaskActionClient taskActionClient()
   {
     return taskActionClient;
+  }
+
+  @Override
+  public TaskLockType taskLockType()
+  {
+    return controllerTask.getTaskLockType();
   }
 
   @Override
