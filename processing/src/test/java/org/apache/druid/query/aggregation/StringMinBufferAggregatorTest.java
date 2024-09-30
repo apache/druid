@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
-import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.junit.Assert;
 import org.junit.Test;
 
