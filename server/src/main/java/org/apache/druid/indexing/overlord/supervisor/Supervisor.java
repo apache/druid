@@ -30,7 +30,7 @@ import java.util.Map;
 
 /**
  * An interface representing a general supervisor for managing ingestion tasks. For streaming ingestion use cases,
- * see SeekableStreamSupervisor.
+ * see {@link StreamSupervisor}.
  */
 public interface Supervisor
 {

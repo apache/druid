@@ -116,6 +116,7 @@ import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
@@ -6388,8 +6389,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnplannableJoinQueriesInNonSQLCompatibleMode()
   {
+    assumeFalse(testBuilder().isDecoupledMode(), "only valid in non-decoupled mode");
     msqIncompatible();
-
     Assumptions.assumeFalse(NullHandling.sqlCompatible());
 
     assertQueryIsUnplannable(
@@ -6398,6 +6399,14 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k",
         "SQL requires a join with 'NOT_EQUALS' condition that is not supported."
     );
+  }
+
+  @Test
+  public void testUnplannableJoinQueriesInNonSQLCompatibleMode2()
+  {
+    assumeFalse(testBuilder().isDecoupledMode(), "only valid in non-decoupled mode");
+    msqIncompatible();
+    Assumptions.assumeFalse(NullHandling.sqlCompatible());
 
     assertQueryIsUnplannable(
         // JOIN condition with a function of both sides.
@@ -6405,6 +6414,36 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n",
         "SQL requires a join with 'GREATER_THAN' condition that is not supported."
     );
+  }
+
+  @Test
+  public void testPlannableJoinQueriesInNonSQLCompatibleMode()
+  {
+    assumeTrue(testBuilder().isDecoupledMode(), "only in decoupled mode");
+    msqIncompatible();
+    Assumptions.assumeFalse(NullHandling.sqlCompatible());
+
+    testBuilder()
+        .sql(
+            "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
+                + "FROM foo INNER JOIN lookup.lookyloo l ON foo.dim2 <> l.k"
+        )
+        .run();
+  }
+
+  @Test
+  public void testPlannableJoinQueriesInNonSQLCompatibleMode2()
+  {
+    assumeTrue(testBuilder().isDecoupledMode(), "only in decoupled mode");
+    msqIncompatible();
+    Assumptions.assumeFalse(NullHandling.sqlCompatible());
+
+    testBuilder()
+        .sql(
+            "SELECT foo.dim1, foo.dim2, l.k, l.v\n"
+                + "FROM foo INNER JOIN lookup.lookyloo l ON CHARACTER_LENGTH(foo.dim2 || l.k) > 3\n"
+        )
+        .run();
   }
 
   @Test
@@ -7722,6 +7761,56 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{"", 3L, 3L, 1L},
             new Object[]{"a", 2L, 1L, 1L},
             new Object[]{"abc", 1L, 1L, 1L}
+        )
+    );
+  }
+
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN_EXTRA_COLUMNS, separateDefaultModeTest = true)
+  @Test
+  public void testTimeFilterOnSubquery()
+  {
+    testQuery(
+        "SELECT __time, m1 FROM (SELECT * FROM \"foo\" LIMIT 100)\n"
+        + "WHERE TIME_IN_INTERVAL(__time, '2000/P1D') OR TIME_IN_INTERVAL(__time, '2001/P1D')",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    newScanQueryBuilder()
+                        .dataSource(CalciteTests.DATASOURCE1)
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .columns("__time", "m1")
+                        .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                        .limit(100)
+                        .context(QUERY_CONTEXT_DEFAULT)
+                        .build()
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .filters(or(
+                    range(
+                        ColumnHolder.TIME_COLUMN_NAME,
+                        ColumnType.LONG,
+                        DateTimes.of("2000").getMillis(),
+                        DateTimes.of("2000-01-02").getMillis(),
+                        false,
+                        true
+                    ),
+                    range(
+                        ColumnHolder.TIME_COLUMN_NAME,
+                        ColumnType.LONG,
+                        DateTimes.of("2001").getMillis(),
+                        DateTimes.of("2001-01-02").getMillis(),
+                        false,
+                        true
+                    )
+                ))
+                .columns("__time", "m1")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{DateTimes.of("2000-01-01").getMillis(), 1.0f},
+            new Object[]{DateTimes.of("2001-01-01").getMillis(), 4.0f}
         )
     );
   }
@@ -9341,7 +9430,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_PLAN, separateDefaultModeTest = true)
   @SqlTestFrameworkConfig.NumMergeBuffers(3)
   @Test
   public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
@@ -12962,7 +13050,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   // __time >= x remains in the join condition
-  @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
+  @NotYetSupported(Modes.REQUIRE_TIME_CONDITION)
   @Test
   public void testRequireTimeConditionPositive3()
   {
@@ -16045,7 +16133,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
-  @NotYetSupported(Modes.UNSUPPORTED_DATASOURCE)
   @Test
   public void testWindowingOverJoin()
   {

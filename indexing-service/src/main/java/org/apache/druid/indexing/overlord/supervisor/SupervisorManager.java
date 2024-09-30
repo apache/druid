@@ -143,7 +143,7 @@ public class SupervisorManager
     if (supervisor == null || supervisor.lhs == null) {
       return false;
     }
-    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "handoff");
+    final StreamSupervisor streamSupervisor = requireStreamSupervisor(id, "handoff");
     streamSupervisor.handoffTaskGroupsEarly(taskGroupIds);
     return true;
   }
@@ -279,7 +279,7 @@ public class SupervisorManager
       return false;
     }
 
-    final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(id, "reset");
+    final StreamSupervisor streamSupervisor = requireStreamSupervisor(id, "reset");
     if (resetDataSourceMetadata == null) {
       streamSupervisor.reset(null);
     } else {
@@ -306,7 +306,7 @@ public class SupervisorManager
 
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
 
-      final SeekableStreamSupervisor streamSupervisor = requireSeekableStreamSupervisor(supervisorId, "checkPoint");
+      final StreamSupervisor streamSupervisor = requireStreamSupervisor(supervisorId, "checkPoint");
       streamSupervisor.checkpoint(taskGroupId, previousDataSourceMetadata);
       return true;
     }
@@ -450,11 +450,11 @@ public class SupervisorManager
     return true;
   }
 
-  private SeekableStreamSupervisor requireSeekableStreamSupervisor(final String supervisorId, final String operation)
+  private StreamSupervisor requireStreamSupervisor(final String supervisorId, final String operation)
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
-    if (supervisor.lhs instanceof SeekableStreamSupervisor) {
-      return (SeekableStreamSupervisor) supervisor.lhs;
+    if (supervisor.lhs instanceof StreamSupervisor) {
+      return (StreamSupervisor) supervisor.lhs;
     } else {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.UNSUPPORTED)

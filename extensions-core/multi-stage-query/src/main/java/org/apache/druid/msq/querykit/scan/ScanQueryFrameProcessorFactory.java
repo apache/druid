@@ -56,8 +56,7 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
   {
     super(query);
     this.query = Preconditions.checkNotNull(query, "query");
-    this.runningCountForLimit =
-        query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
+    this.runningCountForLimit = query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
   }
 
   @JsonProperty
