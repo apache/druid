@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.objects.Object2LongRBTreeMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
@@ -88,6 +89,21 @@ public class DistinctKeyCollectorTest
           verifyCollector(collector, clusterBy, comparator, sortedKeyWeights);
         }
     );
+  }
+
+  @Test
+  public void test_single_key_addition()
+  {
+    DistinctKeyCollector distinctKeyCollector = new DistinctKeyCollector(
+        clusterBy.keyComparator(signature),
+        new Object2LongRBTreeMap<>(comparator),
+        2
+    );
+    List<Pair<RowKey, Integer>> pairs = KeyCollectorTestUtils.sequentialKeys(2);
+
+    distinctKeyCollector.add(pairs.get(1).lhs, pairs.get(1).rhs);
+    distinctKeyCollector.downSample();
+    distinctKeyCollector.add(pairs.get(0).lhs, pairs.get(0).rhs);
   }
 
   @Test

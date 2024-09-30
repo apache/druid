@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContext;
@@ -28,6 +29,7 @@ import org.apache.druid.query.filter.Filter;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 
 public class CursorBuildSpec
@@ -52,7 +54,6 @@ public class CursorBuildSpec
   private final VirtualColumns virtualColumns;
   @Nullable
   private final List<AggregatorFactory> aggregators;
-  @Nullable
   private final List<OrderBy> orderByColumns;
 
   private final QueryContext queryContext;
@@ -66,18 +67,18 @@ public class CursorBuildSpec
       @Nullable List<String> groupingColumns,
       VirtualColumns virtualColumns,
       @Nullable List<AggregatorFactory> aggregators,
-      @Nullable List<OrderBy> preferredOrdering,
+      List<OrderBy> preferredOrdering,
       QueryContext queryContext,
       @Nullable QueryMetrics<?> queryMetrics
   )
   {
     this.filter = filter;
-    this.interval = interval;
+    this.interval = Preconditions.checkNotNull(interval, "interval");
     this.groupingColumns = groupingColumns;
-    this.virtualColumns = virtualColumns;
+    this.virtualColumns = Preconditions.checkNotNull(virtualColumns, "virtualColumns");
     this.aggregators = aggregators;
-    this.orderByColumns = preferredOrdering;
-    this.queryContext = queryContext;
+    this.orderByColumns = Preconditions.checkNotNull(preferredOrdering, "preferredOrdering");
+    this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
     this.queryMetrics = queryMetrics;
   }
 
@@ -139,7 +140,6 @@ public class CursorBuildSpec
    * <p>
    * If not specified, the cursor will advance in the native order of the underlying data.
    */
-  @Nullable
   public List<OrderBy> getPreferredOrdering()
   {
     return orderByColumns;
@@ -177,8 +177,7 @@ public class CursorBuildSpec
     private VirtualColumns virtualColumns = VirtualColumns.EMPTY;
     @Nullable
     private List<AggregatorFactory> aggregators;
-    @Nullable
-    private List<OrderBy> preferredOrdering;
+    private List<OrderBy> preferredOrdering = Collections.emptyList();
 
     private QueryContext queryContext = QueryContext.empty();
     @Nullable
@@ -251,9 +250,9 @@ public class CursorBuildSpec
     /**
      * @see CursorBuildSpec#getPreferredOrdering()
      */
-    public CursorBuildSpecBuilder setPreferredOrdering(@Nullable List<OrderBy> orderBy)
+    public CursorBuildSpecBuilder setPreferredOrdering(List<OrderBy> preferredOrdering)
     {
-      this.preferredOrdering = orderBy;
+      this.preferredOrdering = preferredOrdering;
       return this;
     }
 

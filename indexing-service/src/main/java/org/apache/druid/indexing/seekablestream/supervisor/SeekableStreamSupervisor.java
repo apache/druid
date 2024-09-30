@@ -56,7 +56,7 @@ import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.indexing.overlord.supervisor.Supervisor;
+import org.apache.druid.indexing.overlord.supervisor.StreamSupervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
@@ -146,7 +146,7 @@ import java.util.stream.Stream;
  * @param <SequenceOffsetType> the type of the sequence number or offsets, for example, Kafka uses long offsets while Kinesis uses String sequence numbers
  */
 public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
-    implements Supervisor
+    implements StreamSupervisor
 {
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
   public static final String AUTOSCALER_SKIP_REASON_DIMENSION = "scalingSkipReason";
@@ -2733,6 +2733,10 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     log.debug("Found [%d] partitions for stream [%s]", partitionIdsFromSupplier.size(), ioConfig.getStream());
 
+    final int configuredTaskCount = spec.getIoConfig().getTaskCount();
+    if (configuredTaskCount > partitionIdsFromSupplier.size()) {
+      log.warn("Configured task count[%s] for supervisor[%s] is greater than the number of partitions[%d].", configuredTaskCount, supervisorId, partitionIdsFromSupplier.size());
+    }
     Map<PartitionIdType, SequenceOffsetType> storedMetadata = getOffsetsFromMetadataStorage();
     Set<PartitionIdType> storedPartitions = storedMetadata.keySet();
     Set<PartitionIdType> closedPartitions = storedMetadata
@@ -4243,7 +4247,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     return activeTaskMap.build();
   }
-
 
   /**
    * creates a specific task IOConfig instance for Kafka/Kinesis

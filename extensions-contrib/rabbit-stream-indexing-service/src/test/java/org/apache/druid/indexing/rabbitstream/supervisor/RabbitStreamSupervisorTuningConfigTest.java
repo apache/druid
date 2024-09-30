@@ -87,7 +87,6 @@ public class RabbitStreamSupervisorTuningConfigTest
         + "  \"reportParseExceptions\": true,\n"
         + "  \"handoffConditionTimeout\": 100,\n"
         + "  \"workerThreads\": 12,\n"
-        + "  \"chatThreads\": 13,\n"
         + "  \"chatRetries\": 14,\n"
         + "  \"httpTimeout\": \"PT15S\",\n"
         + "  \"shutdownTimeout\": \"PT95S\",\n"

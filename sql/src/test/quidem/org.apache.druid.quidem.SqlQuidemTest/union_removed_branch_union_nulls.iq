@@ -1,0 +1,66 @@
+!set plannerStrategy DECOUPLED
+!set debug true
+!use druidtest://?numMergeBuffers=3
+!set outputformat mysql
+
+(SELECT COUNT(*), "channel" FROM "wikipedia" WHERE
+ added = '31'
+AND __time >= '2024-08-17T00:00:00+00:00' AND 'timestamp' > 1723856628000
+AND __time <= '2024-08-17T00:00:00+00:00' AND 'timestamp' <= 1723855690000
+GROUP BY "channel")
+UNION ALL
+(SELECT null,null)
+;
++--------+---------+
+| EXPR$0 | channel |
++--------+---------+
+|        |         |
++--------+---------+
+(1 row)
+
+!ok
+LogicalUnion(all=[true])
+  LogicalProject(EXPR$0=[$1], channel=[$0])
+    LogicalAggregate(group=[{0}], EXPR$0=[COUNT()])
+      LogicalProject(channel=[$1])
+        LogicalFilter(condition=[AND(=($18, CAST('31'):BIGINT NOT NULL), >=($0, CAST('2024-08-17T00:00:00+00:00'):TIMESTAMP(3) NOT NULL), >(CAST('timestamp'):BIGINT NOT NULL, 1723856628000), <=($0, CAST('2024-08-17T00:00:00+00:00'):TIMESTAMP(3) NOT NULL), <=(CAST('timestamp'):BIGINT NOT NULL, 1723855690000))])
+          LogicalTableScan(table=[[druid, wikipedia]])
+  LogicalValues(tuples=[[{ null, null }]])
+
+!convertedPlan
+DruidProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR], druid=[logical])
+  DruidValues(tuples=[[{ null, null }]])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "inline",
+    "columnNames" : [ "EXPR$0", "EXPR$1" ],
+    "rows" : [ [ null, null ] ]
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "null",
+    "outputType" : "LONG"
+  }, {
+    "type" : "expression",
+    "name" : "v1",
+    "expression" : "null",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "v0", "v1" ],
+  "columnTypes" : [ "LONG", "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan
+

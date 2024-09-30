@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
@@ -381,6 +381,13 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
               timestamp = timestampNumber == null ? null : granularity.toDateTime(timestampNumber.longValue());
             } else {
               timestamp = granularity.toDateTime(Preconditions.checkNotNull(timestampNumber, "timestamp").longValue());
+            }
+
+            // If "timestampResultField" is set, we must include a copy of the timestamp in the result.
+            // This is used by the SQL layer when it generates a Timeseries query for a group-by-time-floor SQL query.
+            // The SQL layer expects the result of the time-floor to have a specific name that is not going to be "__time".
+            if (StringUtils.isNotEmpty(query.getTimestampResultField()) && timestamp != null) {
+              retVal.put(query.getTimestampResultField(), timestamp.getMillis());
             }
 
             CacheStrategy.fetchAggregatorsFromCache(

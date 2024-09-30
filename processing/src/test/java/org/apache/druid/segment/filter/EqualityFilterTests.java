@@ -40,8 +40,8 @@ import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.IsFalseDimFilter;
 import org.apache.druid.query.filter.IsTrueDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
@@ -62,7 +62,7 @@ public class EqualityFilterTests
     public EqualityFilterTest(
         String testName,
         IndexBuilder indexBuilder,
-        Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+        Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
         boolean cnf,
         boolean optimize
     )
@@ -1627,6 +1627,100 @@ public class EqualityFilterTests
           NullHandling.sqlCompatible()
           ? ImmutableList.of("0", "1", "2", "3", "4")
           : ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
+    }
+
+    @Test
+    public void testArraysAsMvds()
+    {
+      Assume.assumeTrue(canTestArrayColumns());
+      /*
+          dim0 .. arrayString               arrayLong             arrayDouble
+          "0", .. ["a", "b", "c"],          [1L, 2L, 3L],         [1.1, 2.2, 3.3]
+          "1", .. [],                       [],                   [1.1, 2.2, 3.3]
+          "2", .. null,                     [1L, 2L, 3L],         [null]
+          "3", .. ["a", "b", "c"],          null,                 []
+          "4", .. ["c", "d"],               [null],               [-1.1, -333.3]
+          "5", .. [null],                   [123L, 345L],         null
+       */
+
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayStringAsMvd",
+              ColumnType.STRING,
+              "b",
+              null
+          ),
+          ImmutableList.of("0", "3")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayStringAsMvd",
+                  ColumnType.STRING,
+                  "b",
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("1", "4")
+          : ImmutableList.of("1", "2", "4", "5")
+      );
+
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayLongAsMvd",
+              ColumnType.STRING,
+              "2",
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayLongAsMvd",
+                  ColumnType.STRING,
+                  "2",
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("1", "5")
+          : ImmutableList.of("1", "3", "4", "5")
+      );
+
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayDoubleAsMvd",
+              ColumnType.STRING,
+              "3.3",
+              null
+          ),
+          ImmutableList.of("0", "1")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayDoubleAsMvd",
+                  ColumnType.STRING,
+                  "3.3",
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("3", "4")
+          : ImmutableList.of("2", "3", "4", "5")
+      );
+
+      assertFilterMatches(
+          new EqualityFilter(
+              "arrayConstantAsMvd",
+              ColumnType.STRING,
+              "3",
+              null
+          ),
+          ImmutableList.of("0", "1", "2", "3", "4", "5")
       );
     }
   }

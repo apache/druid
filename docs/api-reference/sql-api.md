@@ -933,7 +933,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
                         "context": {
                             "__resultFormat": "array",
                             "__user": "allowAll",
-                            "enableWindowing": true,
                             "executionMode": "async",
                             "finalize": true,
                             "maxNumTasks": 2,

@@ -18,48 +18,7 @@
 
 import { createStore } from 'zustand';
 
-interface Highlight {
-  /**
-   * The label of the highlight.
-   */
-  label: string;
-
-  /**
-   * The x coordinate of the highlight.
-   */
-  x: number;
-
-  /**
-   * The y coordinate of the highlight.
-   */
-  y: number;
-
-  /**
-   * Optional x offset for the highlight (useful for scrolling offset)
-   */
-  offsetX?: number;
-
-  /**
-   * Optional y offset for the highlight (useful for scrolling offset)
-   */
-  offsetY?: number;
-
-  /**
-   * Called when the highlight is dropped (when the "cancel" button is clicked)
-   */
-  onDrop: () => void;
-
-  /**
-   * Called when the highlight is saved (when the "save" button is clicked)
-   * @param highlight The highlight to save
-   */
-  onSave?: (highlight: Highlight) => void;
-
-  /**
-   * Optional data attached to the highlight.
-   */
-  data?: any;
-}
+import type { Highlight } from '../models';
 
 interface HighlightState {
   /**

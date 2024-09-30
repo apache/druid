@@ -242,6 +242,7 @@ TLS
 tls
 TopN
 TopNs
+tryParseNumbers
 UI
 UIs
 UPSERT
@@ -276,6 +277,7 @@ averager
 averagers
 backend
 backfills
+backfilled
 backpressure
 base64
 big-endian
@@ -298,6 +300,7 @@ colocation
 colocating
 compactable
 compactionTask
+complexMetricCompression
 config
 configs
 consumerProperties
@@ -382,6 +385,7 @@ json_paths
 json_query
 json_query_array
 json_value
+json_merge
 karlkfi
 kbps
 kerberos
@@ -2415,3 +2419,4 @@ percentilesSpectatorHistogram
 quantilesFromDDSketch
 quantileFromDDSketch
 collapsingLowestDense
+snapshotVersion

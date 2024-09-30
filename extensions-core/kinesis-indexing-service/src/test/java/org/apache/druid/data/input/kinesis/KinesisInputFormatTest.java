@@ -713,7 +713,8 @@ public class KinesisInputFormatTest
             null,
             false,
             false,
-            0
+            0,
+            null
         ),
         "kinesis.newts.partitionKey",
         "kinesis.newts.timestamp"

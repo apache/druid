@@ -29,7 +29,7 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
@@ -151,9 +151,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
   public static Iterable<Object[]> constructorFeeder()
   {
     return Iterables.transform(
-        QueryRunnerTestHelper.makeQueryRunners(
-            FACTORY
-        ),
+        QueryRunnerTestHelper.makeQueryRunners(FACTORY, false),
         (runner) -> new Object[]{runner}
     );
   }

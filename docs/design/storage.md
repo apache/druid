@@ -28,7 +28,7 @@ Druid stores data in datasources, which are similar to tables in a traditional R
 
 ![Segment timeline](../assets/druid-timeline.png)
 
-A datasource may have anywhere from just a few segments, up to hundreds of thousands and even millions of segments. Each segment is created by a MiddleManager as mutable and uncommitted. Data is queryable as soon as it is added to an uncommitted segment. The segment building process accelerates later queries by producing a data file that is compact and indexed:
+A datasource may have anywhere from just a few segments, up to hundreds of thousands and even millions of segments. Each segment is created by a Middle Manager as mutable and uncommitted. Data is queryable as soon as it is added to an uncommitted segment. The segment building process accelerates later queries by producing a data file that is compact and indexed:
 
 - Conversion to columnar format
 - Indexing with bitmap indexes
@@ -37,7 +37,7 @@ A datasource may have anywhere from just a few segments, up to hundreds of thous
     - Bitmap compression for bitmap indexes
     - Type-aware compression for all columns
 
-Periodically, segments are committed and published to [deep storage](deep-storage.md), become immutable, and move from MiddleManagers to the Historical services. An entry about the segment is also written to the [metadata store](metadata-storage.md). This entry is a self-describing bit of metadata about the segment, including things like the schema of the segment, its size, and its location on deep storage. These entries tell the Coordinator what data is available on the cluster.
+Periodically, segments are committed and published to [deep storage](deep-storage.md), become immutable, and move from Middle Managers to the Historical services. An entry about the segment is also written to the [metadata store](metadata-storage.md). This entry is a self-describing bit of metadata about the segment, including things like the schema of the segment, its size, and its location on deep storage. These entries tell the Coordinator what data is available on the cluster.
 
 For details on the segment file format, see [segment files](segments.md).
 
@@ -67,7 +67,7 @@ On the Coordinator / Historical side:
 Segments all have a four-part identifier with the following components:
 
 - Datasource name.
-- Time interval (for the time chunk containing the segment; this corresponds to the `segmentGranularity` specified at ingestion time).
+- Time interval for the time chunk containing the segment; this corresponds to the `segmentGranularity` specified at ingestion time. Uses the same format as [query granularity](../querying/granularities.md).
 - Version number (generally an ISO8601 timestamp corresponding to when the segment set was first started).
 - Partition number (an integer, unique within a datasource+interval+version; may not necessarily be contiguous).
 

@@ -588,7 +588,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     final GroupingEngine groupingEngineBroker = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPoolBroker,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
@@ -597,7 +596,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     final GroupingEngine groupingEngineHistorical = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPoolHistorical,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
@@ -606,7 +604,6 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     final GroupingEngine groupingEngineHistorical2 = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPoolHistorical2,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
@@ -615,17 +612,20 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
 
     groupByFactoryBroker = new GroupByQueryRunnerFactory(
         groupingEngineBroker,
-        new GroupByQueryQueryToolChest(groupingEngineBroker, groupByResourcesReservationPoolBroker)
+        new GroupByQueryQueryToolChest(groupingEngineBroker, groupByResourcesReservationPoolBroker),
+        bufferPool
     );
 
     groupByFactoryHistorical = new GroupByQueryRunnerFactory(
         groupingEngineHistorical,
-        new GroupByQueryQueryToolChest(groupingEngineHistorical, groupByResourcesReservationPoolHistorical)
+        new GroupByQueryQueryToolChest(groupingEngineHistorical, groupByResourcesReservationPoolHistorical),
+        bufferPool
     );
 
     groupByFactoryHistorical2 = new GroupByQueryRunnerFactory(
         groupingEngineHistorical2,
-        new GroupByQueryQueryToolChest(groupingEngineHistorical2, groupByResourcesReservationPoolHistorical2)
+        new GroupByQueryQueryToolChest(groupingEngineHistorical2, groupByResourcesReservationPoolHistorical2),
+        bufferPool
     );
   }
 

@@ -35,13 +35,15 @@ import org.apache.druid.query.timeseries.DefaultTimeseriesQueryMetrics;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.IncrementalIndexTimeBoundaryInspector;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
+import org.apache.druid.segment.QueryableIndexTimeBoundaryInspector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -147,10 +149,20 @@ public class StringLastTimeseriesQueryTest extends InitializedNullHandlingTest
 
     final DefaultTimeseriesQueryMetrics defaultTimeseriesQueryMetrics = new DefaultTimeseriesQueryMetrics();
     final Iterable<Result<TimeseriesResultValue>> iiResults =
-        engine.process(query, new IncrementalIndexStorageAdapter(incrementalIndex), defaultTimeseriesQueryMetrics).toList();
+        engine.process(
+            query,
+            new IncrementalIndexCursorFactory(incrementalIndex),
+            new IncrementalIndexTimeBoundaryInspector(incrementalIndex),
+            defaultTimeseriesQueryMetrics
+        ).toList();
 
     final Iterable<Result<TimeseriesResultValue>> qiResults =
-        engine.process(query, new QueryableIndexStorageAdapter(queryableIndex), defaultTimeseriesQueryMetrics).toList();
+        engine.process(
+            query,
+            new QueryableIndexCursorFactory(queryableIndex),
+            QueryableIndexTimeBoundaryInspector.create(queryableIndex),
+            defaultTimeseriesQueryMetrics
+        ).toList();
 
     TestHelper.assertExpectedResults(expectedResults, iiResults, "incremental index");
     TestHelper.assertExpectedResults(expectedResults, qiResults, "queryable index");

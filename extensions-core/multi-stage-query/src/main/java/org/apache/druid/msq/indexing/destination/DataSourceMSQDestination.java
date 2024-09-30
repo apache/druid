@@ -51,6 +51,8 @@ public class DataSourceMSQDestination implements MSQDestination
   @Nullable
   private final List<Interval> replaceTimeChunks;
 
+  private final TerminalStageSpec terminalStageSpec;
+
   @Nullable
   private final Map<String, DimensionSchema> dimensionSchemas;
 
@@ -60,7 +62,8 @@ public class DataSourceMSQDestination implements MSQDestination
       @JsonProperty("segmentGranularity") Granularity segmentGranularity,
       @JsonProperty("segmentSortOrder") @Nullable List<String> segmentSortOrder,
       @JsonProperty("replaceTimeChunks") @Nullable List<Interval> replaceTimeChunks,
-      @JsonProperty("dimensionSchemas") @Nullable Map<String, DimensionSchema> dimensionSchemas
+      @JsonProperty("dimensionSchemas") @Nullable Map<String, DimensionSchema> dimensionSchemas,
+      @JsonProperty("terminalStageSpec") @Nullable TerminalStageSpec terminalStageSpec
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -68,6 +71,7 @@ public class DataSourceMSQDestination implements MSQDestination
     this.segmentSortOrder = segmentSortOrder != null ? segmentSortOrder : Collections.emptyList();
     this.replaceTimeChunks = replaceTimeChunks;
     this.dimensionSchemas = dimensionSchemas;
+    this.terminalStageSpec = terminalStageSpec != null ? terminalStageSpec : SegmentGenerationStageSpec.instance();
 
     if (replaceTimeChunks != null) {
       // Verify that if replaceTimeChunks is provided, it is nonempty.
@@ -103,6 +107,17 @@ public class DataSourceMSQDestination implements MSQDestination
   public String getDataSource()
   {
     return dataSource;
+  }
+
+  /**
+   * Returns the terminal stage spec.
+   * <p>
+   * The terminal stage spec, is a way to tell the MSQ task how to convert the results into segments at the final stage.
+   */
+  @JsonProperty
+  public TerminalStageSpec getTerminalStageSpec()
+  {
+    return terminalStageSpec;
   }
 
   @JsonProperty
@@ -177,13 +192,14 @@ public class DataSourceMSQDestination implements MSQDestination
            && Objects.equals(segmentGranularity, that.segmentGranularity)
            && Objects.equals(segmentSortOrder, that.segmentSortOrder)
            && Objects.equals(replaceTimeChunks, that.replaceTimeChunks)
-           && Objects.equals(dimensionSchemas, that.dimensionSchemas);
+           && Objects.equals(dimensionSchemas, that.dimensionSchemas)
+           && Objects.equals(terminalStageSpec, that.terminalStageSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, dimensionSchemas);
+    return Objects.hash(dataSource, segmentGranularity, segmentSortOrder, replaceTimeChunks, dimensionSchemas, terminalStageSpec);
   }
 
   @Override
@@ -195,6 +211,7 @@ public class DataSourceMSQDestination implements MSQDestination
            ", segmentSortOrder=" + segmentSortOrder +
            ", replaceTimeChunks=" + replaceTimeChunks +
            ", dimensionSchemas=" + dimensionSchemas +
+           ", terminalStageSpec=" + terminalStageSpec +
            '}';
   }
 

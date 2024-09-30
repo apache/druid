@@ -21,9 +21,11 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.server.coordinator.compact.CompactionStatistics;
+import org.apache.druid.server.compaction.CompactionStatistics;
 
+import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.Objects;
 
@@ -39,6 +41,8 @@ public class AutoCompactionSnapshot
   private final String dataSource;
   @JsonProperty
   private final AutoCompactionScheduleStatus scheduleStatus;
+  @JsonProperty
+  private final String message;
   @JsonProperty
   private final long bytesAwaitingCompaction;
   @JsonProperty
@@ -60,26 +64,28 @@ public class AutoCompactionSnapshot
 
   public static Builder builder(String dataSource)
   {
-    return new Builder(dataSource, AutoCompactionScheduleStatus.RUNNING);
+    return new Builder(dataSource).withStatus(AutoCompactionScheduleStatus.RUNNING);
   }
 
   @JsonCreator
   public AutoCompactionSnapshot(
-      @JsonProperty @NotNull String dataSource,
-      @JsonProperty @NotNull AutoCompactionScheduleStatus scheduleStatus,
-      @JsonProperty long bytesAwaitingCompaction,
-      @JsonProperty long bytesCompacted,
-      @JsonProperty long bytesSkipped,
-      @JsonProperty long segmentCountAwaitingCompaction,
-      @JsonProperty long segmentCountCompacted,
-      @JsonProperty long segmentCountSkipped,
-      @JsonProperty long intervalCountAwaitingCompaction,
-      @JsonProperty long intervalCountCompacted,
-      @JsonProperty long intervalCountSkipped
+      @JsonProperty("dataSource") @NotNull String dataSource,
+      @JsonProperty("scheduleStatus") @NotNull AutoCompactionScheduleStatus scheduleStatus,
+      @JsonProperty("message") @Nullable String message,
+      @JsonProperty("bytesAwaitingCompaction") long bytesAwaitingCompaction,
+      @JsonProperty("bytesCompacted") long bytesCompacted,
+      @JsonProperty("bytesSkipped") long bytesSkipped,
+      @JsonProperty("segmentCountAwaitingCompaction") long segmentCountAwaitingCompaction,
+      @JsonProperty("segmentCountCompacted") long segmentCountCompacted,
+      @JsonProperty("segmentCountSkipped") long segmentCountSkipped,
+      @JsonProperty("intervalCountAwaitingCompaction") long intervalCountAwaitingCompaction,
+      @JsonProperty("intervalCountCompacted") long intervalCountCompacted,
+      @JsonProperty("intervalCountSkipped") long intervalCountSkipped
   )
   {
     this.dataSource = dataSource;
     this.scheduleStatus = scheduleStatus;
+    this.message = message;
     this.bytesAwaitingCompaction = bytesAwaitingCompaction;
     this.bytesCompacted = bytesCompacted;
     this.bytesSkipped = bytesSkipped;
@@ -101,6 +107,12 @@ public class AutoCompactionSnapshot
   public AutoCompactionScheduleStatus getScheduleStatus()
   {
     return scheduleStatus;
+  }
+
+  @Nullable
+  public String getMessage()
+  {
+    return message;
   }
 
   public long getBytesAwaitingCompaction()
@@ -168,7 +180,8 @@ public class AutoCompactionSnapshot
            intervalCountCompacted == that.intervalCountCompacted &&
            intervalCountSkipped == that.intervalCountSkipped &&
            dataSource.equals(that.dataSource) &&
-           scheduleStatus == that.scheduleStatus;
+           scheduleStatus == that.scheduleStatus &&
+           Objects.equals(message, that.message);
   }
 
   @Override
@@ -177,6 +190,7 @@ public class AutoCompactionSnapshot
     return Objects.hash(
         dataSource,
         scheduleStatus,
+        message,
         bytesAwaitingCompaction,
         bytesCompacted,
         bytesSkipped,
@@ -192,26 +206,33 @@ public class AutoCompactionSnapshot
   public static class Builder
   {
     private final String dataSource;
-    private final AutoCompactionScheduleStatus scheduleStatus;
+    private AutoCompactionScheduleStatus scheduleStatus;
+    private String message;
 
     private final CompactionStatistics compactedStats = new CompactionStatistics();
     private final CompactionStatistics skippedStats = new CompactionStatistics();
     private final CompactionStatistics waitingStats = new CompactionStatistics();
 
     private Builder(
-        @NotNull String dataSource,
-        @NotNull AutoCompactionScheduleStatus scheduleStatus
+        @NotNull String dataSource
     )
     {
       if (dataSource == null || dataSource.isEmpty()) {
         throw new ISE("Invalid dataSource name");
       }
-      if (scheduleStatus == null) {
-        throw new ISE("scheduleStatus cannot be null");
-      }
-
       this.dataSource = dataSource;
-      this.scheduleStatus = scheduleStatus;
+    }
+
+    public Builder withStatus(AutoCompactionScheduleStatus status)
+    {
+      this.scheduleStatus = Preconditions.checkNotNull(status, "scheduleStatus cannot be null");
+      return this;
+    }
+
+    public Builder withMessage(String message)
+    {
+      this.message = message;
+      return this;
     }
 
     public void incrementWaitingStats(CompactionStatistics entry)
@@ -234,6 +255,7 @@ public class AutoCompactionSnapshot
       return new AutoCompactionSnapshot(
           dataSource,
           scheduleStatus,
+          message,
           waitingStats.getTotalBytes(),
           compactedStats.getTotalBytes(),
           skippedStats.getTotalBytes(),

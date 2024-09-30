@@ -32,7 +32,7 @@ import java.util.Objects;
 /**
  * Input slice representing a set of segments to read.
  * <br>
- * Sliced from {@link TableInputSpec} by {@link TableInputSpecSlicer}.
+ * Sliced from {@link TableInputSpec}.
  * <br>
  * Similar to {@link org.apache.druid.query.spec.MultipleSpecificSegmentSpec} from native queries.
  * <br>

@@ -19,8 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -54,34 +52,15 @@ public class Cursors
   }
 
   /**
-   * Check if the first {@link OrderBy} of {@link CursorHolder#getOrdering()} is {@link ColumnHolder#TIME_COLUMN_NAME}
-   * in the specified {@link Order}
+   * Return the {@link Order} of the {@link ColumnHolder#TIME_COLUMN_NAME}, based on a
+   * {@link CursorHolder#getOrdering()} or {@link Metadata#getOrdering()}.
    */
-  public static boolean isTimeOrdered(CursorHolder holder, Order order)
+  public static Order getTimeOrdering(final List<OrderBy> ordering)
   {
-    final List<OrderBy> ordering = holder.getOrdering();
-    if (ordering.isEmpty()) {
-      return false;
-    }
-    final OrderBy orderBy = ordering.get(0);
-    return ColumnHolder.TIME_COLUMN_NAME.equals(orderBy.getColumnName()) && orderBy.getOrder() == order;
-  }
-
-  /**
-   * Require the first {@link OrderBy} of {@link CursorHolder#getOrdering()} is {@link ColumnHolder#TIME_COLUMN_NAME}.
-   * Throws {@link DruidException} if the order does
-   */
-  public static void requireTimeOrdering(CursorHolder holder, Order order)
-  {
-    if (!isTimeOrdered(holder, order)) {
-      final String failureReason = StringUtils.format(
-          "Cursor must be ordered by [%s] with direction [%s] but was [%s] instead.",
-          ColumnHolder.TIME_COLUMN_NAME,
-          order,
-          holder.getOrdering()
-      );
-      holder.close();
-      throw DruidException.defensive(failureReason);
+    if (!ordering.isEmpty() && ColumnHolder.TIME_COLUMN_NAME.equals(ordering.get(0).getColumnName())) {
+      return ordering.get(0).getOrder();
+    } else {
+      return Order.NONE;
     }
   }
 

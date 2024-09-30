@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import { Tooltip } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
@@ -89,20 +88,15 @@ export const StatusCard = React.memo(function StatusCard(props: StatusCardProps)
           </>
         )}
         {nullModeDetection && (
-          <Tooltip
-            content={
-              <div>
-                <p>
-                  <strong>Null related server properties</strong>
-                </p>
-                {explainNullModeDetection(nullModeDetection).map((line, i) => (
-                  <p key={i}>{line}</p>
-                ))}
-              </div>
-            }
+          <p
+            className="tooltip-info"
+            data-tooltip={[
+              'Null related server properties',
+              ...explainNullModeDetection(nullModeDetection),
+            ].join('\n')}
           >
-            <p>{summarizeNullModeDetection(nullModeDetection)}</p>
-          </Tooltip>
+            {summarizeNullModeDetection(nullModeDetection)}
+          </p>
         )}
       </HomeViewCard>
       {showStatusDialog && (

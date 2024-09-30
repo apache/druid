@@ -41,6 +41,8 @@ export interface QueryContext {
   failOnEmptyInsert?: boolean;
   waitUntilSegmentsLoad?: boolean;
   useConcurrentLocks?: boolean;
+  forceSegmentSortByTime?: boolean;
+  includeAllCounters?: boolean;
 
   [key: string]: any;
 }
@@ -63,6 +65,8 @@ export const DEFAULT_SERVER_QUERY_CONTEXT: QueryContext = {
   failOnEmptyInsert: false,
   waitUntilSegmentsLoad: false,
   useConcurrentLocks: false,
+  forceSegmentSortByTime: true,
+  includeAllCounters: false,
 };
 
 export interface QueryWithContext {

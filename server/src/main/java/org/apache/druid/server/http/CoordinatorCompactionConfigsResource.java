@@ -27,22 +27,20 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.common.config.ConfigManager.SetResult;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
-import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigHistory;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.security.AuthorizationUtils;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
@@ -100,30 +98,7 @@ public class CoordinatorCompactionConfigsResource
       @Context HttpServletRequest req
   )
   {
-    UnaryOperator<DruidCompactionConfig> operator = current -> {
-      final DruidCompactionConfig newConfig = current.withClusterConfig(updatePayload);
-
-      final List<DataSourceCompactionConfig> datasourceConfigs = newConfig.getCompactionConfigs();
-      if (CollectionUtils.isNullOrEmpty(datasourceConfigs)
-          || current.getEngine() == newConfig.getEngine()) {
-        return newConfig;
-      }
-
-      // Validate all the datasource configs against the new engine
-      for (DataSourceCompactionConfig datasourceConfig : datasourceConfigs) {
-        CompactionConfigValidationResult validationResult =
-            ClientCompactionRunnerInfo.validateCompactionConfig(datasourceConfig, newConfig.getEngine());
-        if (!validationResult.isValid()) {
-          throw InvalidInput.exception(
-              "Cannot update engine to [%s] as it does not support"
-              + " compaction config of DataSource[%s]. Reason[%s].",
-              newConfig.getEngine(), datasourceConfig.getDataSource(), validationResult.getReason()
-          );
-        }
-      }
-
-      return newConfig;
-    };
+    UnaryOperator<DruidCompactionConfig> operator = current -> current.withClusterConfig(updatePayload);
     return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
   }
 
@@ -160,12 +135,11 @@ public class CoordinatorCompactionConfigsResource
   )
   {
     UnaryOperator<DruidCompactionConfig> callable = current -> {
-      CompactionConfigValidationResult validationResult =
-          ClientCompactionRunnerInfo.validateCompactionConfig(newConfig, current.getEngine());
-      if (validationResult.isValid()) {
-        return current.withDatasourceConfig(newConfig);
+      if (newConfig.getEngine() == CompactionEngine.MSQ) {
+        throw InvalidInput.exception(
+            "MSQ engine in compaction config only supported with supervisor-based compaction on the Overlord.");
       } else {
-        throw InvalidInput.exception("Compaction config not supported. Reason[%s].", validationResult.getReason());
+        return current.withDatasourceConfig(newConfig);
       }
     };
     return updateConfigHelper(

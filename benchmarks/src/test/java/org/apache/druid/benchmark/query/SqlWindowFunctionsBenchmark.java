@@ -55,8 +55,8 @@ import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
@@ -78,7 +78,6 @@ import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.DruidPlanner;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -158,6 +157,12 @@ public class SqlWindowFunctionsBenchmark
     public int getNumMergeBuffers()
     {
       return 3;
+    }
+
+    @Override
+    public int intermediateComputeSizeBytes()
+    {
+      return 200_000_000;
     }
   };
 
@@ -281,8 +286,8 @@ public class SqlWindowFunctionsBenchmark
     } else if (STORAGE_FRAME_ROW.equals(storageType)) {
       walker.add(
           descriptor,
-          FrameTestUtil.adapterToFrameSegment(
-              new QueryableIndexStorageAdapter(index),
+          FrameTestUtil.cursorFactoryToFrameSegment(
+              new QueryableIndexCursorFactory(index),
               FrameType.ROW_BASED,
               descriptor.getId()
           )
@@ -290,8 +295,8 @@ public class SqlWindowFunctionsBenchmark
     } else if (STORAGE_FRAME_COLUMNAR.equals(storageType)) {
       walker.add(
           descriptor,
-          FrameTestUtil.adapterToFrameSegment(
-              new QueryableIndexStorageAdapter(index),
+          FrameTestUtil.cursorFactoryToFrameSegment(
+              new QueryableIndexCursorFactory(index),
               FrameType.COLUMNAR,
               descriptor.getId()
           )
@@ -335,8 +340,8 @@ public class SqlWindowFunctionsBenchmark
   public void querySql(String sql, Blackhole blackhole)
   {
     final Map<String, Object> context = ImmutableMap.of(
-        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "auto"
+        QueryContexts.MAX_SUBQUERY_BYTES_KEY, "disabled",
+        QueryContexts.MAX_SUBQUERY_ROWS_KEY, -1
     );
     try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, context)) {
       final PlannerResult plannerResult = planner.plan();
@@ -418,6 +423,17 @@ public class SqlWindowFunctionsBenchmark
                  + "OVER (PARTITION BY dimUniform ORDER BY dimSequential) "
                  + "FROM foo "
                  + "GROUP BY dimUniform, dimSequential";
+    querySql(sql, blackhole);
+  }
+
+  @Benchmark
+  public void windowWithGroupbyTime(Blackhole blackhole)
+  {
+    String sql = "SELECT "
+                 + "SUM(dimSequentialHalfNull) + SUM(dimHyperUnique), "
+                 + "LAG(SUM(dimSequentialHalfNull + dimHyperUnique)) OVER (PARTITION BY dimUniform ORDER BY dimSequential) "
+                 + "FROM foo "
+                 + "GROUP BY __time, dimUniform, dimSequential";
     querySql(sql, blackhole);
   }
 }

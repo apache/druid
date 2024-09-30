@@ -83,6 +83,9 @@ import {
   computeFlattenPathsForData,
   CONSTANT_TIMESTAMP_SPEC,
   CONSTANT_TIMESTAMP_SPEC_FIELDS,
+  DEFAULT_ARRAY_MODE,
+  DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
+  DEFAULT_SCHEMA_MODE,
   DIMENSION_SPEC_FIELDS,
   fillDataSourceNameIfNeeded,
   fillInputFormatIfNeeded,
@@ -92,6 +95,7 @@ import {
   getArrayMode,
   getDimensionSpecName,
   getFlattenSpec,
+  getForceSegmentSortByTime,
   getIngestionComboType,
   getIngestionImage,
   getIngestionTitle,
@@ -113,6 +117,7 @@ import {
   invalidPartitionConfig,
   isDruidSource,
   isEmptyIngestionSpec,
+  isFixedFormatSource,
   isKafkaOrKinesis,
   isStreamingSpec,
   issueWithIoConfig,
@@ -263,26 +268,27 @@ function showBlankLine(line: SampleEntry): string {
 
 function formatSampleEntries(
   sampleEntries: SampleEntry[],
-  specialSource: undefined | 'druid' | 'kafka' | 'kinesis',
-): string {
-  if (!sampleEntries.length) return 'No data returned from sampler';
+  specialSource: undefined | 'fixedFormat' | 'druid' | 'kafka' | 'kinesis',
+): string[] {
+  if (!sampleEntries.length) return ['No data returned from sampler'];
 
   switch (specialSource) {
+    case 'fixedFormat':
+      return sampleEntries.map(l => JSONBig.stringify(l.parsed));
+
     case 'druid':
-      return sampleEntries.map(showDruidLine).join('\n');
+      return sampleEntries.map(showDruidLine);
 
     case 'kafka':
-      return sampleEntries.map(showKafkaLine).join('\n');
+      return sampleEntries.map(showKafkaLine);
 
     case 'kinesis':
-      return sampleEntries.map(showKinesisLine).join('\n');
+      return sampleEntries.map(showKinesisLine);
 
     default:
-      return (
-        sampleEntries.every(l => !l.parsed)
-          ? sampleEntries.map(showBlankLine)
-          : sampleEntries.map(showRawLine)
-      ).join('\n');
+      return sampleEntries.every(l => !l.parsed)
+        ? sampleEntries.map(showBlankLine)
+        : sampleEntries.map(showRawLine);
   }
 }
 
@@ -311,7 +317,14 @@ function initializeSchemaWithSampleIfNeeded(
   sample: SampleResponse,
 ): Partial<IngestionSpec> {
   if (deepGet(spec, 'spec.dataSchema.dimensionsSpec')) return spec;
-  return updateSchemaWithSample(spec, sample, 'fixed', 'multi-values', getRollup(spec, false));
+  return updateSchemaWithSample(
+    spec,
+    sample,
+    DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
+    DEFAULT_SCHEMA_MODE,
+    DEFAULT_ARRAY_MODE,
+    getRollup(spec, false),
+  );
 }
 
 type Step =
@@ -394,6 +407,7 @@ export interface LoadDataViewState {
   continueToSpec: boolean;
   showResetConfirm: boolean;
   newRollup?: boolean;
+  newForceSegmentSortByTime?: boolean;
   newSchemaMode?: SchemaMode;
   newArrayMode?: ArrayMode;
 
@@ -541,7 +555,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   isStepEnabled(step: Step): boolean {
     const { spec, cacheRows } = this.state;
-    const druidSource = isDruidSource(spec);
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
 
     switch (step) {
@@ -549,10 +562,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return Boolean(spec.type);
 
       case 'parser':
-        return Boolean(!druidSource && spec.type && !issueWithIoConfig(ioConfig));
+        return Boolean(!isFixedFormatSource(spec) && spec.type && !issueWithIoConfig(ioConfig));
 
       case 'timestamp':
-        return Boolean(!druidSource && cacheRows && deepGet(spec, 'spec.dataSchema.timestampSpec'));
+        return Boolean(
+          !isDruidSource(spec) && cacheRows && deepGet(spec, 'spec.dataSchema.timestampSpec'),
+        );
 
       case 'transform':
       case 'filter':
@@ -1246,7 +1261,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const deltaState: Partial<LoadDataViewState> = {
       inputQueryState: new QueryState({ data: sampleResponse }),
     };
-    if (isDruidSource(spec)) {
+    if (isFixedFormatSource(spec)) {
       deltaState.cacheRows = getCacheRowsFromSampleResponse(sampleResponse);
     }
     this.setState(deltaState as LoadDataViewState);
@@ -1258,8 +1273,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const specType = getSpecType(spec);
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
     const inlineMode = deepGet(spec, 'spec.ioConfig.inputSource.type') === 'inline';
+    const fixedFormatSource = isFixedFormatSource(spec);
     const druidSource = isDruidSource(spec);
-    const specialSource = druidSource ? 'druid' : isKafkaOrKinesis(specType) ? specType : undefined;
+    const specialSource = druidSource
+      ? 'druid'
+      : fixedFormatSource
+      ? 'fixedFormat'
+      : isKafkaOrKinesis(specType)
+      ? specType
+      : undefined;
 
     let mainFill: JSX.Element | string;
     if (inlineMode) {
@@ -1291,7 +1313,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <TextArea
               className="raw-lines"
               readOnly
-              value={formatSampleEntries(inputData, specialSource)}
+              value={formatSampleEntries(inputData, specialSource).join('\n')}
             />
           )}
           {inputQueryState.isLoading() && <Loader />}
@@ -1363,7 +1385,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </div>
         {this.renderNextBar({
           disabled: !inputQueryState.data,
-          nextStep: druidSource ? 'transform' : 'parser',
+          nextStep: druidSource ? 'transform' : fixedFormatSource ? 'timestamp' : 'parser',
           onNextStep: () => {
             if (!inputQueryState.data) return false;
             const inputData = inputQueryState.data;
@@ -1410,6 +1432,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   );
                 }
               }
+
+              this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
+            }
+            if (fixedFormatSource) {
+              const newSpec = deepSet(
+                spec,
+                'spec.dataSchema.timestampSpec',
+                getTimestampSpec(inputQueryState.data),
+              );
 
               this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
             } else {
@@ -1663,21 +1694,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !parserQueryState.data,
           onNextStep: () => {
             if (!parserQueryState.data) return false;
-            let possibleTimestampSpec: TimestampSpec;
-            if (isDruidSource(spec)) {
-              possibleTimestampSpec = {
-                column: TIME_COLUMN,
-                format: 'auto',
-              };
-            } else {
-              possibleTimestampSpec = getTimestampSpec(parserQueryState.data);
-            }
+            const possibleTimestampSpec = isDruidSource(spec)
+              ? {
+                  column: TIME_COLUMN,
+                  format: 'auto',
+                }
+              : getTimestampSpec(parserQueryState.data);
 
-            if (possibleTimestampSpec) {
-              const newSpec = deepSet(spec, 'spec.dataSchema.timestampSpec', possibleTimestampSpec);
-              this.updateSpec(newSpec);
-            }
-
+            const newSpec = deepSet(spec, 'spec.dataSchema.timestampSpec', possibleTimestampSpec);
+            this.updateSpec(newSpec);
             return true;
           },
         })}
@@ -1965,7 +1990,11 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let sampleResponse: SampleResponse;
     try {
-      sampleResponse = await sampleForTransform(spec, cacheRows);
+      sampleResponse = await sampleForTransform(
+        spec,
+        cacheRows,
+        DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
+      );
     } catch (e) {
       this.setState(({ transformQueryState }) => ({
         transformQueryState: new QueryState({
@@ -2359,6 +2388,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const somethingSelected = Boolean(
       selectedAutoDimension || selectedDimensionSpec || selectedMetricSpec,
     );
+    const forceSegmentSortByTime = getForceSegmentSortByTime(spec);
     const schemaMode = getSchemaMode(spec);
     const arrayMode = getArrayMode(spec);
 
@@ -2404,6 +2434,39 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <SchemaMessage schemaMode={schemaMode} />
           {!somethingSelected && (
             <>
+              <FormGroupWithInfo
+                inlineInfo
+                info={
+                  <PopoverText>
+                    <p>
+                      When set to true (the default), segments created by the ingestion job are
+                      sorted by <Code>{'{__time, dimensions[0], dimensions[1], ...}'}</Code>. When
+                      set to false, segments created by the ingestion job are sorted by{' '}
+                      <Code>{'{dimensions[0], dimensions[1], ...}'}</Code>. To include{' '}
+                      <Code>__time</Code> in the sort order when this parameter is set to{' '}
+                      <Code>false</Code>, you must include a dimension named <Code>__time</Code>{' '}
+                      with type <Code>long</Code> explicitly in the `dimensions` list.
+                    </p>
+                    <p>
+                      Setting this to `false` is an experimental feature; see
+                      <ExternalLink href={`${getLink('DOCS')}/ingestion/partitioning/#sorting`}>
+                        Sorting
+                      </ExternalLink>{' '}
+                      for details.
+                    </p>
+                  </PopoverText>
+                }
+              >
+                <Switch
+                  checked={forceSegmentSortByTime}
+                  onChange={() =>
+                    this.setState({
+                      newForceSegmentSortByTime: !forceSegmentSortByTime,
+                    })
+                  }
+                  label="Force segment sort by time"
+                />
+              </FormGroupWithInfo>
               <FormGroupWithInfo
                 inlineInfo
                 info={
@@ -2563,7 +2626,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
               {schemaToolsMenu && (
                 <FormGroup>
                   <Popover content={schemaToolsMenu}>
-                    <Button icon={IconNames.BUILD} />
+                    <Button icon={IconNames.BUILD} text="Tools" />
                   </Popover>
                 </FormGroup>
               )}
@@ -2572,6 +2635,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           {this.renderAutoDimensionControls()}
           {this.renderDimensionSpecControls()}
           {this.renderMetricSpecControls()}
+          {this.renderChangeForceSegmentSortByTime()}
           {this.renderChangeRollupAction()}
           {this.renderChangeSchemaModeAction()}
           {this.renderChangeArrayModeAction()}
@@ -2660,6 +2724,44 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     });
   };
 
+  renderChangeForceSegmentSortByTime() {
+    const { newForceSegmentSortByTime, spec, cacheRows } = this.state;
+    if (typeof newForceSegmentSortByTime === 'undefined' || !cacheRows) return;
+
+    return (
+      <AsyncActionDialog
+        action={async () => {
+          const sampleResponse = await sampleForTransform(
+            spec,
+            cacheRows,
+            newForceSegmentSortByTime,
+          );
+          this.updateSpec(
+            updateSchemaWithSample(
+              spec,
+              sampleResponse,
+              newForceSegmentSortByTime,
+              getSchemaMode(spec),
+              getArrayMode(spec),
+              getRollup(spec),
+              true,
+            ),
+          );
+        }}
+        confirmButtonText={`Yes - ${
+          newForceSegmentSortByTime ? 'force time to be first' : "don't force time to be first"
+        }`}
+        successText={`forceSegmentSortByTime was set to ${newForceSegmentSortByTime}.`}
+        failText="Could change rollup"
+        intent={Intent.WARNING}
+        onClose={() => this.setState({ newForceSegmentSortByTime: undefined })}
+      >
+        <p>{`Are you sure you want to set forceSegmentSortByTime to ${newForceSegmentSortByTime}?`}</p>
+        <p>Making this change will reset any work you have done in this section.</p>
+      </AsyncActionDialog>
+    );
+  }
+
   renderChangeRollupAction() {
     const { newRollup, spec, cacheRows } = this.state;
     if (typeof newRollup === 'undefined' || !cacheRows) return;
@@ -2667,11 +2769,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     return (
       <AsyncActionDialog
         action={async () => {
-          const sampleResponse = await sampleForTransform(spec, cacheRows);
+          const sampleResponse = await sampleForTransform(
+            spec,
+            cacheRows,
+            getForceSegmentSortByTime(spec),
+          );
           this.updateSpec(
             updateSchemaWithSample(
               spec,
               sampleResponse,
+              getForceSegmentSortByTime(spec),
               getSchemaMode(spec),
               getArrayMode(spec),
               newRollup,
@@ -2699,11 +2806,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     return (
       <AsyncActionDialog
         action={async () => {
-          const sampleResponse = await sampleForTransform(spec, cacheRows);
+          const sampleResponse = await sampleForTransform(
+            spec,
+            cacheRows,
+            getForceSegmentSortByTime(spec),
+          );
           this.updateSpec(
             updateSchemaWithSample(
               spec,
               sampleResponse,
+              getForceSegmentSortByTime(spec),
               newSchemaMode,
               getArrayMode(spec),
               getRollup(spec),
@@ -2766,11 +2878,16 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     return (
       <AsyncActionDialog
         action={async () => {
-          const sampleResponse = await sampleForTransform(spec, cacheRows);
+          const sampleResponse = await sampleForTransform(
+            spec,
+            cacheRows,
+            getForceSegmentSortByTime(spec),
+          );
           this.updateSpec(
             updateSchemaWithSample(
               spec,
               sampleResponse,
+              getForceSegmentSortByTime(spec),
               getSchemaMode(spec),
               newArrayMode,
               getRollup(spec),
@@ -2829,6 +2946,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
   renderDimensionSpecControls() {
     const { spec, selectedDimensionSpec } = this.state;
     if (!selectedDimensionSpec) return;
+    const selectedTime = selectedDimensionSpec.value.name === TIME_COLUMN;
     const schemaMode = getSchemaMode(spec);
 
     const dimensions = deepGet(spec, `spec.dataSchema.dimensionsSpec.dimensions`) || EMPTY_ARRAY;
@@ -2913,7 +3031,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           )
         }
         showDelete={selectedDimensionSpec.index !== -1}
-        disableDelete={dimensions.length <= 1}
+        disableDelete={dimensions.length <= 1 || selectedTime}
         onDelete={() =>
           this.updateSpec(
             deepDelete(
@@ -2934,18 +3052,20 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             </Popover>
           </FormGroup>
         )}
-        {selectedDimensionSpec.index !== -1 && deepGet(spec, 'spec.dataSchema.metricsSpec') && (
-          <FormGroup>
-            <Popover content={convertToMetricMenu}>
-              <Button
-                icon={IconNames.EXCHANGE}
-                text="Convert to metric"
-                rightIcon={IconNames.CARET_DOWN}
-                disabled={dimensions.length <= 1}
-              />
-            </Popover>
-          </FormGroup>
-        )}
+        {selectedDimensionSpec.index !== -1 &&
+          deepGet(spec, 'spec.dataSchema.metricsSpec') &&
+          !selectedTime && (
+            <FormGroup>
+              <Popover content={convertToMetricMenu}>
+                <Button
+                  icon={IconNames.EXCHANGE}
+                  text="Convert to metric"
+                  rightIcon={IconNames.CARET_DOWN}
+                  disabled={dimensions.length <= 1}
+                />
+              </Popover>
+            </FormGroup>
+          )}
       </FormEditor>
     );
   }

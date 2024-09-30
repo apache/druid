@@ -56,8 +56,7 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
   {
     super(query);
     this.query = Preconditions.checkNotNull(query, "query");
-    this.runningCountForLimit =
-        query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
+    this.runningCountForLimit = query.isLimited() && query.getOrderBys().isEmpty() ? new AtomicLong() : null;
   }
 
   @JsonProperty
@@ -84,5 +83,11 @@ public class ScanQueryFrameProcessorFactory extends BaseLeafFrameProcessorFactor
         outputChannelHolder,
         frameWriterFactoryHolder
     );
+  }
+
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
   }
 }

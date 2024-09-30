@@ -22,11 +22,13 @@ package org.apache.druid.query;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -45,25 +47,39 @@ public class CursorGranularizer
 {
   @Nullable
   public static CursorGranularizer create(
-      final StorageAdapter storageAdapter,
       final Cursor cursor,
+      @Nullable final TimeBoundaryInspector timeBoundaryInspector,
+      final Order timeOrder,
       final Granularity granularity,
-      final Interval queryInterval,
-      final boolean descending
+      final Interval queryInterval
   )
   {
-    final DateTime minTime = storageAdapter.getMinTime();
-    final DateTime maxTime = storageAdapter.getMaxTime();
+    if (!Granularities.ALL.equals(granularity) && timeOrder == Order.NONE) {
+      throw DruidException
+          .forPersona(DruidException.Persona.USER)
+          .ofCategory(DruidException.Category.UNSUPPORTED)
+          .build("Cannot use granularity[%s] on non-time-sorted data.", granularity);
+    }
 
-    final Interval storageAdapterInterval = new Interval(minTime, granularity.bucketEnd(maxTime));
-    final Interval clippedQueryInterval = queryInterval.overlap(storageAdapterInterval);
+    final Interval clippedQueryInterval;
+
+    if (timeBoundaryInspector != null) {
+      clippedQueryInterval = queryInterval.overlap(
+          new Interval(
+              timeBoundaryInspector.getMinTime(),
+              granularity.bucketEnd(timeBoundaryInspector.getMaxTime())
+          )
+      );
+    } else {
+      clippedQueryInterval = queryInterval;
+    }
 
     if (clippedQueryInterval == null) {
       return null;
     }
 
     Iterable<Interval> bucketIterable = granularity.getIterable(clippedQueryInterval);
-    if (descending) {
+    if (timeOrder == Order.DESCENDING) {
       bucketIterable = Lists.reverse(ImmutableList.copyOf(bucketIterable));
     }
     final Interval firstBucket = granularity.bucket(clippedQueryInterval.getStart());
@@ -78,7 +94,7 @@ public class CursorGranularizer
       timeSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
     }
 
-    return new CursorGranularizer(cursor, bucketIterable, timeSelector, descending);
+    return new CursorGranularizer(cursor, bucketIterable, timeSelector, timeOrder == Order.DESCENDING);
   }
 
   private final Cursor cursor;
@@ -131,12 +147,16 @@ public class CursorGranularizer
     if (descending) {
       while (currentTime >= currentBucketEnd && !cursor.isDone()) {
         cursor.advance();
-        currentTime = timeSelector.getLong();
+        if (!cursor.isDone()) {
+          currentTime = timeSelector.getLong();
+        }
       }
     } else {
       while (currentTime < currentBucketStart && !cursor.isDone()) {
         cursor.advance();
-        currentTime = timeSelector.getLong();
+        if (!cursor.isDone()) {
+          currentTime = timeSelector.getLong();
+        }
       }
     }
 

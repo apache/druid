@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+export * from './base64-url';
 export * from './column-metadata';
 export * from './date';
 export * from './download';
@@ -24,14 +25,13 @@ export * from './druid-lookup';
 export * from './druid-query';
 export * from './formatter';
 export * from './general';
-export * from './intermediate-query-state';
 export * from './local-storage-backed-visibility';
 export * from './local-storage-keys';
+export * from './mouse-tooltip/mouse-tooltip';
 export * from './null-mode-detection';
 export * from './object-change';
 export * from './query-action';
 export * from './query-manager';
-export * from './query-state';
 export * from './sanitizers';
 export * from './sql';
 export * from './table-helpers';
