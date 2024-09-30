@@ -24,7 +24,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
-public class StringMinBufferAggregatorTest
+public class StringMaxBufferAggregatorTest
 {
   private void aggregateBuffer(
       TestObjectColumnSelector<String> valueSelector,
@@ -40,12 +40,12 @@ public class StringMinBufferAggregatorTest
   @Test
   public void testBufferAggregate()
   {
-    final String[] strings = {"Minstrings", "a", "MinStrings", "MinString", "Minstring"};
+    final String[] strings = {"Maxstrings", "A", "MaxStrings", "MaxString", "Maxstring"};
     int maxStringBytes = 1024;
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
-    StringMinBufferAggregator agg = new StringMinBufferAggregator(
+    StringMaxBufferAggregator agg = new StringMaxBufferAggregator(
         objectColumnSelector,
         maxStringBytes
     );
@@ -60,7 +60,7 @@ public class StringMinBufferAggregatorTest
 
     String result = (String) agg.get(buf, position);
 
-    Assert.assertEquals("MinString", result);
+    Assert.assertEquals("Maxstrings", result);
   }
 
   @Test
@@ -71,7 +71,7 @@ public class StringMinBufferAggregatorTest
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
-    StringMinBufferAggregator agg = new StringMinBufferAggregator(
+    StringMaxBufferAggregator agg = new StringMaxBufferAggregator(
         objectColumnSelector,
         maxStringBytes
     );
@@ -86,7 +86,7 @@ public class StringMinBufferAggregatorTest
 
     String result = (String) agg.get(buf, position);
 
-    Assert.assertEquals("AAAA", result);
+    Assert.assertEquals("aaaa", result);
   }
 
   @Test
@@ -97,7 +97,7 @@ public class StringMinBufferAggregatorTest
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
-    StringMinBufferAggregator agg = new StringMinBufferAggregator(
+    StringMaxBufferAggregator agg = new StringMaxBufferAggregator(
         objectColumnSelector,
         maxStringBytes
     );
@@ -112,7 +112,7 @@ public class StringMinBufferAggregatorTest
 
     String result = (String) agg.get(buf, position);
 
-    Assert.assertEquals("AAAA", result);
+    Assert.assertEquals("CCCC", result);
   }
 
   @Test
@@ -123,7 +123,7 @@ public class StringMinBufferAggregatorTest
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
-    StringMinBufferAggregator agg = new StringMinBufferAggregator(
+    StringMaxBufferAggregator agg = new StringMaxBufferAggregator(
         objectColumnSelector,
         maxStringBytes
     );
@@ -138,7 +138,7 @@ public class StringMinBufferAggregatorTest
 
     String result = (String) agg.get(buf, position);
 
-    Assert.assertEquals("!!!!", result);
+    Assert.assertEquals("ZZZZ", result);
   }
 
   @Test
@@ -149,7 +149,7 @@ public class StringMinBufferAggregatorTest
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
-    StringMinBufferAggregator agg = new StringMinBufferAggregator(
+    StringMaxBufferAggregator agg = new StringMaxBufferAggregator(
         objectColumnSelector,
         maxStringBytes
     );
@@ -169,8 +169,8 @@ public class StringMinBufferAggregatorTest
     String result1 = (String) agg.get(buf, position1);
     String result2 = (String) agg.get(buf, position2);
 
-    Assert.assertEquals("BBBB", result1);
-    Assert.assertEquals("AAAA", result2);
+    Assert.assertEquals("EEEE", result1);
+    Assert.assertEquals("FFFF", result2);
   }
 
   @Test(expected = UnsupportedOperationException.class)
@@ -179,7 +179,7 @@ public class StringMinBufferAggregatorTest
     int maxStringBytes = 1024;
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(new String[]{"AAAA"});
 
-    StringMinBufferAggregator agg = new StringMinBufferAggregator(objectColumnSelector, maxStringBytes);
+    StringMaxBufferAggregator agg = new StringMaxBufferAggregator(objectColumnSelector, maxStringBytes);
     ByteBuffer buf = ByteBuffer.allocate(2048);
     int position = 0;
 
@@ -193,7 +193,7 @@ public class StringMinBufferAggregatorTest
     int maxStringBytes = 1024;
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(new String[]{"AAAA"});
 
-    StringMinBufferAggregator agg = new StringMinBufferAggregator(objectColumnSelector, maxStringBytes);
+    StringMaxBufferAggregator agg = new StringMaxBufferAggregator(objectColumnSelector, maxStringBytes);
     ByteBuffer buf = ByteBuffer.allocate(2048);
     int position = 0;
 
@@ -207,7 +207,7 @@ public class StringMinBufferAggregatorTest
     int maxStringBytes = 1024;
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(new String[]{"AAAA"});
 
-    StringMinBufferAggregator agg = new StringMinBufferAggregator(objectColumnSelector, maxStringBytes);
+    StringMaxBufferAggregator agg = new StringMaxBufferAggregator(objectColumnSelector, maxStringBytes);
     ByteBuffer buf = ByteBuffer.allocate(2048);
     int position = 0;
 
@@ -223,7 +223,7 @@ public class StringMinBufferAggregatorTest
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
 
-    StringMinBufferAggregator agg = new StringMinBufferAggregator(
+    StringMaxBufferAggregator agg = new StringMaxBufferAggregator(
         objectColumnSelector,
         maxStringBytes
     );
@@ -242,6 +242,6 @@ public class StringMinBufferAggregatorTest
 
     String result = (String) agg.get(newBuf, newPosition);
 
-    Assert.assertEquals("AAAA", result);
+    Assert.assertEquals("EEEE", result);
   }
 }

@@ -34,7 +34,7 @@ import org.mockito.Mockito;
 
 import java.util.Comparator;
 
-public class StringMinAggregatorFactoryTest
+public class StringMaxAggregatorFactoryTest
 {
   private final ExprMacroTable macroTable = ExprMacroTable.nil();
 
@@ -42,18 +42,18 @@ public class StringMinAggregatorFactoryTest
   public void testBuildAggregators()
   {
     BaseObjectColumnValueSelector<String> selector = Mockito.mock(BaseObjectColumnValueSelector.class);
-    StringMinAggregatorFactory factory = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
+    StringMaxAggregatorFactory factory = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
 
-    Assert.assertEquals(factory, new StringMinAggregatorFactory("name", "fieldName", null, true, null, macroTable));
+    Assert.assertEquals(factory, new StringMaxAggregatorFactory("name", "fieldName", null, true, null, macroTable));
     Aggregator aggregator = factory.buildAggregator(selector);
 
     Assert.assertNotNull(aggregator);
-    Assert.assertEquals(StringMinAggregator.class, aggregator.getClass());
+    Assert.assertEquals(StringMaxAggregator.class, aggregator.getClass());
 
     BufferAggregator bufferAggregator = factory.buildBufferAggregator(selector);
 
     Assert.assertNotNull(bufferAggregator);
-    Assert.assertEquals(StringMinBufferAggregator.class, bufferAggregator.getClass());
+    Assert.assertEquals(StringMaxBufferAggregator.class, bufferAggregator.getClass());
   }
 
   @Test
@@ -69,37 +69,38 @@ public class StringMinAggregatorFactoryTest
     Mockito.when(columnSelectorFactory.getColumnCapabilities("fieldName")).thenReturn(capabilities);
     Mockito.when(capabilities.hasMultipleValues()).thenReturn(ColumnCapabilities.Capable.TRUE);
 
-    StringMinAggregatorFactory factory = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
+    StringMaxAggregatorFactory factory = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
 
     VectorAggregator multiValueAggregator = factory.factorizeVector(columnSelectorFactory, selector);
 
     Assert.assertNotNull(multiValueAggregator);
-    Assert.assertEquals(multiValueAggregator.getClass(), StringMinVectorAggregator.class);
+    Assert.assertEquals(multiValueAggregator.getClass(), StringMaxVectorAggregator.class);
   }
 
   @Test
   public void testGetComparator()
   {
-    StringMinAggregatorFactory factory = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
+    StringMaxAggregatorFactory factory = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
     Comparator<String> comparator = factory.getComparator();
 
     String smaller = "a";
     String larger = "b";
 
     Assert.assertNotNull(comparator);
-    Assert.assertTrue(comparator.compare(smaller, larger) < 0);
-    Assert.assertTrue(comparator.compare(larger, smaller) > 0);
+    // Max operates in reverse order, so strings that are "smaller" will be "larger" now.
+    Assert.assertTrue(comparator.compare(smaller, larger) > 0);
+    Assert.assertTrue(comparator.compare(larger, smaller) < 0);
     Assert.assertEquals(0, comparator.compare(larger, "b"));
   }
 
   @Test
   public void testCombine()
   {
-    StringMinAggregatorFactory factory = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
+    StringMaxAggregatorFactory factory = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
 
-    Assert.assertEquals("a", factory.combine("a", "b"));
+    Assert.assertEquals("b", factory.combine("a", "b"));
     Assert.assertEquals("a", factory.combine("a", "a"));
-    Assert.assertEquals("a", factory.combine("b", "a"));
+    Assert.assertEquals("b", factory.combine("b", "a"));
     Assert.assertEquals("a", factory.combine(null, "a"));
     Assert.assertEquals("a", factory.combine("a", null));
     Assert.assertNull(factory.combine(null, null));
@@ -108,40 +109,40 @@ public class StringMinAggregatorFactoryTest
   @Test
   public void testGetCombiningFactory()
   {
-    StringMinAggregatorFactory factory = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
+    StringMaxAggregatorFactory factory = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
     AggregatorFactory combiningFactory = factory.getCombiningFactory();
 
     Assert.assertNotNull(combiningFactory);
-    Assert.assertTrue(combiningFactory instanceof StringMinAggregatorFactory);
+    Assert.assertTrue(combiningFactory instanceof StringMaxAggregatorFactory);
   }
 
   @Test
   public void testGetMergingFactory() throws AggregatorFactoryNotMergeableException
   {
-    StringMinAggregatorFactory factory1 = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
-    StringMinAggregatorFactory factory2 = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
+    StringMaxAggregatorFactory factory1 = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
+    StringMaxAggregatorFactory factory2 = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
 
     AggregatorFactory mergingFactory = factory1.getMergingFactory(factory2);
 
     Assert.assertNotNull(mergingFactory);
-    Assert.assertTrue(mergingFactory instanceof StringMinAggregatorFactory);
+    Assert.assertTrue(mergingFactory instanceof StringMaxAggregatorFactory);
   }
 
   @Test
   public void testWithName()
   {
-    StringMinAggregatorFactory factory = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
+    StringMaxAggregatorFactory factory = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
     AggregatorFactory newFactory = factory.withName("newName");
 
     Assert.assertNotNull(newFactory);
-    Assert.assertTrue(newFactory instanceof StringMinAggregatorFactory);
+    Assert.assertTrue(newFactory instanceof StringMaxAggregatorFactory);
     Assert.assertEquals("newName", newFactory.getName());
   }
 
   @Test
   public void testGetCacheKey()
   {
-    StringMinAggregatorFactory factory = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
+    StringMaxAggregatorFactory factory = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
     byte[] cacheKey = factory.getCacheKey();
 
     Assert.assertNotNull(cacheKey);
@@ -154,24 +155,24 @@ public class StringMinAggregatorFactoryTest
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
 
     // Initial JSON string
-    String json0 = "{\"type\": \"stringMin\", \"name\": \"aggName\", \"fieldName\": \"fieldName\"}";
-    StringMinAggregatorFactory agg0 = objectMapper.readValue(json0, StringMinAggregatorFactory.class);
+    String json0 = "{\"type\": \"stringMax\", \"name\": \"aggName\", \"fieldName\": \"fieldName\"}";
+    StringMaxAggregatorFactory agg0 = objectMapper.readValue(json0, StringMaxAggregatorFactory.class);
     Assert.assertEquals("aggName", agg0.getName());
     Assert.assertEquals("fieldName", agg0.getFieldName());
     Assert.assertEquals((Integer) 1024, agg0.getMaxStringBytes());  // Assuming default value
     Assert.assertTrue(agg0.isAggregateMultipleValues()); // Assuming default value
 
     // JSON string with all fields
-    String aggSpecJson = "{\"type\": \"stringMin\", \"name\": \"aggName\", \"fieldName\": \"fieldName\", \"maxStringBytes\": 2048, \"aggregateMultipleValues\": true}";
-    StringMinAggregatorFactory agg = objectMapper.readValue(aggSpecJson, StringMinAggregatorFactory.class);
-    StringMinAggregatorFactory expectedAgg = new StringMinAggregatorFactory("aggName", "fieldName", 2048, true);
+    String aggSpecJson = "{\"type\": \"stringMax\", \"name\": \"aggName\", \"fieldName\": \"fieldName\", \"maxStringBytes\": 2048, \"aggregateMultipleValues\": true}";
+    StringMaxAggregatorFactory agg = objectMapper.readValue(aggSpecJson, StringMaxAggregatorFactory.class);
+    StringMaxAggregatorFactory expectedAgg = new StringMaxAggregatorFactory("aggName", "fieldName", 2048, true);
 
     Assert.assertEquals(expectedAgg, agg);
 
     // Serialize and deserialize to check consistency
     Assert.assertEquals(
         agg,
-        objectMapper.readValue(objectMapper.writeValueAsBytes(agg), StringMinAggregatorFactory.class)
+        objectMapper.readValue(objectMapper.writeValueAsBytes(agg), StringMaxAggregatorFactory.class)
     );
   }
 }
