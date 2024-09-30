@@ -114,7 +114,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
     },
     snappyHighlight: {
       type: 'boolean',
-      label: 'Snap highlight to nearest dates',
+      label: 'Snap highlight to granularity',
       defaultValue: true,
       sticky: true,
     },
