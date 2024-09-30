@@ -44,8 +44,8 @@ import org.apache.druid.query.aggregation.SerializablePairLongFloatComplexMetric
 import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricSerde;
 import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
 import org.apache.druid.query.aggregation.SingleValueAggregatorFactory;
-import org.apache.druid.query.aggregation.StringMinAggregatorFactory;
 import org.apache.druid.query.aggregation.StringMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.StringMinAggregatorFactory;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
