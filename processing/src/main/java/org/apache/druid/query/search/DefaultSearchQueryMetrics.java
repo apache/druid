@@ -122,6 +122,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public void columns(SearchQuery query)
+  {
+    // Don't emit by default
+  }
+
+  @Override
   public void server(String host)
   {
     delegateQueryMetrics.server(host);

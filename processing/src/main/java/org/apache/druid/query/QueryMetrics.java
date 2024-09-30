@@ -233,6 +233,12 @@ public interface QueryMetrics<QueryType extends Query<?>>
   @PublicApi
   void context(QueryType query);
 
+  /**
+   * Sets {@link Query#getRequiredColumns()} of the given query as dimension.
+   */
+  @PublicApi
+  void columns(QueryType query);
+
   void server(String host);
 
   void remoteAddress(String remoteAddress);
