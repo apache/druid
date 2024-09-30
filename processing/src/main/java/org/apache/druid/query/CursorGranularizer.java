@@ -147,12 +147,16 @@ public class CursorGranularizer
     if (descending) {
       while (currentTime >= currentBucketEnd && !cursor.isDone()) {
         cursor.advance();
-        currentTime = timeSelector.getLong();
+        if (!cursor.isDone()) {
+          currentTime = timeSelector.getLong();
+        }
       }
     } else {
       while (currentTime < currentBucketStart && !cursor.isDone()) {
         cursor.advance();
-        currentTime = timeSelector.getLong();
+        if (!cursor.isDone()) {
+          currentTime = timeSelector.getLong();
+        }
       }
     }
 
