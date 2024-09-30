@@ -428,6 +428,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
           columns={columnNester(
             queryResult.header.map((column, i) => {
               const h = column.name;
+              const hint = columnHints?.get(h);
               const icon = showTypeIcons ? columnToIcon(column) : undefined;
 
               return {
@@ -446,9 +447,10 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                 },
                 headerClassName: getHeaderClassName(h),
                 accessor: String(i),
+                show: !hint?.hidden,
                 Cell(row) {
                   const value = row.value;
-                  const formatter = columnHints?.get(h)?.formatter || formatNumber;
+                  const formatter = hint?.formatter || formatNumber;
                   return (
                     <div>
                       <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
