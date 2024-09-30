@@ -19,9 +19,12 @@
 
 package org.apache.druid.query.aggregation;
 
+import org.apache.druid.query.monomorphicprocessing.HotLoopCallee;
+import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class StringMinBufferAggregatorTest
@@ -40,7 +43,7 @@ public class StringMinBufferAggregatorTest
   @Test
   public void testBufferAggregate()
   {
-    final String[] strings = {"BBBB", "AAAAA", "CCCC", "DDDD", "EEEE"};
+    final String[] strings = {"Minstrings", "a", "MinStrings", "MinString", "Minstring"};
     int maxStringBytes = 1024;
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
@@ -60,13 +63,13 @@ public class StringMinBufferAggregatorTest
 
     String result = (String) agg.get(buf, position);
 
-    Assert.assertEquals("AAAAA", result);
+    Assert.assertEquals("MinString", result);
   }
 
   @Test
-  public void testBufferAggregateWithFoldCheck()
+  public void testBufferAggregateWithDuplicateValues()
   {
-    final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
+    final String[] strings = {"AAAA", "AAAA", "aaaa", "aaaa", "BBBB"};
     int maxStringBytes = 1024;
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
@@ -92,7 +95,7 @@ public class StringMinBufferAggregatorTest
   @Test
   public void testContainsNullBufferAggregate()
   {
-    final String[] strings = {"CCCC", "AAAA", "BBBB", null, "EEEE"};
+    final String[] strings = {null, "AAAA", "BBBB", null, "CCCC"};
     int maxStringBytes = 1024;
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
@@ -116,9 +119,9 @@ public class StringMinBufferAggregatorTest
   }
 
   @Test
-  public void testNullFirstBufferAggregate()
+  public void testSpecialCharactersBufferAggregate()
   {
-    final String[] strings = {null, "CCCC", "AAAA", "BBBB", "EEEE"};
+    final String[] strings = {"ZZZZ", "@@@@", "!!!!", "####", "&&&&"};
     int maxStringBytes = 1024;
 
     TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
@@ -137,6 +140,110 @@ public class StringMinBufferAggregatorTest
     }
 
     String result = (String) agg.get(buf, position);
+
+    Assert.assertEquals("!!!!", result);
+  }
+
+  @Test
+  public void testDifferentBufferPositions()
+  {
+    final String[] strings = {"BBBB", "AAAA", "CCCC", "DDDD", "EEEE"};
+    int maxStringBytes = 1024;
+
+    TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
+
+    StringMinBufferAggregator agg = new StringMinBufferAggregator(
+        objectColumnSelector,
+        maxStringBytes
+    );
+
+    ByteBuffer buf = ByteBuffer.allocate(2048);
+    int position1 = 0;
+    int position2 = 1024;
+
+    agg.init(buf, position1);
+    agg.init(buf, position2);
+
+    for (int i = 0; i < strings.length; i++) {
+      aggregateBuffer(objectColumnSelector, agg, buf, position1);
+      aggregateBuffer(objectColumnSelector, agg, buf, position2);
+    }
+
+    String result1 = (String) agg.get(buf, position1);
+    String result2 = (String) agg.get(buf, position2);
+
+    Assert.assertEquals("AAAA", result1);
+    Assert.assertEquals("AAAA", result2);
+  }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void testGetFloat()
+  {
+    int maxStringBytes = 1024;
+    TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(new String[]{"AAAA"});
+
+    StringMinBufferAggregator agg = new StringMinBufferAggregator(objectColumnSelector, maxStringBytes);
+    ByteBuffer buf = ByteBuffer.allocate(2048);
+    int position = 0;
+
+    agg.init(buf, position);
+    agg.getFloat(buf, position);
+  }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void testGetLong()
+  {
+    int maxStringBytes = 1024;
+    TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(new String[]{"AAAA"});
+
+    StringMinBufferAggregator agg = new StringMinBufferAggregator(objectColumnSelector, maxStringBytes);
+    ByteBuffer buf = ByteBuffer.allocate(2048);
+    int position = 0;
+
+    agg.init(buf, position);
+    agg.getLong(buf, position);
+  }
+
+  @Test(expected = UnsupportedOperationException.class)
+  public void testGetDouble()
+  {
+    int maxStringBytes = 1024;
+    TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(new String[]{"AAAA"});
+
+    StringMinBufferAggregator agg = new StringMinBufferAggregator(objectColumnSelector, maxStringBytes);
+    ByteBuffer buf = ByteBuffer.allocate(2048);
+    int position = 0;
+
+    agg.init(buf, position);
+    agg.getDouble(buf, position);
+  }
+
+  @Test
+  public void testRelocate()
+  {
+    final String[] strings = {"AAAA", "BBBB", "CCCC", "DDDD", "EEEE"};
+    int maxStringBytes = 1024;
+
+    TestObjectColumnSelector<String> objectColumnSelector = new TestObjectColumnSelector<>(strings);
+
+    StringMinBufferAggregator agg = new StringMinBufferAggregator(
+        objectColumnSelector,
+        maxStringBytes
+    );
+
+    ByteBuffer oldBuf = ByteBuffer.allocate(2048);
+    ByteBuffer newBuf = ByteBuffer.allocate(2048);
+    int oldPosition = 0;
+    int newPosition = 1024;
+
+    agg.init(oldBuf, oldPosition);
+    for (int i = 0; i < strings.length; i++) {
+      aggregateBuffer(objectColumnSelector, agg, oldBuf, oldPosition);
+    }
+
+    agg.relocate(oldPosition, newPosition, oldBuf, newBuf);
+
+    String result = (String) agg.get(newBuf, newPosition);
 
     Assert.assertEquals("AAAA", result);
   }
