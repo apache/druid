@@ -152,7 +152,7 @@ public class DartWorkerManager implements WorkerManager
     final Int2ObjectMap<List<WorkerStats>> retVal = new Int2ObjectAVLTreeMap<>();
 
     for (int i = 0; i < workerIds.size(); i++) {
-      retVal.put(i, Collections.singletonList(new WorkerStats(workerIds.get(0), TaskState.RUNNING, -1, -1)));
+      retVal.put(i, Collections.singletonList(new WorkerStats(workerIds.get(i), TaskState.RUNNING, -1, -1)));
     }
 
     return retVal;
