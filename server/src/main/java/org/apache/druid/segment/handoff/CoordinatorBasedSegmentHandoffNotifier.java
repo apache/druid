@@ -22,6 +22,7 @@ package org.apache.druid.segment.handoff;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.SegmentDescriptor;
@@ -44,6 +45,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   private volatile ScheduledExecutorService scheduledExecutor;
   private final Duration pollDuration;
   private final String dataSource;
+  private final String indexTaskId;
 
   public CoordinatorBasedSegmentHandoffNotifier(
       String dataSource,
@@ -54,6 +56,20 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
     this.dataSource = dataSource;
     this.coordinatorClient = coordinatorClient;
     this.pollDuration = config.getPollDuration();
+    this.indexTaskId = "default";
+  }
+
+  public CoordinatorBasedSegmentHandoffNotifier(
+      String dataSource,
+      CoordinatorClient coordinatorClient,
+      CoordinatorBasedSegmentHandoffNotifierConfig config,
+      String indexTaskId
+  )
+  {
+    this.dataSource = dataSource;
+    this.coordinatorClient = coordinatorClient;
+    this.pollDuration = config.getPollDuration();
+    this.indexTaskId = indexTaskId;
   }
 
   @Override
@@ -70,7 +86,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   @Override
   public void start()
   {
-    scheduledExecutor = Execs.scheduledSingleThreaded("coordinator_handoff_scheduled_%d");
+    scheduledExecutor = Execs.scheduledSingleThreaded("[" + StringUtils.encodeForFormat(indexTaskId) + "]-coordinator_handoff_scheduled_%d");
     scheduledExecutor.scheduleAtFixedRate(
         this::checkForSegmentHandoffs,
         0L,

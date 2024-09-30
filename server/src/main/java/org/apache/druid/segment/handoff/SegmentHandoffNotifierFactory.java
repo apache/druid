@@ -23,4 +23,5 @@ package org.apache.druid.segment.handoff;
 public interface SegmentHandoffNotifierFactory
 {
   SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource);
+  SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String indexTaskId);
 }

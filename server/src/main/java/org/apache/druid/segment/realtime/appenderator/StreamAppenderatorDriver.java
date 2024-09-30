@@ -108,7 +108,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
     super(appenderator, segmentAllocator, segmentRetriever, dataSegmentKiller);
 
     this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
-                                        .createSegmentHandoffNotifier(appenderator.getDataSource());
+                                        .createSegmentHandoffNotifier(appenderator.getDataSource(), appenderator.getId());
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
   }
