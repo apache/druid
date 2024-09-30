@@ -45,6 +45,7 @@ import org.apache.druid.query.aggregation.SerializablePairLongLongComplexMetricS
 import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
 import org.apache.druid.query.aggregation.SingleValueAggregatorFactory;
 import org.apache.druid.query.aggregation.StringMinAggregatorFactory;
+import org.apache.druid.query.aggregation.StringMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.any.DoubleAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.FloatAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.any.LongAnyAggregatorFactory;
@@ -127,7 +128,7 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "doubleMin", value = DoubleMinAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longMax", value = LongMaxAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longMin", value = LongMinAggregatorFactory.class),
-      // @JsonSubTypes.Type(name = "stringMax", value = StringMaxAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "stringMax", value = StringMaxAggregatorFactory.class),
       @JsonSubTypes.Type(name = "stringMin", value = StringMinAggregatorFactory.class),
       @JsonSubTypes.Type(name = "javascript", value = JavaScriptAggregatorFactory.class),
       @JsonSubTypes.Type(name = "histogram", value = HistogramAggregatorFactory.class),

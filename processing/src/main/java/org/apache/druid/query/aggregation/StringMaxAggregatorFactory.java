@@ -1,0 +1,182 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.query.aggregation;
+
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
+
+import javax.annotation.Nullable;
+import java.util.Comparator;
+
+public class StringMaxAggregatorFactory extends SimpleStringAggregatorFactory
+{
+  private static final Comparator<String> VALUE_COMPARATOR = Comparator.nullsLast(Comparator.reverseOrder());
+  private final Supplier<byte[]> cacheKey;
+
+  @JsonCreator
+  public StringMaxAggregatorFactory(
+      @JsonProperty("name") String name,
+      @JsonProperty("fieldName") @Nullable String fieldName,
+      @JsonProperty("maxStringBytes") @Nullable Integer maxStringBytes,
+      @JsonProperty("aggregateMultipleValues") @Nullable final Boolean aggregateMultipleValues,
+      @JsonProperty("expression") @Nullable String expression,
+      @JacksonInject ExprMacroTable macroTable
+  )
+  {
+    super(macroTable, name, fieldName, expression, maxStringBytes, aggregateMultipleValues);
+
+    this.cacheKey = AggregatorUtil.getSimpleAggregatorCacheKeySupplier(
+        AggregatorUtil.STRING_MAX_CACHE_TYPE_ID,
+        fieldName,
+        fieldExpression
+    );
+  }
+
+  public StringMaxAggregatorFactory(
+      String name,
+      String fieldName,
+      Integer maxStringBytes,
+      boolean aggregateMultipleValues
+  )
+  {
+    this(name, fieldName, maxStringBytes, aggregateMultipleValues, null, ExprMacroTable.nil());
+  }
+
+  @Override
+  protected Aggregator buildAggregator(BaseObjectColumnValueSelector<String> selector)
+  {
+    return new StringMaxAggregator(selector, maxStringBytes);
+  }
+
+  @Override
+  protected BufferAggregator buildBufferAggregator(BaseObjectColumnValueSelector<String> selector)
+  {
+    return new StringMaxBufferAggregator(selector, maxStringBytes);
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(
+      VectorColumnSelectorFactory columnSelectorFactory,
+      VectorValueSelector selector
+  )
+  {
+    String field;
+    if (fieldName != null) {
+      field = fieldName;
+    } else {
+      Preconditions.checkNotNull(expression);
+      field = expression;
+    }
+
+    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(field);
+
+    if (capabilities != null && capabilities.hasMultipleValues().isMaybeTrue()) {
+      return new StringMaxVectorAggregator(
+          null,
+          columnSelectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(field)),
+          maxStringBytes,
+          aggregateMultipleValues
+      );
+    } else {
+      return new StringMaxVectorAggregator(
+          columnSelectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(field)),
+          null,
+          maxStringBytes,
+          aggregateMultipleValues
+      );
+    }
+  }
+
+  @Override
+  public Comparator<String> getComparator()
+  {
+    return StringMaxAggregatorFactory.VALUE_COMPARATOR;
+  }
+
+  @Nullable
+  @Override
+  public Object combine(@Nullable Object lhs, @Nullable Object rhs)
+  {
+    return StringMaxAggregator.combineValues((String) lhs, (String) rhs);
+  }
+
+  @JsonIgnore
+  @Override
+  public AggregatorFactory getCombiningFactory()
+  {
+    return new StringMaxAggregatorFactory(name, name, maxStringBytes, aggregateMultipleValues);
+  }
+
+  @Override
+  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  {
+    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
+      return getCombiningFactory();
+    } else {
+      throw new AggregatorFactoryNotMergeableException(this, other);
+    }
+  }
+
+  @Override
+  public String getName()
+  {
+    return name;
+  }
+
+  @Override
+  public AggregatorFactory withName(String newName)
+  {
+    return new StringMaxAggregatorFactory(
+        newName,
+        fieldName,
+        maxStringBytes,
+        aggregateMultipleValues,
+        expression,
+        macroTable
+    );
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return cacheKey.get();
+  }
+
+  @Override
+  public String toString()
+  {
+    return "StringMaxAggregatorFactory{" +
+           "name='" + name + '\'' +
+           ", fieldName='" + fieldName + '\'' +
+           ", maxStringBytes=" + maxStringBytes +
+           ", aggregateMultipleValues=" + aggregateMultipleValues +
+           '}';
+  }
+}
