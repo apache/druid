@@ -442,7 +442,7 @@ Also, as a result of this, comma joins should be avoided.
 Joins in Druid have the following limitations:
 
 - The order of joins is not entirely optimized. Join operations are not reordered to get the most performant plan.
-- Preloaded Dimension tables that are wider than lookups (i.e. supporting more than a single key and single value) are not supported.
+- Preloaded dimension tables that are wider than lookups (i.e. supporting more than a single key and single value) are not supported.
 - RIGHT OUTER and FULL OUTER joins in the native query engine are not fully implemented. Queries run
   but results are not always correct.
 - Join conditions on a column can't contain a multi-value dimension.
