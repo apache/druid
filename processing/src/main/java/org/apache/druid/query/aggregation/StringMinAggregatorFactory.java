@@ -23,9 +23,15 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorValueSelector;
+
 
 import javax.annotation.Nullable;
 import java.util.Comparator;
@@ -77,6 +83,39 @@ public class StringMinAggregatorFactory extends SimpleStringAggregatorFactory
   protected BufferAggregator buildBufferAggregator(BaseObjectColumnValueSelector<String> selector)
   {
     return new StringMinBufferAggregator(selector, maxStringBytes);
+  }
+
+  @Override
+  public VectorAggregator factorizeVector(
+      VectorColumnSelectorFactory columnSelectorFactory,
+      VectorValueSelector selector
+  )
+  {
+    String field;
+    if (fieldName != null) {
+      field = fieldName;
+    } else {
+      Preconditions.checkNotNull(expression);
+      field = expression;
+    }
+
+    final ColumnCapabilities capabilities =  columnSelectorFactory.getColumnCapabilities(field);
+
+    if (capabilities != null && capabilities.hasMultipleValues().isMaybeTrue()) {
+      return new StringMinVectorAggregator(
+          null,
+          columnSelectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(field)),
+          maxStringBytes,
+          aggregateMultipleValues
+      );
+    } else {
+      return new StringMinVectorAggregator(
+          columnSelectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(field)),
+          null,
+          maxStringBytes,
+          aggregateMultipleValues
+      );
+    }
   }
 
   @Override

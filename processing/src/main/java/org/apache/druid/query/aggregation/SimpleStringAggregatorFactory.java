@@ -128,7 +128,6 @@ public abstract class SimpleStringAggregatorFactory
     return object.toString(); // Assuming the object can be converted to a String
   }
 
-
   @Override
   public ColumnType getIntermediateType()
   {
