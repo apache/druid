@@ -58,32 +58,11 @@ import { QuerySource } from './models';
 import { ModuleRepository } from './module-repository/module-repository';
 import { rewriteAggregate, rewriteMaxDataTime } from './query-macros';
 import type { Rename } from './utils';
-import { adjustTransferValue, normalizeType } from './utils';
+import { adjustTransferValue, normalizeType, QueryLog } from './utils';
 
 import './explore-view.scss';
 
-// ---------------------------------------
-
-interface QueryHistoryEntry {
-  time: Date;
-  sqlQuery: string;
-}
-
-const MAX_PAST_QUERIES = 10;
-const QUERY_HISTORY: QueryHistoryEntry[] = [];
-
-function addQueryToHistory(sqlQuery: string): void {
-  QUERY_HISTORY.unshift({ time: new Date(), sqlQuery });
-  while (QUERY_HISTORY.length > MAX_PAST_QUERIES) QUERY_HISTORY.pop();
-}
-
-function getFormattedQueryHistory(): string {
-  return QUERY_HISTORY.map(
-    ({ time, sqlQuery }) => `At ${time.toISOString()} ran query:\n\n${sqlQuery}`,
-  ).join('\n\n-----------------------------------------------------\n\n');
-}
-
-// ---------------------------------------
+const QUERY_LOG = new QueryLog();
 
 function getStickyParameterValuesForModule(moduleId: string): ParameterValues {
   return localStorageGetJson(LocalStorageKeys.EXPLORE_STICKY)?.[moduleId] || {};
@@ -95,7 +74,7 @@ const queryRunner = new QueryRunner({
   inflateDateStrategy: 'fromSqlTypes',
   executor: async (sqlQueryPayload, isSql, cancelToken) => {
     if (!isSql) throw new Error('should never get here');
-    addQueryToHistory(sqlQueryPayload.query);
+    QUERY_LOG.addQuery(sqlQueryPayload.query);
     return Api.instance.post('/druid/v2/sql', sqlQueryPayload, { cancelToken });
   },
 });
@@ -379,9 +358,9 @@ export const ExploreView = React.memo(function ExploreView() {
                 <MenuItem
                   icon={IconNames.DUPLICATE}
                   text="Copy last query"
-                  disabled={!QUERY_HISTORY.length}
+                  disabled={!QUERY_LOG.length()}
                   onClick={() => {
-                    copy(QUERY_HISTORY[0]?.sqlQuery, { format: 'text/plain' });
+                    copy(QUERY_LOG.getLastQuery()!, { format: 'text/plain' });
                     AppToaster.show({
                       message: `Copied query to clipboard`,
                       intent: Intent.SUCCESS,
@@ -390,9 +369,9 @@ export const ExploreView = React.memo(function ExploreView() {
                 />
                 <MenuItem
                   icon={IconNames.HISTORY}
-                  text="Show query history"
+                  text="Show query log"
                   onClick={() => {
-                    setShownText(getFormattedQueryHistory());
+                    setShownText(QUERY_LOG.getFormatted());
                   }}
                 />
                 <MenuItem
