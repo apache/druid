@@ -692,15 +692,6 @@ Changed the upload buffer size in `GoogleTaskLogs` to 1 MB instead of 15 MB to a
 
 ### Incompatible changes
 
-#### Changes to `targetDataSource` in EXPLAIN queries
-
-Druid 30.0.0 includes a breaking change that restores the behavior for `targetDataSource` to its 28.0.0 and earlier state, different from Druid 29.0.0 and only 29.0.0. In 29.0.0, `targetDataSource` returns a JSON object that includes the datasource name. In all other versions, `targetDataSource` returns a string containing the name of the datasource.
-
-If you're upgrading from any version other than 29.0.0, there is no change in behavior.
-
-If you are upgrading from 29.0.0, this is an incompatible change.
-
-[#16004](https://github.com/apache/druid/pull/16004)
 
 #### Removed ZooKeeper-based segment loading
 
