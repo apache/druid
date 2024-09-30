@@ -40,6 +40,7 @@ public class StringMinAggregatorTest
     }
 
     String result = (String) agg.get();
+    agg.close();
 
     Assert.assertEquals("MinString", result);
   }
@@ -60,6 +61,7 @@ public class StringMinAggregatorTest
     }
 
     String result = (String) agg.get();
+    agg.close();
 
     Assert.assertEquals("AAAA", result);
   }
@@ -80,6 +82,7 @@ public class StringMinAggregatorTest
     }
 
     String result = (String) agg.get();
+    agg.close();
 
     Assert.assertEquals("AAAA", result);
   }
@@ -100,6 +103,7 @@ public class StringMinAggregatorTest
     }
 
     String result = (String) agg.get();
+    agg.close();
 
     Assert.assertEquals("!!!!", result);
   }
@@ -120,6 +124,7 @@ public class StringMinAggregatorTest
     }
 
     String result = (String) agg.get();
+    agg.close();
 
     Assert.assertEquals("", result);
   }
@@ -140,6 +145,7 @@ public class StringMinAggregatorTest
     }
 
     String result = (String) agg.get();
+    agg.close();
 
     Assert.assertEquals("A very ver", result);
   }
@@ -152,6 +158,7 @@ public class StringMinAggregatorTest
 
     StringMinAggregator agg = new StringMinAggregator(objectColumnSelector, maxStringBytes);
     agg.getFloat();
+    agg.close();
   }
 
   @Test(expected = UnsupportedOperationException.class)
@@ -162,6 +169,7 @@ public class StringMinAggregatorTest
 
     StringMinAggregator agg = new StringMinAggregator(objectColumnSelector, maxStringBytes);
     agg.getLong();
+    agg.close();
   }
 
   @Test(expected = UnsupportedOperationException.class)
@@ -172,6 +180,7 @@ public class StringMinAggregatorTest
 
     StringMinAggregator agg = new StringMinAggregator(objectColumnSelector, maxStringBytes);
     agg.getDouble();
+    agg.close();
   }
 
   @Test
@@ -189,6 +198,7 @@ public class StringMinAggregatorTest
     agg.aggregate();
 
     Assert.assertFalse(agg.isNull());
+    agg.close();
   }
 
   @Test
