@@ -68,10 +68,10 @@ public class DartProcessingBuffersProvider implements ProcessingBuffersProvider
     final ReferenceCountingResourceHolder<ByteBuffer> bufferHolder = batch.get(0);
     try {
       final ByteBuffer buffer = bufferHolder.get().duplicate();
+      final int sliceSize = buffer.capacity() / poolSize / processingThreads;
       final List<ProcessingBuffers> pool = new ArrayList<>(poolSize);
 
       for (int i = 0; i < poolSize; i++) {
-        final int sliceSize = buffer.capacity() / poolSize / processingThreads;
         final BlockingQueue<ByteBuffer> queue = new ArrayBlockingQueue<>(processingThreads);
         for (int j = 0; j < processingThreads; j++) {
           final int sliceNum = i * processingThreads + j;

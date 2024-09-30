@@ -25,13 +25,16 @@ import org.joda.time.Interval;
 
 import java.util.Objects;
 
-public class QueryableDataSegment
+/**
+ * Represents a segment that is queryable at a specific worker number.
+ */
+public class DartQueryableSegment
 {
   private final DataSegment segment;
   private final Interval interval;
   private final int workerNumber;
 
-  public QueryableDataSegment(final DataSegment segment, final Interval interval, final int workerNumber)
+  public DartQueryableSegment(final DataSegment segment, final Interval interval, final int workerNumber)
   {
     this.segment = Preconditions.checkNotNull(segment, "segment");
     this.interval = Preconditions.checkNotNull(interval, "interval");
@@ -62,7 +65,7 @@ public class QueryableDataSegment
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    QueryableDataSegment that = (QueryableDataSegment) o;
+    DartQueryableSegment that = (DartQueryableSegment) o;
     return workerNumber == that.workerNumber
            && Objects.equals(segment, that.segment)
            && Objects.equals(interval, that.interval);

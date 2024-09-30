@@ -132,7 +132,9 @@ public class DartControllerContext implements ControllerContext
       workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId).toString());
     }
 
-    // Shuffle workerIds, so we don't bias a single server to always be worker 0 (which tends to do more work).
+    // Shuffle workerIds, so we don't bias towards specific servers when running multiple queries concurrently. For any
+    // given query, lower-numbered workers tend to do more work, because the controller prefers using lower-numbered
+    // workers when maxWorkerCount for a stage is less than the total number of workers.
     Collections.shuffle(workerIds);
 
     final ControllerMemoryParameters memoryParameters =

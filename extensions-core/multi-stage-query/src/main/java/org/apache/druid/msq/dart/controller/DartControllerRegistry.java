@@ -24,31 +24,49 @@ import org.apache.druid.msq.exec.Controller;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Registry for actively-running {@link Controller}.
  */
-public interface DartControllerRegistry
+public class DartControllerRegistry
 {
+  private final ConcurrentHashMap<String, ControllerHolder> controllerMap = new ConcurrentHashMap<>();
+
   /**
    * Add a controller. Throws {@link DruidException} if a controller with the same {@link Controller#queryId()} is
    * already registered.
    */
-  void register(ControllerHolder holder);
+  public void register(ControllerHolder holder)
+  {
+    if (controllerMap.putIfAbsent(holder.getController().queryId(), holder) != null) {
+      throw DruidException.defensive("Controller[%s] already registered", holder.getController().queryId());
+    }
+  }
 
   /**
    * Remove a controller from the registry.
    */
-  void remove(ControllerHolder holder);
+  public void deregister(ControllerHolder holder)
+  {
+    // Remove only if the current mapping for the queryId is this specific controller.
+    controllerMap.remove(holder.getController().queryId(), holder);
+  }
 
   /**
    * Return a specific controller holder, or null if it doesn't exist.
    */
   @Nullable
-  ControllerHolder get(String queryId);
+  public ControllerHolder get(final String queryId)
+  {
+    return controllerMap.get(queryId);
+  }
 
   /**
    * Returns all actively-running {@link Controller}.
    */
-  Collection<ControllerHolder> getAllHolders();
+  public Collection<ControllerHolder> getAllHolders()
+  {
+    return controllerMap.values();
+  }
 }

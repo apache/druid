@@ -28,7 +28,7 @@ import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.msq.dart.worker.QueryableDataSegment;
+import org.apache.druid.msq.dart.worker.DartQueryableSegment;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.exec.WorkerManager;
@@ -63,16 +63,16 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   /**
    * Worker host:port -> worker number. This is the reverse of the mapping from {@link WorkerManager#getWorkerIds()}.
    */
-  private final Object2IntMap<String> reverseWorkers;
+  private final Object2IntMap<String> workerIdToNumber;
 
   /**
    * Server view for identifying which segments exist and which servers (workers) have which segments.
    */
   private final TimelineServerView serverView;
 
-  DartTableInputSpecSlicer(final Object2IntMap<String> reverseWorkers, final TimelineServerView serverView)
+  DartTableInputSpecSlicer(final Object2IntMap<String> workerIdToNumber, final TimelineServerView serverView)
   {
-    this.reverseWorkers = reverseWorkers;
+    this.workerIdToNumber = workerIdToNumber;
     this.serverView = serverView;
   }
 
@@ -108,20 +108,20 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
       return Collections.emptyList();
     }
 
-    final Set<QueryableDataSegment> prunedSegments =
+    final Set<DartQueryableSegment> prunedSegments =
         findQueryableDataSegments(
             tableInputSpec,
             timeline,
             serverSelector -> findWorkerForServerSelector(serverSelector, maxNumSlices)
         );
 
-    final List<List<QueryableDataSegment>> assignments = new ArrayList<>(maxNumSlices);
+    final List<List<DartQueryableSegment>> assignments = new ArrayList<>(maxNumSlices);
     while (assignments.size() < maxNumSlices) {
       assignments.add(null);
     }
 
     int nextRoundRobinWorker = 0;
-    for (final QueryableDataSegment segment : prunedSegments) {
+    for (final DartQueryableSegment segment : prunedSegments) {
       final int worker;
       if (segment.getWorkerNumber() == UNKNOWN) {
         // Segment is not available on any worker. Assign to some worker, round-robin. Today, that server will throw
@@ -169,10 +169,12 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
     }
 
     final String serverHostAndPort = server.getServer().getHostAndPort();
-    final int worker = reverseWorkers.getInt(serverHostAndPort);
+    final int workerNumber = workerIdToNumber.getInt(serverHostAndPort);
 
-    if (worker != UNKNOWN && worker < maxNumSlices) {
-      return worker;
+    // The worker number may be UNKNOWN in a race condition, such as the set of Historicals changing while
+    // the query is being planned. I don't think it can be >= maxNumSlices, but if it is, treat it like UNKNOWN.
+    if (workerNumber != UNKNOWN && workerNumber < maxNumSlices) {
+      return workerNumber;
     } else {
       return UNKNOWN;
     }
@@ -182,13 +184,13 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    * Pull the list of {@link DataSegment} that we should query, along with a clipping interval for each one, and
    * a worker to get it from.
    */
-  static Set<QueryableDataSegment> findQueryableDataSegments(
+  static Set<DartQueryableSegment> findQueryableDataSegments(
       final TableInputSpec tableInputSpec,
       final TimelineLookup<?, ServerSelector> timeline,
       final ToIntFunction<ServerSelector> toWorkersFunction
   )
   {
-    final FluentIterable<QueryableDataSegment> allSegments =
+    final FluentIterable<DartQueryableSegment> allSegments =
         FluentIterable.from(JodaUtils.condenseIntervals(tableInputSpec.getIntervals()))
                       .transformAndConcat(timeline::lookup)
                       .transformAndConcat(
@@ -200,7 +202,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
                                     final ServerSelector serverSelector = chunk.getObject();
                                     final DataSegment dataSegment = serverSelector.getSegment();
                                     final int worker = toWorkersFunction.applyAsInt(serverSelector);
-                                    return new QueryableDataSegment(dataSegment, holder.getInterval(), worker);
+                                    return new DartQueryableSegment(dataSegment, holder.getInterval(), worker);
                                   })
                                   .filter(segment -> !segment.getSegment().isTombstone())
                       );
@@ -226,17 +228,17 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    */
   static List<InputSlice> makeSegmentSlices(
       final String dataSource,
-      final List<List<QueryableDataSegment>> assignments
+      final List<List<DartQueryableSegment>> assignments
   )
   {
     final List<InputSlice> retVal = new ArrayList<>(assignments.size());
 
-    for (final List<QueryableDataSegment> assignment : assignments) {
+    for (final List<DartQueryableSegment> assignment : assignments) {
       if (assignment == null || assignment.isEmpty()) {
         retVal.add(NilInputSlice.INSTANCE);
       } else {
         final List<RichSegmentDescriptor> descriptors = new ArrayList<>();
-        for (final QueryableDataSegment segment : assignment) {
+        for (final DartQueryableSegment segment : assignment) {
           if (!dataSource.equals(segment.getSegment().getDataSource())) {
             throw new ISE("Expected dataSource[%s] but got[%s]", dataSource, segment.getSegment().getDataSource());
           }
@@ -254,7 +256,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   /**
    * Returns a {@link RichSegmentDescriptor}, which is used by {@link SegmentsInputSlice}.
    */
-  static RichSegmentDescriptor toRichSegmentDescriptor(final QueryableDataSegment segment)
+  static RichSegmentDescriptor toRichSegmentDescriptor(final DartQueryableSegment segment)
   {
     return new RichSegmentDescriptor(
         segment.getSegment().getInterval(),

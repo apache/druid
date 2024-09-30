@@ -70,6 +70,10 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * Resource for Dart queries. API-compatible with {@link SqlResource}, so clients can be pointed from
+ * {@code /druid/v2/sql/} to {@code /druid/v2/sql/dart/} without code changes.
+ */
 @Path(DartSqlResource.PATH + '/')
 public class DartSqlResource extends SqlResource
 {
@@ -253,6 +257,13 @@ public class DartSqlResource extends SqlResource
             found = true;
             holder.cancel();
           }
+        } else {
+          log.warn(
+              "%s[%s] for query[%s] is not a string, cannot cancel.",
+              DartSqlEngine.CTX_DART_QUERY_ID,
+              dartQueryId,
+              sqlQueryId
+          );
         }
       }
 

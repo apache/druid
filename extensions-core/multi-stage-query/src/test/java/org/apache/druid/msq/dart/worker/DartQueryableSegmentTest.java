@@ -22,11 +22,11 @@ package org.apache.druid.msq.dart.worker;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.jupiter.api.Test;
 
-public class QueryableDataSegmentTest
+public class DartQueryableSegmentTest
 {
   @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(QueryableDataSegment.class).usingGetClass().verify();
+    EqualsVerifier.forClass(DartQueryableSegment.class).usingGetClass().verify();
   }
 }

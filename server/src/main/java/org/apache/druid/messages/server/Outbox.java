@@ -24,7 +24,9 @@ import org.apache.druid.messages.MessageBatch;
 import org.apache.druid.messages.client.MessageRelay;
 
 /**
- * An outbox for messages sent from servers to clients.
+ * An outbox for messages sent from servers to clients. Messages are retrieved in the order they are sent.
+ *
+ * @see org.apache.druid.messages package-level javadoc for description of the message relay system
  */
 public interface Outbox<MessageType>
 {
@@ -39,7 +41,7 @@ public interface Outbox<MessageType>
   ListenableFuture<?> sendMessage(String clientHost, MessageType message);
 
   /**
-   * Get the next batch of messages for an client, from an outbox.
+   * Get the next batch of messages for an client, from an outbox. Messages are retrieved in the order they were sent.
    *
    * The provided epoch must either be {@link MessageRelay#INIT}, or must match the epoch of the outbox as indicated by
    * {@link MessageBatch#getEpoch()} returned by previous calls to the same outbox. If the provided epoch does not

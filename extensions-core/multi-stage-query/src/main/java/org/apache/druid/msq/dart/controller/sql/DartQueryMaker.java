@@ -164,13 +164,15 @@ public class DartQueryMaker implements QueryMaker
     controllerRegistry.register(controllerHolder);
 
     try {
+      // runWithReport, runWithoutReport are responsible for calling controllerRegistry.deregister(controllerHolder)
+      // when their work is done.
       final Sequence<Object[]> results =
           fullReport ? runWithReport(controllerHolder) : runWithoutReport(controllerHolder);
       return QueryResponse.withEmptyContext(results);
     }
     catch (Throwable e) {
-      // Error while creating the result sequence; unregister controller.
-      controllerRegistry.remove(controllerHolder);
+      // Error while calling runWithReport or runWithoutReport. Deregister controller immediately.
+      controllerRegistry.deregister(controllerHolder);
       throw e;
     }
   }
@@ -179,7 +181,7 @@ public class DartQueryMaker implements QueryMaker
    * Run a query and return the full report, buffered in memory up to
    * {@link DartControllerConfig#getMaxQueryReportSize()}.
    *
-   * Arranges for {@link DartControllerRegistry#remove(ControllerHolder)} to be called upon completion (either
+   * Arranges for {@link DartControllerRegistry#deregister(ControllerHolder)} to be called upon completion (either
    * success or failure).
    */
   private Sequence<Object[]> runWithReport(final ControllerHolder controllerHolder)
@@ -219,7 +221,7 @@ public class DartQueryMaker implements QueryMaker
         }
       }
       finally {
-        controllerRegistry.remove(controllerHolder);
+        controllerRegistry.deregister(controllerHolder);
       }
     });
 
@@ -255,7 +257,7 @@ public class DartQueryMaker implements QueryMaker
   /**
    * Run a query and return the results only, streamed back using {@link ResultIteratorMaker}.
    *
-   * Arranges for {@link DartControllerRegistry#remove(ControllerHolder)} to be called upon completion (either
+   * Arranges for {@link DartControllerRegistry#deregister(ControllerHolder)} to be called upon completion (either
    * success or failure).
    */
   private Sequence<Object[]> runWithoutReport(final ControllerHolder controllerHolder)
@@ -315,7 +317,7 @@ public class DartQueryMaker implements QueryMaker
           );
         }
         finally {
-          controllerRegistry.remove(controllerHolder);
+          controllerRegistry.deregister(controllerHolder);
           Thread.currentThread().setName(threadName);
         }
       });

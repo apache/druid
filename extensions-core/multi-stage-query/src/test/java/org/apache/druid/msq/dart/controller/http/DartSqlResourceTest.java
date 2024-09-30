@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
-import org.apache.druid.msq.dart.controller.DartControllerRegistryImpl;
 import org.apache.druid.msq.dart.controller.sql.DartQueryMaker;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClient;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
@@ -178,7 +177,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     final DartSqlEngine engine = new DartSqlEngine(
         controllerContext,
-        controllerRegistry = new DartControllerRegistryImpl()
+        controllerRegistry = new DartControllerRegistry()
         {
           @Override
           public void register(ControllerHolder holder)
@@ -288,7 +287,7 @@ public class DartSqlResourceTest extends MSQTestBase
         sqlResource.doGetRunningQueries("", httpServletRequest)
     );
 
-    controllerRegistry.remove(holder);
+    controllerRegistry.deregister(holder);
   }
 
   /**
@@ -312,8 +311,8 @@ public class DartSqlResourceTest extends MSQTestBase
         sqlResource.doGetRunningQueries("", httpServletRequest)
     );
 
-    controllerRegistry.remove(holder);
-    controllerRegistry.remove(holder2);
+    controllerRegistry.deregister(holder);
+    controllerRegistry.deregister(holder2);
   }
 
   /**
@@ -352,7 +351,7 @@ public class DartSqlResourceTest extends MSQTestBase
         sqlResource.doGetRunningQueries(null, httpServletRequest)
     );
 
-    controllerRegistry.remove(localHolder);
+    controllerRegistry.deregister(localHolder);
   }
 
   /**
@@ -379,7 +378,7 @@ public class DartSqlResourceTest extends MSQTestBase
         sqlResource.doGetRunningQueries(null, httpServletRequest)
     );
 
-    controllerRegistry.remove(localHolder);
+    controllerRegistry.deregister(localHolder);
   }
 
   /**
@@ -415,7 +414,7 @@ public class DartSqlResourceTest extends MSQTestBase
         sqlResource.doGetRunningQueries(null, httpServletRequest)
     );
 
-    controllerRegistry.remove(localHolder);
+    controllerRegistry.deregister(localHolder);
   }
 
   /**
@@ -450,7 +449,7 @@ public class DartSqlResourceTest extends MSQTestBase
         sqlResource.doGetRunningQueries(null, httpServletRequest)
     );
 
-    controllerRegistry.remove(holder);
+    controllerRegistry.deregister(holder);
   }
 
   @Test

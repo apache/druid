@@ -132,10 +132,10 @@ public class DartControllerModule implements DruidModule
     @ManageLifecycle
     public DartMessageRelays makeMessageRelays(
         final DruidNodeDiscoveryProvider discoveryProvider,
-        final DartMessageRelayFactoryImpl messageCollectorFactory
+        final DartMessageRelayFactoryImpl messageRelayFactory
     )
     {
-      return new DartMessageRelays(discoveryProvider, messageCollectorFactory);
+      return new DartMessageRelays(discoveryProvider, messageRelayFactory);
     }
 
     @Provides

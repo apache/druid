@@ -140,6 +140,9 @@ public class OutboxImpl<MessageType> implements Outbox<MessageType>
 
     public OutboxQueue()
     {
+      // Random positive number, to differentiate this outbox from a previous version that may have lived
+      // on the same host. (When the upstream relay connects, it needs to know if this is the "same" outbox
+      // it was previously listening to.)
       this.epoch = ThreadLocalRandom.current().nextLong() & Long.MAX_VALUE;
     }
 
