@@ -653,7 +653,6 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     type: 'json',
     placeholder: '{"type": "=", "column": "name", "value": "foo"}',
     defined: typeIsKnown(KNOWN_TYPES, 'delta'),
-    required: false,
     info: (
       <>
         <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources/#delta-filter-object`}>
@@ -668,8 +667,8 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Delta snapshot version',
     type: 'number',
     placeholder: '(latest)',
+    zeroMeansUndefined: true,
     defined: typeIsKnown(KNOWN_TYPES, 'delta'),
-    required: false,
     info: (
       <>
         The snapshot version to read from the Delta table. By default, the latest snapshot is read.

@@ -75,3 +75,10 @@ body {
   max-height: 47vh;
   overflow: auto;
 }
+
+// Make buttons stretch nicely
+.#{$bp-ns}-button.#{$bp-ns}-fill {
+  .#{$bp-ns}-button-text {
+    flex: 1;
+  }
+}

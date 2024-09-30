@@ -26,7 +26,6 @@ import com.google.common.collect.Collections2;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -362,7 +361,7 @@ public class SegmentSchemaManager
     Map<Boolean, Set<String>> existingFingerprints = new HashMap<>();
     for (List<String> fingerprintList : partitionedFingerprints) {
       String fingerprints = fingerprintList.stream()
-                                           .map(fingerprint -> "'" + StringEscapeUtils.escapeSql(fingerprint) + "'")
+                                           .map(fingerprint -> "'" + StringUtils.escapeSql(fingerprint) + "'")
                                            .collect(Collectors.joining(","));
       handle.createQuery(
                 StringUtils.format(
@@ -380,7 +379,7 @@ public class SegmentSchemaManager
   private String getInClause(final Stream<String> ids)
   {
     return ids
-        .map(value -> "'" + StringEscapeUtils.escapeSql(value) + "'")
+        .map(value -> "'" + StringUtils.escapeSql(value) + "'")
         .collect(Collectors.joining(","));
   }
 

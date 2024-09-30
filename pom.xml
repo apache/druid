@@ -508,6 +508,10 @@
                     <groupId>com.google.guava</groupId>
                     <artifactId>guava</artifactId>
                   </exclusion>
+                  <exclusion>
+                      <groupId>net.hydromatic</groupId>
+                      <artifactId>aggdesigner-algorithm</artifactId>
+                  </exclusion>
                 </exclusions>
             </dependency>
             <dependency>
@@ -1396,6 +1400,11 @@
                         <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-testing-frameworks</artifactId>
                         <version>2.6.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-apache</artifactId>
+                        <version>1.2.2</version>
                     </dependency>
                 </dependencies>
             </plugin>

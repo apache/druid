@@ -81,6 +81,12 @@ public class NotFilter implements Filter
         }
 
         @Override
+        public int estimatedComputeCost()
+        {
+          return baseIndex.estimatedComputeCost();
+        }
+
+        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           return bitmapResultFactory.complement(

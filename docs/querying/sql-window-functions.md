@@ -28,10 +28,6 @@ description: Reference for window functions
 Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 This document describes the SQL language.
 
-Window functions are an [experimental](../development/experimental.md) feature.
-Development and testing are still at early stage. Feel free to try window functions and provide your feedback.
-Windows functions are not currently supported by multi-stage-query engine so you cannot use them in SQL-based ingestion.
-
 :::
 
 Window functions in Apache Druid produce values based upon the relationship of one row within a window of rows to the other rows within the same window. A window is a group of related rows within a result set. For example, rows with the same value for a specific dimension.
