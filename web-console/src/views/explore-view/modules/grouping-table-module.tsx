@@ -105,6 +105,7 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
         count: `Show '<count> values'`,
       },
       defaultValue: 'null',
+      sticky: true,
       visible: ({ parameterValues }) => Boolean((parameterValues.showColumns || []).length),
     },
     pivotColumn: {

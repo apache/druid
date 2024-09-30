@@ -30,7 +30,15 @@ import { useStore } from 'zustand';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { useHashAndLocalStorageHybridState, useQueryManager } from '../../hooks';
 import { Api, AppToaster } from '../../singletons';
-import { DruidError, LocalStorageKeys, queryDruidSql } from '../../utils';
+import {
+  DruidError,
+  isEmpty,
+  localStorageGetJson,
+  LocalStorageKeys,
+  localStorageSetJson,
+  mapRecord,
+  queryDruidSql,
+} from '../../utils';
 
 import {
   ControlPane,
@@ -73,6 +81,12 @@ function getFormattedQueryHistory(): string {
   return QUERY_HISTORY.map(
     ({ time, sqlQuery }) => `At ${time.toISOString()} ran query:\n\n${sqlQuery}`,
   ).join('\n\n-----------------------------------------------------\n\n');
+}
+
+// ---------------------------------------
+
+function getStickyParameterValuesForModule(moduleId: string): ParameterValues {
+  return localStorageGetJson(LocalStorageKeys.EXPLORE_STICKY)?.[moduleId] || {};
 }
 
 // ---------------------------------------
@@ -193,10 +207,25 @@ export const ExploreView = React.memo(function ExploreView() {
   }
 
   function resetParameterValues() {
-    setParameterValues({});
+    setParameterValues(getStickyParameterValuesForModule(moduleId));
   }
 
   function updateParameterValues(newParameterValues: ParameterValues) {
+    // Evaluate sticky-ness
+    if (module) {
+      const currentExploreSticky = localStorageGetJson(LocalStorageKeys.EXPLORE_STICKY) || {};
+      const currentModuleSticky = currentExploreSticky[moduleId] || {};
+      const newModuleSticky = {
+        ...currentModuleSticky,
+        ...mapRecord(newParameterValues, (v, k) => (module.parameters[k]?.sticky ? v : undefined)),
+      };
+
+      localStorageSetJson(LocalStorageKeys.EXPLORE_STICKY, {
+        ...currentExploreSticky,
+        [moduleId]: isEmpty(newModuleSticky) ? undefined : newModuleSticky,
+      });
+    }
+
     setParameterValues({ ...parameterValues, ...newParameterValues });
   }
 
@@ -311,7 +340,8 @@ export const ExploreView = React.memo(function ExploreView() {
             ]}
             selectedModuleId={moduleId}
             onSelectedModuleIdChange={newModuleId => {
-              const newParameterValues: ParameterValues = {};
+              const newParameterValues = getStickyParameterValuesForModule(newModuleId);
+
               const oldModule = ModuleRepository.getModule(moduleId);
               const newModule = ModuleRepository.getModule(newModuleId);
               if (oldModule && newModule) {

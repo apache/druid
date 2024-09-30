@@ -50,15 +50,18 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
     ascending: {
       type: 'boolean',
       defaultValue: false,
+      sticky: true,
     },
     showTypeIcons: {
       type: 'boolean',
       defaultValue: true,
+      sticky: true,
     },
     hideNullColumns: {
       type: 'boolean',
-      label: 'Hide all null column',
+      label: 'Hide all null columns',
       defaultValue: false,
+      sticky: true,
     },
   },
   component: function RecordTableModule(props) {

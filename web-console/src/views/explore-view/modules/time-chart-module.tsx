@@ -116,6 +116,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       type: 'boolean',
       label: 'Snap highlight to nearest dates',
       defaultValue: true,
+      sticky: true,
     },
   },
   component: function TimeChartModule(props) {
