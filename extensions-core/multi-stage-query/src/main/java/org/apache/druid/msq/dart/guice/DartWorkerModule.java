@@ -37,7 +37,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.messages.server.ClientMonitor;
+import org.apache.druid.messages.server.MessageRelayMonitor;
 import org.apache.druid.messages.server.MessageRelayResource;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.messages.server.OutboxImpl;
@@ -85,7 +85,7 @@ public class DartWorkerModule implements DruidModule
       JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".worker", DartWorkerConfig.class);
       Jerseys.addResource(binder, DartWorkerResource.class);
       LifecycleModule.register(binder, DartWorkerRunner.class);
-      LifecycleModule.registerKey(binder, Key.get(ClientMonitor.class, Dart.class));
+      LifecycleModule.registerKey(binder, Key.get(MessageRelayMonitor.class, Dart.class));
 
       binder.bind(DartWorkerFactory.class)
             .to(DartWorkerFactoryImpl.class)
@@ -128,12 +128,12 @@ public class DartWorkerModule implements DruidModule
 
     @Provides
     @Dart
-    public ClientMonitor createControllerMonitor(
+    public MessageRelayMonitor createControllerMonitor(
         final DruidNodeDiscoveryProvider discoveryProvider,
         final Outbox<ControllerMessage> outbox
     )
     {
-      return new ClientMonitor(discoveryProvider, outbox, NodeRole.BROKER);
+      return new MessageRelayMonitor(discoveryProvider, outbox, NodeRole.BROKER);
     }
 
     /**

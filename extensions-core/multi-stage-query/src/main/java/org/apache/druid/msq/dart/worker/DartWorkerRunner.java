@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.dart.controller.ControllerServerId;
 import org.apache.druid.msq.dart.worker.http.DartWorkerInfo;
 import org.apache.druid.msq.dart.worker.http.GetWorkersResponse;
 import org.apache.druid.msq.exec.Worker;
@@ -107,7 +106,7 @@ public class DartWorkerRunner
    */
   public Worker startWorker(
       final String queryId,
-      final ControllerServerId controllerServerId,
+      final String controllerHost,
       final QueryContext context
   )
   {
@@ -115,10 +114,10 @@ public class DartWorkerRunner
     final boolean newHolder;
 
     synchronized (this) {
-      if (!activeControllerHosts.contains(controllerServerId.getHost())) {
+      if (!activeControllerHosts.contains(controllerHost)) {
         throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                             .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                            .build("Received startWorker request for unknown controller[%s]", controllerServerId);
+                            .build("Received startWorker request for unknown controller[%s]", controllerHost);
       }
 
       final WorkerHolder existingHolder = workerMap.get(queryId);
@@ -126,9 +125,9 @@ public class DartWorkerRunner
         holder = existingHolder;
         newHolder = false;
       } else {
-        final Worker worker = workerFactory.build(queryId, controllerServerId.getHost(), baseTempDir, context);
+        final Worker worker = workerFactory.build(queryId, controllerHost, baseTempDir, context);
         final WorkerResource resource = new WorkerResource(worker, permissionMapper, authorizerMapper);
-        holder = new WorkerHolder(worker, controllerServerId, resource, DateTimes.nowUtc());
+        holder = new WorkerHolder(worker, controllerHost, resource, DateTimes.nowUtc());
         workerMap.put(queryId, holder);
         this.notifyAll();
         newHolder = true;
@@ -211,7 +210,7 @@ public class DartWorkerRunner
             new DartWorkerInfo(
                 queryId,
                 WorkerId.fromString(workerHolder.worker.id()),
-                workerHolder.controllerServerId,
+                workerHolder.controllerHost,
                 workerHolder.acceptTime
             )
         );
@@ -292,19 +291,19 @@ public class DartWorkerRunner
   {
     private final Worker worker;
     private final WorkerResource resource;
-    private final ControllerServerId controllerServerId;
+    private final String controllerHost;
     private final DateTime acceptTime;
 
     public WorkerHolder(
         Worker worker,
-        ControllerServerId controllerServerId,
+        String controllerHost,
         WorkerResource resource,
         final DateTime acceptTime
     )
     {
       this.worker = worker;
       this.resource = resource;
-      this.controllerServerId = controllerServerId;
+      this.controllerHost = controllerHost;
       this.acceptTime = acceptTime;
     }
   }
@@ -336,7 +335,7 @@ public class DartWorkerRunner
         activeControllerHosts.removeAll(hostsRemoved);
 
         for (Map.Entry<String, WorkerHolder> entry : workerMap.entrySet()) {
-          if (hostsRemoved.contains(entry.getValue().controllerServerId.getHost())) {
+          if (hostsRemoved.contains(entry.getValue().controllerHost)) {
             workersToNotify.add(entry.getValue().worker);
           }
         }

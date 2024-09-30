@@ -22,7 +22,6 @@ package org.apache.druid.msq.dart.worker.http;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.msq.dart.controller.ControllerServerId;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.segment.TestHelper;
 import org.junit.jupiter.api.Assertions;
@@ -41,7 +40,7 @@ public class GetWorkersResponseTest
             new DartWorkerInfo(
                 "xyz",
                 WorkerId.fromString("http:localhost:8100:xyz"),
-                ControllerServerId.fromString("localhost:8101:123"),
+                "localhost:8101",
                 DateTimes.of("2000")
             )
         )

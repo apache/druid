@@ -33,13 +33,13 @@ import java.util.stream.Collectors;
  * Code that runs on message servers, to monitor their clients. When a client vanishes, its outbox is reset using
  * {@link Outbox#resetOutbox(String)}.
  */
-public class ClientMonitor
+public class MessageRelayMonitor
 {
   private final DruidNodeDiscoveryProvider discoveryProvider;
   private final Outbox<?> outbox;
   private final NodeRole clientRole;
 
-  public ClientMonitor(
+  public MessageRelayMonitor(
       final DruidNodeDiscoveryProvider discoveryProvider,
       final Outbox<?> outbox,
       final NodeRole clientRole

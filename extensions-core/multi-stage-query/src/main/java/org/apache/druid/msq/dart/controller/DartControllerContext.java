@@ -83,7 +83,6 @@ public class DartControllerContext implements ControllerContext
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final DruidNode selfNode;
-  private final ControllerServerId selfId;
   private final ServiceClientFactory serviceClientFactory;
   private final BrokerServerView serverView;
   private final MemoryIntrospector memoryIntrospector;
@@ -96,7 +95,6 @@ public class DartControllerContext implements ControllerContext
       @Json final ObjectMapper jsonMapper,
       @Smile final ObjectMapper smileMapper,
       @Self final DruidNode selfNode,
-      final ControllerServerId selfId,
       @EscalatedGlobal final ServiceClientFactory serviceClientFactory,
       final MemoryIntrospector memoryIntrospector,
       final BrokerServerView serverView,
@@ -107,7 +105,6 @@ public class DartControllerContext implements ControllerContext
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.selfNode = selfNode;
-    this.selfId = selfId;
     this.serviceClientFactory = serviceClientFactory;
     this.serverView = serverView;
     this.memoryIntrospector = memoryIntrospector;
@@ -212,7 +209,7 @@ public class DartControllerContext implements ControllerContext
   @Override
   public DartWorkerClient newWorkerClient()
   {
-    return new DartWorkerClient(serviceClientFactory, smileMapper, selfId);
+    return new DartWorkerClient(serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse());
   }
 
   @Override

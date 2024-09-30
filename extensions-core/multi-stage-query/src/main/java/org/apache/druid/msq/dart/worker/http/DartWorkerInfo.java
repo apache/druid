@@ -20,7 +20,6 @@
 package org.apache.druid.msq.dart.worker.http;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.msq.dart.controller.ControllerServerId;
 import org.apache.druid.msq.dart.controller.http.DartQueryInfo;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.joda.time.DateTime;
@@ -34,19 +33,19 @@ public class DartWorkerInfo
 {
   private final String dartQueryId;
   private final WorkerId workerId;
-  private final ControllerServerId controllerServerId;
+  private final String controllerHost;
   private final DateTime startTime;
 
   public DartWorkerInfo(
       @JsonProperty("dartQueryId") final String dartQueryId,
       @JsonProperty("workerId") final WorkerId workerId,
-      @JsonProperty("controllerServerId") final ControllerServerId controllerServerId,
+      @JsonProperty("controllerHost") final String controllerHost,
       @JsonProperty("startTime") final DateTime startTime
   )
   {
     this.dartQueryId = dartQueryId;
     this.workerId = workerId;
-    this.controllerServerId = controllerServerId;
+    this.controllerHost = controllerHost;
     this.startTime = startTime;
   }
 
@@ -69,12 +68,12 @@ public class DartWorkerInfo
   }
 
   /**
-   * Controller server that manages this query.
+   * Controller host:port that manages this query.
    */
   @JsonProperty
-  public ControllerServerId getControllerServerId()
+  public String getControllerHost()
   {
-    return controllerServerId;
+    return controllerHost;
   }
 
   /**
@@ -99,13 +98,13 @@ public class DartWorkerInfo
     DartWorkerInfo that = (DartWorkerInfo) o;
     return Objects.equals(dartQueryId, that.dartQueryId)
            && Objects.equals(workerId, that.workerId)
-           && Objects.equals(controllerServerId, that.controllerServerId)
+           && Objects.equals(controllerHost, that.controllerHost)
            && Objects.equals(startTime, that.startTime);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(dartQueryId, workerId, controllerServerId, startTime);
+    return Objects.hash(dartQueryId, workerId, controllerHost, startTime);
   }
 }

@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
-import org.apache.druid.msq.dart.controller.ControllerServerId;
 import org.apache.druid.msq.dart.worker.http.GetWorkersResponse;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -70,7 +69,7 @@ public class DartWorkerRunnerTest
   private static final int MAX_WORKERS = 1;
   private static final String QUERY_ID = "abc";
   private static final WorkerId WORKER_ID = new WorkerId("http", "localhost:8282", QUERY_ID);
-  private static final ControllerServerId CONTROLLER_SERVER_ID = new ControllerServerId("localhost:8081", 123);
+  private static final String CONTROLLER_SERVER_HOST = "localhost:8081";
   private static final DiscoveryDruidNode CONTROLLER_DISCOVERY_NODE =
       new DiscoveryDruidNode(
           new DruidNode("no", "localhost", false, 8081, -1, true, false),
@@ -125,7 +124,7 @@ public class DartWorkerRunnerTest
     Mockito.when(
         workerFactory.build(
             QUERY_ID,
-            CONTROLLER_SERVER_ID.getHost(),
+            CONTROLLER_SERVER_HOST,
             temporaryFolder.toFile(),
             QueryContext.empty()
         )
@@ -215,7 +214,7 @@ public class DartWorkerRunnerTest
   {
     final DruidException e = Assertions.assertThrows(
         DruidException.class,
-        () -> workerRunner.startWorker("abc", CONTROLLER_SERVER_ID, QueryContext.empty())
+        () -> workerRunner.startWorker("abc", CONTROLLER_SERVER_HOST, QueryContext.empty())
     );
 
     MatcherAssert.assertThat(
@@ -239,8 +238,8 @@ public class DartWorkerRunnerTest
     discoveryListener.getValue().nodesAdded(Collections.singletonList(CONTROLLER_DISCOVERY_NODE));
 
     // Start the worker twice (startWorker is idempotent; nothing special happens the second time).
-    final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_ID, QueryContext.empty());
-    final Worker workerFromStart2 = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_ID, QueryContext.empty());
+    final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
+    final Worker workerFromStart2 = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
     Assertions.assertSame(worker, workerFromStart);
     Assertions.assertSame(worker, workerFromStart2);
 
@@ -248,7 +247,7 @@ public class DartWorkerRunnerTest
     final GetWorkersResponse workersResponse = workerRunner.getWorkersResponse();
     Assertions.assertEquals(1, workersResponse.getWorkers().size());
     Assertions.assertEquals(QUERY_ID, workersResponse.getWorkers().get(0).getDartQueryId());
-    Assertions.assertEquals(CONTROLLER_SERVER_ID, workersResponse.getWorkers().get(0).getControllerServerId());
+    Assertions.assertEquals(CONTROLLER_SERVER_HOST, workersResponse.getWorkers().get(0).getControllerHost());
     Assertions.assertEquals(WORKER_ID, workersResponse.getWorkers().get(0).getWorkerId());
 
     // Worker should have a resource.
@@ -263,7 +262,7 @@ public class DartWorkerRunnerTest
     discoveryListener.getValue().nodesAdded(Collections.singletonList(CONTROLLER_DISCOVERY_NODE));
 
     // Start the worker.
-    final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_ID, QueryContext.empty());
+    final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
     Assertions.assertSame(worker, workerFromStart);
     Assertions.assertEquals(1, workerRunner.getWorkersResponse().getWorkers().size());
 
@@ -283,7 +282,7 @@ public class DartWorkerRunnerTest
     discoveryListener.getValue().nodesAdded(Collections.singletonList(CONTROLLER_DISCOVERY_NODE));
 
     // Start the worker.
-    final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_ID, QueryContext.empty());
+    final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
     Assertions.assertSame(worker, workerFromStart);
     Assertions.assertEquals(1, workerRunner.getWorkersResponse().getWorkers().size());
 
@@ -303,7 +302,7 @@ public class DartWorkerRunnerTest
     discoveryListener.getValue().nodesAdded(Collections.singletonList(CONTROLLER_DISCOVERY_NODE));
 
     // Start the worker.
-    final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_ID, QueryContext.empty());
+    final Worker workerFromStart = workerRunner.startWorker(QUERY_ID, CONTROLLER_SERVER_HOST, QueryContext.empty());
     Assertions.assertSame(worker, workerFromStart);
     Assertions.assertEquals(1, workerRunner.getWorkersResponse().getWorkers().size());
 

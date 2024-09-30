@@ -28,7 +28,6 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.messages.server.MessageRelayResource;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.Dart;
-import org.apache.druid.msq.dart.controller.ControllerServerId;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.dart.worker.DartWorkerRunner;
@@ -37,6 +36,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.rpc.MSQResourceUtils;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.msq.rpc.WorkerResource;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import javax.servlet.http.HttpServletRequest;
@@ -66,9 +66,9 @@ public class DartWorkerResource
   public static final String PATH = "/druid/v2/dart-worker";
 
   /**
-   * Header containing the controller ID, from {@link ControllerServerId}.
+   * Header containing the controller host:port, from {@link DruidNode#getHostAndPortToUse()}.
    */
-  public static final String HEADER_CONTROLLER_ID = "X-Dart-Controller-Id";
+  public static final String HEADER_CONTROLLER_HOST = "X-Dart-Controller-Host";
 
   private final DartWorkerRunner workerRunner;
   private final ResourcePermissionMapper permissionMapper;
@@ -120,14 +120,14 @@ public class DartWorkerResource
   )
   {
     MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
-    final String controllerIdString = req.getHeader(HEADER_CONTROLLER_ID);
-    if (controllerIdString == null) {
+    final String controllerHost = req.getHeader(HEADER_CONTROLLER_HOST);
+    if (controllerHost == null) {
       throw DruidException.forPersona(DruidException.Persona.DEVELOPER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
-                          .build("Missing controllerId[%s]", HEADER_CONTROLLER_ID);
+                          .build("Missing controllerId[%s]", HEADER_CONTROLLER_HOST);
     }
 
-    workerRunner.startWorker(queryId, ControllerServerId.fromString(controllerIdString), workOrder.getWorkerContext())
+    workerRunner.startWorker(queryId, controllerHost, workOrder.getWorkerContext())
                 .postWorkOrder(workOrder);
 
     return Response.status(Response.Status.ACCEPTED).build();
@@ -159,7 +159,7 @@ public class DartWorkerResource
    * by {@link #httpPostWorkOrder(WorkOrder, String, HttpServletRequest)}.
    */
   @Path("/workers/{queryId}")
-  public Object httpCallWorker(@PathParam("queryId") final String queryId)
+  public Object httpCallWorkerResource(@PathParam("queryId") final String queryId)
   {
     final WorkerResource resource = workerRunner.getWorkerResource(queryId);
 
@@ -167,13 +167,15 @@ public class DartWorkerResource
       return resource;
     } else {
       // Return HTTP 503 (Service Unavailable) so clients retry. When workers are first starting up and contacting
-      // each other, worker A may contact worker B before worker B has started up.
+      // each other, worker A may contact worker B before worker B has started up. In the future, it would be better
+      // to do an async wait, with some timeout, for the worker to show up before returning 503. That way a retry
+      // wouldn't be necessary.
       return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
     }
   }
 
   @Path("/relay")
-  public Object httpCallMessageServer(@Context final HttpServletRequest req)
+  public Object httpCallMessageRelayServer(@Context final HttpServletRequest req)
   {
     MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
     return messageRelayResource;

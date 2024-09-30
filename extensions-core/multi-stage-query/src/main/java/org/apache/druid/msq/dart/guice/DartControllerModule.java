@@ -31,17 +31,13 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.LoadScope;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.controller.ControllerMessageListener;
-import org.apache.druid.msq.dart.controller.ControllerServerId;
 import org.apache.druid.msq.dart.controller.DartControllerContext;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
-import org.apache.druid.msq.dart.controller.DartControllerRegistryImpl;
 import org.apache.druid.msq.dart.controller.DartMessageRelayFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartMessageRelays;
 import org.apache.druid.msq.dart.controller.http.DartSqlResource;
@@ -52,7 +48,6 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
 
@@ -92,11 +87,10 @@ public class DartControllerModule implements DruidModule
             .in(LazySingleton.class);
 
       binder.bind(DartControllerRegistry.class)
-            .to(DartControllerRegistryImpl.class)
             .in(LazySingleton.class);
 
       binder.bind(ControllerMessageListener.class)
-             .in(LazySingleton.class);
+            .in(LazySingleton.class);
 
       binder.bind(DartMessageRelayFactoryImpl.class)
             .in(LazySingleton.class);
@@ -108,13 +102,6 @@ public class DartControllerModule implements DruidModule
       binder.bind(ResourcePermissionMapper.class)
             .annotatedWith(Dart.class)
             .to(DartResourcePermissionMapper.class);
-    }
-
-    @Provides
-    @LazySingleton
-    public ControllerServerId makeControllerId(final @Self DruidNode selfNode)
-    {
-      return new ControllerServerId(selfNode.getHostAndPortToUse(), DateTimes.nowUtc().getMillis());
     }
 
     @Provides
