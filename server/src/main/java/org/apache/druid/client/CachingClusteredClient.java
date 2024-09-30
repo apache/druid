@@ -412,6 +412,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
                 queryMetrics.reportParallelMergeOutputRows(reportMetrics.getOutputRows());
                 queryMetrics.reportParallelMergeTaskCount(reportMetrics.getTaskCount());
                 queryMetrics.reportParallelMergeTotalCpuTime(reportMetrics.getTotalCpuTime());
+                queryMetrics.emit(emitter);
               }
             }
         );
