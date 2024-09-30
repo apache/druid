@@ -19,39 +19,23 @@
 
 package org.apache.druid.sql.calcite.rule.logical;
 
-import org.apache.calcite.plan.RelTrait;
+import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
-import org.apache.calcite.rel.convert.ConverterRule;
-import org.apache.calcite.rel.logical.LogicalValues;
-import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
-import org.apache.druid.sql.calcite.rel.logical.DruidValues;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rex.RexNode;
 
-/**
- * {@link ConverterRule} to convert {@link org.apache.calcite.rel.core.Values} to {@link DruidValues}
- */
-public class DruidValuesRule extends ConverterRule
+public class LogicalUnnest extends Unnest
 {
-  public DruidValuesRule(
-      Class<? extends RelNode> clazz,
-      RelTrait in,
-      RelTrait out,
-      String descriptionPrefix
-  )
+  protected LogicalUnnest(RelOptCluster cluster, RelTraitSet traits, RelNode input, RexNode unnestExpr,
+      RelDataType rowType, RexNode condition)
   {
-    super(clazz, in, out, descriptionPrefix);
+    super(cluster, traits, input, unnestExpr, rowType, condition);
   }
 
   @Override
-  public RelNode convert(RelNode rel)
+  protected RelNode copy(RelTraitSet traitSet, RelNode input)
   {
-    LogicalValues values = (LogicalValues) rel;
-    RelTraitSet newTrait = values.getTraitSet().replace(DruidLogicalConvention.instance());
-    return new DruidValues(
-        values.getCluster(),
-        newTrait,
-        values.getRowType(),
-        values.getTuples()
-    );
+    return new LogicalUnnest(getCluster(), traitSet, input, unnestExpr, rowType, filter);
   }
 }
