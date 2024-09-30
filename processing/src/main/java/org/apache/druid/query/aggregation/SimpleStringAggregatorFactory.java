@@ -53,13 +53,15 @@ public abstract class SimpleStringAggregatorFactory
   protected final ExprMacroTable macroTable;
   protected final Supplier<Expr> fieldExpression;
   protected final int maxStringBytes;
+  protected final boolean aggregateMultipleValues;
 
   public SimpleStringAggregatorFactory(
       final ExprMacroTable macroTable,
       final String name,
       @Nullable final String fieldName,
       @Nullable final String expression,
-      @Nullable final Integer maxStringBytes
+      @Nullable final Integer maxStringBytes,
+      @Nullable final Boolean aggregateMultipleValues
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -82,6 +84,7 @@ public abstract class SimpleStringAggregatorFactory
     this.name = name;
     this.fieldName = fieldName;
     this.expression = expression;
+    this.aggregateMultipleValues = aggregateMultipleValues == null || aggregateMultipleValues;
     this.fieldExpression = Parser.lazyParse(expression, macroTable);
   }
 
@@ -219,6 +222,19 @@ public abstract class SimpleStringAggregatorFactory
   public String getExpression()
   {
     return expression;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Integer getMaxStringBytes()
+  {
+    return maxStringBytes;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Boolean isAggregateMultipleValues() {
+    return aggregateMultipleValues;
   }
 
   @Override

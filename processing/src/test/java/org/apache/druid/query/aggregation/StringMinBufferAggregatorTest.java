@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation;
 import org.junit.Assert;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class StringMinBufferAggregatorTest

@@ -32,15 +32,12 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
-
 import javax.annotation.Nullable;
 import java.util.Comparator;
 
 public class StringMinAggregatorFactory extends SimpleStringAggregatorFactory
 {
   private static final Comparator<String> VALUE_COMPARATOR = Comparator.nullsLast(Comparator.naturalOrder());
-
-  private final boolean aggregateMultipleValues;
   private final Supplier<byte[]> cacheKey;
 
   @JsonCreator
@@ -53,9 +50,8 @@ public class StringMinAggregatorFactory extends SimpleStringAggregatorFactory
       @JacksonInject ExprMacroTable macroTable
   )
   {
-    super(macroTable, name, fieldName, expression, maxStringBytes);
+    super(macroTable, name, fieldName, expression, maxStringBytes, aggregateMultipleValues);
 
-    this.aggregateMultipleValues = aggregateMultipleValues == null || aggregateMultipleValues;
     this.cacheKey = AggregatorUtil.getSimpleAggregatorCacheKeySupplier(
         AggregatorUtil.STRING_MIN_CACHE_TYPE_ID,
         fieldName,
@@ -99,7 +95,7 @@ public class StringMinAggregatorFactory extends SimpleStringAggregatorFactory
       field = expression;
     }
 
-    final ColumnCapabilities capabilities =  columnSelectorFactory.getColumnCapabilities(field);
+    final ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(field);
 
     if (capabilities != null && capabilities.hasMultipleValues().isMaybeTrue()) {
       return new StringMinVectorAggregator(
