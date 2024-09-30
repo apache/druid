@@ -704,7 +704,8 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   protected boolean waitForSegmentAvailability(
       TaskToolbox toolbox,
       List<DataSegment> segmentsToWaitFor,
-      long waitTimeout
+      long waitTimeout,
+      String taskId
   )
   {
     if (segmentsToWaitFor.isEmpty()) {
@@ -719,7 +720,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
     try (
         SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
-                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource())
+                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource(), taskId)
     ) {
 
       final ExecutorService exec = Execs.directExecutor();

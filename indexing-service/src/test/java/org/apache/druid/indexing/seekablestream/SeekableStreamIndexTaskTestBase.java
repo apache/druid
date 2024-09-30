@@ -629,43 +629,32 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     final TaskActionClientFactory taskActionClientFactory = new LocalTaskActionClientFactory(
         taskActionToolbox
     );
-    final SegmentHandoffNotifierFactory handoffNotifierFactory = new SegmentHandoffNotifierFactory() {
+    final SegmentHandoffNotifierFactory handoffNotifierFactory = (dataSource, taskId) -> new SegmentHandoffNotifier()
+    {
       @Override
-      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+      public boolean registerSegmentHandoffCallback(
+          SegmentDescriptor descriptor,
+          Executor exec,
+          Runnable handOffRunnable
+      )
       {
-        return new SegmentHandoffNotifier() {
-          @Override
-          public boolean registerSegmentHandoffCallback(
-              SegmentDescriptor descriptor,
-              Executor exec,
-              Runnable handOffRunnable
-          )
-          {
-            if (doHandoff) {
-              // Simulate immediate handoff
-              exec.execute(handOffRunnable);
-            }
-            return true;
-          }
-
-          @Override
-          public void start()
-          {
-            // Noop
-          }
-
-          @Override
-          public void close()
-          {
-            // Noop
-          }
-        };
+        if (doHandoff) {
+          // Simulate immediate handoff
+          exec.execute(handOffRunnable);
+        }
+        return true;
       }
+
       @Override
-      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String indexTaskId)
+      public void start()
       {
-        // Noop
-        return null;
+        //Noop
+      }
+
+      @Override
+      public void close()
+      {
+        //Noop
       }
     };
     final LocalDataSegmentPusherConfig dataSegmentPusherConfig = new LocalDataSegmentPusherConfig();

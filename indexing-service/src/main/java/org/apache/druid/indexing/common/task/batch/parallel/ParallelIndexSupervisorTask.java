@@ -631,7 +631,8 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     waitForSegmentAvailability(
         toolbox,
         segmentsToWaitFor,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        getId()
     );
   }
 

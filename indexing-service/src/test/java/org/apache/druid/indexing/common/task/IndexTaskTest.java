@@ -1115,7 +1115,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     EasyMock.replay(mockToolbox);
-    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
+    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000, indexTask.getId()));
     EasyMock.verify(mockToolbox);
   }
 
@@ -1140,7 +1140,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     EasyMock.replay(mockToolbox);
-    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, -1));
+    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, -1, indexTask.getId()));
     EasyMock.verify(mockToolbox);
   }
 
@@ -1181,7 +1181,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.expect(mockToolbox.getSegmentHandoffNotifierFactory()).andReturn(mockFactory).once();
     EasyMock.expect(mockToolbox.getEmitter()).andReturn(new NoopServiceEmitter()).anyTimes();
     EasyMock.expect(mockDataSegment1.getDataSource()).andReturn("MockDataSource").once();
-    EasyMock.expect(mockFactory.createSegmentHandoffNotifier("MockDataSource")).andReturn(mockNotifier).once();
+    EasyMock.expect(mockFactory.createSegmentHandoffNotifier("MockDataSource", indexTask.getId())).andReturn(mockNotifier).once();
     mockNotifier.start();
     EasyMock.expectLastCall().once();
     mockNotifier.registerSegmentHandoffCallback(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
@@ -1194,7 +1194,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.replay(mockDataSegment1, mockDataSegment2);
     EasyMock.replay(mockFactory, mockNotifier);
 
-    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
+    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000, indexTask.getId()));
     EasyMock.verify(mockToolbox);
     EasyMock.verify(mockDataSegment1, mockDataSegment2);
     EasyMock.verify(mockFactory, mockNotifier);
@@ -1244,7 +1244,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.replay(mockToolbox);
     EasyMock.replay(mockDataSegment1, mockDataSegment2);
 
-    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000));
+    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000, indexTask.getId()));
     EasyMock.verify(mockToolbox);
     EasyMock.verify(mockDataSegment1, mockDataSegment2);
   }
@@ -1295,7 +1295,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.replay(mockToolbox);
     EasyMock.replay(mockDataSegment1, mockDataSegment2);
 
-    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000));
+    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000, indexTask.getId()));
     emitter.verifyEmitted("task/segmentAvailability/wait/time", 1);
     EasyMock.verify(mockToolbox);
     EasyMock.verify(mockDataSegment1, mockDataSegment2);

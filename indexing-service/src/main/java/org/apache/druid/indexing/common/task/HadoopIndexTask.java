@@ -495,7 +495,8 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
             waitForSegmentAvailability(
                 toolbox,
                 segments,
-                spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis()
+                spec.getTuningConfig().getAwaitSegmentAvailabilityTimeoutMillis(),
+                getId()
             );
           }
 

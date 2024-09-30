@@ -446,12 +446,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     return new SegmentHandoffNotifierFactory()
     {
       @Override
-      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String indexTaskId)
-      {
-        return null;
-      }
-      @Override
-      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId)
       {
         return new SegmentHandoffNotifier()
         {

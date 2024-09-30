@@ -22,7 +22,6 @@ package org.apache.druid.segment.handoff;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.SegmentDescriptor;
@@ -45,37 +44,26 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   private volatile ScheduledExecutorService scheduledExecutor;
   private final Duration pollDuration;
   private final String dataSource;
-  private final String indexTaskId;
+  private final String taskId;
 
-  public CoordinatorBasedSegmentHandoffNotifier(
-      String dataSource,
-      CoordinatorClient coordinatorClient,
-      CoordinatorBasedSegmentHandoffNotifierConfig config
-  )
-  {
-    this.dataSource = dataSource;
-    this.coordinatorClient = coordinatorClient;
-    this.pollDuration = config.getPollDuration();
-    this.indexTaskId = "default";
-  }
 
   public CoordinatorBasedSegmentHandoffNotifier(
       String dataSource,
       CoordinatorClient coordinatorClient,
       CoordinatorBasedSegmentHandoffNotifierConfig config,
-      String indexTaskId
+      String taskId
   )
   {
     this.dataSource = dataSource;
     this.coordinatorClient = coordinatorClient;
     this.pollDuration = config.getPollDuration();
-    this.indexTaskId = indexTaskId;
+    this.taskId = taskId;
   }
 
   @Override
   public boolean registerSegmentHandoffCallback(SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable)
   {
-    log.debug("Adding SegmentHandoffCallback for dataSource[%s] Segment[%s]", dataSource, descriptor);
+    log.debug("Adding SegmentHandoffCallback for dataSource[%s] Segment[%s] for task[%s]", dataSource, descriptor, taskId);
     Pair<Executor, Runnable> prev = handOffCallbacks.putIfAbsent(
         descriptor,
         new Pair<>(exec, handOffRunnable)
@@ -86,7 +74,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   @Override
   public void start()
   {
-    scheduledExecutor = Execs.scheduledSingleThreaded("[" + StringUtils.encodeForFormat(indexTaskId) + "]-coordinator_handoff_scheduled_%d");
+    scheduledExecutor = Execs.scheduledSingleThreaded("coordinator_handoff_scheduled_%d");
     scheduledExecutor.scheduleAtFixedRate(
         this::checkForSegmentHandoffs,
         0L,
@@ -107,7 +95,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
           Boolean handOffComplete =
               FutureUtils.getUnchecked(coordinatorClient.isHandoffComplete(dataSource, descriptor), true);
           if (Boolean.TRUE.equals(handOffComplete)) {
-            log.debug("Segment handoff complete for dataSource[%s] segment[%s]", dataSource, descriptor);
+            log.debug("Segment handoff complete for dataSource[%s] segment[%s] for task[%s]", dataSource, descriptor, taskId);
             entry.getValue().lhs.execute(entry.getValue().rhs);
             itr.remove();
           }
@@ -115,22 +103,24 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
         catch (Exception e) {
           log.error(
               e,
-              "Exception while checking handoff for dataSource[%s] Segment[%s]; will try again after [%s]",
+              "Exception while checking handoff for dataSource[%s] Segment[%s], taskId[%s]; will try again after [%s]",
               dataSource,
               descriptor,
+              taskId,
               pollDuration
           );
         }
       }
       if (!handOffCallbacks.isEmpty()) {
-        log.info("Still waiting for handoff for [%d] segments", handOffCallbacks.size());
+        log.info("Still waiting for handoff for [%d] segments for task[%s]", handOffCallbacks.size(), taskId);
       }
     }
     catch (Throwable t) {
       log.error(
           t,
-          "Exception while checking handoff for dataSource[%s]; will try again after [%s]",
+          "Exception while checking handoff for dataSource[%s], taskId[%s]; will try again after [%s]",
           dataSource,
+          taskId,
           pollDuration
       );
     }
