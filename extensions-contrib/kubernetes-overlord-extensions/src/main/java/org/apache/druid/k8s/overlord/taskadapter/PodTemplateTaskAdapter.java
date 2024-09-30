@@ -113,7 +113,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   public Job fromTask(Task task) throws IOException
   {
     Optional<PodTemplateWithName> selectedPodTemplate = podTemplateSelector.getPodTemplateForTask(task);
-    if (!selectedPodTemplate.isPresent()) {
+    if (selectedPodTemplate == null || !selectedPodTemplate.isPresent()) {
       throw InternalServerError.exception(
           "Could not find pod template for task [%s]."
               + " Check the overlord logs for errors selecting the pod template",

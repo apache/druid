@@ -358,6 +358,34 @@ public class PodTemplateTaskAdapterTest
     Assert.assertThrows(DruidException.class, () -> adapter.fromTask(task));
   }
 
+  @Test
+  public void test_fromTask_null()
+  {
+
+    PodTemplateSelector podTemplateSelector = EasyMock.createMock(PodTemplateSelector.class);
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
+    );
+
+    Task task = new NoopTask(
+        "id",
+        "groupId",
+        "data_source",
+        0,
+        0,
+        null
+    );
+    EasyMock.expect(podTemplateSelector.getPodTemplateForTask(EasyMock.anyObject()))
+        .andReturn(null);
+
+    Assert.assertThrows(DruidException.class, () -> adapter.fromTask(task));
+  }
 
   @Test
   public void test_fromTask_taskSupportsQueries() throws IOException
