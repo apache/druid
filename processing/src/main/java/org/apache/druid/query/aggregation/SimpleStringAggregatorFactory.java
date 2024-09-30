@@ -233,7 +233,8 @@ public abstract class SimpleStringAggregatorFactory
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public Boolean isAggregateMultipleValues() {
+  public Boolean isAggregateMultipleValues()
+  {
     return aggregateMultipleValues;
   }
 
