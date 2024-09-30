@@ -237,7 +237,7 @@ You can run automatic compaction using the Overlord rather than the Coordinator.
 You can use either the native engine like Coordinator-based automatic compaction or the [MSQ task engine](#use-msq-for-automatic-compaction). 
 
 
-To use Overlord-based auto-compaction, set the following properties in your Overlrod runtime properties:
+To use Overlord-based auto-compaction, set the following properties in your Overlord runtime properties:
   *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor task
   *  `druid.supervisor.compaction.engine` to  `msq` to specify the MSQ task engine as the compaction engine or to `native` to use the native engine.
 
