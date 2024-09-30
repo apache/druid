@@ -112,6 +112,14 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   @Override
   public Job fromTask(Task task) throws IOException
   {
+    Optional<PodTemplateWithName> selectedPodTemplate = podTemplateSelector.getPodTemplateForTask(task);
+    if (!selectedPodTemplate.isPresent()) {
+      throw InternalServerError.exception(
+          "Could not find pod template for task [%s]."
+              + " Check the overlord logs for errors selecting the pod template",
+          task.getId()
+      );
+    }
     PodTemplateWithName podTemplateWithName = podTemplateSelector.getPodTemplateForTask(task).get();
 
     return new JobBuilder()

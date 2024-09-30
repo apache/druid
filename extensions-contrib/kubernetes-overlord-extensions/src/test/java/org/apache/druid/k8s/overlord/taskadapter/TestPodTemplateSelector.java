@@ -19,10 +19,9 @@
 
 package org.apache.druid.k8s.overlord.taskadapter;
 
+import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
-
-import java.util.Optional;
 
 public class TestPodTemplateSelector implements PodTemplateSelector
 {

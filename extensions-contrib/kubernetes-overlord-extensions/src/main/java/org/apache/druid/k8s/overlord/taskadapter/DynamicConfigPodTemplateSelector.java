@@ -19,6 +19,7 @@
 
 package org.apache.druid.k8s.overlord.taskadapter;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.client.utils.Serialization;
@@ -32,7 +33,6 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 
@@ -67,7 +67,9 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
     HashMap<String, PodTemplate> podTemplateMap = new HashMap<>();
     for (String taskAdapterTemplateKey : taskAdapterTemplateKeys) {
       Optional<PodTemplate> template = loadPodTemplate(taskAdapterTemplateKey, properties);
-      template.ifPresent(podTemplate -> podTemplateMap.put(taskAdapterTemplateKey, podTemplate));
+      if (template.isPresent()) {
+        podTemplateMap.put(taskAdapterTemplateKey, template.get());
+      }
     }
     podTemplates = podTemplateMap;
   }

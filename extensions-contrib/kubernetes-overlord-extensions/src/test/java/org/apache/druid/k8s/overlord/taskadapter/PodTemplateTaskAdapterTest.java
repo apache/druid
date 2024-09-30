@@ -27,6 +27,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
@@ -328,6 +329,36 @@ public class PodTemplateTaskAdapterTest
 
     assertJobSpecsEqual(actual, expected);
   }
+
+  @Test
+  public void test_fromTask_noTemplate()
+  {
+
+    PodTemplateSelector podTemplateSelector = EasyMock.createMock(PodTemplateSelector.class);
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
+    );
+
+    Task task = new NoopTask(
+        "id",
+        "groupId",
+        "data_source",
+        0,
+        0,
+        null
+    );
+    EasyMock.expect(podTemplateSelector.getPodTemplateForTask(EasyMock.anyObject()))
+        .andReturn(Optional.absent());
+
+    Assert.assertThrows(DruidException.class, () -> adapter.fromTask(task));
+  }
+
 
   @Test
   public void test_fromTask_taskSupportsQueries() throws IOException
