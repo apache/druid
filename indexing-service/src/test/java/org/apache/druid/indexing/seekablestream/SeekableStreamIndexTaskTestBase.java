@@ -631,14 +631,16 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
     );
     final SegmentHandoffNotifierFactory handoffNotifierFactory = new SegmentHandoffNotifierFactory() {
       @Override
-      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource) {
+      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+      {
         return new SegmentHandoffNotifier() {
           @Override
           public boolean registerSegmentHandoffCallback(
               SegmentDescriptor descriptor,
               Executor exec,
               Runnable handOffRunnable
-          ) {
+          )
+          {
             if (doHandoff) {
               // Simulate immediate handoff
               exec.execute(handOffRunnable);
@@ -647,18 +649,21 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
           }
 
           @Override
-          public void start() {
+          public void start()
+          {
             // Noop
           }
 
           @Override
-          public void close() {
+          public void close()
+          {
             // Noop
           }
         };
       }
       @Override
-      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String indexTaskId) {
+      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String indexTaskId)
+      {
         // Noop
         return null;
       }
