@@ -90,14 +90,15 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerId,
-      StageId stageId
+      StageId stageId,
+      SketchEncoding sketchEncoding
   )
   {
     String path = StringUtils.format(
         "/keyStatistics/%s/%d?sketchEncoding=%s",
         StringUtils.urlEncode(stageId.getQueryId()),
         stageId.getStageNumber(),
-        WorkerResource.SketchEncoding.OCTET_STREAM
+        sketchEncoding
     );
 
     return getClient(workerId).asyncRequest(
@@ -110,7 +111,8 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerId,
       StageId stageId,
-      long timeChunk
+      long timeChunk,
+      SketchEncoding sketchEncoding
   )
   {
     String path = StringUtils.format(
@@ -118,7 +120,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
         StringUtils.urlEncode(stageId.getQueryId()),
         stageId.getStageNumber(),
         timeChunk,
-        WorkerResource.SketchEncoding.OCTET_STREAM
+        sketchEncoding
     );
 
     return getClient(workerId).asyncRequest(
