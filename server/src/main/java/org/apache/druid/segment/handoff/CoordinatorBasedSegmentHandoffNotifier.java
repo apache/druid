@@ -46,7 +46,6 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   private final String dataSource;
   private final String taskId;
 
-
   public CoordinatorBasedSegmentHandoffNotifier(
       String dataSource,
       CoordinatorClient coordinatorClient,
