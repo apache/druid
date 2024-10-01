@@ -39,6 +39,8 @@ import { toggle } from '../../../utils';
 
 import './nested-column-dialog.scss';
 
+const ARRAY_CONCAT_AGG_SIZE = 10000;
+
 export interface NestedColumnDialogProps {
   nestedColumn: SqlExpression;
   onApply(newQuery: SqlQuery): void;
@@ -62,8 +64,8 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
         .addSelect(
           SqlFunction.decorated('ARRAY_CONCAT_AGG', 'DISTINCT', [
             F('JSON_PATHS', nestedColumn),
-            10000,
-          ]).as('p'),
+            ARRAY_CONCAT_AGG_SIZE,
+          ]),
         )
         .applyIf(querySource.hasBaseTimeColumn(), q =>
           q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),
