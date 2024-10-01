@@ -26,6 +26,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
+import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorValueSelector;
 import org.junit.Assert;
@@ -41,23 +42,24 @@ public class StringMinAggregatorFactoryTest
   @Test
   public void testBuildAggregators()
   {
+    @SuppressWarnings("unchecked")
     BaseObjectColumnValueSelector<String> selector = Mockito.mock(BaseObjectColumnValueSelector.class);
     StringMinAggregatorFactory factory = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
 
     Assert.assertEquals(factory, new StringMinAggregatorFactory("name", "fieldName", null, true, null, macroTable));
-    Aggregator aggregator = factory.buildAggregator(selector);
+    Assert.assertEquals(factory.toString(), "StringMinAggregatorFactory{name='name', fieldName='fieldName', maxStringBytes=1024, aggregateMultipleValues=true}");
 
+    Aggregator aggregator = factory.buildAggregator(selector);
     Assert.assertNotNull(aggregator);
     Assert.assertEquals(StringMinAggregator.class, aggregator.getClass());
 
     BufferAggregator bufferAggregator = factory.buildBufferAggregator(selector);
-
     Assert.assertNotNull(bufferAggregator);
     Assert.assertEquals(StringMinBufferAggregator.class, bufferAggregator.getClass());
   }
 
   @Test
-  public void testFactorizeVector()
+  public void testFactorizeVectorOnMultiValueDimensionSelectorWithNullExpression()
   {
     VectorColumnSelectorFactory columnSelectorFactory = Mockito.mock(VectorColumnSelectorFactory.class);
     VectorValueSelector selector = Mockito.mock(VectorValueSelector.class);
@@ -75,6 +77,63 @@ public class StringMinAggregatorFactoryTest
 
     Assert.assertNotNull(multiValueAggregator);
     Assert.assertEquals(multiValueAggregator.getClass(), StringMinVectorAggregator.class);
+  }
+
+  @Test
+  public void testFactorizeVectorOnSingleValueDimensionVectorSelectorWithNullFieldName()
+  {
+    VectorColumnSelectorFactory falseCapabilitiesColumnSelectorFactory = Mockito.mock(VectorColumnSelectorFactory.class);
+    VectorValueSelector falseCapabilitiesSelector = Mockito.mock(VectorValueSelector.class);
+    ColumnCapabilities falseCapabilities = Mockito.mock(ColumnCapabilities.class);
+    SingleValueDimensionVectorSelector falseCapabilitiesDimensionSelector = Mockito.mock(
+        SingleValueDimensionVectorSelector.class);
+    Mockito.when(falseCapabilitiesColumnSelectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(
+               "fieldName")))
+           .thenReturn(falseCapabilitiesDimensionSelector);
+
+    Mockito.when(falseCapabilitiesColumnSelectorFactory.getColumnCapabilities("fieldName"))
+           .thenReturn(falseCapabilities);
+    Mockito.when(falseCapabilities.hasMultipleValues()).thenReturn(ColumnCapabilities.Capable.FALSE);
+
+    StringMinAggregatorFactory falseCapabilitiesFactory = new StringMinAggregatorFactory(
+        "name",
+        null,
+        1024,
+        true,
+        "fieldName",
+        macroTable
+    );
+    VectorAggregator falseCapabilitiesSingleValueAggregator = falseCapabilitiesFactory.factorizeVector(
+        falseCapabilitiesColumnSelectorFactory,
+        falseCapabilitiesSelector
+    );
+    Assert.assertNotNull(falseCapabilitiesSingleValueAggregator);
+    Assert.assertEquals(falseCapabilitiesSingleValueAggregator.getClass(), StringMinVectorAggregator.class);
+
+    VectorColumnSelectorFactory nullCapabilitiesColumnSelectorFactory = Mockito.mock(VectorColumnSelectorFactory.class);
+    VectorValueSelector nullCapabilitiesDimensionSelector = Mockito.mock(VectorValueSelector.class);
+    SingleValueDimensionVectorSelector nullValueSelector = Mockito.mock(SingleValueDimensionVectorSelector.class);
+    Mockito.when(nullCapabilitiesColumnSelectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(
+               "fieldName")))
+           .thenReturn(nullValueSelector);
+    Mockito.when(nullCapabilitiesColumnSelectorFactory.getColumnCapabilities("fieldName")).thenReturn(null);
+
+    StringMinAggregatorFactory nullCapabilitiesFactory = new StringMinAggregatorFactory(
+        "name",
+        null,
+        1024,
+        true,
+        "fieldName",
+        macroTable
+    );
+
+    VectorAggregator nullCapabilitiesSingleValueAggregator = nullCapabilitiesFactory.factorizeVector(
+        nullCapabilitiesColumnSelectorFactory,
+        nullCapabilitiesDimensionSelector
+    );
+
+    Assert.assertNotNull(nullCapabilitiesSingleValueAggregator);
+    Assert.assertEquals(nullCapabilitiesSingleValueAggregator.getClass(), StringMinVectorAggregator.class);
   }
 
   @Test
@@ -125,6 +184,14 @@ public class StringMinAggregatorFactoryTest
 
     Assert.assertNotNull(mergingFactory);
     Assert.assertTrue(mergingFactory instanceof StringMinAggregatorFactory);
+
+    StringMinAggregatorFactory mismatchedFactory = new StringMinAggregatorFactory("notSameName", "fieldName", 1024, true);
+    Assert.assertThrows(AggregatorFactoryNotMergeableException.class,
+                        () -> mismatchedFactory.getMergingFactory(factory1));
+
+    StringMaxAggregatorFactory mismatchClassFactory = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
+    Assert.assertThrows(AggregatorFactoryNotMergeableException.class,
+                        () -> mismatchClassFactory.getMergingFactory(factory1));
   }
 
   @Test
