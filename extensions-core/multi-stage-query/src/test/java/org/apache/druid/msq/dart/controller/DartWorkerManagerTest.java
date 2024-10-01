@@ -59,7 +59,7 @@ public class DartWorkerManagerTest
   private DartWorkerClient workerClient;
 
   @BeforeEach
-  public void setUp() throws Exception
+  public void setUp()
   {
     mockCloser = MockitoAnnotations.openMocks(this);
     workerManager = new DartWorkerManager(WORKERS, workerClient);

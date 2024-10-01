@@ -28,7 +28,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.worker.http.GetWorkersResponse;
 import org.apache.druid.msq.exec.Worker;
@@ -65,7 +64,6 @@ import java.util.concurrent.TimeUnit;
  */
 public class DartWorkerRunnerTest
 {
-  private static final Logger log = new Logger(DartWorkerRunnerTest.class);
   private static final int MAX_WORKERS = 1;
   private static final String QUERY_ID = "abc";
   private static final WorkerId WORKER_ID = new WorkerId("http", "localhost:8282", QUERY_ID);
@@ -105,7 +103,7 @@ public class DartWorkerRunnerTest
   private ArgumentCaptor<DruidNodeDiscovery.Listener> discoveryListener;
 
   @BeforeEach
-  public void setUp() throws Exception
+  public void setUp()
   {
     mockCloser = MockitoAnnotations.openMocks(this);
     workerRunner = new DartWorkerRunner(
