@@ -525,13 +525,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
             </div>
           )}
           {execution &&
-            (execution.result ? (
-              <ResultTablePane
-                runeMode={execution.engine === 'native'}
-                queryResult={execution.result}
-                onQueryAction={handleQueryAction}
-              />
-            ) : execution.error ? (
+            (execution.error ? (
               <div className="error-container">
                 <ExecutionErrorPane execution={execution} />
                 {execution.stages && (
@@ -543,6 +537,12 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                   />
                 )}
               </div>
+            ) : execution.result ? (
+              <ResultTablePane
+                runeMode={execution.engine === 'native'}
+                queryResult={execution.result}
+                onQueryAction={handleQueryAction}
+              />
             ) : execution.isSuccessfulIngest() ? (
               <IngestSuccessPane
                 execution={execution}
