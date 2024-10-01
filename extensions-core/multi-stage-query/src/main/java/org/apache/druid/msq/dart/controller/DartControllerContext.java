@@ -22,6 +22,8 @@ package org.apache.druid.msq.dart.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -234,5 +236,11 @@ public class DartControllerContext implements ControllerContext
             DEFAULT_TARGET_PARTITIONS_PER_WORKER
         )
     );
+  }
+
+  @Override
+  public TaskLockType taskLockType()
+  {
+    throw DruidException.defensive("TaskLockType is not used with class[%s]", getClass().getName());
   }
 }

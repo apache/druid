@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -40,6 +41,7 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.error.CanceledFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -172,6 +174,7 @@ public class DartSqlResourceTest extends MSQTestBase
             null /* not used in this test */,
             workerMemoryParameters,
             loadedSegmentsMetadata,
+            TaskLockType.APPEND,
             QueryContext.empty()
         ),
         controllerRegistry = new DartControllerRegistry()
