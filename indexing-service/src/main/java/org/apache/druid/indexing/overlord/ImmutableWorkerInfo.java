@@ -181,7 +181,7 @@ public class ImmutableWorkerInfo
   }
 
   @JsonProperty("currCapacityUsedByTaskType")
-  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public Map<String, Integer> getCurrCapacityUsedByTaskType()
   {
     return currCapacityUsedByTaskType;
