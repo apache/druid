@@ -219,7 +219,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
     // If there are rows pending flush, flush them and run again before processing any more rows.
     if (frameHasRowsPendingFlush()) {
-      return flushRACsAndRunAgain();
+      flushAllRowsAndCols(resultRowAndCols, rowId);
+      return ReturnOrAwait.runAgain();
     }
 
     if (partitionColumnNames.isEmpty()) {
@@ -560,17 +561,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private boolean frameHasRowsPendingFlush()
   {
     return frameWriter != null && frameWriter.getNumRows() > 0;
-  }
-
-  /**
-   * Flushes the rows in resultRowAndCols starting with rowId. We return a signal to run again as it's possible
-   * that we weren't able to flush all the rows to the output channel due to frame writer's capacity.
-   * @return A ReturnOrAwait object signaling that the processing should run again.
-   */
-  private ReturnOrAwait<Object> flushRACsAndRunAgain() throws IOException
-  {
-    flushAllRowsAndCols(resultRowAndCols, rowId);
-    return ReturnOrAwait.runAgain();
   }
 
   private void clearRACBuffers()
