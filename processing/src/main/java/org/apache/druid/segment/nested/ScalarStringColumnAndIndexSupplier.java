@@ -106,6 +106,60 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
     }
   }
 
+
+  public static ScalarStringColumnAndIndexSupplier readProjection(
+      ByteOrder byteOrder,
+      BitmapSerdeFactory bitmapSerdeFactory,
+      ByteBuffer bb,
+      ColumnBuilder columnBuilder,
+      ScalarStringColumnAndIndexSupplier parent
+  ) {
+    final byte version = bb.get();
+    final int columnNameLength = VByte.readInt(bb);
+    final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
+
+    if (version == NestedCommonFormatColumnSerializer.V0) {
+      try {
+        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+        final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
+
+        dictionarySupplier = parent.dictionarySupplier;
+
+        final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME
+        );
+        final CompressedVSizeColumnarIntsSupplier ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
+            encodedValueColumn,
+            byteOrder
+        );
+        final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME
+        );
+        GenericIndexed<ImmutableBitmap> valueIndexes = GenericIndexed.read(
+            valueIndexBuffer,
+            bitmapSerdeFactory.getObjectStrategy(),
+            columnBuilder.getFileMapper()
+        );
+        return new ScalarStringColumnAndIndexSupplier(
+            dictionarySupplier,
+            ints,
+            valueIndexes,
+            bitmapSerdeFactory
+        );
+      }
+      catch (IOException ex) {
+        throw new RE(ex, "Failed to deserialize V%s column.", version);
+      }
+    } else {
+      throw new RE("Unknown version " + version);
+    }
+  }
+
+
   private final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
   private final Supplier<ColumnarInts> encodedColumnSupplier;
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
@@ -128,7 +182,6 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         null
     );
   }
-
   @Override
   public NestedCommonFormatColumn get()
   {

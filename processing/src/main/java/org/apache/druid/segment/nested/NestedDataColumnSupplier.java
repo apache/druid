@@ -171,6 +171,87 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
     }
   }
 
+  public static NestedDataColumnSupplier readProjection(
+      ColumnType logicalType,
+      boolean hasNulls,
+      ByteBuffer bb,
+      ColumnBuilder columnBuilder,
+      ColumnConfig columnConfig,
+      BitmapSerdeFactory bitmapSerdeFactory,
+      ByteOrder byteOrder,
+      NestedDataColumnSupplier parent
+  )
+  {
+    final byte version = bb.get();
+    final int columnNameLength = VByte.readInt(bb);
+    final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
+
+    if (version == NestedCommonFormatColumnSerializer.V0) {
+      try {
+        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+        final GenericIndexed<String> fields;
+        final FieldTypeInfo fieldInfo;
+        final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
+        final ImmutableBitmap nullValues;
+        final Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier = parent.stringDictionarySupplier;
+        final Supplier<FixedIndexed<Long>> longDictionarySupplier = parent.longDictionarySupplier;
+        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier = parent.doubleDictionarySupplier;
+        final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier = parent.arrayDictionarySupplier;
+
+        fields = GenericIndexed.read(bb, GenericIndexed.STRING_STRATEGY, mapper);
+        fieldInfo = FieldTypeInfo.read(bb, fields.size());
+
+        final ByteBuffer rawBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            NestedCommonFormatColumnSerializer.RAW_FILE_NAME
+        );
+        compressedRawColumnSupplier = CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
+            ColumnSerializerUtils.getInternalFileName(
+                columnName,
+                NestedCommonFormatColumnSerializer.RAW_FILE_NAME
+            ),
+            rawBuffer,
+            byteOrder,
+            mapper
+        );
+        if (hasNulls) {
+          columnBuilder.setHasNulls(true);
+          final ByteBuffer nullIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.NULL_BITMAP_FILE_NAME
+          );
+          nullValues = bitmapSerdeFactory.getObjectStrategy().fromByteBufferWithSize(nullIndexBuffer);
+        } else {
+          nullValues = bitmapSerdeFactory.getBitmapFactory().makeEmptyImmutableBitmap();
+        }
+
+        return new NestedDataColumnSupplier(
+            columnName,
+            fields,
+            fieldInfo,
+            compressedRawColumnSupplier,
+            nullValues,
+            stringDictionarySupplier,
+            longDictionarySupplier,
+            doubleDictionarySupplier,
+            arrayDictionarySupplier,
+            columnConfig,
+            mapper,
+            bitmapSerdeFactory,
+            byteOrder,
+            logicalType
+        );
+      }
+      catch (IOException ex) {
+        throw new RE(ex, "Failed to deserialize V%s column.", version);
+      }
+    } else {
+      throw new RE("Unknown version " + version);
+    }
+  }
+
   private final String columnName;
   private final GenericIndexed<String> fields;
   private final FieldTypeInfo fieldInfo;

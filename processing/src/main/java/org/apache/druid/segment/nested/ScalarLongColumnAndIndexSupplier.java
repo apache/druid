@@ -42,6 +42,7 @@ import org.apache.druid.query.filter.DruidLongPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IntListUtils;
+import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -129,6 +130,62 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             byteOrder,
             Long.BYTES
         );
+
+        final Supplier<ColumnarLongs> longs = CompressedColumnarLongsSupplier.fromByteBuffer(
+            longsValueColumn,
+            byteOrder
+        );
+        return new ScalarLongColumnAndIndexSupplier(
+            longDictionarySupplier,
+            longs,
+            rBitmaps,
+            bitmapSerdeFactory.getBitmapFactory(),
+            columnConfig
+        );
+      }
+      catch (IOException ex) {
+        throw new RE(ex, "Failed to deserialize V%s column.", version);
+      }
+    } else {
+      throw new RE("Unknown version " + version);
+    }
+  }
+
+  public static ScalarLongColumnAndIndexSupplier readProjection(
+      ByteOrder byteOrder,
+      BitmapSerdeFactory bitmapSerdeFactory,
+      ByteBuffer bb,
+      ColumnBuilder columnBuilder,
+      ColumnConfig columnConfig,
+      ScalarLongColumnAndIndexSupplier parent
+  )
+  {
+    final byte version = bb.get();
+    final int columnNameLength = VByte.readInt(bb);
+    final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
+
+    if (version == NestedCommonFormatColumnSerializer.V0) {
+      try {
+
+        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+
+        final ByteBuffer longsValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            ColumnSerializerUtils.LONG_VALUE_COLUMN_FILE_NAME
+        );
+        final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME
+        );
+        GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
+            valueIndexBuffer,
+            bitmapSerdeFactory.getObjectStrategy(),
+            columnBuilder.getFileMapper()
+        );
+
+        final Supplier<FixedIndexed<Long>> longDictionarySupplier = parent.longDictionarySupplier;
 
         final Supplier<ColumnarLongs> longs = CompressedColumnarLongsSupplier.fromByteBuffer(
             longsValueColumn,

@@ -201,6 +201,91 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
     }
   }
 
+  public static VariantColumnAndIndexSupplier readProjection(
+      ColumnType logicalType,
+      ByteOrder byteOrder,
+      BitmapSerdeFactory bitmapSerdeFactory,
+      ByteBuffer bb,
+      ColumnBuilder columnBuilder,
+      VariantColumnAndIndexSupplier parent
+  )
+  {
+    final byte version = bb.get();
+    final int columnNameLength = VByte.readInt(bb);
+    final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
+
+    // variant types store an extra byte containing a FieldTypeInfo.TypeSet which has bits set for all types
+    // present in the varaint column. this is a smaller scale, single path version of what a full nested column stores
+    // for each nested path. If this value is present then the column is a mixed type and the logical type represents
+    // the 'least restrictive' native Druid type, if not then all values consistently match the logical type
+    final Byte variantTypeByte;
+    if (bb.hasRemaining()) {
+      variantTypeByte = bb.get();
+    } else {
+      variantTypeByte = null;
+    }
+
+    if (version == NestedCommonFormatColumnSerializer.V0) {
+      try {
+        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+        final Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier = parent.stringDictionarySupplier;
+        final Supplier<FixedIndexed<Long>> longDictionarySupplier = parent.longDictionarySupplier;
+        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier = parent.doubleDictionarySupplier;
+        final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier = parent.arrayDictionarySupplier;
+        final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier = parent.arrayElementDictionarySupplier;
+
+        final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME
+        );
+        final CompressedVSizeColumnarIntsSupplier ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
+            encodedValueColumn,
+            byteOrder
+        );
+        final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME
+        );
+        final GenericIndexed<ImmutableBitmap> valueIndexes = GenericIndexed.read(
+            valueIndexBuffer,
+            bitmapSerdeFactory.getObjectStrategy(),
+            columnBuilder.getFileMapper()
+        );
+        final ByteBuffer elementIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            ColumnSerializerUtils.ARRAY_ELEMENT_BITMAP_INDEX_FILE_NAME
+        );
+        final GenericIndexed<ImmutableBitmap> arrayElementIndexes = GenericIndexed.read(
+            elementIndexBuffer,
+            bitmapSerdeFactory.getObjectStrategy(),
+            columnBuilder.getFileMapper()
+        );
+
+        return new VariantColumnAndIndexSupplier(
+            logicalType,
+            variantTypeByte,
+            stringDictionarySupplier,
+            longDictionarySupplier,
+            doubleDictionarySupplier,
+            arrayDictionarySupplier,
+            arrayElementDictionarySupplier,
+            ints,
+            valueIndexes,
+            arrayElementIndexes,
+            bitmapSerdeFactory.getBitmapFactory()
+        );
+      }
+      catch (IOException ex) {
+        throw new RE(ex, "Failed to deserialize V%s column.", version);
+      }
+    } else {
+      throw new RE("Unknown version " + version);
+    }
+  }
+
 
   private final ColumnType logicalType;
   @Nullable

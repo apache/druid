@@ -375,7 +375,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           ByteBuffer buffer,
           ColumnBuilder builder,
           ColumnConfig columnConfig,
-          @Nullable ColumnHolder parent
+          ColumnHolder parent
       )
       {
         final VERSION rVersion = VERSION.fromByte(buffer.get());

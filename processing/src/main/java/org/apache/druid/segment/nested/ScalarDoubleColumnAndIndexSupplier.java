@@ -151,6 +151,62 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     }
   }
 
+  public static ScalarDoubleColumnAndIndexSupplier readProjection(
+      ByteOrder byteOrder,
+      BitmapSerdeFactory bitmapSerdeFactory,
+      ByteBuffer bb,
+      ColumnBuilder columnBuilder,
+      ColumnConfig columnConfig,
+      ScalarDoubleColumnAndIndexSupplier parent
+  )
+  {
+    final byte version = bb.get();
+    final int columnNameLength = VByte.readInt(bb);
+    final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
+
+    if (version == NestedCommonFormatColumnSerializer.V0) {
+      try {
+
+        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
+
+        final ByteBuffer doublesValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            ColumnSerializerUtils.DOUBLE_VALUE_COLUMN_FILE_NAME
+        );
+
+        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier = parent.doubleDictionarySupplier;
+
+        final Supplier<ColumnarDoubles> doubles = CompressedColumnarDoublesSuppliers.fromByteBuffer(
+            doublesValueColumn,
+            byteOrder
+        );
+        final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME
+        );
+        GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
+            valueIndexBuffer,
+            bitmapSerdeFactory.getObjectStrategy(),
+            columnBuilder.getFileMapper()
+        );
+        return new ScalarDoubleColumnAndIndexSupplier(
+            doubleDictionarySupplier,
+            doubles,
+            rBitmaps,
+            bitmapSerdeFactory.getBitmapFactory(),
+            columnConfig
+        );
+      }
+      catch (IOException ex) {
+        throw new RE(ex, "Failed to deserialize V%s column.", version);
+      }
+    } else {
+      throw new RE("Unknown version " + version);
+    }
+  }
+
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
 
   private final Supplier<ColumnarDoubles> valueColumnSupplier;

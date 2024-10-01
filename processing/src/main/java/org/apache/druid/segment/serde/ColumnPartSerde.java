@@ -61,9 +61,12 @@ public interface ColumnPartSerde
         ByteBuffer buffer,
         ColumnBuilder builder,
         ColumnConfig columnConfig,
-        @Nullable ColumnHolder parent
+        ColumnHolder parent
     )
     {
+      // todo (clint): is this chill or should explode to force things to implement? like, is chill to avoid having to
+      //  implement boilerplate for things that don't have different format when projected like simple numbers with no
+      //  dictionaries or indexes, but otoh seems like this would lead to other strange errors...
       read(buffer, builder, columnConfig);
     }
   }
