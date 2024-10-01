@@ -28,6 +28,7 @@ import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -74,14 +75,22 @@ public class LoadingLookup extends LookupExtractor
     }
 
     final String presentVal;
-    try {
-      presentVal = loadingCache.get(keyEquivalent, new ApplyCallable(keyEquivalent));
+    presentVal = this.loadingCache.getIfPresent(keyEquivalent);
+    if (presentVal != null) {
       return NullHandling.emptyToNullIfNeeded(presentVal);
     }
-    catch (ExecutionException e) {
-      LOGGER.debug("value not found for key [%s]", key);
+
+    String val = this.dataFetcher.fetch(keyEquivalent);
+    if (val == null) {
       return null;
     }
+
+    Map<String, String> map = new HashMap<>();
+    map.put(keyEquivalent, val);
+
+    this.loadingCache.putAll(map);
+
+    return NullHandling.emptyToNullIfNeeded(val);
   }
 
   @Override
@@ -108,13 +117,18 @@ public class LoadingLookup extends LookupExtractor
   @Override
   public boolean supportsAsMap()
   {
-    return false;
+    return true;
   }
 
   @Override
   public Map<String, String> asMap()
   {
-    throw new UnsupportedOperationException("Cannot get map view");
+    Iterable<Map.Entry<String, String>> data = this.dataFetcher.fetchAll();
+    Map<String, String> map = new HashMap<>();
+    if (data != null) {
+      data.forEach(each -> map.put(each.getKey(), each.getValue()));
+    }
+    return map;
   }
 
   @Override
