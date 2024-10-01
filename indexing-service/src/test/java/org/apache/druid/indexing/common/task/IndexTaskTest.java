@@ -1115,7 +1115,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     EasyMock.replay(mockToolbox);
-    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000, indexTask.getId()));
+    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
     EasyMock.verify(mockToolbox);
   }
 
@@ -1140,7 +1140,7 @@ public class IndexTaskTest extends IngestionTestBase
     );
 
     EasyMock.replay(mockToolbox);
-    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, -1, indexTask.getId()));
+    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, -1));
     EasyMock.verify(mockToolbox);
   }
 
@@ -1194,7 +1194,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.replay(mockDataSegment1, mockDataSegment2);
     EasyMock.replay(mockFactory, mockNotifier);
 
-    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000, indexTask.getId()));
+    Assert.assertFalse(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 1000));
     EasyMock.verify(mockToolbox);
     EasyMock.verify(mockDataSegment1, mockDataSegment2);
     EasyMock.verify(mockFactory, mockNotifier);
@@ -1244,7 +1244,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.replay(mockToolbox);
     EasyMock.replay(mockDataSegment1, mockDataSegment2);
 
-    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000, indexTask.getId()));
+    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000));
     EasyMock.verify(mockToolbox);
     EasyMock.verify(mockDataSegment1, mockDataSegment2);
   }
@@ -1295,7 +1295,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.replay(mockToolbox);
     EasyMock.replay(mockDataSegment1, mockDataSegment2);
 
-    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000, indexTask.getId()));
+    Assert.assertTrue(indexTask.waitForSegmentAvailability(mockToolbox, segmentsToWaitFor, 30000));
     emitter.verifyEmitted("task/segmentAvailability/wait/time", 1);
     EasyMock.verify(mockToolbox);
     EasyMock.verify(mockDataSegment1, mockDataSegment2);

@@ -966,8 +966,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         waitForSegmentAvailability(
             toolbox,
             segmentsToWaitFor,
-            tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
-            getId()
+            tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
         );
       }
 
