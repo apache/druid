@@ -25,18 +25,18 @@ import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.messages.server.MessageRelayResource;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
-import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.dart.worker.DartWorkerRunner;
-import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.rpc.MSQResourceUtils;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.msq.rpc.WorkerResource;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.initialization.jetty.ServiceUnavailableException;
 import org.apache.druid.server.security.AuthorizerMapper;
 
 import javax.servlet.http.HttpServletRequest;
@@ -63,7 +63,7 @@ public class DartWorkerResource
   /**
    * Root of worker APIs.
    */
-  public static final String PATH = "/druid/v2/dart-worker";
+  public static final String PATH = "/druid/dart-worker";
 
   /**
    * Header containing the controller host:port, from {@link DruidNode#getHostAndPortToUse()}.
@@ -135,12 +135,6 @@ public class DartWorkerResource
 
   /**
    * Stops a worker. Returns immediately; does not wait for the worker to actually finish.
-   *
-   * It is very important that this, or {@link Worker#postFinish()}, is called on the conclusion of each query.
-   * For this reason, {@link DartWorkerClient} uses an unlimited retry policy. If a stop command was lost, a worker
-   * could run in a zombie state without its controller. This state would persist until the server that ran the
-   * controller shuts down or restarts. At that time, the listener in {@link DartWorkerRunner.BrokerListener} calls
-   * {@link Worker#controllerFailed()}, and the zombie worker would exit.
    */
   @POST
   @Path("/workers/{queryId}/stop")
@@ -159,18 +153,22 @@ public class DartWorkerResource
    * by {@link #httpPostWorkOrder(WorkOrder, String, HttpServletRequest)}.
    */
   @Path("/workers/{queryId}")
-  public Object httpCallWorkerResource(@PathParam("queryId") final String queryId)
+  public Object httpCallWorkerResource(
+      @PathParam("queryId") final String queryId,
+      @Context final HttpServletRequest req
+  )
   {
     final WorkerResource resource = workerRunner.getWorkerResource(queryId);
 
     if (resource != null) {
       return resource;
     } else {
-      // Return HTTP 503 (Service Unavailable) so clients retry. When workers are first starting up and contacting
-      // each other, worker A may contact worker B before worker B has started up. In the future, it would be better
-      // to do an async wait, with some timeout, for the worker to show up before returning 503. That way a retry
-      // wouldn't be necessary.
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+      // Return HTTP 503 (Service Unavailable) so worker -> worker clients can retry. When workers are first starting
+      // up and contacting each other, worker A may contact worker B before worker B has started up. In the future, it
+      // would be better to do an async wait, with some timeout, for the worker to show up before returning 503.
+      // That way a retry wouldn't be necessary.
+      MSQResourceUtils.authorizeAdminRequest(permissionMapper, authorizerMapper, req);
+      throw new ServiceUnavailableException(StringUtils.format("No worker running for query[%s]", queryId));
     }
   }
 

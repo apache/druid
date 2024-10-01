@@ -26,11 +26,11 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.http.DartSqlResource;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
-import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.QueryContext;
@@ -65,19 +65,19 @@ public class DartSqlEngine implements SqlEngine
   public static final String CTX_FULL_REPORT = "fullReport";
   public static final boolean CTX_FULL_REPORT_DEFAULT = false;
 
-  private final ControllerContext controllerContext;
+  private final DartControllerContextFactory controllerContextFactory;
   private final DartControllerRegistry controllerRegistry;
   private final DartControllerConfig controllerConfig;
   private final ExecutorService controllerExecutor;
 
   public DartSqlEngine(
-      ControllerContext controllerContext,
+      DartControllerContextFactory controllerContextFactory,
       DartControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
       ExecutorService controllerExecutor
   )
   {
-    this.controllerContext = controllerContext;
+    this.controllerContextFactory = controllerContextFactory;
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
     this.controllerExecutor = controllerExecutor;
@@ -160,7 +160,7 @@ public class DartSqlEngine implements SqlEngine
   {
     return new DartQueryMaker(
         relRoot.fields,
-        controllerContext,
+        controllerContextFactory,
         plannerContext,
         controllerRegistry,
         controllerConfig,

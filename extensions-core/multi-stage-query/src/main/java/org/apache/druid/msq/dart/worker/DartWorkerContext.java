@@ -44,7 +44,6 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.groupby.GroupingEngine;
-import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.server.DruidNode;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -53,6 +52,7 @@ import java.io.File;
 
 /**
  * Dart implementation of {@link WorkerContext}.
+ * Each instance is scoped to a query.
  */
 public class DartWorkerContext implements WorkerContext
 {
@@ -61,9 +61,8 @@ public class DartWorkerContext implements WorkerContext
   private final String workerId;
   private final DruidNode selfNode;
   private final ObjectMapper jsonMapper;
-  private final ObjectMapper smileMapper;
   private final Injector injector;
-  private final ServiceClientFactory serviceClientFactory;
+  private final DartWorkerClient workerClient;
   private final DruidProcessingConfig processingConfig;
   private final SegmentWrangler segmentWrangler;
   private final GroupingEngine groupingEngine;
@@ -86,9 +85,8 @@ public class DartWorkerContext implements WorkerContext
       final String workerId,
       final DruidNode selfNode,
       final ObjectMapper jsonMapper,
-      final ObjectMapper smileMapper,
       final Injector injector,
-      final ServiceClientFactory serviceClientFactory,
+      final DartWorkerClient workerClient,
       final DruidProcessingConfig processingConfig,
       final SegmentWrangler segmentWrangler,
       final GroupingEngine groupingEngine,
@@ -105,9 +103,8 @@ public class DartWorkerContext implements WorkerContext
     this.workerId = workerId;
     this.selfNode = selfNode;
     this.jsonMapper = jsonMapper;
-    this.smileMapper = smileMapper;
     this.injector = injector;
-    this.serviceClientFactory = serviceClientFactory;
+    this.workerClient = workerClient;
     this.processingConfig = processingConfig;
     this.segmentWrangler = segmentWrangler;
     this.groupingEngine = groupingEngine;
@@ -153,6 +150,8 @@ public class DartWorkerContext implements WorkerContext
           processingBuffersSet = null;
         }
       }
+
+      workerClient.close();
     });
   }
 
@@ -175,7 +174,7 @@ public class DartWorkerContext implements WorkerContext
   @Override
   public WorkerClient makeWorkerClient()
   {
-    return new DartWorkerClient(serviceClientFactory, smileMapper, null);
+    return workerClient;
   }
 
   @Override

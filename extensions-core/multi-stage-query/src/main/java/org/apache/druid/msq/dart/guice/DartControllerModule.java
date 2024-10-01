@@ -36,7 +36,8 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.DartResourcePermissionMapper;
 import org.apache.druid.msq.dart.controller.ControllerMessageListener;
-import org.apache.druid.msq.dart.controller.DartControllerContext;
+import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
+import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.DartMessageRelayFactoryImpl;
 import org.apache.druid.msq.dart.controller.DartMessageRelays;
@@ -45,7 +46,6 @@ import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactory;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClientFactoryImpl;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
-import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -75,30 +75,23 @@ public class DartControllerModule implements DruidModule
     @Override
     public void configure(Binder binder)
     {
-      Jerseys.addResource(binder, DartSqlResource.class);
-      LifecycleModule.register(binder, DartSqlClients.class);
-      LifecycleModule.register(binder, DartMessageRelays.class);
       JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".controller", DartControllerConfig.class);
       JsonConfigProvider.bind(binder, DartModules.DART_PROPERTY_BASE + ".query", DefaultQueryConfig.class, Dart.class);
 
-      binder.bind(ControllerContext.class)
-            .annotatedWith(Dart.class)
-            .to(DartControllerContext.class)
-            .in(LazySingleton.class);
+      Jerseys.addResource(binder, DartSqlResource.class);
 
-      binder.bind(DartControllerRegistry.class)
-            .in(LazySingleton.class);
+      LifecycleModule.register(binder, DartSqlClients.class);
+      LifecycleModule.register(binder, DartMessageRelays.class);
 
-      binder.bind(ControllerMessageListener.class)
+      binder.bind(ControllerMessageListener.class).in(LazySingleton.class);
+      binder.bind(DartControllerRegistry.class).in(LazySingleton.class);
+      binder.bind(DartMessageRelayFactoryImpl.class).in(LazySingleton.class);
+      binder.bind(DartControllerContextFactory.class)
+            .to(DartControllerContextFactoryImpl.class)
             .in(LazySingleton.class);
-
-      binder.bind(DartMessageRelayFactoryImpl.class)
-            .in(LazySingleton.class);
-
       binder.bind(DartSqlClientFactory.class)
             .to(DartSqlClientFactoryImpl.class)
             .in(LazySingleton.class);
-
       binder.bind(ResourcePermissionMapper.class)
             .annotatedWith(Dart.class)
             .to(DartResourcePermissionMapper.class);
@@ -107,10 +100,7 @@ public class DartControllerModule implements DruidModule
     @Provides
     @Dart
     @LazySingleton
-    public SqlStatementFactory makeSqlStatementFactory(
-        final DartSqlEngine engine,
-        final SqlToolbox toolbox
-    )
+    public SqlStatementFactory makeSqlStatementFactory(final DartSqlEngine engine, final SqlToolbox toolbox)
     {
       return new SqlStatementFactory(toolbox.withEngine(engine));
     }
@@ -128,13 +118,13 @@ public class DartControllerModule implements DruidModule
     @Provides
     @LazySingleton
     public DartSqlEngine makeSqlEngine(
-        @Dart ControllerContext controllerContext,
+        DartControllerContextFactory controllerContextFactory,
         DartControllerRegistry controllerRegistry,
         DartControllerConfig controllerConfig
     )
     {
       return new DartSqlEngine(
-          controllerContext,
+          controllerContextFactory,
           controllerRegistry,
           controllerConfig,
           Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s")

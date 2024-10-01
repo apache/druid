@@ -78,7 +78,7 @@ public class WorkerIdTest
     Assertions.assertEquals("https", workerId.getScheme());
     Assertions.assertEquals("local-host:8100", workerId.getHostAndPort());
     Assertions.assertEquals("xyz", workerId.getQueryId());
-    Assertions.assertEquals("https://local-host:8100/druid/v2/dart-worker/workers/xyz", workerId.toUri().toString());
+    Assertions.assertEquals("https://local-host:8100/druid/dart-worker/workers/xyz", workerId.toUri().toString());
   }
 
   @Test

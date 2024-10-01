@@ -175,11 +175,17 @@ public class DartWorkerManager implements WorkerManager
       final List<ListenableFuture<?>> futures = new ArrayList<>();
 
       // Send stop commands to all workers. This ensures they exit promptly, and do not get left in a zombie state.
+      // For this reason, the workerClient uses an unlimited retry policy. If a stop command is lost, a worker
+      // could get stuck in a zombie state without its controller. This state would persist until the server that
+      // ran the controller shuts down or restarts. At that time, the listener in DartWorkerRunner.BrokerListener calls
+      // "controllerFailed()" on the Worker, and the zombie worker would exit.
+
       for (final String workerId : workerIds) {
         futures.add(workerClient.stopWorker(workerId));
       }
 
-      // Block until messages are acknowledged.
+      // Block until messages are acknowledged, or until the worker we're communicating with has failed.
+
       try {
         FutureUtils.getUnchecked(Futures.successfulAsList(futures), false);
       }

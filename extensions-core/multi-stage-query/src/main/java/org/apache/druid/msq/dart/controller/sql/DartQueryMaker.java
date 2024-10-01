@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
+import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.guice.DartControllerConfig;
 import org.apache.druid.msq.exec.Controller;
@@ -87,7 +88,7 @@ public class DartQueryMaker implements QueryMaker
   private static final Logger log = new Logger(DartQueryMaker.class);
 
   private final List<Entry<Integer, String>> fieldMapping;
-  private final ControllerContext controllerContext;
+  private final DartControllerContextFactory controllerContextFactory;
   private final PlannerContext plannerContext;
 
   /**
@@ -108,7 +109,7 @@ public class DartQueryMaker implements QueryMaker
 
   public DartQueryMaker(
       List<Entry<Integer, String>> fieldMapping,
-      ControllerContext controllerContext,
+      DartControllerContextFactory controllerContextFactory,
       PlannerContext plannerContext,
       DartControllerRegistry controllerRegistry,
       DartControllerConfig controllerConfig,
@@ -116,7 +117,7 @@ public class DartQueryMaker implements QueryMaker
   )
   {
     this.fieldMapping = fieldMapping;
-    this.controllerContext = controllerContext;
+    this.controllerContextFactory = controllerContextFactory;
     this.plannerContext = plannerContext;
     this.controllerRegistry = controllerRegistry;
     this.controllerConfig = controllerConfig;
@@ -136,8 +137,10 @@ public class DartQueryMaker implements QueryMaker
     final List<Pair<SqlTypeName, ColumnType>> types =
         MSQTaskQueryMaker.getTypes(druidQuery, fieldMapping, plannerContext);
 
+    final String dartQueryId = druidQuery.getQuery().context().getString(DartSqlEngine.CTX_DART_QUERY_ID);
+    final ControllerContext controllerContext = controllerContextFactory.newContext(dartQueryId);
     final ControllerImpl controller = new ControllerImpl(
-        druidQuery.getQuery().context().getString(DartSqlEngine.CTX_DART_QUERY_ID),
+        dartQueryId,
         querySpec,
         new ResultsContext(
             types.stream().map(p -> p.lhs).collect(Collectors.toList()),
@@ -148,6 +151,7 @@ public class DartQueryMaker implements QueryMaker
 
     final ControllerHolder controllerHolder = new ControllerHolder(
         controller,
+        controllerContext,
         plannerContext.getSqlQueryId(),
         plannerContext.getSql(),
         plannerContext.getAuthenticationResult(),
@@ -191,7 +195,11 @@ public class DartQueryMaker implements QueryMaker
     // Run in controllerExecutor. Control doesn't really *need* to be moved to another thread, but we have to
     // use the controllerExecutor anyway, to ensure we respect the concurrentQueries configuration.
     reportFuture = controllerExecutor.submit(() -> {
+      final String threadName = Thread.currentThread().getName();
+
       try {
+        Thread.currentThread().setName(nameThread(plannerContext));
+
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         final TaskReportQueryListener queryListener = new TaskReportQueryListener(
             TaskReportMSQDestination.instance(),
@@ -222,6 +230,7 @@ public class DartQueryMaker implements QueryMaker
       }
       finally {
         controllerRegistry.deregister(controllerHolder);
+        Thread.currentThread().setName(threadName);
       }
     });
 
@@ -266,6 +275,19 @@ public class DartQueryMaker implements QueryMaker
   }
 
   /**
+   * Generate a name for a thread in {@link #controllerExecutor}.
+   */
+  private String nameThread(final PlannerContext plannerContext)
+  {
+    return StringUtils.format(
+        "%s-sqlQueryId[%s]-queryId[%s]",
+        Thread.currentThread().getName(),
+        plannerContext.getSqlQueryId(),
+        plannerContext.queryContext().get(DartSqlEngine.CTX_DART_QUERY_ID)
+    );
+  }
+
+  /**
    * Helper for {@link #runWithoutReport(ControllerHolder)}.
    */
   class ResultIteratorMaker implements BaseSequence.IteratorMaker<Object[], ResultIterator>
@@ -291,14 +313,8 @@ public class DartQueryMaker implements QueryMaker
         final String threadName = Thread.currentThread().getName();
 
         try {
-          Thread.currentThread().setName(
-              StringUtils.format(
-                  "%s-sqlQueryId[%s]-queryId[%s]",
-                  threadName,
-                  plannerContext.getSqlQueryId(),
-                  controller.queryId()
-              )
-          );
+          Thread.currentThread().setName(nameThread(plannerContext));
+
           if (!controllerHolder.run(resultIterator)) {
             // Controller was canceled before it ran. Push a cancellation error to the resultIterator, so the sequence
             // returned by "runWithoutReport" can resolve.

@@ -20,13 +20,8 @@
 package org.apache.druid.msq.dart.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import org.apache.druid.client.BrokerServerView;
-import org.apache.druid.guice.annotations.EscalatedGlobal;
-import org.apache.druid.guice.annotations.Json;
-import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -49,7 +44,6 @@ import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 
@@ -57,6 +51,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Dart implementation of {@link ControllerContext}.
+ * Each instance is scoped to a query.
+ */
 public class DartControllerContext implements ControllerContext
 {
   /**
@@ -81,21 +79,18 @@ public class DartControllerContext implements ControllerContext
 
   private final Injector injector;
   private final ObjectMapper jsonMapper;
-  private final ObjectMapper smileMapper;
   private final DruidNode selfNode;
-  private final ServiceClientFactory serviceClientFactory;
+  private final DartWorkerClient workerClient;
   private final BrokerServerView serverView;
   private final MemoryIntrospector memoryIntrospector;
   private final ServiceMetricEvent.Builder metricBuilder;
   private final ServiceEmitter emitter;
 
-  @Inject
   public DartControllerContext(
       final Injector injector,
-      @Json final ObjectMapper jsonMapper,
-      @Smile final ObjectMapper smileMapper,
-      @Self final DruidNode selfNode,
-      @EscalatedGlobal final ServiceClientFactory serviceClientFactory,
+      final ObjectMapper jsonMapper,
+      final DruidNode selfNode,
+      final DartWorkerClient workerClient,
       final MemoryIntrospector memoryIntrospector,
       final BrokerServerView serverView,
       final ServiceEmitter emitter
@@ -103,9 +98,8 @@ public class DartControllerContext implements ControllerContext
   {
     this.injector = injector;
     this.jsonMapper = jsonMapper;
-    this.smileMapper = smileMapper;
     this.selfNode = selfNode;
-    this.serviceClientFactory = serviceClientFactory;
+    this.workerClient = workerClient;
     this.serverView = serverView;
     this.memoryIntrospector = memoryIntrospector;
     this.metricBuilder = new ServiceMetricEvent.Builder();
@@ -203,19 +197,19 @@ public class DartControllerContext implements ControllerContext
   {
     // We're ignoring WorkerFailureListener. Dart worker failures are routed into the controller by
     // ControllerMessageListener, which receives a notification when a worker goes offline.
-    return new DartWorkerManager(queryKernelConfig.getWorkerIds(), newWorkerClient());
+    return new DartWorkerManager(queryKernelConfig.getWorkerIds(), workerClient);
   }
 
   @Override
   public DartWorkerClient newWorkerClient()
   {
-    return new DartWorkerClient(serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse());
+    return workerClient;
   }
 
   @Override
   public void registerController(Controller controller, Closer closer)
   {
-    // Nothing to do.
+    closer.register(workerClient);
   }
 
   @Override

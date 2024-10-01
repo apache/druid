@@ -128,7 +128,7 @@ public class DartWorkerModule implements DruidModule
 
     @Provides
     @Dart
-    public MessageRelayMonitor createControllerMonitor(
+    public MessageRelayMonitor createMessageRelayMonitor(
         final DruidNodeDiscoveryProvider discoveryProvider,
         final Outbox<ControllerMessage> outbox
     )

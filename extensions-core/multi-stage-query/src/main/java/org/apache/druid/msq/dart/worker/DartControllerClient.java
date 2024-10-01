@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.dart.worker;
 
+import org.apache.druid.common.guava.FutureBox;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.messages.server.Outbox;
@@ -46,6 +47,11 @@ public class DartControllerClient implements ControllerClient
   private final Outbox<ControllerMessage> outbox;
   private final String queryId;
   private final String controllerHost;
+
+  /**
+   * Currently-outstanding futures. These are tracked so they can be canceled in {@link #close()}.
+   */
+  private final FutureBox futureBox = new FutureBox();
 
   public DartControllerClient(
       final Outbox<ControllerMessage> outbox,
@@ -111,12 +117,13 @@ public class DartControllerClient implements ControllerClient
   @Override
   public void close()
   {
-    // Nothing to close.
+    // Cancel any pending futures.
+    futureBox.close();
   }
 
   private void sendMessage(final ControllerMessage message)
   {
-    FutureUtils.getUnchecked(outbox.sendMessage(controllerHost, message), true);
+    FutureUtils.getUnchecked(futureBox.register(outbox.sendMessage(controllerHost, message)), true);
   }
 
   /**

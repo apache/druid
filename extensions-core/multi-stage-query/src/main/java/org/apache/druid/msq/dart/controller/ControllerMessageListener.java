@@ -25,7 +25,6 @@ import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
 import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
-import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.server.DruidNode;
 
 /**
@@ -43,20 +42,6 @@ public class ControllerMessageListener implements MessageListener<ControllerMess
   }
 
   @Override
-  public void serverAdded(DruidNode node)
-  {
-    // Fail workers when they're added, because when they're added, they shouldn't be running anything. If they are
-    // running something, cancel it.
-    workerFailed(node);
-  }
-
-  @Override
-  public void serverRemoved(DruidNode node)
-  {
-    workerFailed(node);
-  }
-
-  @Override
   public void messageReceived(ControllerMessage message)
   {
     final ControllerHolder holder = controllerRegistry.get(message.getQueryId());
@@ -65,21 +50,19 @@ public class ControllerMessageListener implements MessageListener<ControllerMess
     }
   }
 
-  private void workerFailed(final DruidNode node)
+  @Override
+  public void serverAdded(DruidNode node)
+  {
+    // Nothing to do.
+  }
+
+  @Override
+  public void serverRemoved(DruidNode node)
   {
     for (final ControllerHolder holder : controllerRegistry.getAllHolders()) {
       final Controller controller = holder.getController();
-      final String workerId = WorkerId.fromDruidNode(node, controller.queryId()).toString();
-      if (controller.hasWorker(workerId)) {
-        controller.workerError(
-            MSQErrorReport.fromFault(
-                workerId,
-                node.getHost(),
-                null,
-                new WorkerFailedFault(workerId, "Worker went offline")
-            )
-        );
-      }
+      final WorkerId workerId = WorkerId.fromDruidNode(node, controller.queryId());
+      holder.workerOffline(workerId);
     }
   }
 }

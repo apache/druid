@@ -20,8 +20,13 @@
 package org.apache.druid.msq.dart.controller;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.msq.dart.worker.DartWorkerClient;
+import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.QueryListener;
+import org.apache.druid.msq.indexing.error.MSQErrorReport;
+import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.joda.time.DateTime;
 
@@ -51,6 +56,7 @@ public class ControllerHolder
   }
 
   private final Controller controller;
+  private final ControllerContext controllerContext;
   private final String sqlQueryId;
   private final String sql;
   private final AuthenticationResult authenticationResult;
@@ -59,6 +65,7 @@ public class ControllerHolder
 
   public ControllerHolder(
       final Controller controller,
+      final ControllerContext controllerContext,
       final String sqlQueryId,
       final String sql,
       final AuthenticationResult authenticationResult,
@@ -66,6 +73,7 @@ public class ControllerHolder
   )
   {
     this.controller = Preconditions.checkNotNull(controller, "controller");
+    this.controllerContext = controllerContext;
     this.sqlQueryId = Preconditions.checkNotNull(sqlQueryId, "sqlQueryId");
     this.sql = sql;
     this.authenticationResult = authenticationResult;
@@ -100,6 +108,33 @@ public class ControllerHolder
   public State getState()
   {
     return state.get();
+  }
+
+  /**
+   * Call when a worker has gone offline. Closes its client and sends a {@link Controller#workerError}
+   * to the controller.
+   */
+  public void workerOffline(final WorkerId workerId)
+  {
+    final String workerIdString = workerId.toString();
+
+    if (controllerContext instanceof DartControllerContext) {
+      // For DartControllerContext, newWorkerClient() returns the same instance every time.
+      // This will always be DartControllerContext in production; the instanceof check is here because certain
+      // tests use a different context class.
+      ((DartWorkerClient) controllerContext.newWorkerClient()).closeClient(workerId.getHostAndPort());
+    }
+
+    if (controller.hasWorker(workerIdString)) {
+      controller.workerError(
+          MSQErrorReport.fromFault(
+              workerIdString,
+              workerId.getHostAndPort(),
+              null,
+              new WorkerFailedFault(workerIdString, "Worker went offline")
+          )
+      );
+    }
   }
 
   /**

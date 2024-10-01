@@ -20,14 +20,13 @@
 package org.apache.druid.messages.server;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.common.guava.FutureBox;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.messages.MessageBatch;
 import org.apache.druid.messages.client.MessageRelay;
@@ -38,7 +37,6 @@ import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -123,9 +121,9 @@ public class OutboxImpl<MessageType> implements Outbox<MessageType>
     private final long epoch;
 
     /**
-     * Currently-outstanding futures. These are tracked so they can be canceled in {@link #stop()}.
+     * Currently-outstanding futures.
      */
-    private final Set<ListenableFuture<?>> pendingFutures = Sets.newConcurrentHashSet();
+    private final FutureBox pendingFutures = new FutureBox();
 
     @GuardedBy("this")
     private long startWatermark = 0;
@@ -135,8 +133,6 @@ public class OutboxImpl<MessageType> implements Outbox<MessageType>
 
     @GuardedBy("this")
     private SettableFuture<?> messageAvailableFuture = SettableFuture.create();
-
-    private volatile boolean stopped;
 
     public OutboxQueue()
     {
@@ -157,7 +153,7 @@ public class OutboxImpl<MessageType> implements Outbox<MessageType>
         }
       }
 
-      return registerFuture(future);
+      return pendingFutures.register(future);
     }
 
     ListenableFuture<MessageBatch<T>> getMessages(final long newStartWatermark)
@@ -176,7 +172,7 @@ public class OutboxImpl<MessageType> implements Outbox<MessageType>
             messageAvailableFuture = SettableFuture.create();
           }
 
-          return registerFuture(
+          return pendingFutures.register(
               FutureUtils.transform(
                   Futures.nonCancellationPropagating(messageAvailableFuture),
                   ignored -> {
@@ -187,17 +183,14 @@ public class OutboxImpl<MessageType> implements Outbox<MessageType>
               )
           );
         } else {
-          return registerFuture(Futures.immediateFuture(nextBatch()));
+          return pendingFutures.register(Futures.immediateFuture(nextBatch()));
         }
       }
     }
 
     void stop()
     {
-      stopped = true;
-      for (ListenableFuture<?> future : pendingFutures) {
-        future.cancel(false); // Ignore return value
-      }
+      pendingFutures.close();
     }
 
     @GuardedBy("this")
@@ -211,19 +204,6 @@ public class OutboxImpl<MessageType> implements Outbox<MessageType>
       }
 
       return new MessageBatch<>(batch, epoch, startWatermark);
-    }
-
-    private <R> ListenableFuture<R> registerFuture(final ListenableFuture<R> future)
-    {
-      pendingFutures.add(future);
-      future.addListener(() -> pendingFutures.remove(future), Execs.directExecutor());
-
-      // If "stop" was called while we were creating this future, cancel it prior to returning it.
-      if (stopped) {
-        future.cancel(false);
-      }
-
-      return future;
     }
   }
 }
