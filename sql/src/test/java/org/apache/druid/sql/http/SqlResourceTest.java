@@ -1397,21 +1397,21 @@ public class SqlResourceTest extends CalciteTestBase
 
   /**
    * This test is for {@link org.apache.druid.error.InvalidSqlInput} exceptions that are thrown by druid rules during query
-   * planning. e.g. doing max aggregation on string type. The test checks that the API returns correct error messages
+   * planning. e.g. doing sum aggregation on complex type. The test checks that the API returns correct error messages
    * for such planning errors.
    */
   @Test
   public void testCannotConvert_InvalidSQL() throws Exception
   {
-    // max(string) unsupported
+    // sum(complex<hyperunique>) unsupported
     ErrorResponse errorResponse = postSyncForException(
-        "SELECT max(dim1) FROM druid.foo",
+        "SELECT sum(unique_dim1) FROM druid.foo",
         Status.BAD_REQUEST.getStatusCode()
     );
 
     validateInvalidSqlError(
         errorResponse,
-        "Aggregation [MAX] does not support type [STRING], column [v0]"
+        "Cannot apply 'SUM' to arguments of type 'SUM(<COMPLEX<HYPERUNIQUE>>)'."
     );
     checkSqlRequestLog(false);
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
