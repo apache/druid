@@ -217,6 +217,11 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
      Most of the window operations like SUM(), RANK(), RANGE() etc. can be made with 2 passes of the data. We might think to reimplement them in the MSQ way so that we do not have to materialize so much data.
      */
 
+    // If there are rows pending flush, flush them and run again before processing any more rows.
+    if (frameHasRowsPendingFlush()) {
+      return flushRACsAndRunAgain();
+    }
+
     if (partitionColumnNames.isEmpty()) {
       // Scenario 1: Query has atleast one window function with an OVER() clause without a PARTITION BY.
       if (inputChannel.canRead()) {
@@ -226,11 +231,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       }
 
       if (inputChannel.isFinished()) {
-        // If there are rows pending flush, flush them and run again.
-        if (frameHasRowsPendingFlush()) {
-          return flushRACsAndRunAgain();
-        }
-
         // If no rows are flushed yet, process all rows.
         if (rowId.get() == 0) {
           runAllOpsOnMultipleRac(frameRowsAndCols);
@@ -244,6 +244,10 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       }
       return ReturnOrAwait.awaitAll(inputChannels().size());
     }
+
+    // This helps us avoid OOM issues, as it ensures that we don't keep accumulating the processed rows in-memory, if
+    // the rate of processing of the rows is higher than the allowed capacity of frame writer in each iteration of runIncrementally.
+    clearRACBuffers();
 
     // Scenario 2: All window functions in the query have OVER() clause with a PARTITION BY
     if (frameCursor == null || frameCursor.isDone()) {
@@ -264,25 +268,10 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
           processRowsUpToLastPartition();
           return ReturnOrAwait.runAgain();
         }
-
-        // This handles the rows pending flush to the output channel, if we have any.
-        if (frameHasRowsPendingFlush()) {
-          return flushRACsAndRunAgain();
-        } else {
-          clearRACBuffers();
-        }
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         return ReturnOrAwait.runAgain();
       }
-    }
-
-    // This helps us avoid OOM issues, as it ensures that we don't keep accumulating the processed rows in-memory, if
-    // the rate of processing of the rows is higher than the allowed capacity of frame writer in each iteration of runIncrementally.
-    if (frameHasRowsPendingFlush()) {
-      return flushRACsAndRunAgain();
-    } else {
-      clearRACBuffers();
     }
 
     while (!frameCursor.isDone()) {
