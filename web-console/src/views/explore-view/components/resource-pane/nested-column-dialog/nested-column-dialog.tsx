@@ -18,6 +18,7 @@
 
 import {
   Button,
+  ButtonGroup,
   Classes,
   Dialog,
   FormGroup,
@@ -102,6 +103,10 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
                 );
               })}
             </Menu>
+            <ButtonGroup fill>
+              <Button text="Select all" onClick={() => setSelectedPaths(paths)} />
+              <Button text="Select none" onClick={() => setSelectedPaths([])} />
+            </ButtonGroup>
           </FormGroup>
         )}
         <FormGroup label="Nameing scheme">
