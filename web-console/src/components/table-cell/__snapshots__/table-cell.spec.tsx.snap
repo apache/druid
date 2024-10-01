@@ -14,7 +14,7 @@ exports[`TableCell matches snapshot Date 1`] = `
   class="table-cell timestamp"
   data-tooltip="1645664523000"
 >
-  2022-02-24T01:02:03.000Z
+  2022-02-24 01:02:03
 </div>
 `;
 
