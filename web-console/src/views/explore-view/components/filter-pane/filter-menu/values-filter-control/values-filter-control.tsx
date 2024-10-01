@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-import { FormGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { FormGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { QueryResult, ValuesFilterPattern } from '@druid-toolkit/query';
 import { C, F, SqlExpression, SqlQuery } from '@druid-toolkit/query';
 import React, { useMemo, useState } from 'react';
 
+import { ClearableInput } from '../../../../../../components';
 import { useQueryManager } from '../../../../../../hooks';
 import { caseInsensitiveContains, filterMap } from '../../../../../../utils';
 import type { QuerySource } from '../../../../models';
@@ -82,11 +83,7 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
   return (
     <FormGroup className="values-filter-control">
       {showSearch && (
-        <InputGroup
-          value={searchString}
-          onChange={e => setSearchString(e.target.value)}
-          placeholder="Search"
-        />
+        <ClearableInput value={searchString} onChange={setSearchString} placeholder="Search" />
       )}
       <Menu className="value-list">
         {filterMap(valuesToShow, (v, i) => {

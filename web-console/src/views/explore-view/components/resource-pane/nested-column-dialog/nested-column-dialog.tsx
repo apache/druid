@@ -31,7 +31,7 @@ import type { SqlExpression } from '@druid-toolkit/query';
 import { type QueryResult, F, sql, SqlFunction, SqlQuery } from '@druid-toolkit/query';
 import React, { useState } from 'react';
 
-import { MenuCheckbox } from '../../../../../components';
+import { ClearableInput, MenuCheckbox } from '../../../../../components';
 import { useQueryManager } from '../../../../../hooks';
 import { caseInsensitiveContains, filterMap, pluralIfNeeded } from '../../../../../utils';
 import { ExpressionMeta, QuerySource } from '../../../models';
@@ -91,11 +91,7 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
         {pathsState.getErrorMessage()}
         {paths && (
           <FormGroup>
-            <InputGroup
-              value={searchString}
-              onChange={e => setSearchString(e.target.value)}
-              placeholder="Search"
-            />
+            <ClearableInput value={searchString} onChange={setSearchString} placeholder="Search" />
             <Menu className="path-selector">
               {filterMap(paths, (path, i) => {
                 if (!caseInsensitiveContains(path, searchString)) return;
@@ -110,8 +106,24 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
               })}
             </Menu>
             <ButtonGroup fill>
-              <Button text="Select all" onClick={() => setSelectedPaths(paths)} />
-              <Button text="Select none" onClick={() => setSelectedPaths([])} />
+              <Button
+                text="Select all"
+                onClick={() =>
+                  // Select all paths matching the shown search string
+                  setSelectedPaths(
+                    paths.filter(path => caseInsensitiveContains(path, searchString)),
+                  )
+                }
+              />
+              <Button
+                text="Select none"
+                onClick={() =>
+                  // Remove from selection all the paths matching the search string
+                  setSelectedPaths(
+                    selectedPaths.filter(path => !caseInsensitiveContains(path, searchString)),
+                  )
+                }
+              />
             </ButtonGroup>
           </FormGroup>
         )}
