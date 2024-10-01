@@ -19,6 +19,7 @@
 
 package org.apache.druid.concurrent;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -133,24 +134,23 @@ public class ExecsTest
     );
     Callable<Void> task = () -> {
       try {
-        Thread.sleep(1000); // Simulate long-running task
+        Thread.sleep(500); // Simulate long-running task
       }
       catch (InterruptedException e) {
-        Thread.sleep(1500);
         Thread.currentThread().interrupt(); // Restore interrupted status
       }
       return null;
     };
 
     // Submit multiple tasks together
-    intermediateTempExecutor.submit(task);
-    intermediateTempExecutor.submit(task);
-    intermediateTempExecutor.submit(task);
+    ListenableFuture<Void> unused = intermediateTempExecutor.submit(task);
+    unused = intermediateTempExecutor.submit(task);
+    unused = intermediateTempExecutor.submit(task);
 
     intermediateTempExecutor.shutdownNow();
     // Submit task after shutDown / shutDownNow should not be added in queue
-    intermediateTempExecutor.submit(task);
-    intermediateTempExecutor.awaitTermination(10, TimeUnit.SECONDS);
+    unused = intermediateTempExecutor.submit(task);
+    Assert.assertTrue(intermediateTempExecutor.awaitTermination(10, TimeUnit.SECONDS));
     Assert.assertTrue(intermediateTempExecutor.isShutdown());
   }
 
