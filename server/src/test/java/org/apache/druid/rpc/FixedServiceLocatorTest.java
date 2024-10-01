@@ -27,7 +27,7 @@ import org.junit.Test;
 
 import java.util.concurrent.ExecutionException;
 
-public class FixedSetServiceLocatorTest
+public class FixedServiceLocatorTest
 {
   public static final DruidServerMetadata DATA_SERVER_1 = new DruidServerMetadata(
       "TestDataServer",
@@ -50,19 +50,24 @@ public class FixedSetServiceLocatorTest
   );
 
   @Test
-  public void testLocateNullShouldBeClosed() throws ExecutionException, InterruptedException
+  public void test_constructor_rejectsNull()
   {
-    FixedSetServiceLocator serviceLocator
-        = FixedSetServiceLocator.forDruidServerMetadata(null);
+    Assert.assertThrows(
+        NullPointerException.class,
+        () -> new FixedServiceLocator((ServiceLocation) null)
+    );
 
-    Assert.assertTrue(serviceLocator.locate().get().isClosed());
+    Assert.assertThrows(
+        NullPointerException.class,
+        () -> new FixedServiceLocator((ServiceLocations) null)
+    );
   }
 
   @Test
-  public void testLocateSingleServer() throws ExecutionException, InterruptedException
+  public void test_locate_singleServer() throws ExecutionException, InterruptedException
   {
-    FixedSetServiceLocator serviceLocator
-        = FixedSetServiceLocator.forDruidServerMetadata(ImmutableSet.of(DATA_SERVER_1));
+    FixedServiceLocator serviceLocator =
+        new FixedServiceLocator(ServiceLocation.fromDruidServerMetadata(DATA_SERVER_1));
 
     Assert.assertEquals(
         ServiceLocations.forLocation(ServiceLocation.fromDruidServerMetadata(DATA_SERVER_1)),
@@ -71,16 +76,30 @@ public class FixedSetServiceLocatorTest
   }
 
   @Test
-  public void testLocateMultipleServers() throws ExecutionException, InterruptedException
+  public void test_locate_afterClose() throws ExecutionException, InterruptedException
   {
-    FixedSetServiceLocator serviceLocator
-        = FixedSetServiceLocator.forDruidServerMetadata(ImmutableSet.of(DATA_SERVER_1, DATA_SERVER_2));
+    FixedServiceLocator serviceLocator =
+        new FixedServiceLocator(ServiceLocation.fromDruidServerMetadata(DATA_SERVER_1));
 
-    Assert.assertTrue(
-        ImmutableSet.of(
-            ServiceLocations.forLocation(ServiceLocation.fromDruidServerMetadata(DATA_SERVER_1)),
-            ServiceLocations.forLocation(ServiceLocation.fromDruidServerMetadata(DATA_SERVER_2))
-        ).contains(serviceLocator.locate().get())
+    serviceLocator.close();
+
+    Assert.assertEquals(
+        ServiceLocations.closed(),
+        serviceLocator.locate().get()
     );
+  }
+
+  @Test
+  public void test_locate_multipleServers() throws ExecutionException, InterruptedException
+  {
+    final ServiceLocations locations = ServiceLocations.forLocations(
+        ImmutableSet.of(
+            ServiceLocation.fromDruidServerMetadata(DATA_SERVER_1),
+            ServiceLocation.fromDruidServerMetadata(DATA_SERVER_2)
+        )
+    );
+
+    FixedServiceLocator serviceLocator = new FixedServiceLocator(locations);
+    Assert.assertEquals(locations, serviceLocator.locate().get());
   }
 }

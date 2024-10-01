@@ -320,6 +320,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;
   private static final Logger log = new Logger(MSQTestBase.class);
+  protected Injector injector;
   protected ObjectMapper objectMapper;
   protected MSQTestOverlordServiceClient indexingServiceClient;
   protected MSQTestTaskActionClient testTaskActionClient;
@@ -530,7 +531,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         binder -> binder.bind(Bouncer.class).toInstance(new Bouncer(1))
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
-    Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
+    injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
         .addAll(modules)
         .build();
 

@@ -35,10 +35,12 @@ import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
   private final Map<String, Worker> inMemoryWorkers;
+  private final AtomicBoolean closed = new AtomicBoolean();
 
   public MSQTestWorkerClient(Map<String, Worker> inMemoryWorkers)
   {
@@ -141,6 +143,8 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public void close()
   {
-    inMemoryWorkers.forEach((k, v) -> v.stop());
+    if (closed.compareAndSet(false, true)) {
+      inMemoryWorkers.forEach((k, v) -> v.stop());
+    }
   }
 }
