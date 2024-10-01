@@ -918,8 +918,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         {!columnMetadataState.isError() && (
           <ColumnTree
             getParsedQuery={this.getParsedQuery}
+            columnMetadata={columnMetadataState.getSomeData()}
             columnMetadataLoading={columnMetadataState.loading}
-            columnMetadata={columnMetadataState.data}
             onQueryChange={this.handleSqlQueryChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTables={defaultTables}
