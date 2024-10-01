@@ -39,6 +39,7 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 
 public class UnionQuery implements Query<RowsAndColumns>
 {
@@ -97,7 +98,7 @@ public class UnionQuery implements Query<RowsAndColumns>
   @Override
   public QueryRunner<RowsAndColumns> getRunner(QuerySegmentWalker walker)
   {
-    return new RealUnionQueryRunner<RowsAndColumns>(this, walker);
+    return new RealUnionQueryRunner(walker);
   }
 
   @Override
@@ -137,13 +138,13 @@ public class UnionQuery implements Query<RowsAndColumns>
       throw new RuntimeException("FIXME: Unimplemented!");
     }
     return null;
-
   }
 
   @Override
   public Query<RowsAndColumns> withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new UnionQuery(queries, QueryContexts.override(getContext(), contextOverrides));
+    List<Query<?>> newQueries = mapQueries(q -> q.withOverriddenContext(contextOverrides));
+    return new UnionQuery(newQueries, QueryContexts.override(getContext(), contextOverrides));
   }
 
   @Override
@@ -192,4 +193,14 @@ public class UnionQuery implements Query<RowsAndColumns>
     }
     return new UnionQuery(newQueries, context);
   }
+
+  List<Query<?>> mapQueries(Function<Query, Query> mapFn)
+  {
+    List<Query<?>> newQueries = new ArrayList<>();
+    for (Query<?> query : queries) {
+      newQueries.add(mapFn.apply(query));
+    }
+    return newQueries;
+  }
+
 }

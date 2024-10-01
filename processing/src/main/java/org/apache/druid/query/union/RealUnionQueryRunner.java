@@ -20,41 +20,52 @@
 package org.apache.druid.query.union;
 
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.Result;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.query.timeseries.TimeseriesResultValue;
+
+import java.util.List;
 
 public class RealUnionQueryRunner implements QueryRunner<RowsAndColumns>
 {
-  private UnionQuery unionQuery;
   private QuerySegmentWalker walker;
 
-  public RealUnionQueryRunner(UnionQuery unionQuery, QuerySegmentWalker walker)
+  public RealUnionQueryRunner(QuerySegmentWalker walker)
   {
-    this.unionQuery = unionQuery;
     this.walker = walker;
-
   }
 
   @Override
   public Sequence<RowsAndColumns> run(QueryPlus<RowsAndColumns> queryPlus, ResponseContext responseContext)
   {
-    queryPlus.unwrap(UnionQuery.class);
-    UnionQuery query = (UnionQuery) queryPlus.getQuery();
-    if (!(query instanceof ScanQuery)) {
-      throw new ISE("Got a [%s] which isn't a %s", query.getClass(), ScanQuery.class);
-    }
+    UnionQuery unionQuery = queryPlus.unwrapQuery(UnionQuery.class);
 
-    ScanQuery.verifyOrderByForNativeExecution((ScanQuery) query);
-
-    // it happens in unit tests
-    final Long timeoutAt = responseContext.getTimeoutTime();
-    if (timeoutAt == null || timeoutAt == 0L) {
-      responseContext.putTimeoutTime(JodaUtils.MAX_INSTANT);
+    for (Query<?> q: unionQuery.queries) {
+      if(q instanceof TimeseriesQuery) {
+        runTsQuery(queryPlus,(TimeseriesQuery)q, responseContext);
+      }
     }
-    return engine.process((ScanQuery) query, segment, responseContext, queryPlus.getQueryMetrics());
+    return Sequences.empty();
+  }
+
+  private void runTsQuery(QueryPlus<RowsAndColumns> queryPlus, TimeseriesQuery q, ResponseContext responseContext)
+  {
+    QueryRunner<Result<TimeseriesResultValue>> runner = q.getRunner(walker);
+    Sequence<Result<TimeseriesResultValue>> res = runner.run(queryPlus.withQuery(q), responseContext);
+
+    TimeseriesQueryQueryToolChest tsToolChest = new TimeseriesQueryQueryToolChest();
+    Sequence<Object[]> res1 = tsToolChest.resultsAsArrays(q, res);
+    List<Object[]> li = res1.toList();
+//    tsToolChest.mergeResults()
+
   }
 
 
