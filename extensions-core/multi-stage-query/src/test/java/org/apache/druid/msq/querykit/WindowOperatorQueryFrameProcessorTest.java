@@ -79,7 +79,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
   @Test
   public void testFrameWriterReachingCapacity() throws IOException
   {
-    // This test validates that all output outputRows are flushed to the output channel even if frame writer's
+    // This test validates that all output rows are flushed to the output channel even if frame writer's
     // capacity is reached, by subsequent iterations of runIncrementally.
     final ReadableInput factChannel = buildWindowTestInputChannel();
 
