@@ -179,6 +179,10 @@ export class QuerySource {
     return this.measures.some(m => m.name === name);
   }
 
+  public hasBaseTimeColumn(): boolean {
+    return this.baseColumns.some(column => column.isTimeColumn());
+  }
+
   public getSourceExpressionForColumn(outputName: string): SqlExpression {
     const selectExpressionsArray = this.query.getSelectExpressionsArray();
 

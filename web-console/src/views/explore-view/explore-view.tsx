@@ -83,6 +83,9 @@ async function runSqlQuery(query: string | SqlQuery): Promise<QueryResult> {
   try {
     return await queryRunner.runQuery({
       query,
+      defaultQueryContext: {
+        sqlStringifyArrays: false,
+      },
     });
   } catch (e) {
     throw new DruidError(e);
