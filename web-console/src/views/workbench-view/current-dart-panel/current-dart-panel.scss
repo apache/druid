@@ -103,10 +103,13 @@
         opacity: 0.6;
       }
 
-      .identity-identity,
-      .identity-authenticator {
+      .identity-identity {
         margin-left: 5px;
         display: inline-block;
+
+        &.anonymous {
+          font-style: italic;
+        }
       }
 
       .query-indicator {

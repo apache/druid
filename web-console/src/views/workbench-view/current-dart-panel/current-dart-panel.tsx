@@ -18,6 +18,7 @@
 
 import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
 import { type IconName, IconNames } from '@blueprintjs/icons';
+import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import React, { useCallback, useState } from 'react';
 import { useStore } from 'zustand';
@@ -38,7 +39,7 @@ function stateToIconAndColor(status: DartQueryEntry['state']): [IconName, string
     case 'RUNNING':
       return [IconNames.REFRESH, '#2167d5'];
     case 'ACCEPTED':
-      return [IconNames.CIRCLE, '#d5631a'];
+      return [IconNames.CIRCLE, '#8d8d8d'];
     case 'CANCELED':
       return [IconNames.DISABLE, '#8d8d8d'];
     default:
@@ -97,11 +98,22 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
                 />
                 <MenuItem
                   icon={IconNames.DUPLICATE}
-                  text="Copy ID"
+                  text="Copy SQL ID"
                   onClick={() => {
                     copy(w.sqlQueryId, { format: 'text/plain' });
                     AppToaster.show({
                       message: `${w.sqlQueryId} copied to clipboard`,
+                      intent: Intent.SUCCESS,
+                    });
+                  }}
+                />
+                <MenuItem
+                  icon={IconNames.DUPLICATE}
+                  text="Copy Dart ID"
+                  onClick={() => {
+                    copy(w.dartQueryId, { format: 'text/plain' });
+                    AppToaster.show({
+                      message: `${w.dartQueryId} copied to clipboard`,
                       intent: Intent.SUCCESS,
                     });
                   }}
@@ -119,6 +131,7 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
             const duration = now.valueOf() - new Date(w.startTime).valueOf();
 
             const [icon, color] = stateToIconAndColor(w.state);
+            const anonymous = w.identity === 'allowAll' && w.authenticator === 'allowAll';
             return (
               <Popover className="work-entry" key={w.sqlQueryId} position="left" content={menu}>
                 <div>
@@ -127,24 +140,23 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
                       className={'status-icon ' + w.state.toLowerCase()}
                       icon={icon}
                       style={{ color }}
+                      data-tooltip={`State: ${w.state}`}
                     />
                     <div className="timing">
                       {prettyFormatIsoDate(w.startTime) +
-                        (w.state === 'RUNNING' && duration > 0
+                        ((w.state === 'RUNNING' || w.state === 'ACCEPTED') && duration > 0
                           ? ` (${formatDuration(duration)})`
                           : '')}
                     </div>
                   </div>
                   <div className="line2">
                     <Icon className="identity-icon" icon={IconNames.MUGSHOT} />
-                    <div className="identity-identity" data-tooltip="Identity">
-                      {w.identity}
+                    <div
+                      className={classNames('identity-identity', { anonymous })}
+                      data-tooltip={`Identity: ${w.identity}\nAuthenticator: ${w.authenticator}`}
+                    >
+                      {anonymous ? 'anonymous' : `${w.identity} (${w.authenticator})`}
                     </div>
-                    {w.authenticator && (
-                      <div className="identity-authenticator" data-tooltip="Authenticator">
-                        {`(${w.authenticator})`}
-                      </div>
-                    )}
                   </div>
                 </div>
               </Popover>
