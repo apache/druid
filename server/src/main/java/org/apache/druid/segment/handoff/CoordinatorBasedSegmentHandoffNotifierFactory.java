@@ -39,12 +39,13 @@ public class CoordinatorBasedSegmentHandoffNotifierFactory implements SegmentHan
   }
 
   @Override
-  public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+  public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId)
   {
     return new CoordinatorBasedSegmentHandoffNotifier(
         dataSource,
         client,
-        config
+        config,
+        taskId
     );
   }
 }

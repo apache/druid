@@ -3094,7 +3094,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
         new TaskAuditLogConfig(false)
     );
 
-    final SegmentHandoffNotifierFactory handoffNotifierFactory = dataSource -> new SegmentHandoffNotifier()
+    final SegmentHandoffNotifierFactory handoffNotifierFactory = (dataSource, taskId) -> new SegmentHandoffNotifier()
     {
       @Override
       public boolean registerSegmentHandoffCallback(

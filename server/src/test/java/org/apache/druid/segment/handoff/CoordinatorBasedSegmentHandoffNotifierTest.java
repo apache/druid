@@ -64,7 +64,8 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     CoordinatorBasedSegmentHandoffNotifier notifier = new CoordinatorBasedSegmentHandoffNotifier(
         "test_ds",
         coordinatorClient,
-        notifierConfig
+        notifierConfig,
+        "test_task"
     );
     final AtomicBoolean callbackCalled = new AtomicBoolean(false);
     notifier.registerSegmentHandoffCallback(
@@ -95,7 +96,8 @@ public class CoordinatorBasedSegmentHandoffNotifierTest
     CoordinatorBasedSegmentHandoffNotifier notifier = new CoordinatorBasedSegmentHandoffNotifier(
         "test_ds",
         coordinatorClient,
-        notifierConfig
+        notifierConfig,
+        "test_task"
     );
 
     notifier.registerSegmentHandoffCallback(

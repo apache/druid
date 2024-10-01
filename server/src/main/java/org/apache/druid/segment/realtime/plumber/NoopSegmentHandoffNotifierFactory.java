@@ -52,7 +52,7 @@ public class NoopSegmentHandoffNotifierFactory implements SegmentHandoffNotifier
   };
 
   @Override
-  public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+  public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId)
   {
     return NOTIFIER;
   }

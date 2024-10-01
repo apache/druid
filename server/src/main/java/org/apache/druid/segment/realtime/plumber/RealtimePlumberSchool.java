@@ -115,7 +115,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         joinableFactory,
         dataSegmentPusher,
         segmentPublisher,
-        handoffNotifierFactory.createSegmentHandoffNotifier(schema.getDataSource()),
+        handoffNotifierFactory.createSegmentHandoffNotifier(schema.getDataSource(), "realtime-plumber-task"),
         indexMergerV9,
         indexIO,
         cache,

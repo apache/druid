@@ -471,7 +471,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     }
 
     @Override
-    public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+    public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId)
     {
       return new SegmentHandoffNotifier()
       {
