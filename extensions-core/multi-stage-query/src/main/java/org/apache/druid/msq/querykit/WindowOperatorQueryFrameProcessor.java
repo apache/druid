@@ -303,7 +303,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         outputRow = currentRow.copy();
         return ReturnOrAwait.runAgain();
       }
-
       frameCursor.advance();
     }
     return ReturnOrAwait.runAgain();
