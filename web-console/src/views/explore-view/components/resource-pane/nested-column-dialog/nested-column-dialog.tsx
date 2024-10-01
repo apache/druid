@@ -28,12 +28,12 @@ import {
   Tag,
 } from '@blueprintjs/core';
 import type { SqlExpression } from '@druid-toolkit/query';
-import { type QueryResult, F, sql, SqlQuery } from '@druid-toolkit/query';
+import { type QueryResult, F, sql, SqlFunction, SqlQuery } from '@druid-toolkit/query';
 import React, { useState } from 'react';
 
 import { MenuCheckbox } from '../../../../../components';
 import { useQueryManager } from '../../../../../hooks';
-import { caseInsensitiveContains, filterMap, pluralIfNeeded, uniq } from '../../../../../utils';
+import { caseInsensitiveContains, filterMap, pluralIfNeeded } from '../../../../../utils';
 import { ExpressionMeta, QuerySource } from '../../../models';
 import { toggle } from '../../../utils';
 
@@ -59,7 +59,12 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
     query: nestedColumn,
     processQuery: async nestedColumn => {
       const query = SqlQuery.from(QuerySource.stripToBaseSource(querySource.query))
-        .addSelect(F('JSON_PATHS', nestedColumn).as('p'))
+        .addSelect(
+          SqlFunction.decorated('ARRAY_CONCAT_AGG', 'DISTINCT', [
+            F('JSON_PATHS', nestedColumn),
+            10000,
+          ]).as('p'),
+        )
         .applyIf(querySource.hasBaseTimeColumn(), q =>
           q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),
         )
@@ -67,10 +72,10 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
 
       const pathResult = await runSqlQuery(query);
 
-      const pathColumn = pathResult.getColumnByIndex(0);
-      if (!pathColumn) throw new Error('Could not get path column');
+      const paths = pathResult.rows[0]?.[0];
+      if (!Array.isArray(paths)) throw new Error('Could not get paths');
 
-      return uniq(([] as string[]).concat(...pathColumn)).sort();
+      return paths;
     },
   });
 
