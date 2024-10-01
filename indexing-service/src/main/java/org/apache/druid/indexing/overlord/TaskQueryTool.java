@@ -374,11 +374,11 @@ public class TaskQueryTool
     }
     TaskRunner taskRunner = taskRunnerOptional.get();
 
-    int currentCapacity = taskRunner.getTotalCapacity();
-    int usedCapacity = taskRunner.getUsedCapacity();
-    int maximumCapacity = taskRunner.getMaximumCapacity();
-
-    return new TotalWorkerCapacityResponse(currentCapacity, maximumCapacity, usedCapacity);
+    return new TotalWorkerCapacityResponse(
+        taskRunner.getTotalCapacity(),
+        taskRunner.getMaximumCapacityWithAutoscale(),
+        taskRunner.getUsedCapacity()
+    );
   }
 
   public WorkerBehaviorConfig getLatestWorkerConfig()

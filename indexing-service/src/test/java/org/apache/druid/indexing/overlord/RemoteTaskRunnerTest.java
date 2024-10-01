@@ -155,7 +155,7 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(3, remoteTaskRunner.getTotalCapacity());
-    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacity());
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacityWithAutoscale());
     Assert.assertEquals(0, remoteTaskRunner.getUsedCapacity());
 
 
@@ -621,7 +621,7 @@ public class RemoteTaskRunnerTest
         httpClient,
         null
     );
-    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacity());
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacityWithAutoscale());
   }
 
   @Test
@@ -634,7 +634,7 @@ public class RemoteTaskRunnerTest
         httpClient,
         new DefaultWorkerBehaviorConfig(new EqualDistributionWorkerSelectStrategy(null), null)
     );
-    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacity());
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacityWithAutoscale());
   }
 
   @Test
@@ -648,7 +648,7 @@ public class RemoteTaskRunnerTest
         DefaultWorkerBehaviorConfig.defaultConfig()
     );
     // Default autoscaler has max workers of 0
-    Assert.assertEquals(0, remoteTaskRunner.getMaximumCapacity());
+    Assert.assertEquals(0, remoteTaskRunner.getMaximumCapacityWithAutoscale());
   }
 
   private void doSetup() throws Exception

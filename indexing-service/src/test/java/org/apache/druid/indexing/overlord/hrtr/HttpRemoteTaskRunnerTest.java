@@ -149,7 +149,7 @@ public class HttpRemoteTaskRunnerTest
     Assert.assertEquals(numTasks, taskRunner.getKnownTasks().size());
     Assert.assertEquals(numTasks, taskRunner.getCompletedTasks().size());
     Assert.assertEquals(4, taskRunner.getTotalCapacity());
-    Assert.assertEquals(-1, taskRunner.getMaximumCapacity());
+    Assert.assertEquals(-1, taskRunner.getMaximumCapacityWithAutoscale());
     Assert.assertEquals(0, taskRunner.getUsedCapacity());
   }
 
@@ -1802,7 +1802,7 @@ public class HttpRemoteTaskRunnerTest
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     );
-    Assert.assertEquals(-1, taskRunner.getMaximumCapacity());
+    Assert.assertEquals(-1, taskRunner.getMaximumCapacityWithAutoscale());
   }
 
   @Test
@@ -1826,7 +1826,7 @@ public class HttpRemoteTaskRunnerTest
         new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null),
         new NoopServiceEmitter()
     );
-    Assert.assertEquals(-1, taskRunner.getMaximumCapacity());
+    Assert.assertEquals(-1, taskRunner.getMaximumCapacityWithAutoscale());
   }
 
   @Test
@@ -1851,7 +1851,7 @@ public class HttpRemoteTaskRunnerTest
         new NoopServiceEmitter()
     );
     // Default autoscaler has max workers of 0
-    Assert.assertEquals(0, taskRunner.getMaximumCapacity());
+    Assert.assertEquals(0, taskRunner.getMaximumCapacityWithAutoscale());
   }
 
   public static HttpRemoteTaskRunner createTaskRunnerForTestTaskAddedOrUpdated(

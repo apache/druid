@@ -1792,8 +1792,14 @@ public class HttpRemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     return getWorkers().stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
   }
 
+
+  /**
+   * Retrieves the maximum capacity of the task runner when autoscaling is enabled.*
+   * @return The maximum capacity as an integer value. Returns -1 if the maximum
+   *         capacity cannot be determined or if autoscaling is not enabled.
+   */
   @Override
-  public int getMaximumCapacity()
+  public int getMaximumCapacityWithAutoscale()
   {
     int maximumCapacity = -1;
     WorkerBehaviorConfig workerBehaviorConfig = workerConfigRef.get();

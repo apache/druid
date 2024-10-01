@@ -157,9 +157,9 @@ public interface TaskRunner
 
   /**
    * The maximum number of tasks this TaskRunner can run concurrently with autoscaling hints.
-   * Can return -1 if this method is not implemented or capacity can't be found.
+   * @return -1 if this method is not implemented or capacity can't be found.
    */
-  default int getMaximumCapacity()
+  default int getMaximumCapacityWithAutoscale()
   {
     return -1;
   }

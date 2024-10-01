@@ -269,9 +269,9 @@ public class KubernetesAndWorkerTaskRunner implements TaskLogStreamer, WorkerTas
   }
 
   @Override
-  public int getMaximumCapacity()
+  public int getMaximumCapacityWithAutoscale()
   {
-    return workerTaskRunner.getMaximumCapacity() + kubernetesTaskRunner.getMaximumCapacity();
+    return workerTaskRunner.getMaximumCapacityWithAutoscale() + kubernetesTaskRunner.getMaximumCapacityWithAutoscale();
   }
 
   @Override

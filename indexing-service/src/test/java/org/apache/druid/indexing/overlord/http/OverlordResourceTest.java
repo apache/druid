@@ -1315,7 +1315,7 @@ public class OverlordResourceTest
             .andReturn(workerBehaviorConfigAtomicReference);
     EasyMock.expect(taskRunner.getTotalCapacity()).andReturn(-1);
     EasyMock.expect(taskRunner.getUsedCapacity()).andReturn(-1);
-    EasyMock.expect(taskRunner.getMaximumCapacity()).andReturn(-1);
+    EasyMock.expect(taskRunner.getMaximumCapacityWithAutoscale()).andReturn(-1);
     EasyMock.expect(overlord.isLeader()).andReturn(true);
     replayAll();
 
@@ -1338,7 +1338,7 @@ public class OverlordResourceTest
         .andReturn(workerBehaviorConfigAtomicReference);
     EasyMock.expect(taskRunner.getTotalCapacity()).andReturn(expectedWorkerCapacity);
     EasyMock.expect(taskRunner.getUsedCapacity()).andReturn(expectedWorkerCapacity);
-    EasyMock.expect(taskRunner.getMaximumCapacity()).andReturn(expectedWorkerCapacityWithAutoscale);
+    EasyMock.expect(taskRunner.getMaximumCapacityWithAutoscale()).andReturn(expectedWorkerCapacityWithAutoscale);
     EasyMock.expect(overlord.isLeader()).andReturn(true);
     replayAll();
 
