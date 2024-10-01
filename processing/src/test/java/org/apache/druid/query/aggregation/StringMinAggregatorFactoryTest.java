@@ -20,6 +20,7 @@
 package org.apache.druid.query.aggregation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -47,7 +48,10 @@ public class StringMinAggregatorFactoryTest
     StringMinAggregatorFactory factory = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
 
     Assert.assertEquals(factory, new StringMinAggregatorFactory("name", "fieldName", null, true, null, macroTable));
-    Assert.assertEquals(factory.toString(), "StringMinAggregatorFactory{name='name', fieldName='fieldName', maxStringBytes=1024, aggregateMultipleValues=true}");
+    Assert.assertEquals(
+        factory.toString(),
+        "StringMinAggregatorFactory{name='name', fieldName='fieldName', maxStringBytes=1024, aggregateMultipleValues=true}"
+    );
 
     Aggregator aggregator = factory.buildAggregator(selector);
     Assert.assertNotNull(aggregator);
@@ -56,6 +60,15 @@ public class StringMinAggregatorFactoryTest
     BufferAggregator bufferAggregator = factory.buildBufferAggregator(selector);
     Assert.assertNotNull(bufferAggregator);
     Assert.assertEquals(StringMinBufferAggregator.class, bufferAggregator.getClass());
+  }
+
+  @Test
+  public void testFailingBuilds()
+  {
+    Assert.assertThrows(IllegalArgumentException.class, () -> new StringMinAggregatorFactory("name", "fieldName", -1024, true));
+    Assert.assertThrows(IllegalArgumentException.class, () -> new StringMinAggregatorFactory("name", "fieldName", Integer.MAX_VALUE - 3, true));
+    Assert.assertThrows(IllegalArgumentException.class, () -> new StringMinAggregatorFactory("name", "fieldName", null, true, "fieldName", macroTable));
+    Assert.assertThrows(IllegalArgumentException.class, () -> new StringMinAggregatorFactory("name",null, null, true, null, macroTable));
   }
 
   @Test
@@ -185,13 +198,22 @@ public class StringMinAggregatorFactoryTest
     Assert.assertNotNull(mergingFactory);
     Assert.assertTrue(mergingFactory instanceof StringMinAggregatorFactory);
 
-    StringMinAggregatorFactory mismatchedFactory = new StringMinAggregatorFactory("notSameName", "fieldName", 1024, true);
-    Assert.assertThrows(AggregatorFactoryNotMergeableException.class,
-                        () -> mismatchedFactory.getMergingFactory(factory1));
+    StringMinAggregatorFactory mismatchedFactory = new StringMinAggregatorFactory(
+        "notSameName",
+        "fieldName",
+        1024,
+        true
+    );
+    Assert.assertThrows(
+        AggregatorFactoryNotMergeableException.class,
+        () -> mismatchedFactory.getMergingFactory(factory1)
+    );
 
     StringMaxAggregatorFactory mismatchClassFactory = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
-    Assert.assertThrows(AggregatorFactoryNotMergeableException.class,
-                        () -> mismatchClassFactory.getMergingFactory(factory1));
+    Assert.assertThrows(
+        AggregatorFactoryNotMergeableException.class,
+        () -> mismatchClassFactory.getMergingFactory(factory1)
+    );
   }
 
   @Test

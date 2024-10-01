@@ -52,12 +52,8 @@ public class StringMinVectorAggregator implements VectorAggregator
   )
   {
     Preconditions.checkState(
-        singleValueSelector != null || multiValueSelector != null,
-        "At least one selector must be non null"
-    );
-    Preconditions.checkState(
-        singleValueSelector == null || multiValueSelector == null,
-        "Only one selector must be non null"
+        singleValueSelector == null ^ multiValueSelector == null,
+        "Only one of [singleValueSelector] and [multiValueSelector] must be non null."
     );
 
     this.multiValueSelector = multiValueSelector;
