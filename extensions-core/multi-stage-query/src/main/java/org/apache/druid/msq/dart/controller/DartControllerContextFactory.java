@@ -27,5 +27,5 @@ import org.apache.druid.msq.exec.ControllerContext;
  */
 public interface DartControllerContextFactory
 {
-  ControllerContext newContext(final String queryId);
+  ControllerContext newContext(String queryId);
 }
