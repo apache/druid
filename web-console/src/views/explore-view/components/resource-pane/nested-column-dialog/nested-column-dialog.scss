@@ -21,7 +21,7 @@
 .nested-column-dialog {
   &.#{$bp-ns}-dialog {
     width: 50vw;
-    height: 60vh;
+    min-height: 540px;
   }
 
   .#{$bp-ns}-dialog-body {
@@ -31,11 +31,10 @@
     .path-selector {
       flex: 1;
       padding: 5px 0;
-      height: 300px;
+      height: 400px;
       overflow: auto;
       border: 1px solid rgba(15, 19, 32, 0.4);
       border-top: none;
-      margin-bottom: 15px;
     }
   }
 

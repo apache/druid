@@ -83,7 +83,7 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
         </p>
         {pathsState.getErrorMessage()}
         {paths && (
-          <>
+          <FormGroup>
             <InputGroup
               value={searchString}
               onChange={e => setSearchString(e.target.value)}
@@ -102,7 +102,7 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
                 );
               })}
             </Menu>
-          </>
+          </FormGroup>
         )}
         <FormGroup label="Nameing scheme">
           <InputGroup

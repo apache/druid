@@ -90,7 +90,7 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
       )}
       <Menu className="value-list">
         {filterMap(valuesToShow, (v, i) => {
-          if (caseInsensitiveContains(v, searchString)) return;
+          if (!caseInsensitiveContains(v, searchString)) return;
           return (
             <MenuItem
               key={i}
