@@ -62,6 +62,7 @@ import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -289,6 +290,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingLocalWalker(Query<T> query)
   {
+    if(query instanceof UnionQuery) {
+      // FIXME ??
+      return false;
+    }
     final DataSource dataSourceFromQuery = query.getDataSource();
     final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
@@ -308,6 +313,11 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingClusterWalker(Query<T> query)
   {
+    if(query instanceof UnionQuery) {
+      // FIXME ??
+      return true;
+    }
+
     final DataSource dataSourceFromQuery = query.getDataSource();
     final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
@@ -623,7 +633,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   )
   {
     if (currentDataSource instanceof QueryDataSource
-        && queryDataSourceToSubqueryIds.containsKey((QueryDataSource) currentDataSource)) {
+        && queryDataSourceToSubqueryIds.containsKey(currentDataSource)) {
       QueryDataSource queryDataSource = (QueryDataSource) currentDataSource;
       Pair<Integer, Integer> nestingInfo = queryDataSourceToSubqueryIds.get(queryDataSource);
       String subQueryId = nestingInfo.lhs + "." + nestingInfo.rhs;

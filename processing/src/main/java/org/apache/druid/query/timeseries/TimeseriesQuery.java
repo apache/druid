@@ -38,11 +38,13 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.groupby.SupportRowSignature;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec.LimitJsonIncludeFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Finalization;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -55,7 +57,7 @@ import java.util.Set;
 /**
  */
 @JsonTypeName("timeseries")
-public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
+public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>> implements SupportRowSignature
 {
   public static final String CTX_GRAND_TOTAL = "grandTotal";
   public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";
@@ -181,6 +183,12 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return context().getBoolean(SKIP_EMPTY_BUCKETS, false);
   }
 
+  @Override
+  public RowSignature getResultRowSignature(Finalization finalization) {
+    return getResultSignature(finalization);
+  }
+
+  @Deprecated
   public RowSignature getResultSignature(final RowSignature.Finalization finalization)
   {
     final RowSignature.Builder builder = RowSignature.builder();

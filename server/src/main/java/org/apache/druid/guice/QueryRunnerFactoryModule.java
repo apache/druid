@@ -46,6 +46,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
+import org.apache.druid.query.union.RealUnionQueryRunnerFactory;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 
@@ -66,6 +68,7 @@ public class QueryRunnerFactoryModule extends QueryToolChestModule
                   .put(TimeseriesQuery.class, TimeseriesQueryRunnerFactory.class)
                   .put(TopNQuery.class, TopNQueryRunnerFactory.class)
                   .put(WindowOperatorQuery.class, WindowOperatorQueryQueryRunnerFactory.class)
+                  .put(UnionQuery.class, RealUnionQueryRunnerFactory.class)
                   .build();
 
   @Override

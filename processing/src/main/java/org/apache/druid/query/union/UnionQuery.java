@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.union;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -29,6 +30,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -38,8 +40,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class UnionQuery<T> implements Query<T>
+public class UnionQuery implements Query<RowsAndColumns>
 {
+  RealUnionQueryRunnerFactory a;
   protected final Map<String, Object> context;
   protected final List<Query<?>> queries;
 
@@ -50,6 +53,7 @@ public class UnionQuery<T> implements Query<T>
 
   public UnionQuery(List<Query<?>> queries, Map<String, Object> context)
   {
+    Preconditions.checkArgument(queries.size() > 1, "union with fewer than 2 queries makes no sense");
     this.queries = queries;
     this.context = context;
   }
@@ -91,9 +95,9 @@ public class UnionQuery<T> implements Query<T>
   }
 
   @Override
-  public QueryRunner<T> getRunner(QuerySegmentWalker walker)
+  public QueryRunner<RowsAndColumns> getRunner(QuerySegmentWalker walker)
   {
-    return new RealUnionQueryRunner<T>(this, walker);
+    return new RealUnionQueryRunner<RowsAndColumns>(this, walker);
   }
 
   @Override
@@ -127,7 +131,7 @@ public class UnionQuery<T> implements Query<T>
   }
 
   @Override
-  public Ordering<T> getResultOrdering()
+  public Ordering<RowsAndColumns> getResultOrdering()
   {
     if (true) {
       throw new RuntimeException("FIXME: Unimplemented!");
@@ -137,19 +141,19 @@ public class UnionQuery<T> implements Query<T>
   }
 
   @Override
-  public Query<T> withOverriddenContext(Map<String, Object> contextOverrides)
+  public Query<RowsAndColumns> withOverriddenContext(Map<String, Object> contextOverrides)
   {
-    return new UnionQuery<T>(queries, QueryContexts.override(getContext(), contextOverrides));
+    return new UnionQuery(queries, QueryContexts.override(getContext(), contextOverrides));
   }
 
   @Override
-  public Query<T> withQuerySegmentSpec(QuerySegmentSpec spec)
+  public Query<RowsAndColumns> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     throw new RuntimeException("FIXME: Unimplemented!");
   }
 
   @Override
-  public Query<T> withId(String id)
+  public Query<RowsAndColumns> withId(String id)
   {
     return withOverriddenContext(ImmutableMap.of(BaseQuery.QUERY_ID, id));
   }
@@ -161,7 +165,7 @@ public class UnionQuery<T> implements Query<T>
   }
 
   @Override
-  public Query<T> withSubQueryId(String subQueryId)
+  public Query<RowsAndColumns> withSubQueryId(String subQueryId)
   {
     return withOverriddenContext(ImmutableMap.of(BaseQuery.SUB_QUERY_ID, subQueryId));
   }
@@ -173,8 +177,19 @@ public class UnionQuery<T> implements Query<T>
   }
 
   @Override
-  public Query<T> withDataSource(DataSource dataSource)
+  public Query<RowsAndColumns> withDataSource(DataSource dataSource)
   {
     throw new RuntimeException("FIXME: Unimplemented!");
+  }
+
+  @Override
+  public Query<RowsAndColumns> withDataSources(List<DataSource> children)
+  {
+    Preconditions.checkArgument(queries.size() == children.size(), "Number of children must match number of queries");
+    List<Query<?>> newQueries= new ArrayList<>();
+    for (int i = 0; i < queries.size(); i++) {
+      newQueries.add(queries.get(i).withDataSource(children.get(i)));
+    }
+    return new UnionQuery(newQueries, context);
   }
 }

@@ -85,7 +85,7 @@ import java.util.stream.Collectors;
 /**
  *
  */
-public class GroupByQuery extends BaseQuery<ResultRow>
+public class GroupByQuery extends BaseQuery<ResultRow> implements SupportRowSignature
 {
   public static final String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
   public static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";

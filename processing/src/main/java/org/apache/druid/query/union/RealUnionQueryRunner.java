@@ -24,27 +24,39 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
-public class RealUnionQueryRunner<T> implements QueryRunner<T>
+public class RealUnionQueryRunner implements QueryRunner<RowsAndColumns>
 {
+  private UnionQuery unionQuery;
+  private QuerySegmentWalker walker;
 
-  public RealUnionQueryRunner(UnionQuery<T> unionQuery, QuerySegmentWalker walker)
+  public RealUnionQueryRunner(UnionQuery unionQuery, QuerySegmentWalker walker)
   {
-    if(true)
-    {
-      throw new RuntimeException("FIXME: Unimplemented!");
-    }
+    this.unionQuery = unionQuery;
+    this.walker = walker;
 
   }
 
   @Override
-  public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
+  public Sequence<RowsAndColumns> run(QueryPlus<RowsAndColumns> queryPlus, ResponseContext responseContext)
   {
-    if (true) {
-      throw new RuntimeException("FIXME: Unimplemented!");
+    queryPlus.unwrap(UnionQuery.class);
+    UnionQuery query = (UnionQuery) queryPlus.getQuery();
+    if (!(query instanceof ScanQuery)) {
+      throw new ISE("Got a [%s] which isn't a %s", query.getClass(), ScanQuery.class);
     }
-    return null;
 
+    ScanQuery.verifyOrderByForNativeExecution((ScanQuery) query);
+
+    // it happens in unit tests
+    final Long timeoutAt = responseContext.getTimeoutTime();
+    if (timeoutAt == null || timeoutAt == 0L) {
+      responseContext.putTimeoutTime(JodaUtils.MAX_INSTANT);
+    }
+    return engine.process((ScanQuery) query, segment, responseContext, queryPlus.getQueryMetrics());
   }
+
+
 
 }

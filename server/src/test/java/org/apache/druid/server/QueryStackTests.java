@@ -77,6 +77,8 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
+import org.apache.druid.query.union.RealUnionQueryRunnerFactory;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
@@ -371,6 +373,7 @@ public class QueryStackTests
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )
+            .put(UnionQuery.class, new RealUnionQueryRunnerFactory("asd"))
             .put(GroupByQuery.class, groupByQueryRunnerFactory)
             .put(TimeBoundaryQuery.class, new TimeBoundaryQueryRunnerFactory(QueryRunnerTestHelper.NOOP_QUERYWATCHER))
             .put(WindowOperatorQuery.class, new WindowOperatorQueryQueryRunnerFactory())

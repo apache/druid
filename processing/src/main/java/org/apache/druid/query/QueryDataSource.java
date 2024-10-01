@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.union.UnionQuery;
@@ -73,11 +72,7 @@ public class QueryDataSource implements DataSource
   @Override
   public DataSource withChildren(List<DataSource> children)
   {
-    if (children.size() != 1) {
-      throw new IAE("Must have exactly one child");
-    }
-
-    return new QueryDataSource(query.withDataSource(Iterables.getOnlyElement(children)));
+    return new QueryDataSource(query.withDataSources(children));
   }
 
   @Override
