@@ -16,15 +16,31 @@
  * limitations under the License.
  */
 
-export * from './date-format';
-export * from './duration';
-export * from './filter-pattern-helpers';
-export * from './general';
-export * from './get-auto-granularity';
-export * from './known-aggregations';
-export * from './max-time-for-table';
-export * from './misc';
-export * from './query-log';
-export * from './snap-to-granularity';
-export * from './table-query';
-export * from './time-manipulation';
+export const KNOWN_AGGREGATIONS = [
+  'COUNT',
+  'SUM',
+  'MIN',
+  'MAX',
+  'AVG',
+  'APPROX_COUNT_DISTINCT',
+  'APPROX_COUNT_DISTINCT_DS_HLL',
+  'APPROX_COUNT_DISTINCT_DS_THETA',
+  'DS_HLL',
+  'DS_THETA',
+  'APPROX_QUANTILE',
+  'APPROX_QUANTILE_DS',
+  'APPROX_QUANTILE_FIXED_BUCKETS',
+  'DS_QUANTILES_SKETCH',
+  'BLOOM_FILTER',
+  'TDIGEST_QUANTILE',
+  'TDIGEST_GENERATE_SKETCH',
+  'VAR_POP',
+  'VAR_SAMP',
+  'VARIANCE',
+  'STDDEV_POP',
+  'STDDEV_SAMP',
+  'STDDEV',
+  'EARLIEST',
+  'LATEST',
+  'ANY_VALUE',
+];
