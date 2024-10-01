@@ -21,33 +21,21 @@
 .nested-column-dialog {
   &.#{$bp-ns}-dialog {
     width: 50vw;
+    height: 60vh;
   }
 
   .#{$bp-ns}-dialog-body {
     display: flex;
-    gap: 12px;
+    flex-direction: column;
 
-    .controls {
+    .path-selector {
       flex: 1;
-      display: flex;
-      flex-direction: column;
-
-      .sql-expression-form-group {
-        flex: 1;
-        margin: 0;
-
-        .#{$bp-ns}-form-content {
-          flex: 1;
-
-          .flexible-query-input {
-            height: 100%;
-          }
-        }
-      }
-    }
-
-    .preview-pane {
-      width: 300px;
+      padding: 5px 0;
+      height: 300px;
+      overflow: auto;
+      border: 1px solid rgba(15, 19, 32, 0.4);
+      border-top: none;
+      margin-bottom: 15px;
     }
   }
 

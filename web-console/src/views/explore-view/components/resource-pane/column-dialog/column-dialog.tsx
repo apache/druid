@@ -150,7 +150,7 @@ export const ColumnDialog = React.memo(function ColumnDialog(props: ColumnDialog
                   } else {
                     onApply(
                       querySource.changeColumn(initExpressionName, newExpression),
-                      new Map([[initExpression.getOutputName()!, newExpression.getOutputName()!]]),
+                      new Map([[initExpressionName, newExpression.getOutputName()!]]),
                     );
                   }
                 } else {

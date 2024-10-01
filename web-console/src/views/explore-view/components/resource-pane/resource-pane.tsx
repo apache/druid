@@ -128,7 +128,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
                   {isNestedColumn ? (
                     <MenuItem
                       icon={IconNames.EXPAND_ALL}
-                      text="Expload"
+                      text="Expand nested column"
                       onClick={() =>
                         setNestedColumnEditorOpenOn(
                           querySource.getSourceExpressionForColumn(columnName),
@@ -184,7 +184,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
             >
               <div
                 className={Classes.MENU_ITEM}
-                draggable
+                draggable={!isNestedColumn}
                 onDragStart={e => {
                   e.dataTransfer.effectAllowed = 'all';
                   DragHelper.dragColumn = column;
@@ -290,7 +290,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
       {nestedColumnEditorOpenOn && (
         <NestedColumnDialog
           nestedColumn={nestedColumnEditorOpenOn}
-          onApply={() => {}}
+          onApply={newQuery => onQueryChange(newQuery, undefined)}
           querySource={querySource}
           runSqlQuery={runSqlQuery}
           onClose={() => setNestedColumnEditorOpenOn(undefined)}

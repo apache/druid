@@ -95,7 +95,9 @@ export class QuerySource {
     let effectiveColumns = columns;
     if (query.getSelectExpressionsArray().some(ex => ex instanceof SqlStar)) {
       // The query has a star so carefully pick the columns that make sense
-      effectiveColumns = columns.filter(c => c.sqlType !== 'OTHER');
+      effectiveColumns = columns.filter(
+        c => c.sqlType !== 'OTHER' || c.nativeType === 'COMPLEX<json>',
+      );
     }
 
     let measures = Measure.extractQueryMeasures(query);
@@ -243,6 +245,15 @@ export class QuerySource {
       noStarQuery
         .getSelectExpressionsArray()
         .map(ex => (ex.getOutputName() === oldName ? newExpression : ex)),
+    );
+  }
+
+  public explodeColumn(oldName: string, newExpressions: SqlExpression[]): SqlQuery {
+    const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
+    return noStarQuery.changeSelectExpressions(
+      noStarQuery
+        .getSelectExpressionsArray()
+        .flatMap(ex => (ex.getOutputName() === oldName ? newExpressions : ex)),
     );
   }
 
