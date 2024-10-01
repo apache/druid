@@ -309,7 +309,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayConstructor()
   {
     assertArrayExpr("array(1, 2, 3, 4)", new Long[]{1L, 2L, 3L, 4L});
-    assertArrayExpr("array(1, 2, 3, 'bar')", new Long[]{1L, 2L, 3L, null});
+    assertArrayExpr("array(1, 2, 3, 'bar')", new String[]{"1", "2", "3", "bar"});
     assertArrayExpr("array(1.0)", new Double[]{1.0});
     assertArrayExpr("array('foo', 'bar')", new String[]{"foo", "bar"});
     assertArrayExpr(
@@ -1218,7 +1218,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array_to_mv(a)", new String[]{"foo", "bar", "baz", "foobar"});
     assertArrayExpr("array_to_mv(b)", new String[]{"1", "2", "3", "4", "5"});
     assertArrayExpr("array_to_mv(c)", new String[]{"3.1", "4.2", "5.3"});
-    assertArrayExpr("array_to_mv(array(y,z))", new String[]{"2", "3"});
+    assertArrayExpr("array_to_mv(array(y,z))", new String[]{"2.0", "3.1"});
     // array type is determined by the first array type
     assertArrayExpr("array_to_mv(array_concat(b,c))", new String[]{"1", "2", "3", "4", "5", "3", "4", "5"});
     assertArrayExpr(

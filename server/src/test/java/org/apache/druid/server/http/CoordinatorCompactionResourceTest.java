@@ -50,6 +50,7 @@ public class CoordinatorCompactionResourceTest
   private final AutoCompactionSnapshot expectedSnapshot = new AutoCompactionSnapshot(
       dataSourceName,
       AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+      null,
       1,
       1,
       1,

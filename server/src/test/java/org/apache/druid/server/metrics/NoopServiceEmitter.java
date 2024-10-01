@@ -24,6 +24,13 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 
 public class NoopServiceEmitter extends ServiceEmitter
 {
+  private static final NoopServiceEmitter INSTANCE = new NoopServiceEmitter();
+
+  public static NoopServiceEmitter instance()
+  {
+    return INSTANCE;
+  }
+
   public NoopServiceEmitter()
   {
     super("", "", null);

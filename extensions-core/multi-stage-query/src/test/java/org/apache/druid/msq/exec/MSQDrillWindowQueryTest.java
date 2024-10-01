@@ -39,7 +39,6 @@ import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.junit.jupiter.api.Test;
 
@@ -50,7 +49,6 @@ import java.util.Map;
 public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
 {
   private final Map<String, Object> queryContext = new HashMap<>(ImmutableMap.of(
-      PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
       PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
       QueryContexts.ENABLE_DEBUG, true,
       MultiStageQueryContext.CTX_MAX_NUM_TASKS, 5
@@ -170,6 +168,105 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
   @DrillTest("druid_queries/over_clause_only_partitioning/multiple_over_different_partition_column")
   @Test
   public void test_over_clause_with_only_partitioning_multiple_over_different_partition_column()
+  {
+    useSingleWorker();
+    windowQueryTest();
+  }
+
+  @Override
+  @DrillTest("ntile_func/ntileFn_47")
+  @Test
+  public void test_ntile_func_ntileFn_47()
+  {
+    useSingleWorker();
+    windowQueryTest();
+  }
+
+  @Override
+  @DrillTest("ntile_func/ntileFn_49")
+  @Test
+  public void test_ntile_func_ntileFn_49()
+  {
+    useSingleWorker();
+    windowQueryTest();
+  }
+
+  @Override
+  @DrillTest("ntile_func/ntileFn_50")
+  @Test
+  public void test_ntile_func_ntileFn_50()
+  {
+    useSingleWorker();
+    windowQueryTest();
+  }
+
+  @Override
+  @DrillTest("ntile_func/ntileFn_51")
+  @Test
+  public void test_ntile_func_ntileFn_51()
+  {
+    useSingleWorker();
+    windowQueryTest();
+  }
+
+  @Override
+  @DrillTest("ntile_func/ntileFn_52")
+  @Test
+  public void test_ntile_func_ntileFn_52()
+  {
+    useSingleWorker();
+    windowQueryTest();
+  }
+
+  @Override
+  @DrillTest("ntile_func/ntileFn_53")
+  @Test
+  public void test_ntile_func_ntileFn_53()
+  {
+    useSingleWorker();
+    windowQueryTest();
+  }
+
+  @Override
+  @DrillTest("ntile_func/ntileFn_54")
+  @Test
+  public void test_ntile_func_ntileFn_54()
+  {
+    useSingleWorker();
+    windowQueryTest();
+  }
+
+  @Override
+  @DrillTest("ntile_func/ntileFn_55")
+  @Test
+  public void test_ntile_func_ntileFn_55()
+  {
+    useSingleWorker();
+    windowQueryTest();
+  }
+
+  @Override
+  @DrillTest("ntile_func/ntileFn_56")
+  @Test
+  public void test_ntile_func_ntileFn_56()
+  {
+    useSingleWorker();
+    windowQueryTest();
+  }
+
+  @Override
+  @DrillTest("ntile_func/ntileFn_57")
+  @Test
+  public void test_ntile_func_ntileFn_57()
+  {
+    useSingleWorker();
+    windowQueryTest();
+  }
+
+  @Override
+  @DrillTest("ntile_func/ntileFn_58")
+  @Test
+  public void test_ntile_func_ntileFn_58()
   {
     useSingleWorker();
     windowQueryTest();

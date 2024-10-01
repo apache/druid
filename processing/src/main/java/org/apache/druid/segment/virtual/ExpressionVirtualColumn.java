@@ -240,7 +240,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
       return factory.makeObjectSelector(parsedExpression.get().getBindingIfIdentifier());
     }
 
-    return ExpressionVectorSelectors.makeVectorObjectSelector(factory, parsedExpression.get());
+    return ExpressionVectorSelectors.makeVectorObjectSelector(factory, parsedExpression.get(), expression.outputType);
   }
 
   @Nullable

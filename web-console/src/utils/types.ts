@@ -111,6 +111,12 @@ export function dataTypeToIcon(dataType: string): IconName {
     case 'COMPLEX<COMPRESSEDBIGDECIMAL>':
       return IconNames.SORT_NUMERICAL_DESC;
 
+    case 'COMPLEX<TEXT>':
+      return IconNames.LABEL;
+
+    case 'COMPLEX<VECTOR>':
+      return IconNames.REGRESSION_CHART;
+
     default:
       if (typeUpper.startsWith('ARRAY')) return IconNames.ARRAY;
       if (typeUpper.startsWith('COMPLEX')) return IconNames.ASTERISK;

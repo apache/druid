@@ -120,8 +120,9 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
     if (isNewMin || isKeySelected(key)) {
       if (isNewMin && !retainedKeys.isEmpty() && !isKeySelected(retainedKeys.firstKey())) {
         // Old min should be kicked out.
-        totalWeightUnadjusted -= retainedKeys.removeLong(retainedKeys.firstKey());
-        retainedBytes -= retainedKeys.firstKey().estimatedObjectSizeBytes();
+        RowKey rowKey = retainedKeys.firstKey();
+        totalWeightUnadjusted -= retainedKeys.removeLong(rowKey);
+        retainedBytes -= rowKey.estimatedObjectSizeBytes();
       }
 
       if (retainedKeys.putIfAbsent(key, weight) == MISSING_KEY_WEIGHT) {

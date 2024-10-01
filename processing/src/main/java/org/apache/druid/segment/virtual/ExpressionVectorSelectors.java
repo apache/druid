@@ -21,6 +21,7 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.math.expr.Expr;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
@@ -33,6 +34,8 @@ import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSe
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.Types;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.ConstantVectorSelectors;
 import org.apache.druid.segment.vector.ReadableVectorInspector;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
@@ -94,21 +97,32 @@ public class ExpressionVectorSelectors
 
   public static VectorObjectSelector makeVectorObjectSelector(
       VectorColumnSelectorFactory factory,
-      Expr expression
+      Expr expression,
+      @Nullable ColumnType outputTypeHint
   )
   {
     final ExpressionPlan plan = ExpressionPlanner.plan(factory, expression);
     Preconditions.checkArgument(plan.is(ExpressionPlan.Trait.VECTORIZABLE));
 
     if (plan.isConstant()) {
+      final ExprEval<?> eval = plan.getExpression().eval(InputBindings.nilBindings());
+      if (Types.is(outputTypeHint, ValueType.STRING) && eval.type().isArray()) {
+        return ConstantVectorSelectors.vectorObjectSelector(
+            factory.getReadableVectorInspector(),
+            ExpressionSelectors.coerceEvalToObjectOrList(eval)
+        );
+      }
       return ConstantVectorSelectors.vectorObjectSelector(
           factory.getReadableVectorInspector(),
-          plan.getExpression().eval(InputBindings.nilBindings()).valueOrDefault()
+          eval.valueOrDefault()
       );
     }
 
     final Expr.VectorInputBinding bindings = createVectorBindings(plan.getAnalysis(), factory);
     final ExprVectorProcessor<?> processor = plan.getExpression().asVectorProcessor(bindings);
+    if (Types.is(outputTypeHint, ValueType.STRING) && processor.getOutputType().isArray()) {
+      return new ExpressionVectorMultiValueStringObjectSelector(processor, bindings);
+    }
     return new ExpressionVectorObjectSelector(processor, bindings);
   }
 
@@ -170,7 +184,8 @@ public class ExpressionVectorSelectors
     return new ExpressionVectorObjectSelector(
         CastToTypeVectorProcessor.cast(
             VectorProcessors.identifier(binding, columnName),
-            ExpressionType.fromColumnType(castTo)
+            ExpressionType.fromColumnType(castTo),
+            binding.getMaxVectorSize()
         ),
         binding
     );
@@ -190,7 +205,8 @@ public class ExpressionVectorSelectors
     return new ExpressionVectorValueSelector(
         CastToTypeVectorProcessor.cast(
             VectorProcessors.identifier(binding, columnName),
-            ExpressionType.fromColumnType(castTo)
+            ExpressionType.fromColumnType(castTo),
+            binding.getMaxVectorSize()
         ),
         binding
     );

@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
+import org.apache.druid.indexer.CompactionEngine;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -33,10 +34,12 @@ import java.util.Objects;
  */
 public class CompactionSupervisorConfig
 {
-  private static final CompactionSupervisorConfig DEFAULT = new CompactionSupervisorConfig(null);
+  private static final CompactionSupervisorConfig DEFAULT = new CompactionSupervisorConfig(null, null);
 
   @JsonProperty
   private final boolean enabled;
+  @JsonProperty
+  private final CompactionEngine engine;
 
   public static CompactionSupervisorConfig defaultConfig()
   {
@@ -45,15 +48,22 @@ public class CompactionSupervisorConfig
 
   @JsonCreator
   public CompactionSupervisorConfig(
-      @JsonProperty("enabled") @Nullable Boolean enabled
+      @JsonProperty("enabled") @Nullable Boolean enabled,
+      @JsonProperty("engine") @Nullable CompactionEngine engine
   )
   {
     this.enabled = Configs.valueOrDefault(enabled, false);
+    this.engine = Configs.valueOrDefault(engine, CompactionEngine.NATIVE);
   }
 
   public boolean isEnabled()
   {
     return enabled;
+  }
+
+  public CompactionEngine getEngine()
+  {
+    return engine;
   }
 
   @Override
@@ -66,13 +76,13 @@ public class CompactionSupervisorConfig
       return false;
     }
     CompactionSupervisorConfig that = (CompactionSupervisorConfig) o;
-    return enabled == that.enabled;
+    return enabled == that.enabled && engine == that.engine;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(enabled);
+    return Objects.hash(enabled, engine);
   }
 
   @Override
@@ -80,6 +90,7 @@ public class CompactionSupervisorConfig
   {
     return "CompactionSchedulerConfig{" +
            "enabled=" + enabled +
+           "engine=" + engine +
            '}';
   }
 }

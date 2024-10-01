@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -82,6 +83,11 @@ public interface ControllerContext
    * {@link MSQSpec#getDestination()} is {@link org.apache.druid.msq.indexing.destination.DataSourceMSQDestination}.
    */
   TaskActionClient taskActionClient();
+
+  /**
+   * Task lock type.
+   */
+  TaskLockType taskLockType();
 
   /**
    * Provides services about workers: starting, canceling, obtaining status.

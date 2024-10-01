@@ -20,6 +20,7 @@
 package org.apache.druid.query.rowsandcols;
 
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn;
@@ -28,6 +29,7 @@ import org.apache.druid.segment.column.ColumnType;
 import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -128,7 +130,16 @@ public class RearrangedRowsAndColumns implements RowsAndColumns
             @Override
             public Object getObject(int rowNum)
             {
-              return accessor.getObject(pointers[start + rowNum]);
+              Object value = accessor.getObject(pointers[start + rowNum]);
+              if (ColumnType.STRING.equals(getType()) && value instanceof List) {
+                // special handling to reject MVDs
+                throw new UOE(
+                    "Encountered a multi value column [%s]. Window processing does not support MVDs. "
+                    + "Consider using UNNEST or MV_TO_ARRAY.",
+                    name
+                );
+              }
+              return value;
             }
 
             @Override

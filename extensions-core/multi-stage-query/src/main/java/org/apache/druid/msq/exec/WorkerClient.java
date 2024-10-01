@@ -25,6 +25,7 @@ import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import java.io.Closeable;
@@ -47,7 +48,8 @@ public interface WorkerClient extends Closeable
    */
   ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerId,
-      StageId stageId
+      StageId stageId,
+      SketchEncoding sketchEncoding
   );
 
   /**
@@ -57,7 +59,8 @@ public interface WorkerClient extends Closeable
   ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerId,
       StageId stageId,
-      long timeChunk
+      long timeChunk,
+      SketchEncoding sketchEncoding
   );
 
   /**
