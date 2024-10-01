@@ -293,20 +293,18 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       } else if (comparePartitionKeys(outputRow, currentRow, partitionColumnNames)) {
         // Add current row to the same batch of rows for processing.
         rowsToProcess.add(currentRow);
+        if (rowsToProcess.size() > maxRowsMaterialized) {
+          // We don't want to materialize more than maxRowsMaterialized rows at any point in time, so process the pending batch.
+          processRowsUpToLastPartition();
+        }
+        ensureMaxRowsInAWindowConstraint(rowsToProcess.size());
       } else {
         lastPartitionIndex = rowsToProcess.size() - 1;
         outputRow = currentRow.copy();
-        rowsToProcess.add(currentRow);
+        return ReturnOrAwait.runAgain();
       }
 
       frameCursor.advance();
-
-      if (rowsToProcess.size() > maxRowsMaterialized) {
-        // We don't want to materialize more than maxRowsMaterialized rows at any point in time, so process the pending batch.
-        processRowsUpToLastPartition();
-        ensureMaxRowsInAWindowConstraint(rowsToProcess.size());
-        return ReturnOrAwait.runAgain();
-      }
     }
     return ReturnOrAwait.runAgain();
   }
