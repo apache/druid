@@ -78,8 +78,8 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
     <Dialog className="nested-column-dialog" isOpen onClose={onClose} title="Expand nested column">
       <div className={Classes.DIALOG_BODY}>
         <p>
-          Replace <Tag minimal>{String(nestedColumn)}</Tag> with path expansions for the selected
-          paths.
+          Replace <Tag minimal>{String(nestedColumn.getOutputName())}</Tag> with path expansions for
+          the selected paths.
         </p>
         {pathsState.getErrorMessage()}
         {paths && (
