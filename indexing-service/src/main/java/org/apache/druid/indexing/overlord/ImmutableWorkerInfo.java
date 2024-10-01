@@ -71,7 +71,7 @@ public class ImmutableWorkerInfo
     this.worker = worker;
     this.currCapacityUsed = currCapacityUsed;
     this.currParallelIndexCapacityUsed = currParallelIndexCapacityUsed;
-    this.currCapacityUsedByTaskType = currCapacityUsedByTaskType;
+    this.currCapacityUsedByTaskType = currCapacityUsedByTaskType == null ? Collections.emptyMap() : currCapacityUsedByTaskType;
     this.availabilityGroups = ImmutableSet.copyOf(availabilityGroups);
     this.runningTasks = ImmutableSet.copyOf(runningTasks);
     this.lastCompletedTaskTime = lastCompletedTaskTime;
