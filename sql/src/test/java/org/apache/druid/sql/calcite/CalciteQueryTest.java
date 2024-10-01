@@ -3108,7 +3108,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNION_WITH_COMPLEX_OPERAND)
   @Test
   public void testUnionAllQueries()
   {

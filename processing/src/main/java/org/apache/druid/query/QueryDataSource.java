@@ -26,9 +26,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -49,7 +51,11 @@ public class QueryDataSource implements DataSource
   @Override
   public Set<String> getTableNames()
   {
-    return query.getDataSource().getTableNames();
+    Set<String> names = new HashSet<>();
+    for (DataSource ds : query.getDataSources()) {
+      names.addAll(ds.getTableNames());
+    }
+    return names;
   }
 
   @JsonProperty
@@ -61,7 +67,7 @@ public class QueryDataSource implements DataSource
   @Override
   public List<DataSource> getChildren()
   {
-    return Collections.singletonList(query.getDataSource());
+    return query.getDataSources();
   }
 
   @Override
@@ -118,14 +124,17 @@ public class QueryDataSource implements DataSource
   public DataSourceAnalysis getAnalysis()
   {
     final Query<?> subQuery = this.getQuery();
-    if (!(subQuery instanceof BaseQuery)) {
-      // We must verify that the subQuery is a BaseQuery, because it is required to make
-      // "DataSourceAnalysis.getBaseQuerySegmentSpec" work properly.
-      // All built-in query types are BaseQuery, so we only expect this with funky extension queries.
-      throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
+    if (subQuery instanceof BaseQuery) {
+      final DataSource current = subQuery.getDataSource();
+      return current.getAnalysis().maybeWithBaseQuery(subQuery);
     }
-    final DataSource current = subQuery.getDataSource();
-    return current.getAnalysis().maybeWithBaseQuery(subQuery);
+    if(subQuery instanceof UnionQuery) {
+      return new DataSourceAnalysis(this, null, null, Collections.emptyList());
+    }
+    // We must verify that the subQuery is a BaseQuery, because it is required to make
+    // "DataSourceAnalysis.getBaseQuerySegmentSpec" work properly.
+    // All built-in query types are BaseQuery, so we only expect this with funky extension queries.
+    throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
   }
 
   @Override
