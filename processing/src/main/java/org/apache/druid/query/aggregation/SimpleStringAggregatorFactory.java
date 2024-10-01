@@ -24,10 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -77,7 +77,7 @@ public abstract class SimpleStringAggregatorFactory
       if (maxStringBytes < 0) {
         throw new IAE("maxStringBytes must be greater than 0");
       } else if (maxStringBytes > Integer.MAX_VALUE - Integer.BYTES) {
-        throw new IAE(String.format("Maximum value for maxStringBytes is %d", Integer.MAX_VALUE - Integer.BYTES));
+        throw new IAE(StringUtils.format("Maximum value for maxStringBytes is %d", Integer.MAX_VALUE - Integer.BYTES));
       } else {
         this.maxStringBytes = maxStringBytes;
       }
