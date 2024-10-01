@@ -34,7 +34,6 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -97,7 +96,6 @@ public class TestTimelineServerView implements TimelineServerView
     throw new UnsupportedOperationException();
   }
 
-  @Nullable
   @Override
   public List<ImmutableDruidServer> getDruidServers()
   {

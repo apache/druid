@@ -79,6 +79,7 @@ import org.apache.druid.query.PrioritizedRunnable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -986,6 +987,11 @@ public class WorkerImpl implements Worker
     // Close controller client to cancel any currently in-flight calls to the controller.
     if (controllerClient != null) {
       controllerClient.close();
+    }
+
+    // Close worker client to cancel any currently in-flight calls to other workers.
+    if (workerClient != null) {
+      CloseableUtils.closeAndSuppressExceptions(workerClient, e -> log.warn("Failed to close workerClient"));
     }
 
     // Clear the main loop event queue, then throw a CanceledFault into the loop to exit it promptly.

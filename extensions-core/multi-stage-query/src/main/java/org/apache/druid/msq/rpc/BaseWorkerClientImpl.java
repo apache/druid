@@ -57,6 +57,8 @@ import java.io.IOException;
  */
 public abstract class BaseWorkerClientImpl implements WorkerClient
 {
+  private static final Logger log = new Logger(BaseWorkerClientImpl.class);
+
   private final ObjectMapper objectMapper;
   private final String contentType;
 
@@ -190,8 +192,6 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
         holder -> deserialize(holder, new TypeReference<CounterSnapshotsTree>() {})
     );
   }
-
-  private static final Logger log = new Logger(BaseWorkerClientImpl.class);
 
   @Override
   public ListenableFuture<Boolean> fetchChannelData(
