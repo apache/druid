@@ -67,8 +67,7 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
         )
         .applyIf(querySource.hasBaseTimeColumn(), q =>
           q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),
-        )
-        .changeLimitValue(200);
+        );
 
       const pathResult = await runSqlQuery(query);
 
