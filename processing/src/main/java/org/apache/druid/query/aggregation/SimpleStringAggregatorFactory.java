@@ -143,6 +143,12 @@ public abstract class SimpleStringAggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
+    Preconditions.checkArgument(
+        maxStringBytes <= Integer.MAX_VALUE - Integer.BYTES,
+        StringUtils.format("maxStringBytes cannot exceed %d", Integer.MAX_VALUE - Integer.BYTES)
+    );
+    Preconditions.checkArgument(maxStringBytes > 0, "maxStringBytes must be positive.");
+
     return Integer.BYTES + maxStringBytes;
   }
 
