@@ -17,35 +17,25 @@
  * under the License.
  */
 
-package org.apache.druid.segment.handoff;
+package org.apache.druid.k8s.overlord.taskadapter;
 
-import com.google.inject.Inject;
-import org.apache.druid.client.coordinator.CoordinatorClient;
+import com.google.common.base.Optional;
+import io.fabric8.kubernetes.api.model.PodTemplate;
+import org.apache.druid.indexing.common.task.Task;
 
-public class CoordinatorBasedSegmentHandoffNotifierFactory implements SegmentHandoffNotifierFactory
+public class TestPodTemplateSelector implements PodTemplateSelector
 {
 
-  private final CoordinatorClient client;
-  private final CoordinatorBasedSegmentHandoffNotifierConfig config;
+  private final PodTemplate basePodTemplate;
 
-  @Inject
-  public CoordinatorBasedSegmentHandoffNotifierFactory(
-      CoordinatorClient client,
-      CoordinatorBasedSegmentHandoffNotifierConfig config
-  )
+  public TestPodTemplateSelector(PodTemplate basePodTemplate)
   {
-    this.client = client;
-    this.config = config;
+    this.basePodTemplate = basePodTemplate;
   }
 
   @Override
-  public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId)
+  public Optional<PodTemplateWithName> getPodTemplateForTask(Task task)
   {
-    return new CoordinatorBasedSegmentHandoffNotifier(
-        dataSource,
-        client,
-        config,
-        taskId
-    );
+    return Optional.of(new PodTemplateWithName("base", basePodTemplate));
   }
 }

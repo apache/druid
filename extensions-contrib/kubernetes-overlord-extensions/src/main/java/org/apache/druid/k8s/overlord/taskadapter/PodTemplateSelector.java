@@ -17,10 +17,24 @@
  * under the License.
  */
 
-package org.apache.druid.segment.handoff;
+package org.apache.druid.k8s.overlord.taskadapter;
 
+import com.google.common.base.Optional;
+import org.apache.druid.indexing.common.task.Task;
 
-public interface SegmentHandoffNotifierFactory
+/**
+ * Interface for selecting a Pod template based on a given task.
+ * Implementations of this interface are responsible for determining the appropriate
+ * Pod template to use for a specific task based on task characteristics.
+ */
+public interface PodTemplateSelector
 {
-  SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId);
+  /**
+   * Selects a Pod template for the given task.
+   * @param task The task for which to select a Pod template..
+   * @return An Optional containing the selected PodTemplateWithName if a suitable
+   *         template is found, or an empty Optional if no appropriate template
+   *         is available for the given task.
+   */
+  Optional<PodTemplateWithName> getPodTemplateForTask(Task task);
 }
