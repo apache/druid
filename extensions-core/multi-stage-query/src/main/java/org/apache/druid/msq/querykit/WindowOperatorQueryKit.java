@@ -96,10 +96,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         false
     );
 
-    ShuffleSpec nextShuffleSpec = findShuffleSpecForNextWindow(
-        stages.get(0),
-        queryKitSpec.getNumPartitionsForShuffle()
-    );
+    ShuffleSpec nextShuffleSpec = stages.get(0).findShuffleSpec(queryKitSpec.getNumPartitionsForShuffle());
     final QueryDefinitionBuilder queryDefBuilder =
         makeQueryDefinitionBuilder(queryKitSpec.getQueryId(), dataSourcePlan, nextShuffleSpec);
 
@@ -182,7 +179,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
           stageRowSignature = finalWindowStageRowSignature;
           nextShuffleSpec = finalWindowStageShuffleSpec;
         } else {
-          nextShuffleSpec = findShuffleSpecForNextWindow(stages.get(i + 1), queryKitSpec.getNumPartitionsForShuffle());
+          nextShuffleSpec = stages.get(i + 1).findShuffleSpec(queryKitSpec.getNumPartitionsForShuffle());
           if (nextShuffleSpec == null) {
             stageRowSignature = intermediateSignature;
           } else {
@@ -262,42 +259,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     }
 
     return stages;
-  }
-
-  private ShuffleSpec findShuffleSpecForNextWindow(WindowStage windowStage, int partitionCount)
-  {
-    final NaivePartitioningOperatorFactory partition = windowStage.getPartitioningOperatorFactory();
-    final NaiveSortOperatorFactory sort = windowStage.getSortOperatorFactory();
-
-    Map<String, ColumnWithDirection.Direction> sortColumnsMap = new HashMap<>();
-    if (sort != null) {
-      for (ColumnWithDirection sortColumn : sort.getSortColumns()) {
-        sortColumnsMap.put(sortColumn.getColumn(), sortColumn.getDirection());
-      }
-    }
-
-    if (partition == null) {
-      // If the window stage doesn't have any partitioning factory, then we should keep the shuffle spec from previous stage.
-      // This indicates that we already have the data partitioned correctly, and hence we don't need to do any shuffling.
-      return null;
-    }
-
-    if (partition.getPartitionColumns().isEmpty()) {
-      return MixShuffleSpec.instance();
-    }
-
-    List<KeyColumn> keyColsOfWindow = new ArrayList<>();
-    for (String partitionColumn : partition.getPartitionColumns()) {
-      KeyColumn kc;
-      if (sortColumnsMap.get(partitionColumn) == ColumnWithDirection.Direction.DESC) {
-        kc = new KeyColumn(partitionColumn, KeyOrder.DESCENDING);
-      } else {
-        kc = new KeyColumn(partitionColumn, KeyOrder.ASCENDING);
-      }
-      keyColsOfWindow.add(kc);
-    }
-
-    return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), partitionCount);
   }
 
   /**
@@ -394,19 +355,42 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       return partitioningOperatorFactory != null ? partitioningOperatorFactory.getPartitionColumns() : new ArrayList<>();
     }
 
-    public NaiveSortOperatorFactory getSortOperatorFactory()
-    {
-      return sortOperatorFactory;
-    }
-
-    public NaivePartitioningOperatorFactory getPartitioningOperatorFactory()
-    {
-      return partitioningOperatorFactory;
-    }
-
     public List<WindowOperatorFactory> getWindowOperatorFactories()
     {
       return windowOperatorFactories;
+    }
+
+    public ShuffleSpec findShuffleSpec(int partitionCount)
+    {
+      Map<String, ColumnWithDirection.Direction> sortColumnsMap = new HashMap<>();
+      if (sortOperatorFactory != null) {
+        for (ColumnWithDirection sortColumn : sortOperatorFactory.getSortColumns()) {
+          sortColumnsMap.put(sortColumn.getColumn(), sortColumn.getDirection());
+        }
+      }
+
+      if (partitioningOperatorFactory == null) {
+        // If the window stage doesn't have any partitioning factory, then we should keep the shuffle spec from previous stage.
+        // This indicates that we already have the data partitioned correctly, and hence we don't need to do any shuffling.
+        return null;
+      }
+
+      if (partitioningOperatorFactory.getPartitionColumns().isEmpty()) {
+        return MixShuffleSpec.instance();
+      }
+
+      List<KeyColumn> keyColsOfWindow = new ArrayList<>();
+      for (String partitionColumn : partitioningOperatorFactory.getPartitionColumns()) {
+        KeyColumn kc;
+        if (sortColumnsMap.get(partitionColumn) == ColumnWithDirection.Direction.DESC) {
+          kc = new KeyColumn(partitionColumn, KeyOrder.DESCENDING);
+        } else {
+          kc = new KeyColumn(partitionColumn, KeyOrder.ASCENDING);
+        }
+        keyColsOfWindow.add(kc);
+      }
+
+      return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), partitionCount);
     }
 
     @Override
