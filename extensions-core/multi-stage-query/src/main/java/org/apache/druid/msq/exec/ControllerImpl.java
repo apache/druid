@@ -1174,6 +1174,16 @@ public class ControllerImpl implements Controller
     return workerManager.getWorkerIds();
   }
 
+  @Override
+  public boolean hasWorker(String workerId)
+  {
+    if (workerManager == null) {
+      return false;
+    }
+
+    return workerManager.getWorkerNumber(workerId) != WorkerManager.UNKNOWN_WORKER_NUMBER;
+  }
+
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Nullable
   private Int2ObjectMap<Object> makeWorkerFactoryInfosForStage(
