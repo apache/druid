@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -85,6 +86,12 @@ public class ColumnCache implements ColumnSelector
             theColumn = closer.register(holder.getColumn());
           }
           return theColumn;
+        }
+
+        @Override
+        public Supplier<? extends BaseColumn> getColumnSupplier()
+        {
+          return this::getColumn;
         }
 
         @Nullable

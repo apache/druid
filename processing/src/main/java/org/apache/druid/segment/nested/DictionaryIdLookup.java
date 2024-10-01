@@ -100,6 +100,18 @@ public final class DictionaryIdLookup implements Closeable
     this.arrayDictionaryWriter = arrayDictionaryWriter;
   }
 
+  public String getStringValue(int id)
+  {
+    ensureStringDictionaryLoaded();
+    return StringUtils.fromUtf8Nullable(stringDictionary.get(id));
+  }
+
+  public int[] getArrayValue(int id)
+  {
+    ensureArrayDictionaryLoaded();
+    return arrayDictionary.get(id - arrayOffset());
+  }
+
   @Nullable
   public Object getDictionaryValue(int id)
   {
@@ -400,5 +412,25 @@ public final class DictionaryIdLookup implements Closeable
         return Ints.checkedCast(numBytesWritten);
       }
     };
+  }
+
+  public int getStringCardinality()
+  {
+    return stringDictionary.size();
+  }
+
+  public int getLongCardinality()
+  {
+    return longDictionary.size();
+  }
+
+  public int getDoubleCardinality()
+  {
+    return doubleDictionary.size();
+  }
+
+  public int getArrayCardinality()
+  {
+    return arrayDictionary.size();
   }
 }

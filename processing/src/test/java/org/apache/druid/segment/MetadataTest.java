@@ -21,6 +21,9 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
@@ -28,6 +31,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -57,6 +61,7 @@ public class MetadataTest
         null,
         Granularities.ALL,
         Boolean.FALSE,
+        null,
         null
     );
 
@@ -89,6 +94,7 @@ public class MetadataTest
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         Boolean.FALSE,
+        null,
         null
     );
 
@@ -98,6 +104,7 @@ public class MetadataTest
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         Boolean.FALSE,
+        null,
         null
     );
 
@@ -107,6 +114,7 @@ public class MetadataTest
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         Boolean.TRUE,
+        null,
         null
     );
 
@@ -118,7 +126,19 @@ public class MetadataTest
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         Boolean.FALSE,
-        Cursors.ascendingTimeOrder()
+        Cursors.ascendingTimeOrder(),
+        ImmutableList.of(
+            new AggregateProjectionSpec(
+                "some_projection",
+                ImmutableList.of(new StringDimensionSchema("a"), new LongDimensionSchema("b")),
+                VirtualColumns.create(
+                    Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+                ),
+                new AggregatorFactory[] {
+                    new LongLastAggregatorFactory("atLongLast", "d", null)
+                }
+            )
+        )
     );
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
@@ -129,7 +149,7 @@ public class MetadataTest
     metadataToBeMerged.add(null);
 
     final Metadata merged2 =
-        new Metadata(Collections.singletonMap("k", "v"), null, null, null, null, Cursors.ascendingTimeOrder());
+        new Metadata(Collections.singletonMap("k", "v"), null, null, null, null, Cursors.ascendingTimeOrder(), null);
 
     Assert.assertEquals(merged2, Metadata.merge(metadataToBeMerged, null));
 
@@ -139,7 +159,7 @@ public class MetadataTest
     };
 
     final Metadata merged3 =
-        new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null, Cursors.ascendingTimeOrder());
+        new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null, Cursors.ascendingTimeOrder(), null);
 
     Assert.assertEquals(
         merged3,
@@ -152,7 +172,8 @@ public class MetadataTest
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         null,
-        Cursors.ascendingTimeOrder()
+        Cursors.ascendingTimeOrder(),
+        null
     );
     Assert.assertEquals(
         merged4,

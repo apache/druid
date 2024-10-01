@@ -239,20 +239,17 @@ public class IndexBuilder
     Preconditions.checkNotNull(indexMerger, "indexMerger");
     Preconditions.checkNotNull(tmpDir, "tmpDir");
     try (final IncrementalIndex incrementalIndex = buildIncrementalIndex()) {
+      File persisted = indexMerger.persist(
+          incrementalIndex,
+          new File(
+              tmpDir,
+              StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))
+          ),
+          indexSpec,
+          null
+      );
       List<IndexableAdapter> adapters = Collections.singletonList(
-          new QueryableIndexIndexableAdapter(
-              indexIO.loadIndex(
-                  indexMerger.persist(
-                      incrementalIndex,
-                      new File(
-                          tmpDir,
-                          StringUtils.format("testIndex-%s", ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE))
-                      ),
-                      indexSpec,
-                      null
-                  )
-              )
-          )
+          new QueryableIndexIndexableAdapter(indexIO.loadIndex(persisted))
       );
       // Do a 'merge' of the persisted segment even though there is only one; this time it will be reading from the
       // queryable index instead of the incremental index, which also mimics the behavior of real ingestion tasks

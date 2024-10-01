@@ -21,6 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnFormat;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -30,6 +31,10 @@ import java.util.List;
  */
 public interface IncrementalIndexRowSelector extends ColumnInspector
 {
+  List<IncrementalIndex.DimensionDesc> getDimensions();
+
+  List<String> getMetricNames();
+
   /**
    * get {@link IncrementalIndex.DimensionDesc} for the specified column, if available, which provides access to things
    * like {@link org.apache.druid.segment.DimensionIndexer} and {@link org.apache.druid.segment.DimensionHandler} as
@@ -49,6 +54,8 @@ public interface IncrementalIndexRowSelector extends ColumnInspector
    * Ordering for the data in the facts table
    */
   List<OrderBy> getOrdering();
+
+  int getTimePosition();
 
   /**
    * Are there any {@link IncrementalIndexRow} stored in the {@link FactsHolder}?
@@ -101,4 +108,13 @@ public interface IncrementalIndexRowSelector extends ColumnInspector
    * @return          is the value null for this row?
    */
   boolean isNull(int rowOffset, int aggOffset);
+
+  ColumnFormat getColumnFormat(String columnName);
+
+  @Nullable
+  String getTimeColumnName();
+
+  int size();
+
+  List<String> getDimensionNames(boolean includeTime);
 }

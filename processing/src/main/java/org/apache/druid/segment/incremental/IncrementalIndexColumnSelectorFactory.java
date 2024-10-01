@@ -47,19 +47,16 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   private final Order timeOrder;
   private final IncrementalIndexRowHolder rowHolder;
   private final IncrementalIndexRowSelector rowSelector;
-  private final String timeColumn;
 
   IncrementalIndexColumnSelectorFactory(
       IncrementalIndexRowSelector rowSelector,
+      IncrementalIndexRowHolder rowHolder,
       VirtualColumns virtualColumns,
-      String timeColumn,
-      Order timeOrder,
-      IncrementalIndexRowHolder rowHolder
+      Order timeOrder
   )
   {
     this.rowSelector = rowSelector;
     this.virtualColumns = virtualColumns;
-    this.timeColumn = timeColumn;
     this.timeOrder = timeOrder;
     this.rowHolder = rowHolder;
     this.snapshotColumnInspector = new ColumnInspector()
@@ -139,7 +136,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     // Use snapshotColumnInspector instead of index.getCapabilities (see note in IncrementalIndexStorageAdapater)
-    if (columnName.equals(timeColumn)) {
+    if (isTimeColumn(columnName)) {
       return virtualColumns.getColumnCapabilitiesWithFallback(snapshotColumnInspector, ColumnHolder.TIME_COLUMN_NAME);
     }
     return virtualColumns.getColumnCapabilitiesWithFallback(snapshotColumnInspector, columnName);
@@ -160,6 +157,6 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
 
   private boolean isTimeColumn(String columnName)
   {
-    return ColumnHolder.TIME_COLUMN_NAME.equals(columnName) || timeColumn.equals(columnName);
+    return ColumnHolder.TIME_COLUMN_NAME.equals(columnName);
   }
 }

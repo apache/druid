@@ -32,6 +32,7 @@ import java.nio.ByteBuffer;
 
 public class ColumnSerializerUtils
 {
+  public static final String VALUE_DICTIONARY_FILE_NAME = "__valueDictionary";
   public static final String STRING_DICTIONARY_FILE_NAME = "__stringDictionary";
   public static final String LONG_DICTIONARY_FILE_NAME = "__longDictionary";
   public static final String DOUBLE_DICTIONARY_FILE_NAME = "__doubleDictionary";

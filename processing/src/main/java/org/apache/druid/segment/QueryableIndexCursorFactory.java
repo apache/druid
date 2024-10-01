@@ -24,6 +24,10 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.data.Offset;
+import org.apache.druid.segment.vector.RemapVectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorOffset;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashSet;
@@ -40,6 +44,41 @@ public class QueryableIndexCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
+    QueryableIndex.Projection projection = index.getProjection(spec);
+    if (projection != null) {
+      return new QueryableIndexCursorHolder(projection.getQueryableIndex(), projection.getCursorBuildSpec())
+      {
+        @Override
+        public ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
+            ColumnCache columnCache,
+            Offset baseOffset
+        )
+        {
+          return new RemapColumnSelectorFactory(
+              super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset),
+              projection.getRemap()
+          );
+        }
+
+        @Override
+        public VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
+            ColumnCache columnCache,
+            VectorOffset baseOffset
+        )
+        {
+          return new RemapVectorColumnSelectorFactory(
+              super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset),
+              projection.getRemap()
+          );
+        }
+
+        @Override
+        public boolean isPreAggregated()
+        {
+          return true;
+        }
+      };
+    }
     return new QueryableIndexCursorHolder(index, CursorBuildSpec.builder(spec).build());
   }
 

@@ -39,6 +39,8 @@ import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.utils.SerializerUtils;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
@@ -48,12 +50,15 @@ import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -643,6 +648,23 @@ public class IndexIO
           smooshedFiles,
           loadFailed
       );
+      // todo (clint): just pass in the metadata to SimpleQueryableIndex so it doesnt need to read it again...
+      final Map<String, Map<String, Supplier<ColumnHolder>>> projectionsColumns = new LinkedHashMap<>();
+      final Metadata metadata = getMetdata(smooshedFiles, mapper, inDir);
+      if (metadata.getProjections() != null) {
+        for (AggregateProjectionSpec projectionSpec : metadata.getProjections()) {
+          final Map<String, Supplier<ColumnHolder>> projectionColumns = readProjectionColumns(
+              mapper,
+              loadFailed,
+              projectionSpec,
+              smooshedFiles,
+              columns,
+              dataInterval
+          );
+
+          projectionsColumns.put(projectionSpec.getName(), projectionColumns);
+        }
+      }
 
       final QueryableIndex index = new SimpleQueryableIndex(
           dataInterval,
@@ -650,36 +672,111 @@ public class IndexIO
           segmentBitmapSerdeFactory.getBitmapFactory(),
           columns,
           smooshedFiles,
-          lazy
+          lazy,
+          projectionsColumns
       )
       {
         @Override
         public Metadata getMetadata()
         {
-          try {
-            ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
-            if (metadataBB != null) {
-              return mapper.readValue(
-                  SERIALIZER_UTILS.readBytes(metadataBB, metadataBB.remaining()),
-                  Metadata.class
-              );
-            }
-          }
-          catch (JsonParseException | JsonMappingException ex) {
-            // Any jackson deserialization errors are ignored e.g. if metadata contains some aggregator which
-            // is no longer supported then it is OK to not use the metadata instead of failing segment loading
-            log.warn(ex, "Failed to load metadata for segment [%s]", inDir);
-          }
-          catch (IOException ex) {
-            log.warn(ex, "Failed to read metadata for segment [%s]", inDir);
-          }
-          return null;
+          return getMetdata(smooshedFiles, mapper, inDir);
         }
       };
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
 
       return index;
+    }
+
+    private Map<String, Supplier<ColumnHolder>> readProjectionColumns(
+        ObjectMapper mapper,
+        SegmentLazyLoadFailCallback loadFailed,
+        AggregateProjectionSpec projectionSpec,
+        SmooshedFileMapper smooshedFiles,
+        Map<String, Supplier<ColumnHolder>> columns,
+        Interval dataInterval
+    ) throws IOException
+    {
+      final Map<String, Supplier<ColumnHolder>> projectionColumns = new LinkedHashMap<>();
+      for (DimensionSchema groupingColumn : projectionSpec.getGroupingColumns()) {
+        final String smooshName = Projections.getProjectionSmooshV9FileName(projectionSpec, groupingColumn.getName());
+        final ByteBuffer colBuffer = smooshedFiles.mapFile(smooshName);
+
+        if (columns.containsKey(groupingColumn.getName())) {
+          final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(groupingColumn.getName());
+          projectionColumns.put(internedColumnName, Suppliers.memoize(
+              () -> {
+                try {
+                  ColumnDescriptor serde = mapper.readValue(SERIALIZER_UTILS.readString(colBuffer), ColumnDescriptor.class);
+                  return serde.readProjection(colBuffer, columnConfig, smooshedFiles, columns.get(internedColumnName).get());
+                }
+                catch (IOException | RuntimeException e) {
+                  log.warn(e, "Throw exceptions when deserialize column [%s].", groupingColumn.getName());
+                  loadFailed.execute();
+                  throw Throwables.propagate(e);
+                }
+              }
+          ));
+        } else {
+          registerColumnHolder(true, projectionColumns, groupingColumn.getName(),
+                               mapper, colBuffer,
+                               smooshedFiles,
+                               loadFailed
+          );
+        }
+
+        if (groupingColumn.getName().equals(projectionSpec.getTimeColumnName())) {
+          projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(groupingColumn.getName()));
+        }
+      }
+      for (AggregatorFactory aggregator : projectionSpec.getAggregators()) {
+        final String smooshName = Projections.getProjectionSmooshV9FileName(projectionSpec, aggregator.getName());
+        final ByteBuffer aggBuffer = smooshedFiles.mapFile(smooshName);
+        registerColumnHolder(
+            true,
+            projectionColumns,
+            aggregator.getName(),
+            mapper,
+            aggBuffer,
+            smooshedFiles,
+            loadFailed
+        );
+      }
+      if (projectionSpec.getTimeColumnName() == null) {
+        // todo (clint): get the count column name from project spec since if it was doing things correctly it might
+        //  possibly not be __count
+        // todo (clint): also, why do we still have to read columns just to know the stupid row count
+        try (BaseColumn count = projectionColumns.get("__count").get().getColumn()) {
+          final int numRows = ((NumericColumn) count).length();
+          projectionColumns.put(
+              ColumnHolder.TIME_COLUMN_NAME,
+              Projections.makeConstantTimeSupplier(numRows, dataInterval.getStartMillis())
+          );
+        }
+      }
+      return projectionColumns;
+    }
+
+    private Metadata getMetdata(SmooshedFileMapper smooshedFiles, ObjectMapper mapper, File inDir)
+    {
+      try {
+        ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
+        if (metadataBB != null) {
+          return mapper.readValue(
+              SERIALIZER_UTILS.readBytes(metadataBB, metadataBB.remaining()),
+              Metadata.class
+          );
+        }
+      }
+      catch (JsonParseException | JsonMappingException ex) {
+        // Any jackson deserialization errors are ignored e.g. if metadata contains some aggregator which
+        // is no longer supported then it is OK to not use the metadata instead of failing segment loading
+        log.warn(ex, "Failed to load metadata for segment [%s]", inDir);
+      }
+      catch (IOException ex) {
+        log.warn(ex, "Failed to read metadata for segment [%s]", inDir);
+      }
+      return null;
     }
 
     /**

@@ -29,7 +29,6 @@ import org.apache.druid.segment.RowPointer;
 import org.apache.druid.segment.TimeAndDimsPointer;
 import org.apache.druid.segment.TransformableRowIterator;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnHolder;
 
 import java.util.Iterator;
 import java.util.List;
@@ -50,7 +49,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
   private final RowPointer currentRowPointer;
   private final TimeAndDimsPointer markedRowPointer;
 
-  IncrementalIndexRowIterator(IncrementalIndex incrementalIndex)
+  IncrementalIndexRowIterator(IncrementalIndexRowSelector incrementalIndex)
   {
     this.timeAndDimsIterator = incrementalIndex.getFacts().persistIterable().iterator();
     this.currentRowPointer = makeRowPointer(incrementalIndex, currentRowHolder, currentRowNumCounter);
@@ -60,7 +59,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
   }
 
   private static RowPointer makeRowPointer(
-      IncrementalIndex incrementalIndex,
+      IncrementalIndexRowSelector incrementalIndex,
       IncrementalIndexRowHolder rowHolder,
       RowNumCounter rowNumCounter
   )
@@ -68,10 +67,9 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
     ColumnSelectorFactory columnSelectorFactory =
         new IncrementalIndexColumnSelectorFactory(
             incrementalIndex,
+            rowHolder,
             VirtualColumns.EMPTY,
-            ColumnHolder.TIME_COLUMN_NAME,
-            incrementalIndex.timePosition == 0 ? Order.ASCENDING : Order.NONE,
-            rowHolder
+            incrementalIndex.getTimePosition() == 0 ? Order.ASCENDING : Order.NONE
         );
     ColumnValueSelector[] dimensionSelectors = incrementalIndex
         .getDimensions()
@@ -94,7 +92,7 @@ class IncrementalIndexRowIterator implements TransformableRowIterator
 
     return new RowPointer(
         rowHolder,
-        incrementalIndex.timePosition,
+        incrementalIndex.getTimePosition(),
         dimensionSelectors,
         dimensionHandlers,
         metricSelectors,

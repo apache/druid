@@ -20,13 +20,13 @@
 package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.NestedDataColumnIndexerV4;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -78,17 +78,28 @@ public class IncrementalIndexCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final IncrementalIndex.ProjectionRowSelector projection = index.getProjection(spec);
+    final IncrementalIndex.Projection projection = index.getProjection(spec);
     if (projection == null) {
-      return new IncrementalIndexCursorHolder(index, spec, ColumnHolder.TIME_COLUMN_NAME, false);
+      return new IncrementalIndexCursorHolder(index, spec);
     } else {
       // currently we only have aggregated projections, so isPreAggregated is always true
       return new IncrementalIndexCursorHolder(
           projection.getRowSelector(),
-          projection.getCursorBuildSpec(),
-          projection.getTimeColumnName(),
-          true
-      );
+          projection.getCursorBuildSpec()
+      )
+      {
+        @Override
+        public ColumnSelectorFactory makeSelectorFactory(CursorBuildSpec buildSpec, IncrementalIndexRowHolder currEntry)
+        {
+          return projection.wrapColumnSelectorFactory(super.makeSelectorFactory(buildSpec, currEntry));
+        }
+
+        @Override
+        public boolean isPreAggregated()
+        {
+          return true;
+        }
+      };
     }
   }
 

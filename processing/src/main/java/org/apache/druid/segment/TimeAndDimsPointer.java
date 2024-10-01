@@ -94,7 +94,7 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
     this.timestampSelector = timestampSelector;
     this.timePosition = timePosition;
     Preconditions.checkArgument(
-        timePosition >= 0 && timePosition <= dimensionSelectors.length,
+        timePosition <= dimensionSelectors.length,
         "timePosition[%s] is out of range 0 .. [%s]",
         timePosition,
         dimensionSelectors.length

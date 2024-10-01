@@ -21,7 +21,9 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -56,6 +58,8 @@ public class Metadata
   private final Boolean rollup;
   @Nullable
   private final List<OrderBy> ordering;
+  @Nullable
+  private final List<AggregateProjectionSpec> projections;
 
   public Metadata(
       @JsonProperty("container") @Nullable Map<String, Object> container,
@@ -63,7 +67,8 @@ public class Metadata
       @JsonProperty("timestampSpec") @Nullable TimestampSpec timestampSpec,
       @JsonProperty("queryGranularity") @Nullable Granularity queryGranularity,
       @JsonProperty("rollup") @Nullable Boolean rollup,
-      @JsonProperty("ordering") @Nullable List<OrderBy> ordering
+      @JsonProperty("ordering") @Nullable List<OrderBy> ordering,
+      @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections
   )
   {
     this.container = container == null ? new ConcurrentHashMap<>() : container;
@@ -72,6 +77,7 @@ public class Metadata
     this.queryGranularity = queryGranularity;
     this.rollup = rollup;
     this.ordering = ordering;
+    this.projections = projections;
   }
 
   @JsonProperty
@@ -124,6 +130,14 @@ public class Metadata
     return ordering;
   }
 
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<AggregateProjectionSpec> getProjections()
+  {
+    return projections;
+  }
+
   public Metadata putAll(@Nullable Map<String, Object> other)
   {
     if (other != null) {
@@ -155,6 +169,7 @@ public class Metadata
     List<Granularity> gransToMerge = new ArrayList<>();
     List<Boolean> rollupToMerge = new ArrayList<>();
     List<List<OrderBy>> orderingsToMerge = new ArrayList<>();
+    List<List<AggregateProjectionSpec>> projectionsToMerge = new ArrayList<>();
 
     for (Metadata metadata : toBeMerged) {
       if (metadata != null) {
@@ -176,6 +191,7 @@ public class Metadata
         }
 
         orderingsToMerge.add(metadata.getOrdering());
+        projectionsToMerge.add(metadata.getProjections());
         mergedContainer.putAll(metadata.container);
       } else {
         //if metadata and hence aggregators and queryGranularity for some segment being merged are unknown then
@@ -204,6 +220,7 @@ public class Metadata
                                           Granularity.mergeGranularities(gransToMerge);
 
     final List<OrderBy> mergedOrdering = mergeOrderings(orderingsToMerge);
+    final List<AggregateProjectionSpec> mergedProjections = mergeProjections(projectionsToMerge);
 
     Boolean rollup = null;
     if (rollupToMerge != null && !rollupToMerge.isEmpty()) {
@@ -227,7 +244,8 @@ public class Metadata
         mergedTimestampSpec,
         mergedGranularity,
         rollup,
-        mergedOrdering
+        mergedOrdering,
+        mergedProjections
     );
   }
 
@@ -246,13 +264,14 @@ public class Metadata
            Objects.equals(timestampSpec, metadata.timestampSpec) &&
            Objects.equals(queryGranularity, metadata.queryGranularity) &&
            Objects.equals(rollup, metadata.rollup) &&
-           Objects.equals(ordering, metadata.ordering);
+           Objects.equals(ordering, metadata.ordering) &&
+           Objects.equals(projections, metadata.projections);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(container, Arrays.hashCode(aggregators), timestampSpec, queryGranularity, rollup);
+    return Objects.hash(container, Arrays.hashCode(aggregators), timestampSpec, queryGranularity, rollup, ordering, projections);
   }
 
   @Override
@@ -265,6 +284,7 @@ public class Metadata
            ", queryGranularity=" + queryGranularity +
            ", rollup=" + rollup +
            ", ordering=" + ordering +
+           ", projections=" + projections +
            '}';
   }
 
@@ -307,5 +327,20 @@ public class Metadata
 
       mergedOrdering.add(orderBy);
     }
+  }
+
+  public static List<AggregateProjectionSpec> mergeProjections(List<List<AggregateProjectionSpec>> projectionsToMerge)
+  {
+    final Map<String, AggregateProjectionSpec> projectionsMap = new HashMap<>();
+    // dedupe by name, fail if somehow incompatible projections are defined
+    for (List<AggregateProjectionSpec> projections : projectionsToMerge) {
+      for (AggregateProjectionSpec projection : projections) {
+        AggregateProjectionSpec prev = projectionsMap.putIfAbsent(projection.getName(), projection);
+        if (prev != null && !prev.equals(projection)) {
+          throw DruidException.defensive("mismatched projections: [%s] and [%s]", prev, projection);
+        }
+      }
+    }
+    return new ArrayList<>(projectionsMap.values());
   }
 }

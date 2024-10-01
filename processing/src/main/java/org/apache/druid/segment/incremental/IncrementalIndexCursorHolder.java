@@ -29,6 +29,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.ValueMatchers;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
@@ -40,20 +41,14 @@ public class IncrementalIndexCursorHolder implements CursorHolder
   private final IncrementalIndexRowSelector rowSelector;
   private final CursorBuildSpec spec;
   private final List<OrderBy> ordering;
-  private final String timeColumnName;
-  private final boolean isPreaggregated;
 
   public IncrementalIndexCursorHolder(
       IncrementalIndexRowSelector rowSelector,
-      CursorBuildSpec spec,
-      String timeColumnName,
-      boolean isPreAggregated
+      CursorBuildSpec spec
   )
   {
     this.rowSelector = rowSelector;
     this.spec = spec;
-    this.timeColumnName = timeColumnName;
-    this.isPreaggregated = isPreAggregated;
     List<OrderBy> ordering = rowSelector.getOrdering();
     if (Cursors.getTimeOrdering(ordering) != Order.NONE) {
       if (Cursors.preferDescendingTimeOrdering(spec)) {
@@ -77,24 +72,30 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       spec.getQueryMetrics().vectorized(false);
     }
 
+    IncrementalIndexRowHolder currentRow = new IncrementalIndexRowHolder();
     return new IncrementalIndexCursor(
         rowSelector,
+        currentRow,
+        makeSelectorFactory(spec, currentRow),
         spec,
-        timeColumnName,
-        getTimeOrder(ordering, timeColumnName)
+        getTimeOrder(ordering)
     );
-  }
-
-  @Override
-  public boolean isPreAggregated()
-  {
-    return isPreaggregated;
   }
 
   @Override
   public List<OrderBy> getOrdering()
   {
     return ordering;
+  }
+
+  public ColumnSelectorFactory makeSelectorFactory(CursorBuildSpec buildSpec, IncrementalIndexRowHolder currEntry)
+  {
+    return new IncrementalIndexColumnSelectorFactory(
+        rowSelector,
+        currEntry,
+        buildSpec.getVirtualColumns(),
+        getTimeOrder()
+    );
   }
 
   static class IncrementalIndexCursor implements Cursor
@@ -111,12 +112,14 @@ public class IncrementalIndexCursorHolder implements CursorHolder
 
     IncrementalIndexCursor(
         IncrementalIndexRowSelector rowSelector,
+        IncrementalIndexRowHolder currentRow,
+        ColumnSelectorFactory selectorFactory,
         CursorBuildSpec buildSpec,
-        String timeColumn,
         Order timeOrder
     )
     {
-      currEntry = new IncrementalIndexRowHolder();
+      currEntry = currentRow;
+      columnSelectorFactory = selectorFactory;
       // Set maxRowIndex before creating the filterMatcher. See https://github.com/apache/druid/pull/6340
       maxRowIndex = rowSelector.getLastRowIndex();
       numAdvanced = -1;
@@ -125,13 +128,6 @@ public class IncrementalIndexCursorHolder implements CursorHolder
           timeOrder == Order.DESCENDING,
           buildSpec.getInterval().getStartMillis(),
           buildSpec.getInterval().getEndMillis()
-      );
-      columnSelectorFactory = new IncrementalIndexColumnSelectorFactory(
-          rowSelector,
-          buildSpec.getVirtualColumns(),
-          timeColumn,
-          timeOrder,
-          currEntry
       );
       filterMatcher = buildSpec.getFilter() == null
                       ? ValueMatchers.allTrue()
@@ -252,9 +248,9 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     }
   }
 
-  private static Order getTimeOrder(List<OrderBy> ordering, String timeColumnName)
+  private static Order getTimeOrder(List<OrderBy> ordering)
   {
-    if (!ordering.isEmpty() && timeColumnName.equals(ordering.get(0).getColumnName())) {
+    if (!ordering.isEmpty() && ColumnHolder.TIME_COLUMN_NAME.equals(ordering.get(0).getColumnName())) {
       return ordering.get(0).getOrder();
     } else {
       return Order.NONE;

@@ -65,6 +65,7 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
+import org.apache.druid.segment.RemapColumnSelectorFactory;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumns;
@@ -364,12 +365,15 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
         incrementalIndexSchema.getTimestampSpec(),
         this.queryGranularity,
         this.rollup,
-        getDimensionOrder().stream().map(OrderBy::ascending).collect(Collectors.toList())
+        getDimensionOrder().stream().map(OrderBy::ascending).collect(Collectors.toList()),
+        incrementalIndexSchema.getProjections()
     );
   }
 
   @Nullable
-  public abstract ProjectionRowSelector getProjection(CursorBuildSpec buildSpec);
+  public abstract Projection getProjection(CursorBuildSpec buildSpec);
+
+  public abstract IncrementalIndexRowSelector getProjection(String name);
 
   public abstract boolean canAppendRow();
 
@@ -440,6 +444,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   }
 
   @Nullable
+  @Override
   public ColumnFormat getColumnFormat(String columnName)
   {
     if (timeAndMetricsColumnFormats.containsKey(columnName)) {
@@ -450,6 +455,12 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
       final DimensionDesc desc = dimensionDescs.get(columnName);
       return desc != null ? desc.getIndexer().getFormat() : null;
     }
+  }
+
+  @Override
+  public String getTimeColumnName()
+  {
+    return ColumnHolder.TIME_COLUMN_NAME;
   }
 
   /**
@@ -674,6 +685,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     return numEntries.get() == 0;
   }
 
+  @Override
   public int size()
   {
     return numEntries.get();
@@ -722,6 +734,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
    *
    * @param includeTime whether to include {@link ColumnHolder#TIME_COLUMN_NAME}.
    */
+  @Override
   public List<String> getDimensionNames(final boolean includeTime)
   {
     synchronized (dimensionDescs) {
@@ -749,6 +762,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   /**
    * Returns a descriptor for each dimension. Does not inclue {@link ColumnHolder#TIME_COLUMN_NAME}.
    */
+  @Override
   public List<DimensionDesc> getDimensions()
   {
     synchronized (dimensionDescs) {
@@ -779,6 +793,12 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   public List<OrderBy> getOrdering()
   {
     return metadata.getOrdering();
+  }
+
+  @Override
+  public int getTimePosition()
+  {
+    return timePosition;
   }
 
   public static ColumnValueSelector<?> makeMetricColumnValueSelector(
@@ -892,6 +912,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     return new DimensionDesc(dimensionIndex, dimensionName, dimensionHandler, useMaxMemoryEstimates);
   }
 
+  @Override
   public List<String> getMetricNames()
   {
     return ImmutableList.copyOf(metricDescs.keySet());
@@ -1379,109 +1400,26 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     }
   }
 
-  public static final class ProjectionRowSelector
+  public static final class Projection
   {
     private final IncrementalIndexRowSelector rowSelector;
     private final CursorBuildSpec cursorBuildSpec;
     private final Map<String, String> rewriteColumns;
-    private final String timeColumnName;
 
-    ProjectionRowSelector(
+    Projection(
         IncrementalIndexRowSelector rowSelector,
         CursorBuildSpec cursorBuildSpec,
-        Map<String, String> rewriteColumns,
-        @Nullable String timeColumnName
+        Map<String, String> rewriteColumns
     )
     {
       this.rowSelector = rowSelector;
       this.cursorBuildSpec = cursorBuildSpec;
       this.rewriteColumns = rewriteColumns;
-      this.timeColumnName = timeColumnName == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumnName;
     }
 
     public IncrementalIndexRowSelector getRowSelector()
     {
-      if (rewriteColumns.isEmpty()) {
-        return rowSelector;
-      }
-      return new IncrementalIndexRowSelector()
-      {
-        @Nullable
-        @Override
-        public ColumnCapabilities getColumnCapabilities(String column)
-        {
-          return rowSelector.getColumnCapabilities(column);
-        }
-
-        @Override
-        public DimensionDesc getDimension(String columnName)
-        {
-          final String columnToUse = rewriteColumns.getOrDefault(columnName, columnName);
-          return rowSelector.getDimension(columnToUse);
-        }
-
-        @Override
-        public MetricDesc getMetric(String s)
-        {
-          final String columnToUse = rewriteColumns.getOrDefault(s, s);
-          return rowSelector.getMetric(columnToUse);
-        }
-
-        @Override
-        public List<OrderBy> getOrdering()
-        {
-          return rowSelector.getOrdering();
-        }
-
-        @Override
-        public boolean isEmpty()
-        {
-          return rowSelector.isEmpty();
-        }
-
-        @Override
-        public FactsHolder getFacts()
-        {
-          return rowSelector.getFacts();
-        }
-
-        @Override
-        public int getLastRowIndex()
-        {
-          return rowSelector.getLastRowIndex();
-        }
-
-        @Override
-        public float getMetricFloatValue(int rowOffset, int aggOffset)
-        {
-          return rowSelector.getMetricFloatValue(rowOffset, aggOffset);
-        }
-
-        @Override
-        public long getMetricLongValue(int rowOffset, int aggOffset)
-        {
-          return rowSelector.getMetricLongValue(rowOffset, aggOffset);
-        }
-
-        @Override
-        public double getMetricDoubleValue(int rowOffset, int aggOffset)
-        {
-          return rowSelector.getMetricDoubleValue(rowOffset, aggOffset);
-        }
-
-        @Nullable
-        @Override
-        public Object getMetricObjectValue(int rowOffset, int aggOffset)
-        {
-          return rowSelector.getMetricObjectValue(rowOffset, aggOffset);
-        }
-
-        @Override
-        public boolean isNull(int rowOffset, int aggOffset)
-        {
-          return rowSelector.isNull(rowOffset, aggOffset);
-        }
-      };
+      return rowSelector;
     }
 
     public CursorBuildSpec getCursorBuildSpec()
@@ -1489,9 +1427,12 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
       return cursorBuildSpec;
     }
 
-    public String getTimeColumnName()
+    public ColumnSelectorFactory wrapColumnSelectorFactory(ColumnSelectorFactory columnSelectorFactory)
     {
-      return timeColumnName;
+      return new RemapColumnSelectorFactory(
+          columnSelectorFactory,
+          rewriteColumns
+      );
     }
   }
 }

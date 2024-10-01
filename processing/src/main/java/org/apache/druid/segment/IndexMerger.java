@@ -354,7 +354,7 @@ public interface IndexMerger
       // type of column doesn't have any kind of special per-index encoding that needs to be converted to the "global"
       // encoding. E. g. it's always true for subclasses of NumericDimensionMergerV9.
       //noinspection ObjectEquality
-      anySelectorChanged |= convertedDimensionSelector != sourceDimensionSelector;
+      anySelectorChanged = anySelectorChanged || convertedDimensionSelector != sourceDimensionSelector;
 
       convertedMarkedDimensionSelectors[i] = mergers.get(i).convertSortedSegmentRowValuesToMergedRowValues(
           indexNumber,

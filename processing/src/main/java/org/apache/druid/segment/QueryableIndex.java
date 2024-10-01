@@ -85,4 +85,24 @@ public interface QueryableIndex extends Closeable, ColumnInspector
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away until SimpleQueryableIndex is fixed
   @Override
   void close();
+
+  @Nullable
+  default Projection getProjection(CursorBuildSpec cursorBuildSpec)
+  {
+    return null;
+  }
+
+  default QueryableIndex getProjection(String name)
+  {
+    return null;
+  }
+
+  interface Projection
+  {
+    CursorBuildSpec getCursorBuildSpec();
+
+    Map<String, String> getRemap();
+
+    QueryableIndex getQueryableIndex();
+  }
 }

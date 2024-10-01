@@ -84,7 +84,20 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
       Closer closer
   )
   {
-    return new AutoTypeColumnMerger(name, castTo, indexSpec, segmentWriteOutMedium, closer);
+    return new AutoTypeColumnMerger(name, name, castTo, indexSpec, segmentWriteOutMedium, closer);
+  }
+
+  @Override
+  public DimensionMergerV9 makeProjectionMerger(
+      String name,
+      IndexSpec indexSpec,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      ColumnCapabilities capabilities,
+      ProgressIndicator progress,
+      Closer closer
+  )
+  {
+    return new AutoTypeColumnMerger(this.name, name, castTo, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override

@@ -35,7 +35,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -56,14 +55,16 @@ import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.EncodedKeyComponent;
+import org.apache.druid.segment.Projections;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.utils.CollectionUtils;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -77,6 +78,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -159,8 +161,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Nullable
   private String outOfRowsReason = null;
 
-  private SortedSet<OnHeapAggregateProjection> aggregateProjections;
-
+  private final SortedSet<OnHeapAggregateProjection> aggregateProjections;
+  private final HashMap<String, IncrementalIndexRowSelector> projections;
 
   OnheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
@@ -186,12 +188,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         useMaxMemoryEstimates ? getMaxBytesPerRowForAggregators(incrementalIndexSchema) : 0;
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
 
+    this.aggregateProjections = new ObjectAVLTreeSet<>(OnHeapAggregateProjection.COMPARATOR);
+    this.projections = new HashMap<>();
     initializeProjections(incrementalIndexSchema, useMaxMemoryEstimates);
   }
 
   private void initializeProjections(IncrementalIndexSchema incrementalIndexSchema, boolean useMaxMemoryEstimates)
   {
-    this.aggregateProjections = new ObjectAVLTreeSet<>(OnHeapAggregateProjection.COMPARATOR);
     for (AggregateProjectionSpec projectionSpec : incrementalIndexSchema.getProjections()) {
       AggregateProjectionSpec schema = projectionSpec;
       final List<DimensionDesc> descs = new ArrayList<>();
@@ -201,38 +204,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       // always have its time-like column in the grouping columns list, so its position in this array specifies -1
       final int[] parentDimIndex = new int[schema.getGroupingColumns().size()];
       Arrays.fill(parentDimIndex, -1);
-      int foundTimePosition = -1;
-      String timeColumnName = null;
-      Granularity granularity = null;
-      // try to find the __time column equivalent, which might be a time_floor expression to model granularity
-      // bucketing. The time column is decided as the finest granularity on __time detected. If the projection does
-      // not have a time-like column, the granularity will be handled as ALL for the projection and all projection
-      // rows will use a synthetic timestamp of the minimum timestamp of the incremental index
-      for (int i = 0; i < schema.getGroupingColumns().size(); i++) {
-        final DimensionSchema dimension = schema.getGroupingColumns().get(i);
-        if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
-          timeColumnName = dimension.getName();
-          foundTimePosition = i;
-          parentDimIndex[i] = -1;
-          granularity = Granularities.NONE;
-        } else {
-          final VirtualColumn vc = schema.getVirtualColumns().getVirtualColumn(dimension.getName());
-          final Granularity maybeGranularity = Granularities.fromVirtualColumn(vc);
-          if (granularity == null && maybeGranularity != null) {
-            granularity = maybeGranularity;
-            timeColumnName = dimension.getName();
-            foundTimePosition = i;
-          } else if (granularity != null && maybeGranularity != null && maybeGranularity.isFinerThan(granularity)) {
-            granularity = maybeGranularity;
-            timeColumnName = dimension.getName();
-            foundTimePosition = i;
-          }
-        }
-      }
       int i = 0;
       final Map<String, DimensionDesc> dimensionsMap = new HashMap<>();
       for (DimensionSchema dimension : schema.getGroupingColumns()) {
-        if (dimension.getName().equals(timeColumnName)) {
+        if (dimension.getName().equals(schema.getTimeColumnName())) {
           continue;
         }
         final DimensionDesc parent = getDimension(dimension.getName());
@@ -268,21 +243,18 @@ public class OnheapIncrementalIndex extends IncrementalIndex
           parentDimIndex[child.getIndex()] = parent.getIndex();
         }
       }
-      aggregateProjections.add(
-          new OnHeapAggregateProjection(
-              schema,
-              descs,
-              dimensionsMap,
-              parentDimIndex,
-              this,
-              timeColumnName,
-              granularity,
-              foundTimePosition,
-              incrementalIndexSchema.getMinTimestamp(),
-              this.useMaxMemoryEstimates,
-              this.maxBytesPerRowForAggregators
-          )
+      final OnHeapAggregateProjection projection = new OnHeapAggregateProjection(
+          schema,
+          descs,
+          dimensionsMap,
+          parentDimIndex,
+          this,
+          incrementalIndexSchema.getMinTimestamp(),
+          this.useMaxMemoryEstimates,
+          this.maxBytesPerRowForAggregators
       );
+      aggregateProjections.add(projection);
+      projections.put(schema.getName(), projection);
     }
   }
 
@@ -562,7 +534,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
   @Nullable
   @Override
-  public ProjectionRowSelector getProjection(CursorBuildSpec buildSpec)
+  public Projection getProjection(CursorBuildSpec buildSpec)
   {
     if (buildSpec.getQueryContext().getBoolean(QueryContexts.CTX_NO_PROJECTION, false)) {
       return null;
@@ -576,18 +548,20 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         }
         final Map<String, String> rewriteColumns = new HashMap<>();
         final Set<VirtualColumn> referenced = new HashSet<>();
-        if (projection.matches(buildSpec, referenced, rewriteColumns)) {
+        final Projections.PhysicalColumnChecker physicalChecker =
+            columnName -> projection.dimensionsMap.containsKey(columnName)
+                          || projection.baseTableInspector.getColumnCapabilities(columnName) == null;
+        if (projection.matches(buildSpec, referenced, rewriteColumns, physicalChecker)) {
           log.debug("Using projection[%s]", projection.name);
+          if (projection.getTimeColumnName() != null) {
+            rewriteColumns.put(projection.getTimeColumnName(), ColumnHolder.TIME_COLUMN_NAME);
+          }
+          // trim virtual columns since some of them may have been remapped to physical projection columns
           final CursorBuildSpec rewrittenBuildSpec =
               CursorBuildSpec.builder(buildSpec)
                              .setVirtualColumns(VirtualColumns.fromIterable(referenced))
                              .build();
-          return new ProjectionRowSelector(
-              projection,
-              rewrittenBuildSpec,
-              rewriteColumns,
-              projection.timeColumnName
-          );
+          return new Projection(projection, rewrittenBuildSpec, rewriteColumns);
         }
       }
     }
@@ -595,6 +569,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       throw InvalidInput.exception("Projection[%s] specified, but does not satisfy query", name);
     }
     return null;
+  }
+
+  @Override
+  public IncrementalIndexRowSelector getProjection(String name)
+  {
+    return projections.get(name);
   }
 
   @Override
@@ -1208,37 +1188,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   public static class OnHeapAggregateProjection implements IncrementalIndexRowSelector
   {
     static Comparator<OnHeapAggregateProjection> COMPARATOR = (o1, o2) -> {
-      // coarsest granularity first
-      if (o1.projectionGranularity.isFinerThan(o2.projectionGranularity)) {
-        return 1;
-      }
-      if (o2.projectionGranularity.isFinerThan(o1.projectionGranularity)) {
-        return -1;
-      }
-      // fewer dimensions first
-      final int dimsCompare = Integer.compare(
-          o1.dimensions.size(),
-          o2.dimensions.size()
-      );
-      if (dimsCompare != 0) {
-        return dimsCompare;
-      }
-      // more metrics first
-      int metCompare = Integer.compare(o2.aggregatorFactories.length, o1.aggregatorFactories.length);
-      if (metCompare != 0) {
-        return metCompare;
-      }
-      // more virtual columns first
-      final int virtCompare = Integer.compare(
-          o2.virtualColumns.getVirtualColumns().length,
-          o1.virtualColumns.getVirtualColumns().length
-      );
-      if (virtCompare != 0) {
-        return virtCompare;
-      }
-      return o1.name.compareTo(o2.name);
+      return AggregateProjectionSpec.COMPARATOR.compare(o1.projectionSpec, o2.projectionSpec);
     };
 
+    private final AggregateProjectionSpec projectionSpec;
     private final String name;
     private final Granularity projectionGranularity;
     private final boolean hasTimeColumn;
@@ -1261,7 +1214,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     private final AtomicInteger rowCounter = new AtomicInteger(0);
     private final boolean useMaxMemoryEstimates;
     private final long maxBytesPerRowForAggregators;
-
+    private final int timePosition;
+    private final AtomicInteger numEntries = new AtomicInteger(0);
 
     public OnHeapAggregateProjection(
         AggregateProjectionSpec schema,
@@ -1269,37 +1223,36 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         Map<String, DimensionDesc> dimensionsMap,
         int[] parentDimensionIndex,
         ColumnInspector baseTableInspector,
-        @Nullable String timeColumnName,
-        @Nullable Granularity granularity,
-        int foundTimePosition,
         long minTimestamp,
         boolean useMaxMemoryEstimates,
         long maxBytesPerRowForAggregators
     )
     {
+      this.projectionSpec = schema;
       this.name = schema.getName();
       this.dimensions = dimensions;
       this.virtualColumns = schema.getVirtualColumns();
       this.parentDimensionIndex = parentDimensionIndex;
       this.dimensionsMap = dimensionsMap;
       this.baseTableInspector = baseTableInspector;
-      this.timeColumnName = timeColumnName;
-      this.projectionGranularity = granularity == null ? Granularities.ALL : granularity;
-      this.hasTimeColumn = foundTimePosition >= 0;
+      this.timeColumnName = projectionSpec.getTimeColumnName();
+      this.projectionGranularity = projectionSpec.getGranularity();
+      this.hasTimeColumn = projectionSpec.getTimeColumnPosition() >= 0;
+      this.timePosition = projectionSpec.getTimeColumnPosition();
       this.minTimestamp = minTimestamp;
       final IncrementalIndexRowComparator rowComparator = new IncrementalIndexRowComparator(
-          foundTimePosition < 0 ? dimensions.size() : foundTimePosition,
+          projectionSpec.getTimeColumnPosition() < 0 ? dimensions.size() : projectionSpec.getTimeColumnPosition(),
           dimensions
       );
-      this.factsHolder = new RollupFactsHolder(rowComparator, dimensions, foundTimePosition == 0);
+      this.factsHolder = new RollupFactsHolder(rowComparator, dimensions, projectionSpec.getTimeColumnPosition() == 0);
       this.useMaxMemoryEstimates = useMaxMemoryEstimates;
       this.maxBytesPerRowForAggregators = maxBytesPerRowForAggregators;
 
       this.virtualSelectorFactory = new CachingColumnSelectorFactory(
           IncrementalIndex.makeColumnSelectorFactory(schema.getVirtualColumns(), inputRowHolder, null)
       );
-      this.aggSelectors = new HashMap<>();
-      this.aggregatorsMap = new HashMap<>();
+      this.aggSelectors = new LinkedHashMap<>();
+      this.aggregatorsMap = new LinkedHashMap<>();
       final AggregatorFactory[] metrics = new AggregatorFactory[schema.getAggregators().length];
       int i = 0;
       // all aggregating projections have a count. its cheap and convenient to be able to correctly satisfy any query
@@ -1332,7 +1285,17 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       } else {
         this.aggregatorFactories = metrics;
       }
-      this.ordering = getOrder(dimensions, foundTimePosition);
+      this.ordering = getOrder(dimensions, projectionSpec.getTimeColumnPosition());
+    }
+
+    public boolean matches(
+        CursorBuildSpec buildSpec,
+        Set<VirtualColumn> referencedVirtualColumns,
+        Map<String, String> rewriteColumns,
+        Projections.PhysicalColumnChecker physicalColumnChecker
+    )
+    {
+      return projectionSpec.matches(buildSpec, referencedVirtualColumns, rewriteColumns, physicalColumnChecker);
     }
 
     private List<OrderBy> getOrder(List<DimensionDesc> dimensions, int foundTimePosition)
@@ -1403,64 +1366,29 @@ public class OnheapIncrementalIndex extends IncrementalIndex
                                        + estimatedSizeOfAggregators
                                        + ROUGH_OVERHEAD_PER_MAP_ENTRY;
         totalSizeInBytes.addAndGet(useMaxMemoryEstimates ? 0 : projectionRowSize);
+        numEntries.incrementAndGet();
       }
       final int rowIndex = rowCounter.getAndIncrement();
       aggregators.put(rowIndex, aggs);
       factsHolder.putIfAbsent(subKey, rowIndex);
     }
 
-    public boolean matches(
-        CursorBuildSpec buildSpec,
-        Set<VirtualColumn> referencedVirtualColumns,
-        Map<String, String> rewriteColumns
-    )
-    {
-      if (!buildSpec.isCompatibleOrdering(ordering)) {
-        return false;
-      }
-      if (CollectionUtils.isNullOrEmpty(buildSpec.getGroupingColumns()) && CollectionUtils.isNullOrEmpty(buildSpec.getAggregators())) {
-        return false;
-      }
-      final List<String> grouping = buildSpec.getGroupingColumns();
-      if (grouping != null) {
-        for (String column : grouping) {
-          if (!hasRequiredColumn(column, buildSpec.getVirtualColumns(), referencedVirtualColumns, rewriteColumns)) {
-            return false;
-          }
-        }
-      }
-      if (buildSpec.getFilter() != null) {
-        for (String column : buildSpec.getFilter().getRequiredColumns()) {
-          if (!hasRequiredColumn(column, buildSpec.getVirtualColumns(), referencedVirtualColumns, rewriteColumns)) {
-            return false;
-          }
-        }
-      }
-      if (!CollectionUtils.isNullOrEmpty(buildSpec.getAggregators())) {
-        int matchCount = 0;
-        boolean allMatch = true;
-        for (AggregatorFactory factory : buildSpec.getAggregators()) {
-          boolean foundMatch = false;
-          for (AggregatorFactory schemaFactory : aggregatorFactories) {
-            if (schemaFactory.withName(factory.getName()).equals(factory)) {
-              rewriteColumns.put(factory.getName(), schemaFactory.getName());
-              foundMatch = true;
-              matchCount++;
-            }
-          }
-          allMatch = allMatch && foundMatch;
-        }
-        if (!allMatch || matchCount < buildSpec.getAggregators().size()) {
-          return false;
-        }
-      }
-      return true;
-    }
-
     @Override
     public FactsHolder getFacts()
     {
       return factsHolder;
+    }
+
+    @Override
+    public List<DimensionDesc> getDimensions()
+    {
+      return dimensions;
+    }
+
+    @Override
+    public List<String> getMetricNames()
+    {
+      return ImmutableList.copyOf(aggregatorsMap.keySet());
     }
 
     @Override
@@ -1479,6 +1407,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     public List<OrderBy> getOrdering()
     {
       return ordering;
+    }
+
+    @Override
+    public int getTimePosition()
+    {
+      return timePosition;
     }
 
     @Override
@@ -1524,6 +1458,61 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       return aggregators.get(rowOffset)[aggOffset].isNull();
     }
 
+    @Override
+    public ColumnFormat getColumnFormat(String columnName)
+    {
+      // todo (clint): hella jank
+      DimensionDesc dimensionDesc = getDimension(columnName);
+      if (dimensionDesc == null) {
+        if (columnName.equals(timeColumnName)) {
+          return new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG));
+        }
+        MetricDesc metricDesc = getMetric(columnName);
+        if (metricDesc == null) {
+          return null;
+        }
+        return new CapabilitiesBasedFormat(metricDesc.getCapabilities());
+      }
+      return dimensionDesc.getIndexer().getFormat();
+    }
+
+    @Override
+    public String getTimeColumnName()
+    {
+      return timeColumnName;
+    }
+
+    @Override
+    public int size()
+    {
+      return numEntries.get();
+    }
+
+    @Override
+    public List<String> getDimensionNames(boolean includeTime)
+    {
+      synchronized (dimensionsMap) {
+        if (includeTime) {
+          final ImmutableList.Builder<String> listBuilder =
+              ImmutableList.builderWithExpectedSize(dimensionsMap.size() + 1);
+          int i = 0;
+          if (i == timePosition) {
+            listBuilder.add(timeColumnName);
+          }
+          for (String dimName : dimensionsMap.keySet()) {
+            listBuilder.add(dimName);
+            i++;
+            if (i == timePosition) {
+              listBuilder.add(timeColumnName);
+            }
+          }
+          return listBuilder.build();
+        } else {
+          return ImmutableList.copyOf(dimensionsMap.keySet());
+        }
+      }
+    }
+
     @Nullable
     @Override
     public ColumnCapabilities getColumnCapabilities(String column)
@@ -1538,57 +1527,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         return aggregatorsMap.get(column).getCapabilities();
       }
       return null;
-    }
-
-    /**
-     * Ensure that the projection has the specified column required by a {@link CursorBuildSpec} in one form or another.
-     * If the column is a {@link VirtualColumn} on the build spec, ensure that the projection has an equivalent virtual
-     * column, or has the required inputs to compute the virtual column. If an equivalent virtual column exists, its
-     * name will be added to the 'rewriteVirtualColumns' parameter  so that the build spec name can be mapped to the
-     * projection name. If no equivalent virtual column exists, but the inputs are available on the projection to
-     * compute it, it will be added to 'referencedVirtualColumns' parameter.
-     */
-    private boolean hasRequiredColumn(
-        String column,
-        VirtualColumns buildSpecVirtualColumns,
-        Set<VirtualColumn> referencedVirtualColumns,
-        Map<String, String> rewriteVirtualColumns
-    )
-    {
-      final VirtualColumn buildSpecVirtualColumn = buildSpecVirtualColumns.getVirtualColumn(column);
-      if (buildSpecVirtualColumn != null) {
-        // check to see if we have an equivalent virtual column defined in the projection, if so we can
-        final VirtualColumn projectionEquivalent = virtualColumns.findEquivalent(buildSpecVirtualColumn);
-        if (projectionEquivalent != null) {
-          if (!buildSpecVirtualColumn.getOutputName().equals(projectionEquivalent.getOutputName())) {
-            rewriteVirtualColumns.put(buildSpecVirtualColumn.getOutputName(), projectionEquivalent.getOutputName());
-          }
-          return true;
-        }
-
-        referencedVirtualColumns.add(buildSpecVirtualColumn);
-        final List<String> requiredInputs = buildSpecVirtualColumn.requiredColumns();
-        if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
-          // special handle time granularity
-          final Granularity virtualGranularity = Granularities.fromVirtualColumn(buildSpecVirtualColumn);
-          if (virtualGranularity != null) {
-            return !virtualGranularity.isFinerThan(projectionGranularity);
-          } else {
-            // anything else with __time requires none granularity
-            return Granularities.NONE.equals(projectionGranularity);
-          }
-        } else {
-          for (String required : requiredInputs) {
-            if (!hasRequiredColumn(required, buildSpecVirtualColumns, referencedVirtualColumns, rewriteVirtualColumns)) {
-              return false;
-            }
-          }
-        }
-        return true;
-      } else {
-        // a physical column must either be present or also missing from the base table
-        return dimensionsMap.containsKey(column) || baseTableInspector.getColumnCapabilities(column) == null;
-      }
     }
 
     private long factorizeAggs(AggregatorFactory[] aggregatorFactories, Aggregator[] aggs)

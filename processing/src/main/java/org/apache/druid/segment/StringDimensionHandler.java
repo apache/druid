@@ -171,6 +171,19 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       Closer closer
   )
   {
+    return makeProjectionMerger(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
+  }
+
+  @Override
+  public DimensionMergerV9 makeProjectionMerger(
+      String name,
+      IndexSpec indexSpec,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      ColumnCapabilities capabilities,
+      ProgressIndicator progress,
+      Closer closer
+  )
+  {
     // Sanity-check capabilities.
     if (hasBitmapIndexes != capabilities.hasBitmapIndexes()) {
       throw new ISE(
@@ -182,6 +195,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
 
     return new StringDimensionMergerV9(
         dimensionName,
+        name,
         indexSpec,
         segmentWriteOutMedium,
         capabilities,

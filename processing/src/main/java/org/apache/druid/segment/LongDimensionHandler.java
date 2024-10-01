@@ -86,6 +86,25 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
   {
     return new LongDimensionMergerV9(
         dimensionName,
+        dimensionName,
+        indexSpec,
+        segmentWriteOutMedium
+    );
+  }
+
+  @Override
+  public DimensionMergerV9 makeProjectionMerger(
+      String name,
+      IndexSpec indexSpec,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      ColumnCapabilities capabilities,
+      ProgressIndicator progress,
+      Closer closer
+  )
+  {
+    return new LongDimensionMergerV9(
+        dimensionName,
+        name,
         indexSpec,
         segmentWriteOutMedium
     );

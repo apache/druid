@@ -262,6 +262,12 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     return new RowIteratorImpl();
   }
 
+  @Override
+  public IndexableAdapter getProjectionAdapter(String projection)
+  {
+    return new QueryableIndexIndexableAdapter(input.getProjection(projection));
+  }
+
   /**
    * On {@link #moveToNext()} and {@link #mark()}, this class copies all column values into a set of {@link
    * SettableColumnValueSelector} instances. Alternative approach was to save only offset in column and use the same

@@ -75,6 +75,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       SimpleDictionaryMergingIterator.makePeekingComparator();
 
   private final String name;
+  private final String outputName;
   private final IndexSpec indexSpec;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final Closer closer;
@@ -87,6 +88,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
 
   public AutoTypeColumnMerger(
       String name,
+      String outputName,
       @Nullable ColumnType castToType,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
@@ -95,6 +97,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   {
 
     this.name = name;
+    this.outputName = outputName;
     this.castToType = castToType;
     this.indexSpec = indexSpec;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
@@ -165,7 +168,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       if (explicitType == null && !forceNested && ((isConstant && constantValue == null) || numMergeIndex == 0)) {
         logicalType = ColumnType.STRING;
         serializer = new ScalarStringColumnSerializer(
-            name,
+            outputName,
             indexSpec,
             segmentWriteOutMedium,
             closer
@@ -179,7 +182,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         switch (logicalType.getType()) {
           case LONG:
             serializer = new ScalarLongColumnSerializer(
-                name,
+                outputName,
                 indexSpec,
                 segmentWriteOutMedium,
                 closer
@@ -187,7 +190,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             break;
           case DOUBLE:
             serializer = new ScalarDoubleColumnSerializer(
-                name,
+                outputName,
                 indexSpec,
                 segmentWriteOutMedium,
                 closer
@@ -195,7 +198,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             break;
           case STRING:
             serializer = new ScalarStringColumnSerializer(
-                name,
+                outputName,
                 indexSpec,
                 segmentWriteOutMedium,
                 closer
@@ -203,7 +206,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             break;
           case ARRAY:
             serializer = new VariantColumnSerializer(
-                name,
+                outputName,
                 logicalType,
                 null,
                 indexSpec,
@@ -230,7 +233,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
           logicalType = ColumnTypeFactory.getInstance().ofArray(logicalType);
         }
         serializer = new VariantColumnSerializer(
-            name,
+            outputName,
             null,
             rootTypes.getByteValue(),
             indexSpec,
@@ -241,7 +244,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         // all the bells and whistles
         logicalType = ColumnType.NESTED_DATA;
         serializer = new NestedDataColumnSerializer(
-            name,
+            outputName,
             indexSpec,
             segmentWriteOutMedium,
             closer
@@ -262,7 +265,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             sortedLookup.getSortedDoubles(),
             () -> new ArrayDictionaryMergingIterator(
                 sortedArrayLookups,
-                serializer.getGlobalLookup()
+                serializer.getDictionaryIdLookup()
             )
         );
         stringCardinality = sortedLookup.getStringCardinality();
@@ -284,7 +287,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         );
         final ArrayDictionaryMergingIterator arrayIterator = new ArrayDictionaryMergingIterator(
             sortedArrayLookups,
-            serializer.getGlobalLookup()
+            serializer.getDictionaryIdLookup()
         );
         serializer.serializeDictionaries(
             () -> stringIterator,
@@ -365,6 +368,22 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
                      .setHasMultipleValues(false)
                      .addSerde(partSerde);
     return descriptorBuilder.build();
+  }
+
+  protected DictionaryIdLookup getIdLookup()
+  {
+    return serializer.getDictionaryIdLookup();
+  }
+
+  @Override
+  public void attachParent(DimensionMergerV9 parent, List<IndexableAdapter> projectionAdapters)
+  {
+    DruidException.conditionalDefensive(
+        parent instanceof AutoTypeColumnMerger,
+        "Projection parent dimension must be same type, got [%s]",
+        parent.getClass()
+    );
+    serializer.setDictionaryIdLookup(((AutoTypeColumnMerger) parent).getIdLookup());
   }
 
   public static class ArrayDictionaryMergingIterator implements Iterator<int[]>

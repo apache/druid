@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -119,6 +120,18 @@ public interface DimensionHandler
       ProgressIndicator progress,
       Closer closer
   );
+
+  default DimensionMergerV9 makeProjectionMerger(
+      String name,
+      IndexSpec indexSpec,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      ColumnCapabilities capabilities,
+      ProgressIndicator progress,
+      Closer closer
+  )
+  {
+    throw DruidException.defensive("projection not supported by [%s]", this.getDimensionName());
+  }
 
   /**
    * Given an key component representing a single set of row value(s) for this dimension as an Object,

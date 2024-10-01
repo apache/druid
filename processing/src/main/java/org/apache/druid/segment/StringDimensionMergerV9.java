@@ -28,6 +28,7 @@ import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.collections.spatial.RTree;
 import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -65,6 +66,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
 
   public StringDimensionMergerV9(
       String dimensionName,
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
@@ -72,7 +74,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
       Closer closer
   )
   {
-    super(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
+    super(dimensionName, outputName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
   }
 
   @Override
@@ -113,7 +115,10 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   @Override
   protected ExtendedIndexesMerger getExtendedIndexesMerger()
   {
-    return new SpatialIndexesMerger();
+    if (capabilities.hasSpatialIndexes()) {
+      return new SpatialIndexesMerger();
+    }
+    return null;
   }
 
   @Override
@@ -127,9 +132,8 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
     final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
     builder.setValueType(ValueType.STRING);
     builder.setHasMultipleValues(hasMultiValue);
-    final DictionaryEncodedColumnPartSerde.SerializerBuilder partBuilder = DictionaryEncodedColumnPartSerde
+    DictionaryEncodedColumnPartSerde.SerializerBuilder partBuilder = DictionaryEncodedColumnPartSerde
         .serializerBuilder()
-        .withDictionary(dictionaryWriter)
         .withValue(
             encodedValueSerializer,
             hasMultiValue,
@@ -140,9 +144,30 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
         .withSpatialIndex(spatialWriter)
         .withByteOrder(IndexIO.BYTE_ORDER);
 
+    if (writeDictionary) {
+      partBuilder = partBuilder.withDictionary(dictionaryWriter);
+    }
+
     return builder
         .addSerde(partBuilder.build())
         .build();
+  }
+
+  @Override
+  public void attachParent(DimensionMergerV9 parent, List<IndexableAdapter> projectionAdapters) throws IOException
+  {
+    DruidException.conditionalDefensive(
+        parent instanceof StringDimensionMergerV9,
+        "Projection parent column must be same type, got [%s]",
+        parent.getClass()
+    );
+    dictionaryWriter = ((StringDimensionMergerV9) parent).dictionaryWriter;
+    dimConversions = ((StringDimensionMergerV9) parent).dimConversions;
+    adapters = ((StringDimensionMergerV9) parent).adapters;
+    cardinality = dictionaryWriter.getCardinality();
+    adapters = projectionAdapters;
+    setupEncodedValueWriter();
+    writeDictionary = false;
   }
 
   /**

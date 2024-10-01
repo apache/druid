@@ -1913,6 +1913,7 @@ public class CompactionTaskTest
                     null,
                     null,
                     null,
+                    null,
                     null
                 );
               }
@@ -1995,6 +1996,13 @@ public class CompactionTaskTest
 
     @Override
     public BaseColumn getColumn()
+    {
+      return null;
+    }
+
+    @Nullable
+    @Override
+    public Supplier<? extends BaseColumn> getColumnSupplier()
     {
       return null;
     }

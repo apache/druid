@@ -86,6 +86,25 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
   {
     return new FloatDimensionMergerV9(
         dimensionName,
+        dimensionName,
+        indexSpec,
+        segmentWriteOutMedium
+    );
+  }
+
+  @Override
+  public DimensionMergerV9 makeProjectionMerger(
+      String name,
+      IndexSpec indexSpec,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      ColumnCapabilities capabilities,
+      ProgressIndicator progress,
+      Closer closer
+  )
+  {
+    return new FloatDimensionMergerV9(
+        dimensionName,
+        name,
         indexSpec,
         segmentWriteOutMedium
     );

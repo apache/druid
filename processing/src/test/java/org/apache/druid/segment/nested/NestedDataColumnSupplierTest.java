@@ -205,7 +205,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
           globalDictionarySortedCollector.getSortedDoubles(),
           () -> new AutoTypeColumnMerger.ArrayDictionaryMergingIterator(
               new Iterable[]{globalDictionarySortedCollector.getSortedArrays()},
-              serializer.getGlobalLookup()
+              serializer.getDictionaryIdLookup()
           )
       );
       serializer.open();
