@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.processor.manager.ConcurrencyLimitedProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -210,19 +211,27 @@ public class SegmentGeneratorFrameProcessorFactory
     );
 
     return new ProcessorsAndChannels<>(
-        ProcessorManagers.of(workers)
-                         .withAccumulation(
-                             new HashSet<>(),
-                             (acc, segment) -> {
-                               if (segment != null) {
-                                 acc.add(segment);
-                               }
+        // Run at most one segmentGenerator per work order, since segment generation memory is carved out
+        // per-worker, not per-processor. See WorkerMemoryParameters for how the memory limits are calculated.
+        new ConcurrencyLimitedProcessorManager<>(ProcessorManagers.of(workers), 1)
+            .withAccumulation(
+                new HashSet<>(),
+                (acc, segment) -> {
+                  if (segment != null) {
+                    acc.add(segment);
+                  }
 
-                               return acc;
-                             }
-                         ),
+                  return acc;
+                }
+            ),
         OutputChannels.none()
     );
+  }
+
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
   }
 
   @Override

@@ -100,14 +100,13 @@ exports[`MaxTasksButton matches snapshot 1`] = `
             multiline={true}
             onClick={[Function]}
             popoverProps={{}}
-            shouldDismissPopover={false}
+            shouldDismissPopover={true}
             text={
               <React.Fragment>
                 <strong>
                   Max
                 </strong>
-                : 
-                uses the maximum possible tasks up to the specified limit.
+                : uses the maximum possible tasks up to the specified limit.
               </React.Fragment>
             }
           />
@@ -115,24 +114,28 @@ exports[`MaxTasksButton matches snapshot 1`] = `
             active={false}
             disabled={false}
             icon="blank"
-            labelElement={
-              <Blueprint5.Button
-                icon="help"
-                minimal={true}
-                onClick={[Function]}
-              />
-            }
             multiline={true}
             onClick={[Function]}
             popoverProps={{}}
-            shouldDismissPopover={false}
+            shouldDismissPopover={true}
             text={
               <React.Fragment>
                 <strong>
                   Auto
                 </strong>
-                : 
-                maximizes the number of tasks while staying within 512 MiB or 10,000 files per task, unless more tasks are needed to stay under the max task limit.
+                : uses the minimum number of tasks while
+                 
+                <span
+                  onClick={[Function]}
+                  style={
+                    {
+                      "color": "#3eadf9",
+                      "cursor": "pointer",
+                    }
+                  }
+                >
+                  staying within constraints.
+                </span>
               </React.Fragment>
             }
           />

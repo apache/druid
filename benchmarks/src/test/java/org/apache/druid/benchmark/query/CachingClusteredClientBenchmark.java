@@ -362,14 +362,13 @@ public class CachingClusteredClientBenchmark
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPool,
         mapper,
         mapper,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
-    return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPool);
   }
 
   @TearDown(Level.Trial)

@@ -74,7 +74,7 @@ public class MSQFaultSerdeTest
     ));
     assertFaultSerde(new InvalidNullByteFault("the source", 1, "the column", "the value", 2));
     assertFaultSerde(new InvalidFieldFault("the source", "the column", 1, "the error", "the log msg"));
-    assertFaultSerde(new NotEnoughMemoryFault(1000, 1000, 900, 1, 2, 2));
+    assertFaultSerde(new NotEnoughMemoryFault(1234, 1000, 1000, 900, 1, 2, 2));
     assertFaultSerde(QueryNotSupportedFault.INSTANCE);
     assertFaultSerde(new QueryRuntimeFault("new error", "base error"));
     assertFaultSerde(new QueryRuntimeFault("new error", null));

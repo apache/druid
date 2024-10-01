@@ -376,13 +376,7 @@ public class WorkerImpl implements Worker
          ? StringUtils.format(", payload[%s]", context.jsonMapper().writeValueAsString(workOrder)) : "")
     );
 
-    final FrameContext frameContext = kernelHolder.processorCloser.register(
-        context.frameContext(
-            workOrder.getQueryDefinition(),
-            stageDefinition.getStageNumber(),
-            workOrder.getOutputChannelMode()
-        )
-    );
+    final FrameContext frameContext = kernelHolder.processorCloser.register(context.frameContext(workOrder));
     kernelHolder.processorCloser.register(() -> {
       try {
         workerExec.cancel(cancellationId);

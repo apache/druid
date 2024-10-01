@@ -32,7 +32,6 @@ import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Smile;
@@ -61,6 +60,7 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -117,8 +117,7 @@ public class GroupingEngine
 
   private final DruidProcessingConfig processingConfig;
   private final Supplier<GroupByQueryConfig> configSupplier;
-  private final NonBlockingPool<ByteBuffer> bufferPool;
-  GroupByResourcesReservationPool groupByResourcesReservationPool;
+  private final GroupByResourcesReservationPool groupByResourcesReservationPool;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper spillMapper;
   private final QueryWatcher queryWatcher;
@@ -127,7 +126,6 @@ public class GroupingEngine
   public GroupingEngine(
       DruidProcessingConfig processingConfig,
       Supplier<GroupByQueryConfig> configSupplier,
-      @Global NonBlockingPool<ByteBuffer> bufferPool,
       @Merging GroupByResourcesReservationPool groupByResourcesReservationPool,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper spillMapper,
@@ -136,7 +134,6 @@ public class GroupingEngine
   {
     this.processingConfig = processingConfig;
     this.configSupplier = configSupplier;
-    this.bufferPool = bufferPool;
     this.groupByResourcesReservationPool = groupByResourcesReservationPool;
     this.jsonMapper = jsonMapper;
     this.spillMapper = spillMapper;
@@ -469,6 +466,8 @@ public class GroupingEngine
    * @param query                 the groupBy query
    * @param cursorFactory         cursor factory for the segment in question
    * @param timeBoundaryInspector time boundary inspector for the segment in question
+   * @param bufferPool            processing buffer pool
+   * @param groupByQueryMetrics   metrics instance, will be populated if nonnull
    *
    * @return result sequence for the cursor factory
    */
@@ -476,6 +475,7 @@ public class GroupingEngine
       GroupByQuery query,
       CursorFactory cursorFactory,
       @Nullable TimeBoundaryInspector timeBoundaryInspector,
+      NonBlockingPool<ByteBuffer> bufferPool,
       @Nullable GroupByQueryMetrics groupByQueryMetrics
   )
   {
@@ -508,6 +508,9 @@ public class GroupingEngine
       final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, groupByQueryMetrics);
       final CursorHolder cursorHolder = closer.register(cursorFactory.makeCursorHolder(buildSpec));
 
+      if (cursorHolder.isPreAggregated()) {
+        query = query.withAggregatorSpecs(AggregatorUtil.getCombiningAggregators(query.getAggregatorSpecs()));
+      }
       final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(cursorFactory);
 
       // group by specific vectorization check

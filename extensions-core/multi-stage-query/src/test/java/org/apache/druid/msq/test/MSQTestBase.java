@@ -429,6 +429,18 @@ public class MSQTestBase extends BaseCalciteQueryTest
           DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
           {
             @Override
+            public int getNumThreads()
+            {
+              return 1;
+            }
+
+            @Override
+            public int intermediateComputeSizeBytes()
+            {
+              return 10_000_000;
+            }
+
+            @Override
             public String getFormatString()
             {
               return "test";
@@ -750,14 +762,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
   public static WorkerMemoryParameters makeTestWorkerMemoryParameters()
   {
-    return WorkerMemoryParameters.createInstance(
-        WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-        2,
-        10,
+    return new WorkerMemoryParameters(
+        100_000_000,
+        WorkerMemoryParameters.DEFAULT_FRAME_SIZE,
         1,
-        2,
-        1,
-        0
+        50,
+        10_000_000,
+        10_000_000
     );
   }
 
