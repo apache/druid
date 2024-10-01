@@ -45,6 +45,8 @@ spec:
               value: "/tmp"
             - name: "TASK_ID"
               value: "id"
+            - name: "LOAD_BROADCAST_DATASOURCE_MODE"
+              value: "ALL"
             - name: "LOAD_BROADCAST_SEGMENTS"
               value: "false"
             - name: "TASK_JSON"
