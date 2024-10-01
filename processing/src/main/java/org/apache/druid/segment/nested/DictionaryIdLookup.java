@@ -416,21 +416,25 @@ public final class DictionaryIdLookup implements Closeable
 
   public int getStringCardinality()
   {
-    return stringDictionary.size();
+    ensureStringDictionaryLoaded();
+    return stringDictionary == null ? 0 : stringDictionary.size();
   }
 
   public int getLongCardinality()
   {
-    return longDictionary.size();
+    ensureLongDictionaryLoaded();
+    return longDictionary == null ? 0 : longDictionary.size();
   }
 
   public int getDoubleCardinality()
   {
-    return doubleDictionary.size();
+    ensureDoubleDictionaryLoaded();
+    return doubleDictionary == null ? 0 : doubleDictionary.size();
   }
 
   public int getArrayCardinality()
   {
-    return arrayDictionary.size();
+    ensureArrayDictionaryLoaded();
+    return arrayDictionary == null ? 0 : arrayDictionary.size();
   }
 }

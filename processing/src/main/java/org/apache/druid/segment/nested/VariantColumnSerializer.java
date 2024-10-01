@@ -83,7 +83,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
 
   private ByteBuffer columnNameBytes = null;
   private boolean hasNulls;
-  private boolean writeDictionary;
+  private boolean writeDictionary = true;
   @Nullable
   private final ExpressionType expectedExpressionType;
   @Nullable

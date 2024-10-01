@@ -651,7 +651,7 @@ public class IndexIO
       // todo (clint): just pass in the metadata to SimpleQueryableIndex so it doesnt need to read it again...
       final Map<String, Map<String, Supplier<ColumnHolder>>> projectionsColumns = new LinkedHashMap<>();
       final Metadata metadata = getMetdata(smooshedFiles, mapper, inDir);
-      if (metadata.getProjections() != null) {
+      if (metadata != null && metadata.getProjections() != null) {
         for (AggregateProjectionSpec projectionSpec : metadata.getProjections()) {
           final Map<String, Supplier<ColumnHolder>> projectionColumns = readProjectionColumns(
               mapper,
@@ -757,6 +757,7 @@ public class IndexIO
       return projectionColumns;
     }
 
+    @Nullable
     private Metadata getMetdata(SmooshedFileMapper smooshedFiles, ObjectMapper mapper, File inDir)
     {
       try {

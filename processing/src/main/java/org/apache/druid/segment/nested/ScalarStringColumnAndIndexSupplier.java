@@ -113,7 +113,8 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
       ScalarStringColumnAndIndexSupplier parent
-  ) {
+  )
+  {
     final byte version = bb.get();
     final int columnNameLength = VByte.readInt(bb);
     final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
@@ -182,6 +183,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         null
     );
   }
+
   @Override
   public NestedCommonFormatColumn get()
   {
