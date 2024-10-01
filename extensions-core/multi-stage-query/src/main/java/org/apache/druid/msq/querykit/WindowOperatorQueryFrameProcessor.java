@@ -268,9 +268,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         // This handles the rows pending flush to the output channel, if we have any.
         if (frameHasRowsPendingFlush()) {
           return flushRACsAndRunAgain();
-        }
-         else {
-           clearRACBuffers();
+        } else {
+          clearRACBuffers();
         }
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
@@ -282,8 +281,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     // the rate of processing of the rows is higher than the allowed capacity of frame writer in each iteration of runIncrementally.
     if (frameHasRowsPendingFlush()) {
       return flushRACsAndRunAgain();
-    }
-    else {
+    } else {
       clearRACBuffers();
     }
 

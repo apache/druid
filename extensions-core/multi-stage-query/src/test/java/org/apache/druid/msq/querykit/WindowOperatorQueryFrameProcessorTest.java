@@ -66,7 +66,7 @@ import java.util.Map;
 
 public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBase
 {
-  private static final List<Map<String, Object>> inputRows = ImmutableList.of(
+  private static final List<Map<String, Object>> INPUT_ROWS = ImmutableList.of(
       ImmutableMap.of("added", 1L, "cityName", "city1"),
       ImmutableMap.of("added", 1L, "cityName", "city2"),
       ImmutableMap.of("added", 2L, "cityName", "city3"),
@@ -120,7 +120,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
             Collections.emptyList(),
             false
         ),
-        inputRows.size() / 4 // This forces frameWriter's capacity to be reached.
+        INPUT_ROWS.size() / 4 // This forces frameWriter's capacity to be reached.
     );
 
     final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
@@ -147,10 +147,10 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
     );
 
     List<List<Object>> outputRows = rowsFromProcessor.toList();
-    Assert.assertEquals(inputRows.size(), outputRows.size());
+    Assert.assertEquals(INPUT_ROWS.size(), outputRows.size());
 
-    for (int i = 0; i < inputRows.size(); i++) {
-      Map<String, Object> inputRow = inputRows.get(i);
+    for (int i = 0; i < INPUT_ROWS.size(); i++) {
+      Map<String, Object> inputRow = INPUT_ROWS.get(i);
       List<Object> outputRow = outputRows.get(i);
 
       Assert.assertEquals("cityName should match", inputRow.get("cityName"), outputRow.get(0));
@@ -288,7 +288,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
                                               .add("cityName", ColumnType.STRING)
                                               .add("added", ColumnType.LONG)
                                               .build();
-    return makeChannelFromRows(inputRows, inputSignature, Collections.emptyList());
+    return makeChannelFromRows(INPUT_ROWS, inputSignature, Collections.emptyList());
   }
 
   private ReadableInput makeChannelFromRows(
