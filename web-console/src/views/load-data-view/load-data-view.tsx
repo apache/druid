@@ -83,7 +83,9 @@ import {
   computeFlattenPathsForData,
   CONSTANT_TIMESTAMP_SPEC,
   CONSTANT_TIMESTAMP_SPEC_FIELDS,
+  DEFAULT_ARRAY_MODE,
   DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
+  DEFAULT_SCHEMA_MODE,
   DIMENSION_SPEC_FIELDS,
   fillDataSourceNameIfNeeded,
   fillInputFormatIfNeeded,
@@ -319,8 +321,8 @@ function initializeSchemaWithSampleIfNeeded(
     spec,
     sample,
     DEFAULT_FORCE_SEGMENT_SORT_BY_TIME,
-    'fixed',
-    'multi-values',
+    DEFAULT_SCHEMA_MODE,
+    DEFAULT_ARRAY_MODE,
     getRollup(spec, false),
   );
 }

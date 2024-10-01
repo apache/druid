@@ -113,6 +113,12 @@ export interface MsqTaskReportResponse {
       };
       stages: StageDefinition[];
       counters: Counters;
+      results?: {
+        signature: { name: string; type: string }[];
+        sqlTypeNames: string[];
+        results: any[];
+        resultsTruncated?: boolean;
+      };
     };
   };
   error?: any;

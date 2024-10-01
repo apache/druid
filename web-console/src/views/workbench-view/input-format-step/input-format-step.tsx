@@ -27,6 +27,7 @@ import type { ArrayMode, InputFormat, InputSource } from '../../../druid-models'
 import {
   BATCH_INPUT_FORMAT_FIELDS,
   chooseByBestTimestamp,
+  DEFAULT_ARRAY_MODE,
   DETECTION_TIMESTAMP_SPEC,
   getPossibleSystemFieldsForInputSource,
   guessColumnTypeFromSampleResponse,
@@ -93,7 +94,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
     InputSourceAndFormat | undefined
   >(isValidInputFormat(initInputFormat) ? inputSourceAndFormat : undefined);
   const [selectTimestamp, setSelectTimestamp] = useState(true);
-  const [arrayMode, setArrayMode] = useState<ArrayMode>('multi-values');
+  const [arrayMode, setArrayMode] = useState<ArrayMode>(DEFAULT_ARRAY_MODE);
 
   const [previewState] = useQueryManager<InputSourceAndFormat, SampleResponse>({
     query: inputSourceAndFormatToSample,
