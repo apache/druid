@@ -457,12 +457,6 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     }
   }
 
-  @Override
-  public String getTimeColumnName()
-  {
-    return ColumnHolder.TIME_COLUMN_NAME;
-  }
-
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.

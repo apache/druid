@@ -175,14 +175,4 @@ public class ColumnBuilder
       throw new ISE("Index supplier already set!");
     }
   }
-
-  public boolean hasNulls()
-  {
-    return capabilitiesBuilder.hasNulls().isTrue();
-  }
-
-  public Supplier<? extends BaseColumn> getColumnSupplier()
-  {
-    return columnSupplier;
-  }
 }

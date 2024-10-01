@@ -100,12 +100,6 @@ public final class DictionaryIdLookup implements Closeable
     this.arrayDictionaryWriter = arrayDictionaryWriter;
   }
 
-  public String getStringValue(int id)
-  {
-    ensureStringDictionaryLoaded();
-    return StringUtils.fromUtf8Nullable(stringDictionary.get(id));
-  }
-
   public int[] getArrayValue(int id)
   {
     ensureArrayDictionaryLoaded();

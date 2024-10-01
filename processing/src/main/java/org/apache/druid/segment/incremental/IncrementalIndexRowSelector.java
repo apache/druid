@@ -111,9 +111,6 @@ public interface IncrementalIndexRowSelector extends ColumnInspector
 
   ColumnFormat getColumnFormat(String columnName);
 
-  @Nullable
-  String getTimeColumnName();
-
   int size();
 
   List<String> getDimensionNames(boolean includeTime);

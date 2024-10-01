@@ -1476,7 +1476,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       return dimensionDesc.getIndexer().getFormat();
     }
 
-    @Override
+    @Nullable
     public String getTimeColumnName()
     {
       return timeColumnName;
