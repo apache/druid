@@ -56,7 +56,6 @@ import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
 import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicer;
-import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
@@ -108,8 +107,8 @@ public class MSQTestControllerContext implements ControllerContext
 
   private Controller controller;
   private final WorkerMemoryParameters workerMemoryParameters;
+  private final TaskLockType taskLockType;
   private final QueryContext queryContext;
-  private final MSQControllerTask controllerTask;
 
   public MSQTestControllerContext(
       ObjectMapper mapper,
@@ -117,7 +116,8 @@ public class MSQTestControllerContext implements ControllerContext
       TaskActionClient taskActionClient,
       WorkerMemoryParameters workerMemoryParameters,
       List<ImmutableSegmentLoadInfo> loadedSegments,
-      MSQControllerTask controllerTask
+      TaskLockType taskLockType,
+      QueryContext queryContext
   )
   {
     this.mapper = mapper;
@@ -137,8 +137,8 @@ public class MSQTestControllerContext implements ControllerContext
                                              .collect(Collectors.toList())
     );
     this.workerMemoryParameters = workerMemoryParameters;
-    this.controllerTask = controllerTask;
-    this.queryContext = controllerTask.getQuerySpec().getQuery().context();
+    this.taskLockType = taskLockType;
+    this.queryContext = queryContext;
   }
 
   OverlordClient overlordClient = new NoopOverlordClient()
@@ -329,7 +329,7 @@ public class MSQTestControllerContext implements ControllerContext
   @Override
   public TaskLockType taskLockType()
   {
-    return controllerTask.getTaskLockType();
+    return taskLockType;
   }
 
   @Override
