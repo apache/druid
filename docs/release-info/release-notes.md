@@ -57,22 +57,22 @@ For tips about how to write a good release note, see [Release notes](https://git
 
 This section contains important information about new and existing features.
 
-### Compaction on MSQ
+### Compaction features
 
-The MSQ task engine now supports compaction with the following exceptions:
+Druid now supports the following features:
 
-- Updating the cluster-level default compaction engine isn't supported. The current default is `native`, which can be changed on a per-datasource basis. 
-- Grouping on multi-value columns isn't supported. The flag `groupByEnableMultiValueUnnesting` is disabled. Only array-type columns are supported.
-- `partitionsSpec` of type `HashedParititionsSpec` isn't supported. Only `DimensionRangePartitionsSpec` and `DynamicPartitionsSpec` are supported.
-- `maxTotalRows` in `DynamicPartitionsSpec` isn't supported. Only `maxRowsPerSegment` works.
-- Setting `rollup` to false in `granularitySpec` when `metricsSpec` is specified isn't supported. Only `rollup` set to true works with a non-empty `metricsSpec`.
-- Aggregators in `metricsSpec` where `fieldName != name` aren't supported.
+- Compaction scheduler with greater flexibility and control over when and what to compact.
+- MSQ-based compaction for performant compaction jobs.
+
+See [Automatic compaction](../data-management/automatic-compaction.md) for details.
+
+Concurrent compaction is now generally available.
 
 [#16291](https://github.com/apache/druid/pull/16291)
 
 ### Window functions are GA
 
-[Window functions](../querying/sql-window-functions.md) are now generally available.
+[Window functions](../querying/sql-window-functions.md) are now generally available in classic Druid and in the MSQ engine.
 
 ### Projections (TBC)
 
@@ -89,10 +89,11 @@ See the [Upgrade notes](#upgrade-notes) for more information about the following
 
 ### Deprecations
 
+- Java 8 support is being deprecated and will be removed in 32.0.0.
 - Deprecated API `/lockedIntervals` is now removed [#16799](https://github.com/apache/druid/pull/16799)
 - [Cluster-level compaction API](#api-for-cluster-level-compaction-configuration) deprecates taskslots compaction API [#16803](https://github.com/apache/druid/pull/16803)
 
-## Functional area and related changes
+## Functional areas and related changes
 
 This section contains detailed release notes separated by areas.
 
@@ -128,18 +129,6 @@ FROM (
 
 [#16458](https://github.com/apache/druid/pull/16458)
 
-#### Search for a datasource
-
-You can know search for datasources in the **Datasource** view. Previously, you had to find them manually.
-
-[#16371](https://github.com/apache/druid/pull/16371)
-
-#### Display formatted JSON
-
-You can now display both raw and formatted JSON in tables, making the data easier to read and troubleshoot.
-
-[#16632](https://github.com/apache/druid/pull/16632)
-
 #### Support Kinesis input format
 
 The web console now supports the Kinesis input format.
@@ -148,6 +137,8 @@ The web console now supports the Kinesis input format.
 
 #### Other web console improvements
 
+- You can now search for datasources in the **Datasource** view - previously you had to find them manually [#16371](https://github.com/apache/druid/pull/16371)
+- You can now display both raw and formatted JSON in tables, making the data easier to read and troubleshoot [#16632](https://github.com/apache/druid/pull/16632)
 - Added hooks to customize the workbench view [#16749](https://github.com/apache/druid/pull/16749)
 - Added the ability to hide workbench view toolbar in the **Query** view [#16785](https://github.com/apache/druid/pull/16785)
 - Added the ability to submit a suspended supervisor using the SQL data loader [#16696](https://github.com/apache/druid/pull/16696)
@@ -166,33 +157,14 @@ The web console now supports the Kinesis input format.
 
 ### Ingestion
 
-#### General ingestion
+#### General ingestion improvements
 
-#### Changed default for indexer task lock batch allocation wait time
-
-The default value for `druid.indexer.tasklock.batchAllocationWaitTime` is now 0.
-
-A segment allocation request is processed immediately unless there are already some requests queued before it. While in queue, a segment allocation request may get clubbed together with other similar requests into a batch to reduce load on the metadata store.
-
-[#16578](https://github.com/apache/druid/pull/16578)
-
-#### API to fetch conflicting task locks
-
-You can use the new API, `/activeLocks` to view task locks for the following attributes:
-* Datasource
-* Priority
-* Interval list
-
-Use this API for debugging or to view lock contention or observe any concurrent locks.
-
-#### Other general ingestion improvements
-
+- The default value for `druid.indexer.tasklock.batchAllocationWaitTime` is now 0 [#16578](https://github.com/apache/druid/pull/16578)
 - Hadoop-based ingestion now works on Kubernetes deployments [#16726](https://github.com/apache/druid/pull/16726)
 - Hadoop-based ingestion now has a Boolean config `useMaxMemoryEstimates` parameter, which controls how memory footprint gets estimated. The default is false, so that the behavior matches native JSON-based batch ingestion [#16280](https://github.com/apache/druid/pull/16280)
 - Added `druid-parquet-extensions` to all example quickstart configurations [#16664](https://github.com/apache/druid/pull/16664)
 - Added support for ingesting CSV format data into Kafka records when Kafka ingestion is enabled with `ioConfig.type = kafka` [#16630](https://github.com/apache/druid/pull/16630)
 - Added logging for sketches on workers [#16697](https://github.com/apache/druid/pull/16697)
-- Added the ability to sort segments by dimensions other than `__time` [#16849](https://github.com/apache/druid/pull/16849) [#16958](https://github.com/apache/druid/pull/16958)
 - Added the ability to optionally specify a `snapshotVersion` in the delta input source payload to ingest versioned snapshots from a Delta Lake table. When not specified, Druid ingests the latest snapshot from the table [#17004](https://github.com/apache/druid/pull/17004)
 - Removed obsolete tasks `index_realtime` and `index_realtime_appenderator` tasks&mdash;you can no longer use these tasks to ingest data [#16602](https://github.com/apache/druid/pull/16602)
 - Renamed `TaskStorageQueryAdapter` to `TaskQueryTool` and removed the `isAudited` method [#16750](https://github.com/apache/druid/pull/16750)
@@ -201,59 +173,7 @@ Use this API for debugging or to view lock contention or observe any concurrent 
 - Fixed NPE in `CompactSegments` [#16713](https://github.com/apache/druid/pull/16713)
 - Fixed Parquet reader to ensure that Druid reads the required columns for a filter from the Parquet data files [#16874](https://github.com/apache/druid/pull/16874)
 
-#### SQL-based ingestion
-
-#### Added query context parameter `maxNumSegments`
-
-Added a query context parameter `maxNumSegments` that acts as a guard rail on the maximum number of segments that can be generated by an ingestion task per time chunk. The default value is null (no restriction on the number of segments per time chunk).
-
-[#16637](https://github.com/apache/druid/pull/16637)
-
-#### Improved lookup performance
-
-Improved lookup performance for queries that use the MSQ task engine by only loading required lookups. This applies to both ingestion and querying.
-
-[#16358](https://github.com/apache/druid/pull/16358)
-
-#### Compression for complex columns
-
-Compression is now available for all complex metric columns which don't have specialized implementations. You can configure the `complexMetricCompression` IndexSpec option to any compression strategy (lz4, zstd, etc). The default is uncompressed. This works for most complex columns except `compressed-big-decimal` and columns stored by first/last aggregators.
-
-Note that enabling compression is not backwards compatible with Druid versions older than 31. Only enable it after comprehensive testing, to ensure no need for rollback.
-
-[#16863](https://github.com/apache/druid/pull/16863)
-
-#### Fixed partition boundary issues for arrays
-
-Updated logic to fix incorrect query results for comparisons involving arrays.
-
-[#16780](https://github.com/apache/druid/pull/16780)
-
-##### Other SQL-based ingestion improvements
-
-- Reduced memory usage when transferring sketches between the MSQ task engine controller and worker [#16269](https://github.com/apache/druid/pull/16269)
-- Improved error handling when retrieving Avro schemas from registry [#16684](https://github.com/apache/druid/pull/16684)
-- Fixed issues related to partitioning boundaries in the MSQ task engine's window functions [#16729](https://github.com/apache/druid/pull/16729)
-- You can now pass a custom `DimensionSchema` map to MSQ query destination of type `DataSourceMSQDestination` instead of using the default values [#16864](https://github.com/apache/druid/pull/16864)
-
-#### Streaming ingestion
-
-#### New API for exiting streaming task groups early
-
-This new API does a best effort attempt to triggerthe handoff for specified task groups of a supervisor early:
-
-`POST` `/druid/indexer/v1/supervisor/{supervisorId}/taskGroups/handoff`
-
-[#16310](https://github.com/apache/druid/pull/16310)
-
-##### Other streaming ingestion improvements
-
-- Added a check for handing off upgraded real-time segments. This prevents data from being temporarily unavailable for queries during segment handoff [#16162](https://github.com/apache/druid/pull/16162)
-- Added a Kinesis input format for timestamp and payload parsing [#16813](https://github.com/apache/druid/pull/16813)
-- Improved the user experience for autoscaling Kinesis. Switching to autoscaling based on max lag per shard from total lag for shard is now controlled by the `lagAggregate` config, defaulting to sum [#16334](https://github.com/apache/druid/pull/16334)
-- Improved the Supervisor so that it doesn't change to a running state from idle if the Overlord restarts [#16844](https://github.com/apache/druid/pull/16844)
-
-### Querying
+### SQL-based ingestion
 
 #### Optimized S3 storage writing for MSQ durable storage
 
@@ -261,11 +181,37 @@ For queries that use the MSQ task engine and write their output to S3 as durable
 
 [#16481](https://github.com/apache/druid/pull/16481)
 
-#### MSQ task engine improved
+#### Improved lookup performance
 
-Improved the performance of the MSQ task engine so that it supports in-memory shuffles and cached data across queries.
+Improved lookup performance for queries that use the MSQ task engine by only loading required lookups. This applies to both ingestion and querying.
 
-[#16168](https://github.com/apache/druid/pull/16168)
+[#16358](https://github.com/apache/druid/pull/16358)
+
+#### Other SQL-based ingestion improvements
+
+- Added query context parameter `maxNumSegments` [#16637](https://github.com/apache/druid/pull/16637)
+- Reduced memory usage when transferring sketches between the MSQ task engine controller and worker [#16269](https://github.com/apache/druid/pull/16269)
+- Improved error handling when retrieving Avro schemas from registry [#16684](https://github.com/apache/druid/pull/16684)
+- Fixed issues related to partitioning boundaries in the MSQ task engine's window functions [#16729](https://github.com/apache/druid/pull/16729)
+- Updated logic to fix incorrect query results for comparisons involving arrays [#16780](https://github.com/apache/druid/pull/16780)
+- You can now pass a custom `DimensionSchema` map to MSQ query destination of type `DataSourceMSQDestination` instead of using the default values [#16864](https://github.com/apache/druid/pull/16864)
+
+### Streaming ingestion
+
+#### New Kinesis input format
+
+Added a Kinesis input format and reader for timestamp and payload parsing.
+The reader relies on a `ByteEntity` type of `KinesisRecordEntity` which includes the underlying Kinesis record.
+
+[#16813](https://github.com/apache/druid/pull/16813)
+
+#### Streaming ingestion improvements
+
+- Added a check for handing off upgraded real-time segments. This prevents data from being temporarily unavailable for queries during segment handoff [#16162](https://github.com/apache/druid/pull/16162)
+- Improved the user experience for autoscaling Kinesis. Switching to autoscaling based on max lag per shard from total lag for shard is now controlled by the `lagAggregate` config, defaulting to sum [#16334](https://github.com/apache/druid/pull/16334)
+- Improved the Supervisor so that it doesn't change to a running state from idle if the Overlord restarts [#16844](https://github.com/apache/druid/pull/16844)
+
+### Querying
 
 #### Enabled querying cold datasources
 
@@ -281,94 +227,20 @@ You can now use the SQL DIV function.
 
 [#16464](https://github.com/apache/druid/pull/16464)
 
-#### Improved query filtering
-
-Improved query filtering to correctly process cases where both an IN expression and an equality (`=`) filter are applied to the same string value. Previously, such queries might have returned an empty result set.
-
-[#16597](https://github.com/apache/druid/pull/16597)
-
-Improved the speed of SQL IN queries that use the SCALAR_IN_ARRAY function.
-
-[#16388](https://github.com/apache/druid/pull/16388)
-
 #### Modified equality and typed in filter behavior
 
 Modified the behavior of using `EqualityFilter` and `TypedInFilter` to match numeric values (particularly DOUBLE) against string columns by casting strings for numerical comparison. This ensures more consistent Druid behavior when the `sqlUseBoundAndSelectors` context flag is set.
 
 [#16593](https://github.com/apache/druid/pull/16593)
 
-#### Faster dimension deserialization on Brokers
-
-Updated the deserialization of dimensions in GROUP BY queries to operate on all dimensions at once rather than deserializing individual dimensions.
-
-[#16740](https://github.com/apache/druid/pull/16740)
-
-#### Updated representation for window frames
-
-Introduced new frame types for `rows` and `groups`. Native queries that use window frames display the new groups.
-
-The following examples compare the old and new representations.
-
-**Example 1**
-
-```
-# old
-frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: true, uppOffset: 0 }
-
-# new
-frame: { type: rows }
-```
-
-
-**Example 2**
-
-```
-# old
-frame: { peerType: "ROWS", lowUnbounded: false, lowOffset: 0, uppUnbounded: false, uppOffset: 2 }
-
-# new
-frame: { type: rows, lowerOffset: 0, upperOffset: 2 }
-```
-
-**Example 3**
-
-```
-# old
-frame: { peerType: "RANGE", lowUnbounded: true, lowOffset: 0, uppUnbounded: false, uppOffset: 0, orderBy: [{ column: l1, direction: ASC }] }
-
-# new
-frame: { type: group, upperOffset: 0, orderBy: [{ column: l1, direction: ASC }] }
-```
-
-
-[#16741](https://github.com/apache/druid/pull/16741)
-
 #### Query guardrails
-
-**Asked Sree for a better release note** Druid rejects queries with HAVING clauses that contain windowed expressions as a result of a Calcite dependency.
-
-[#16742](https://github.com/apache/druid/pull/16742)
 
 Druid blocks window queries that involve aggregation functions inside the window clause, when the window is included in SELECT.
 The error message provides details on updating your query syntax.
-The validation was added as a result of a Calcite dependency.
 
 [#16801](https://github.com/apache/druid/pull/16801)
 
-A query that references aggregators called with unsupported distinct values now fails.
-
-[#16770](https://github.com/apache/druid/pull/16770)
-
-Druid now validates that a complex type aligns with the supported types when used with an aggregator.
-Queries like `SELECT COUNT(DISTINCT columnName) FROM tableName WHERE columnValue = 'non-existing-value'` will also stop working with these changes.
-
-[#16682](https://github.com/apache/druid/pull/16682)
-
-Druid prevents you from using DISTINCT or unsupported aggregations with window functions.
-
-[#16738](https://github.com/apache/druid/pull/16738)
-
-#### Update query from deep storage API response
+#### Updated query from deep storage API response
 
 Added the following fields from the query-based ingestion task report to the response for API request `GET` `/v2/sql/statements/query-id?detail=true`:
 - `stages`: Query stages
@@ -379,6 +251,9 @@ Added the following fields from the query-based ingestion task report to the res
 
 #### Other querying improvements
 
+- A query that references aggregators called with unsupported distinct values now fails [#16770](https://github.com/apache/druid/pull/16770)
+- Druid now validates that a complex type aligns with the supported types when used with an aggregator [#16682](https://github.com/apache/druid/pull/16682)
+- Druid prevents you from using DISTINCT or unsupported aggregations with window functions [#16738](https://github.com/apache/druid/pull/16738)
 - Druid now deduces type from aggregators when materializing subquery results [#16703](https://github.com/apache/druid/pull/16703)
 - Added the ability to define the segment granularity of a table in the catalog [#16680](https://github.com/apache/druid/pull/16680)
 - Added a way for columns to provide `GroupByVectorColumnSelectors`, which controls how the groupBy engine operates on them [#16338](https://github.com/apache/druid/pull/16338)
@@ -391,6 +266,9 @@ Added the following fields from the query-based ingestion task report to the res
 - Improved async query by increasing its timeout to 5 seconds [#16656](https://github.com/apache/druid/pull/16656)
 - Improved error message when the requested number of rows in a window exceeds the maximum [#16906](https://github.com/apache/druid/pull/16906)
 - Improved numeric aggregations so that Druid now coerces complex types to number when possible, such as for `SpectatorHistogram` [#16564](https://github.com/apache/druid/pull/16564)
+- Improved query filtering to correctly process cases where both an IN expression and an equality (`=`) filter are applied to the same string value [#16597](https://github.com/apache/druid/pull/16597)
+- Improved the speed of SQL IN queries that use the SCALAR_IN_ARRAY function [#16388](https://github.com/apache/druid/pull/16388)
+- Updated the deserialization of dimensions in GROUP BY queries to operate on all dimensions at once rather than deserializing individual dimensions [#16740](https://github.com/apache/druid/pull/16740)
 - Fixed an issue that caused `maxSubqueryBytes` to fail when segments had missing columns [#16619](https://github.com/apache/druid/pull/16619)
 - Fixed an issue with the array type selector that caused the array aggregation over window frame to fail [#16653](https://github.com/apache/druid/pull/16653)
 - Fixed support for native window queries without a group by clause [#16753](https://github.com/apache/druid/pull/16753)
@@ -437,6 +315,10 @@ The `druid.indexer.queue.maxTaskPayloadSize` config defines the maximum size in 
 
 ### Data management
 
+#### Compaction
+
+[TBC]
+
 #### Different task locks for kill tasks (experimental)
 
 Kill tasks can now use different types of locks, such as APPEND or REPLACE. This change is experimental and not recommended for produciton use.
@@ -460,6 +342,42 @@ The `KillUnusedSegments` coordinator duty now selects datasources in a round-rob
 #### Other data management improvements
 
 - Fixed an issue in task bootstrapping that prevented tasks from accepting any segment assignments, including broadcast segments [#16475](https://github.com/apache/druid/pull/16475)
+
+### Storage  improvements
+
+#### Compression for complex columns
+
+Compression is now available for all complex metric columns which don't have specialized implementations. You can configure the `complexMetricCompression` IndexSpec option to any compression strategy (lz4, zstd, etc). The default is uncompressed. This works for most complex columns except `compressed-big-decimal` and columns stored by first/last aggregators.
+
+Note that enabling compression is not backwards compatible with Druid versions older than 31. Only enable it after comprehensive testing, to ensure no need for rollback.
+
+[#16863](https://github.com/apache/druid/pull/16863)
+
+#### Improved segment sorting
+
+Added the ability to sort segments by dimensions other than `__time` - this provides a significant storage benefit.
+
+[#16849](https://github.com/apache/druid/pull/16849)
+[#16958](https://github.com/apache/druid/pull/16958)
+
+### APIs
+
+#### New API for exiting streaming task groups early
+
+This new API does a best effort attempt to triggerthe handoff for specified task groups of a supervisor early:
+
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/taskGroups/handoff`
+
+[#16310](https://github.com/apache/druid/pull/16310)
+
+#### API to fetch conflicting task locks
+
+You can use the new `/activeLocks` API to view task locks for the following attributes:
+- Datasource
+- Priority
+- Interval list
+
+Use this API for debugging, to view lock contention, and to observe any concurrent locks.
 
 ### Metrics and monitoring
 
