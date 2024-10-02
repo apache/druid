@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -166,6 +167,12 @@ public class IndexerControllerContext implements ControllerContext
   public TaskActionClient taskActionClient()
   {
     return toolbox.getTaskActionClient();
+  }
+
+  @Override
+  public TaskLockType taskLockType()
+  {
+    return task.getTaskLockType();
   }
 
   @Override

@@ -96,7 +96,7 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
         }
         onClick={() => {
           if (!execution) return;
-          if (oneOf(execution.engine, 'sql-msq-task')) {
+          if (oneOf(execution.engine, 'sql-msq-task', 'sql-msq-dart')) {
             onExecutionDetail();
           }
         }}

@@ -76,6 +76,7 @@ import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparator;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
@@ -887,7 +888,8 @@ public class DruidQuery
    */
   private static boolean canUseIntervalFiltering(final DataSource dataSource)
   {
-    return dataSource.getAnalysis().isTableBased();
+    final DataSourceAnalysis analysis = dataSource.getAnalysis();
+    return !analysis.getBaseQuery().isPresent() && analysis.isTableBased();
   }
 
   private static Filtration toFiltration(
@@ -1498,13 +1500,16 @@ public class DruidQuery
     // This would cause MSQ queries to plan as
     // Window over an inner scan and avoid
     // leaf operators
+    boolean pushLeafOperator = plannerContext.queryContext()
+                                             .getBoolean(PlannerContext.CTX_ENABLE_RAC_TRANSFER_OVER_WIRE, false)
+                               && !plannerContext.featureAvailable(EngineFeature.WINDOW_LEAF_OPERATOR);
     return new WindowOperatorQuery(
         dataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
         plannerContext.queryContextMap(),
         windowing.getSignature(),
         operators,
-        plannerContext.featureAvailable(EngineFeature.WINDOW_LEAF_OPERATOR) ? ImmutableList.of() : null
+        pushLeafOperator ? null : ImmutableList.of()
     );
   }
 

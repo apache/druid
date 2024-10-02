@@ -59,7 +59,8 @@ The console relies on [eslint](https://eslint.org) (and various plugins), [sass-
 
 - Install `dbaeumer.vscode-eslint` extension
 - Install `esbenp.prettier-vscode` extension
-- Open User Settings (JSON) and set the following:
+- Select `Open User Settings (JSON)` from the editor commnads (`Ctrl+Shift+P` or `Comand+Shift+P`) and set the following:
+
   ```json
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true,

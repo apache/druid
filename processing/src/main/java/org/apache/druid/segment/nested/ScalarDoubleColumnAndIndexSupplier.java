@@ -241,9 +241,16 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
       }
       final double doubleValue = castForComparison.asDouble();
+
       return new SimpleBitmapColumnIndex()
       {
         final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
+
+        @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -307,6 +314,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
               bitmapFactory,
               ColumnType.DOUBLE.getNullableStrategy(),
               tailSet,
+              tailSet.size(),
               dictionary,
               valueIndexes,
               unknownsIndex
@@ -316,6 +324,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
             bitmapFactory,
             tailSet,
+            tailSet.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
@@ -325,6 +334,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         return ValueSetIndexes.buildBitmapColumnIndexFromIteratorBinarySearch(
             bitmapFactory,
             Iterables.transform(sortedValues, DimensionHandlerUtils::convertObjectToDouble),
+            sortedValues.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
@@ -345,6 +355,11 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
       return new SimpleBitmapColumnIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -390,6 +405,12 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     {
       return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return values.size();
+        }
+
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {

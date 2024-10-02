@@ -45,6 +45,7 @@ import {
   getDruidErrorMessage,
   nonEmptyArray,
   queryDruidSql,
+  queryDruidSqlDart,
 } from '../../../utils';
 
 import './explain-dialog.scss';
@@ -106,6 +107,10 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
           } catch (e) {
             throw new Error(getDruidErrorMessage(e));
           }
+          break;
+
+        case 'sql-msq-dart':
+          result = await queryDruidSqlDart(payload);
           break;
 
         default:

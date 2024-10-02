@@ -225,6 +225,7 @@ LIMIT 100`,
                       className={'status-icon ' + w.taskStatus.toLowerCase()}
                       icon={icon}
                       style={{ color }}
+                      data-tooltip={`Task status: ${w.taskStatus}`}
                     />
                     <div className="timing">
                       {prettyFormatIsoDate(w.createdTime) +

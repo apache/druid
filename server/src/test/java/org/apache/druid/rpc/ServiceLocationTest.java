@@ -25,8 +25,48 @@ import org.apache.druid.server.coordination.ServerType;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.URI;
+
 public class ServiceLocationTest
 {
+  @Test
+  public void test_stripBrackets()
+  {
+    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceLocation.stripBrackets("[1:2:3:4:5:6:7:8]"));
+    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceLocation.stripBrackets("1:2:3:4:5:6:7:8"));
+    Assert.assertEquals("1.2.3.4", ServiceLocation.stripBrackets("1.2.3.4"));
+  }
+
+  @Test
+  public void test_fromUri_http()
+  {
+    final ServiceLocation location = ServiceLocation.fromUri(URI.create("http://example.com:8100/xyz"));
+    Assert.assertEquals("example.com", location.getHost());
+    Assert.assertEquals(-1, location.getTlsPort());
+    Assert.assertEquals(8100, location.getPlaintextPort());
+    Assert.assertEquals("/xyz", location.getBasePath());
+  }
+
+  @Test
+  public void test_fromUri_https_defaultPort()
+  {
+    final ServiceLocation location = ServiceLocation.fromUri(URI.create("https://example.com/xyz"));
+    Assert.assertEquals("example.com", location.getHost());
+    Assert.assertEquals(443, location.getTlsPort());
+    Assert.assertEquals(-1, location.getPlaintextPort());
+    Assert.assertEquals("/xyz", location.getBasePath());
+  }
+
+  @Test
+  public void test_fromUri_https()
+  {
+    final ServiceLocation location = ServiceLocation.fromUri(URI.create("https://example.com:8100/xyz"));
+    Assert.assertEquals("example.com", location.getHost());
+    Assert.assertEquals(8100, location.getTlsPort());
+    Assert.assertEquals(-1, location.getPlaintextPort());
+    Assert.assertEquals("/xyz", location.getBasePath());
+  }
+
   @Test
   public void test_fromDruidServerMetadata_withPort()
   {
