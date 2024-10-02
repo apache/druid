@@ -6782,8 +6782,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testOrderByNullType()
   {
-    // Cannot vectorize due to null constant expression.
-    cannotVectorize();
     testQuery(
         // Order on subquery, since the native engine doesn't currently support ordering when selecting directly
         // from a table.
