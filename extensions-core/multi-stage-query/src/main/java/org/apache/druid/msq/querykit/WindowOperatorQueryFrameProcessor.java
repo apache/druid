@@ -219,7 +219,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
     // If there are rows pending flush, flush them and run again before processing any more rows.
     if (frameHasRowsPendingFlush()) {
-      flushAllRowsAndCols(resultRowAndCols, rowId);
+      flushAllRowsAndCols();
       return ReturnOrAwait.runAgain();
     }
 
@@ -340,7 +340,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       public void completed()
       {
         try {
-          flushAllRowsAndCols(resultRowAndCols, rowId);
+          flushAllRowsAndCols();
         }
         catch (IOException e) {
           throw new RuntimeException(e);
@@ -350,11 +350,10 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   }
 
   /**
-   * @param resultRowAndCols Flush the list of {@link RowsAndColumns} to a frame
-   * @param rowId An AtomicInteger representing the current row ID
+   * Flushes {@link #resultRowAndCols} to the frame starting from {@link #rowId}, upto the frame writer's capacity.
    * @throws IOException
    */
-  private void flushAllRowsAndCols(ArrayList<RowsAndColumns> resultRowAndCols, AtomicInteger rowId) throws IOException
+  private void flushAllRowsAndCols() throws IOException
   {
     RowsAndColumns rac = new ConcatRowsAndColumns(resultRowAndCols);
     createFrameWriterIfNeeded(rac, rowId);
