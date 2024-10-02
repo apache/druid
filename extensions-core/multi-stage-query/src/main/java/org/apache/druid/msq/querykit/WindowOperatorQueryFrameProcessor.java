@@ -356,15 +356,14 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private void flushAllRowsAndCols() throws IOException
   {
     RowsAndColumns rac = new ConcatRowsAndColumns(resultRowAndCols);
-    createFrameWriterIfNeeded(rac, rowId);
-    writeRacToFrame(rac, rowId);
+    createFrameWriterIfNeeded(rac);
+    writeRacToFrame(rac);
   }
 
   /**
    * @param rac   The frame writer to write this {@link RowsAndColumns} object
-   * @param rowId RowId to get the column selector factory from the {@link RowsAndColumns} object
    */
-  private void createFrameWriterIfNeeded(RowsAndColumns rac, AtomicInteger rowId)
+  private void createFrameWriterIfNeeded(RowsAndColumns rac)
   {
     if (frameWriter == null) {
       final ColumnSelectorFactoryMaker csfm = ColumnSelectorFactoryMaker.fromRAC(rac);
@@ -377,10 +376,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
   /**
    * @param rac   {@link RowsAndColumns} to be written to frame
-   * @param rowId Counter to keep track of how many rows are added
    * @throws IOException
    */
-  public void writeRacToFrame(RowsAndColumns rac, AtomicInteger rowId) throws IOException
+  public void writeRacToFrame(RowsAndColumns rac) throws IOException
   {
     final int numRows = rac.numRows();
     while (rowId.get() < numRows) {
@@ -389,7 +387,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         rowId.incrementAndGet();
       } else if (frameWriter.getNumRows() > 0) {
         flushFrameWriter();
-        createFrameWriterIfNeeded(rac, rowId);
+        createFrameWriterIfNeeded(rac);
 
         if (frameWriter.addSelection()) {
           incrementBoostColumn();
