@@ -167,7 +167,7 @@ For properties common to all streaming ingestion configurations, see [supervisor
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
-|`skipSequenceNumberAvailabilityCheck`|Boolean|Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If `false`, the indexing task attempts to reset the current sequence number, depending on the value of `resetOffsetAutomatically`. For more information on the `resetOffsetAutomatically` property, see [Supervisor tuning configuration](supervisor.md#tuning-configuration).|No|`false`|
+|`skipSequenceNumberAvailabilityCheck`|Boolean|Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If `false`, the indexing task attempts to reset the current sequence number, depending on the value of `resetOffsetAutomatically`. For more information on the `resetOffsetAutomatically` property, see [Supervisor tuning configuration](supervisor.md#tuningConfig).|No|`false`|
 |`recordBufferSizeBytes`|Integer| The size of the buffer (heap memory bytes) Druid uses between the Kinesis fetch threads and the main ingestion thread.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
 |`recordBufferOfferTimeout`|Integer|The number of milliseconds to wait for space to become available in the buffer before timing out.|No|5000|
 |`recordBufferFullWait`|Integer|The number of milliseconds to wait for the buffer to drain before Druid attempts to fetch records from Kinesis again.|No|5000|
