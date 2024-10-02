@@ -246,10 +246,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       return ReturnOrAwait.awaitAll(inputChannels().size());
     }
 
-    // This helps us avoid OOM issues, as it ensures that we don't keep accumulating the processed rows in-memory, if
-    // the rate of processing of the rows is higher than the allowed capacity of frame writer in each iteration of runIncrementally.
-    clearRACBuffers();
-
     // Scenario 2: All window functions in the query have OVER() clause with a PARTITION BY
     if (frameCursor == null || frameCursor.isDone()) {
       if (readableInputs.isEmpty()) {
@@ -402,6 +398,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     }
 
     flushFrameWriter();
+    clearRACBuffers();
   }
 
   @Override
