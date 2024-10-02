@@ -148,6 +148,7 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
       this.spaceReductionFactor = other.spaceReductionFactor;
       this.retainedKeys.putAll(other.retainedKeys);
       this.maxBytes = other.maxBytes;
+      this.totalWeightUnadjusted = other.totalWeightUnadjusted;
     } else {
       for (final Object2LongMap.Entry<RowKey> otherEntry : other.retainedKeys.object2LongEntrySet()) {
         add(otherEntry.getKey(), otherEntry.getLongValue());
