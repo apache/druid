@@ -263,8 +263,8 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
             Header: twoLines(
               'CPU utilization',
               <i>
-                <span className="cpu-label">counter</span>
-                <span className="cpu-counter">wall time</span>
+                <span className="cpu-label">Counter</span>
+                <span className="cpu-counter">Wall time</span>
               </i>,
             ),
             id: 'cpu',
@@ -863,14 +863,14 @@ ${title} uncompressed size: ${formatBytesCompact(
           Header: twoLines(
             'CPU utilization',
             <i>
-              <span className="cpu-label">counter</span>
-              <span className="cpu-counter">wall time</span>
+              <span className="cpu-label">Counter</span>
+              <span className="cpu-counter">Wall time</span>
             </i>,
           ),
           id: 'cpu',
           accessor: () => null,
           className: 'padded',
-          width: 220,
+          width: 240,
           show: stages.hasCounter('cpu'),
           Cell({ original }) {
             const cpuTotals = stages.getCpuTotalsForStage(original);
