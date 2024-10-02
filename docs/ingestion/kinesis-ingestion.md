@@ -43,9 +43,9 @@ Review [Known issues](#known-issues) before deploying the `druid-kinesis-indexin
 
 ## `spec`
 
-This section outlines the configuration properties that are specific to supervisor-led streaming ingestion for Amazon Kinesis.
+This section outlines the configuration properties that are specific to streaming ingestion from Amazon Kinesis.
 
-For configuration properties shared across all streaming ingestion methods supported by Druid, see [supervisor spec](supervisor.md#spec).
+For configuration properties shared across all streaming ingestion methods, see [supervisor spec](supervisor.md#spec).
 
 The following example shows a supervisor spec for a stream with the name `KinesisStream`:
 
@@ -127,11 +127,11 @@ The following example shows a supervisor spec for a stream with the name `Kinesi
 
 ### `ioConfig`
 
-The `ioConfig` influences how data is read from a source system, such as Amazon Kinesis, Amazon S3, a mounted filesystem, or any other supported source system.
+The `ioConfig` defines how Druid reads data from a source system, such as Amazon Kinesis, Amazon S3, a mounted filesystem, or any other supported source system.
 
 The following table outlines the `ioConfig` configuration properties specific to Kinesis.
 
-For configuration properties shared across all supervisor-led ingestion, refer to the [supervisor `ioConfig`](supervisor.md#ioconfig).
+For properties common to all streaming ingestion configurations, see [supervisor `ioConfig`](supervisor.md#ioconfig).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -163,7 +163,7 @@ You specify tuning properties in a `tuningConfig` object at the top level of an 
 
 The following table outlines the `tuningConfig` configuration properties specific to Kinesis.
 
-For configuration properties shared across all supervisor-led ingestion, refer to the [supervisor `tuningConfig`](supervisor.md#tuningconfig).
+For properties common to all streaming ingestion configurations, see [supervisor `tuningConfig`](supervisor.md#tuningconfig).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -343,4 +343,4 @@ Before you deploy the `druid-kinesis-indexing-service` extension to production, 
 See the following topics for more information:
 
 * [Supervisor API](../api-reference/supervisor-api.md) for how to manage and monitor supervisors using the API.
-* [Supervisor](../ingestion/supervisor.md) for supervisor status and capacity planning.
+* [Supervisor](supervisor.md) for supervisor status and capacity planning.

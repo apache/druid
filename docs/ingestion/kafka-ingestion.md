@@ -45,7 +45,7 @@ To use the Kafka indexing service, you must first load the `druid-kafka-indexing
 
 This section outlines the configuration properties that are specific to supervisor-led streaming ingestion for Kafka.
 
-For configuration properties shared across all streaming ingestion methods supported by Druid, see [supervisor spec](supervisor.md#spec).
+For configuration properties shared across all streaming ingestion methods, see [supervisor spec](supervisor.md#spec).
 
 The following example shows a supervisor spec for the Kafka indexing service:
 
@@ -120,11 +120,11 @@ The following example shows a supervisor spec for the Kafka indexing service:
 
 ### `ioConfig`
 
-The `ioConfig` influences how data is read from a source system, such as Apache Kafka, Amazon S3, a mounted filesystem, or any other supported source system.
+The `ioConfig` defines how Druid reads data from a source system, such as Apache Kafka, Amazon S3, a mounted filesystem, or any other supported source system.
 
 The following table outlines the `ioConfig` configuration properties specific to Kafka.
 
-For configuration properties shared across all supervisor-led ingestion, refer to [supervisor `ioConfig`](supervisor.md#ioconfig).
+For properties common to all streaming ingestion configurations, see [supervisor `ioConfig`](supervisor.md#ioconfig).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -427,7 +427,7 @@ You specify tuning properties in a `tuningConfig` object at the top level of an 
 
 The following table outlines the `tuningConfig` configuration properties specific to Apache Kafka.
 
-For configuration properties shared across all supervisor-led ingestion, refer to [Supervisor `tuningConfig`](supervisor.md#tuningconfig).
+For properties common to all streaming ingestion configurations, see [supervisor `tuningConfig`](supervisor.md#tuningconfig).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -452,6 +452,6 @@ For information on how to optimize the segment size, see [Segment size optimizat
 See the following topics for more information:
 
 * [Supervisor API](../api-reference/supervisor-api.md) for how to manage and monitor supervisors using the API.
-* [Supervisor](../ingestion/supervisor.md) for supervisor status and capacity planning.
+* [Supervisor](supervisor.md) for supervisor status and capacity planning.
 * [Loading from Apache Kafka](../tutorials/tutorial-kafka.md) for a tutorial on streaming data from Apache Kafka.
-* [Kafka input format](../ingestion/data-formats.md#kafka) to learn about the `kafka` input format.
+* [Kafka input format](data-formats.md#kafka) to learn about the `kafka` input format.

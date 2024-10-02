@@ -31,7 +31,7 @@ Supervisors oversee the state of indexing tasks to coordinate [handoffs](../desi
 This topic uses the Apache Kafka term _offset_ to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is _sequence number_.
 :::
 
-Druid uses a JSON formatted supervisor spec, to specify how Druid should consume, process, and index streaming data. A supervisor spec is a type of [native ingestion spec](../ingestion/ingestion-spec.md).
+Druid uses a JSON formatted supervisor spec, to specify how Druid should consume, process, and index streaming data. A supervisor spec is a type of [native ingestion spec](ingestion-spec.md).
 
 The following table outlines the high-level configuration options for a supervisor spec:
 
@@ -43,27 +43,27 @@ The following table outlines the high-level configuration options for a supervis
 
 ## `spec`
 
-The `spec` section consists of three components:
+The `spec` section contains three parts:
 
-- `dataSchema`. The schema for the indexing task to use during ingestion.
-- [`ioConfig`](#ioconfig), which tells Druid how to connect to the [source system](./index.md#ingestion-methods) and how to parse data.
-- [`tuningConfig`](#tuningconfig), which controls performance-related settings for the supervisor and indexing tasks.
+- `dataSchema`: The schema for the indexing task to use during ingestion.
+- [`ioConfig`](#ioconfig): Instructs Druid how to connect to the [source system](./index.md#ingestion-methods) and how to parse data.
+- [`tuningConfig`](#tuningconfig): Controls performance-related settings for the supervisor and indexing tasks.
 
-For configuration properties shared across all ingestion methods supported by Druid, including the `dataSchema`, see [native ingestion specs](../ingestion/ingestion-spec.md).
+For configuration properties shared across all ingestion methods supported by Druid, see [native ingestion specs](ingestion-spec.md).
 
 ### `ioConfig`
 
-The `ioConfig` influences how data is read from a source system. See native ingestion specification documentation on the [`ioConfig`](../ingestion/ingestion-spec.md#ioconfig) for more information.
+The `ioConfig` defines how Druid reads data from a source system. See native ingestion specification documentation on the [`ioConfig`](ingestion-spec.md#ioconfig) for more information.
 
-The following table outlines the configuration properties that apply to supervisor-led ingestion methods, including Apache Kafka and Amazon Kinesis.
+The following table outlines the configuration properties available for all streaming ingestion methods, including Apache Kafka and Amazon Kinesis.
 
 For configuration properties specific to Apache Kafka and Amazon Kinesis, see [Kafka `ioConfig`](kafka-ingestion.md#ioconfig) and [Kinesis `ioConfig`](kinesis-ingestion.md#ioconfig) respectively.
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
-|`inputFormat`|Object|The [input format](../ingestion/data-formats.md#input-format) to define input data parsing.|Yes||
+|`inputFormat`|Object|The [input format](data-formats.md#input-format) to define input data parsing.|Yes||
 |`autoScalerConfig`|Object|Defines auto scaling behavior for ingestion tasks. See [Task autoscaler](#task-autoscaler) for more information.|No|null|
-|`taskCount`|Integer|The maximum number of reading tasks in a replica set. Multiply `taskCount` and replicas to measure the maximum number of reading tasks. The total number of tasks, reading and publishing, is higher than the maximum number of reading tasks. See [Capacity planning](../ingestion/supervisor.md#capacity-planning) for more details. When `taskCount` is greater than the number of Kafka partitions or Kinesis shards, the actual number of reading tasks is less than the `taskCount` value.|No|1|
+|`taskCount`|Integer|The maximum number of reading tasks in a replica set. Multiply `taskCount` and replicas to measure the maximum number of reading tasks. The total number of tasks, reading and publishing, is higher than the maximum number of reading tasks. See [Capacity planning](supervisor.md#capacity-planning) for more details. When `taskCount` is greater than the number of Kafka partitions or Kinesis shards, the actual number of reading tasks is less than the `taskCount` value.|No|1|
 |`replicas`|Integer|The number of replica sets, where 1 is a single set of tasks (no replication). Druid always assigns replicate tasks to different workers to provide resiliency against process failure.|No|1|
 |`taskDuration`|ISO 8601 period|The length of time before tasks stop reading and begin publishing segments.|No|`PT1H`|
 |`startDelay`|ISO 8601 period|The period to wait before the supervisor starts managing tasks.|No|`PT5S`|
@@ -194,13 +194,13 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
 
 ### `tuningConfig`
 
-The `tuningConfig` controls various tuning parameters specific to each ingestion method. See native ingestion specification documentation on the [`tuningConfig`](../ingestion/ingestion-spec.md#tuningconfig) for more information.
+The `tuningConfig` controls various tuning parameters specific to each ingestion method. See native ingestion specification documentation on the [`tuningConfig`](ingestion-spec.md#tuningconfig) for more information.
 
 The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configuration settings.
 
 For configuration properties specific to Kafka and Kinesis, see [Kafka  `tuningConfig`](kafka-ingestion.md#tuningconfig) and [Kinesis `tuningConfig`](kinesis-ingestion.md#tuningconfig) respectively.
 
-The following table outlines the tuning properties that apply to supervisor-led ingestion methods, including Apache Kafka and Amazon Kinesis.
+The following table outlines the tuning properties that apply to all streaming ingestion methods, including Apache Kafka and Amazon Kinesis.
 
 
 |Property|Type|Description|Required|Default|
@@ -214,7 +214,7 @@ The following table outlines the tuning properties that apply to supervisor-led 
 |`intermediateHandoffPeriod`|ISO 8601 period|The period that determines how often tasks hand off segments. Handoff occurs if `maxRowsPerSegment` or `maxTotalRows` is reached or every `intermediateHandoffPeriod`, whichever happens first.|No|`P2147483647D`|
 |`intermediatePersistPeriod`|ISO 8601 period|The period that determines the rate at which intermediate persists occur.|No|`PT10M`|
 |`maxPendingPersists`|Integer|Maximum number of persists that can be pending but not started. If a new intermediate persist exceeds this limit, Druid blocks ingestion until the currently running persist finishes. One persist can be running concurrently with ingestion, and none can be queued up. The maximum heap memory usage for indexing scales is `maxRowsInMemory * (2 + maxPendingPersists)`.|No|0|
-|`indexSpec`|Object|Defines segment storage format options to use at indexing time. See [IndexSpec](../ingestion/ingestion-spec.md#indexspec) for more information.|No||
+|`indexSpec`|Object|Defines segment storage format options to use at indexing time. See [IndexSpec](ingestion-spec.md#indexspec) for more information.|No||
 |`indexSpecForIntermediatePersists`|Object|Defines segment storage format options to use at indexing time for intermediate persisted temporary segments. You can use `indexSpecForIntermediatePersists` to disable dimension/metric compression on intermediate segments to reduce memory required for final merging. However, disabling compression on intermediate segments might increase page cache use while they are used before getting merged into final segment published.|No||
 |`reportParseExceptions`|Boolean|DEPRECATED. If `true`, Druid throws exceptions encountered during parsing causing ingestion to halt. If `false`, Druid skips unparseable rows and fields. Setting `reportParseExceptions` to `true` overrides existing configurations for `maxParseExceptions` and `maxSavedParseExceptions`, setting `maxParseExceptions` to 0 and limiting `maxSavedParseExceptions` to not more than 1.|No|`false`|
 |`handoffConditionTimeout`|Long|Number of milliseconds to wait for segment handoff. Set to a value >= 0, where 0 means to wait indefinitely.|No|900000 (15 minutes) for Kafka. 0 for Kinesis.|
@@ -227,7 +227,7 @@ The following table outlines the tuning properties that apply to supervisor-led 
 |`segmentWriteOutMediumFactory`|Object|The segment write-out medium to use when creating segments. See [Additional Peon configuration: SegmentWriteOutMediumFactory](../configuration/index.md#segmentwriteoutmediumfactory) for explanation and available options.|No|If not specified, Druid uses the value from `druid.peon.defaultSegmentWriteOutMediumFactory.type`.|
 |`logParseExceptions`|Boolean|If `true`, Druid logs an error message when a parsing exception occurs, containing information about the row where the error occurred.|No|`false`|
 |`maxParseExceptions`|Integer|The maximum number of parse exceptions that can occur before the task halts ingestion and fails. Setting `reportParseExceptions` overrides this limit.|No|unlimited|
-|`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid keeps track of the most recent parse exceptions. `maxSavedParseExceptions` limits the number of saved exception instances. These saved exceptions are available after the task finishes in the [task completion report](../ingestion/tasks.md#task-reports). Setting `reportParseExceptions` overrides this limit.|No|0|
+|`maxSavedParseExceptions`|Integer|When a parse exception occurs, Druid keeps track of the most recent parse exceptions. `maxSavedParseExceptions` limits the number of saved exception instances. These saved exceptions are available after the task finishes in the [task completion report](tasks.md#task-reports). Setting `reportParseExceptions` overrides this limit.|No|0|
 
 ## Start a supervisor
 
@@ -428,5 +428,5 @@ time-to-publish (generate segment, push to deep storage, load on Historical) is 
 See the following topics for more information:
 
 * [Supervisor API](../api-reference/supervisor-api.md) for how to manage and monitor supervisors using the API.
-* [Apache Kafka ingestion](../ingestion/kafka-ingestion.md) to learn about ingesting data from an Apache Kafka stream.
-* [Amazon Kinesis ingestion](../ingestion/kinesis-ingestion.md) to learn about ingesting data from an Amazon Kinesis stream.
+* [Apache Kafka ingestion](kafka-ingestion.md) to learn about ingesting data from an Apache Kafka stream.
+* [Amazon Kinesis ingestion](kinesis-ingestion.md) to learn about ingesting data from an Amazon Kinesis stream.
