@@ -16,15 +16,44 @@
  * limitations under the License.
  */
 
-export * from './date-format';
-export * from './duration';
-export * from './filter-pattern-helpers';
-export * from './general';
-export * from './get-auto-granularity';
-export * from './known-aggregations';
-export * from './max-time-for-table';
-export * from './misc';
-export * from './query-log';
-export * from './snap-to-granularity';
-export * from './table-query';
-export * from './time-manipulation';
+export const KNOWN_AGGREGATIONS = [
+  'COUNT',
+  'SUM',
+  'MIN',
+  'MAX',
+  'AVG',
+  'APPROX_COUNT_DISTINCT',
+  'APPROX_COUNT_DISTINCT_BUILTIN',
+  'APPROX_QUANTILE',
+  'APPROX_QUANTILE_FIXED_BUCKETS',
+  'BLOOM_FILTER',
+  'VAR_POP',
+  'VAR_SAMP',
+  'VARIANCE',
+  'STDDEV_POP',
+  'STDDEV_SAMP',
+  'STDDEV',
+  'EARLIEST',
+  'EARLIEST_BY',
+  'LATEST',
+  'LATEST_BY',
+  'ANY_VALUE',
+  'GROUPING',
+  'ARRAY_AGG',
+  'ARRAY_AGG',
+  'ARRAY_CONCAT_AGG',
+  'ARRAY_CONCAT_AGG',
+  'STRING_AGG',
+  'LISTAGG',
+  'BIT_AND',
+  'BIT_OR',
+  'BIT_XOR',
+  'APPROX_COUNT_DISTINCT_DS_THETA',
+  'DS_THETA',
+  'APPROX_QUANTILE_DS',
+  'DS_QUANTILES_SKETCH',
+  'DS_TUPLE_DOUBLES',
+  'DS_TUPLE_DOUBLES',
+  'TDIGEST_QUANTILE',
+  'TDIGEST_GENERATE_SKETCH',
+];

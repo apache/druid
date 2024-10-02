@@ -52,6 +52,7 @@ export const ContainsFilterControl = React.memo(function ContainsFilterControl(
           ),
         )
         .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
+        .changeLimitValue(101)
         .toString(),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- exclude 'makePattern' from deps
     [querySource.query, filter, column, contains, negated],

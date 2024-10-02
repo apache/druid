@@ -58,6 +58,7 @@ export const RegexpFilterControl = React.memo(function RegexpFilterControl(
           SqlExpression.and(filter, regexp ? filterPatternToExpression(filterPattern) : undefined),
         )
         .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
+        .changeLimitValue(101)
         .toString(),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- exclude 'makePattern' from deps
     [querySource.query, filter, column, regexp, negated],
