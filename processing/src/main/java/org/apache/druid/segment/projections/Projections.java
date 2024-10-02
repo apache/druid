@@ -17,13 +17,16 @@
  * under the License.
  */
 
-package org.apache.druid.segment;
+package org.apache.druid.segment.projections;
 
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.ConstantExprEvalSelector;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;

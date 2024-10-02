@@ -265,7 +265,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public IndexableAdapter getProjectionAdapter(String projection)
   {
-    return new QueryableIndexIndexableAdapter(input.getProjection(projection));
+    return new QueryableIndexIndexableAdapter(input.getProjectionQueryableIndex(projection));
   }
 
   /**

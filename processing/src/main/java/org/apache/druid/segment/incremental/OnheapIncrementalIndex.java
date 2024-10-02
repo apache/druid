@@ -55,7 +55,6 @@ import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.EncodedKeyComponent;
-import org.apache.druid.segment.Projections;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
@@ -65,6 +64,8 @@ import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.Projection;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -534,7 +535,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
   @Nullable
   @Override
-  public Projection getProjection(CursorBuildSpec buildSpec)
+  public Projection<IncrementalIndexRowSelector> getProjection(CursorBuildSpec buildSpec)
   {
     if (buildSpec.getQueryContext().getBoolean(QueryContexts.CTX_NO_PROJECTION, false)) {
       return null;
@@ -561,7 +562,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
               CursorBuildSpec.builder(buildSpec)
                              .setVirtualColumns(VirtualColumns.fromIterable(referenced))
                              .build();
-          return new Projection(projection, rewrittenBuildSpec, rewriteColumns);
+          return new Projection<>(rewrittenBuildSpec, rewriteColumns, projection);
         }
       }
     }

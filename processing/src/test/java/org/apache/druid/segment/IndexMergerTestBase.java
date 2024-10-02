@@ -411,7 +411,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             Granularities.NONE,
             Boolean.TRUE,
             Cursors.ascendingTimeOrder(),
-            null
+            Collections.emptyList()
         ),
         index.getMetadata()
     );

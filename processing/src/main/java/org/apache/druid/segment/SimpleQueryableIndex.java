@@ -36,6 +36,8 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.projections.Projection;
+import org.apache.druid.segment.projections.Projections;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -227,7 +229,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
 
   @Nullable
   @Override
-  public Projection getProjection(CursorBuildSpec cursorBuildSpec)
+  public Projection<QueryableIndex> getProjection(CursorBuildSpec cursorBuildSpec)
   {
     if (cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CTX_NO_PROJECTION, false)) {
       return null;
@@ -250,27 +252,9 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
               CursorBuildSpec.builder(cursorBuildSpec)
                              .setVirtualColumns(VirtualColumns.fromIterable(referenced))
                              .build();
-          QueryableIndex projectionIndex = getProjection(spec.getName());
-          return new Projection()
-          {
-            @Override
-            public CursorBuildSpec getCursorBuildSpec()
-            {
-              return rewrittenBuildSpec;
-            }
+          final QueryableIndex projectionIndex = getProjectionQueryableIndex(spec.getName());
 
-            @Override
-            public Map<String, String> getRemap()
-            {
-              return rewriteColumns;
-            }
-
-            @Override
-            public QueryableIndex getQueryableIndex()
-            {
-              return projectionIndex;
-            }
-          };
+          return new Projection<>(rewrittenBuildSpec, rewriteColumns, projectionIndex);
         }
       }
     }
@@ -280,9 +264,8 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     return null;
   }
 
-
   @Override
-  public QueryableIndex getProjection(String name)
+  public QueryableIndex getProjectionQueryableIndex(String name)
   {
     final AggregateProjectionSpec projectionSpec = projectionsMap.get(name);
     return new SimpleQueryableIndex(

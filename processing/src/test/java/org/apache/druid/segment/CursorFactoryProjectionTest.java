@@ -798,8 +798,8 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(3, results.size());
     if (sortByDim && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "a", 4L}, results.get(0).getArray());
       Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1).getMillis(), "a", 3L}, results.get(1).getArray());
+      Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "a", 4L}, results.get(0).getArray());
       Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "b", 12L}, results.get(2).getArray());
     } else {
       Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "a", 4L}, results.get(0).getArray());

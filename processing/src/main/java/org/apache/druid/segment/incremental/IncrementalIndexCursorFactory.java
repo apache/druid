@@ -29,6 +29,7 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.projections.Projection;
 
 import javax.annotation.Nullable;
 
@@ -78,7 +79,7 @@ public class IncrementalIndexCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final IncrementalIndex.Projection projection = index.getProjection(spec);
+    final Projection<IncrementalIndexRowSelector> projection = index.getProjection(spec);
     if (projection == null) {
       return new IncrementalIndexCursorHolder(index, spec);
     } else {

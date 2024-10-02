@@ -25,7 +25,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Offset;
-import org.apache.druid.segment.vector.RemapVectorColumnSelectorFactory;
+import org.apache.druid.segment.projections.Projection;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorOffset;
 
@@ -44,9 +44,9 @@ public class QueryableIndexCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    QueryableIndex.Projection projection = index.getProjection(spec);
+    Projection<QueryableIndex> projection = index.getProjection(spec);
     if (projection != null) {
-      return new QueryableIndexCursorHolder(projection.getQueryableIndex(), projection.getCursorBuildSpec())
+      return new QueryableIndexCursorHolder(projection.getRowSelector(), projection.getCursorBuildSpec())
       {
         @Override
         public ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
@@ -54,9 +54,8 @@ public class QueryableIndexCursorFactory implements CursorFactory
             Offset baseOffset
         )
         {
-          return new RemapColumnSelectorFactory(
-              super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset),
-              projection.getRemap()
+          return projection.wrapColumnSelectorFactory(
+              super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset)
           );
         }
 
@@ -66,9 +65,8 @@ public class QueryableIndexCursorFactory implements CursorFactory
             VectorOffset baseOffset
         )
         {
-          return new RemapVectorColumnSelectorFactory(
-              super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset),
-              projection.getRemap()
+          return projection.wrapVectorColumnSelectorFactory(
+              super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset)
           );
         }
 

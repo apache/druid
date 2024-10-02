@@ -32,7 +32,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.Projections;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -54,7 +54,7 @@ public class AggregateProjectionSpec
 {
   public static final String TYPE_NAME = "aggregate";
 
-  public static Comparator<AggregateProjectionSpec> COMPARATOR = (o1, o2) -> {
+  public static final Comparator<AggregateProjectionSpec> COMPARATOR = (o1, o2) -> {
     // coarsest granularity first
     if (o1.getGranularity().isFinerThan(o2.getGranularity())) {
       return 1;

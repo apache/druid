@@ -24,6 +24,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.projections.Projection;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -87,22 +88,14 @@ public interface QueryableIndex extends Closeable, ColumnInspector
   void close();
 
   @Nullable
-  default Projection getProjection(CursorBuildSpec cursorBuildSpec)
+  default Projection<QueryableIndex> getProjection(CursorBuildSpec cursorBuildSpec)
   {
     return null;
   }
 
-  default QueryableIndex getProjection(String name)
+  @Nullable
+  default QueryableIndex getProjectionQueryableIndex(String name)
   {
     return null;
-  }
-
-  interface Projection
-  {
-    CursorBuildSpec getCursorBuildSpec();
-
-    Map<String, String> getRemap();
-
-    QueryableIndex getQueryableIndex();
   }
 }

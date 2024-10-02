@@ -65,7 +65,6 @@ import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
 import org.apache.druid.segment.NilColumnValueSelector;
 import org.apache.druid.segment.ObjectColumnSelector;
-import org.apache.druid.segment.RemapColumnSelectorFactory;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
 import org.apache.druid.segment.VirtualColumns;
@@ -77,6 +76,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.Projection;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -371,7 +371,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   }
 
   @Nullable
-  public abstract Projection getProjection(CursorBuildSpec buildSpec);
+  public abstract Projection<IncrementalIndexRowSelector> getProjection(CursorBuildSpec buildSpec);
 
   public abstract IncrementalIndexRowSelector getProjection(String name);
 
@@ -1391,42 +1391,6 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     public void inspectRuntimeShape(RuntimeShapeInspector inspector)
     {
       inspector.visit("index", rowSelector);
-    }
-  }
-
-  public static final class Projection
-  {
-    private final IncrementalIndexRowSelector rowSelector;
-    private final CursorBuildSpec cursorBuildSpec;
-    private final Map<String, String> rewriteColumns;
-
-    Projection(
-        IncrementalIndexRowSelector rowSelector,
-        CursorBuildSpec cursorBuildSpec,
-        Map<String, String> rewriteColumns
-    )
-    {
-      this.rowSelector = rowSelector;
-      this.cursorBuildSpec = cursorBuildSpec;
-      this.rewriteColumns = rewriteColumns;
-    }
-
-    public IncrementalIndexRowSelector getRowSelector()
-    {
-      return rowSelector;
-    }
-
-    public CursorBuildSpec getCursorBuildSpec()
-    {
-      return cursorBuildSpec;
-    }
-
-    public ColumnSelectorFactory wrapColumnSelectorFactory(ColumnSelectorFactory columnSelectorFactory)
-    {
-      return new RemapColumnSelectorFactory(
-          columnSelectorFactory,
-          rewriteColumns
-      );
     }
   }
 }
