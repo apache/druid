@@ -16,17 +16,12 @@
  * limitations under the License.
  */
 
-export type DruidEngine = 'native' | 'sql-native' | 'sql-msq-task' | 'sql-msq-dart';
-
-export const DRUID_ENGINES: DruidEngine[] = [
-  'native',
-  'sql-native',
-  'sql-msq-task',
-  'sql-msq-dart',
-];
-
-export function validDruidEngine(
-  possibleDruidEngine: string | undefined,
-): possibleDruidEngine is DruidEngine {
-  return Boolean(possibleDruidEngine && DRUID_ENGINES.includes(possibleDruidEngine as DruidEngine));
+export interface DartQueryEntry {
+  sqlQueryId: string;
+  dartQueryId: string;
+  sql: string;
+  authenticator: string;
+  identity: string;
+  startTime: string;
+  state: 'ACCEPTED' | 'RUNNING' | 'CANCELED';
 }
