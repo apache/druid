@@ -230,12 +230,12 @@ export class QuerySource {
     return noStarQuery.addSelect(newExpression);
   }
 
-  public addColumnAfter(neighborName: string, newExpression: SqlExpression): SqlQuery {
+  public addColumnAfter(neighborName: string, ...newExpressions: SqlExpression[]): SqlQuery {
     const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
     return noStarQuery.changeSelectExpressions(
       noStarQuery
         .getSelectExpressionsArray()
-        .flatMap(ex => (ex.getOutputName() === neighborName ? [ex, newExpression] : ex)),
+        .flatMap(ex => (ex.getOutputName() === neighborName ? [ex, ...newExpressions] : ex)),
     );
   }
 
@@ -245,15 +245,6 @@ export class QuerySource {
       noStarQuery
         .getSelectExpressionsArray()
         .map(ex => (ex.getOutputName() === oldName ? newExpression : ex)),
-    );
-  }
-
-  public explodeColumn(oldName: string, newExpressions: SqlExpression[]): SqlQuery {
-    const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
-    return noStarQuery.changeSelectExpressions(
-      noStarQuery
-        .getSelectExpressionsArray()
-        .flatMap(ex => (ex.getOutputName() === oldName ? newExpressions : ex)),
     );
   }
 

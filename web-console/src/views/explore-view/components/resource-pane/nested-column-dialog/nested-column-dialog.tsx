@@ -31,7 +31,7 @@ import type { SqlExpression } from '@druid-toolkit/query';
 import { type QueryResult, F, sql, SqlFunction, SqlQuery } from '@druid-toolkit/query';
 import React, { useState } from 'react';
 
-import { ClearableInput, MenuCheckbox } from '../../../../../components';
+import { ClearableInput, Loader, MenuCheckbox } from '../../../../../components';
 import { useQueryManager } from '../../../../../hooks';
 import { caseInsensitiveContains, filterMap, pluralIfNeeded } from '../../../../../utils';
 import { ExpressionMeta, QuerySource } from '../../../models';
@@ -88,6 +88,7 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
           Replace <Tag minimal>{String(nestedColumn.getOutputName())}</Tag> with path expansions for
           the selected paths.
         </p>
+        {pathsState.isLoading() && <Loader />}
         {pathsState.getErrorMessage()}
         {paths && (
           <FormGroup>
@@ -143,7 +144,7 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
             <Button
               text={
                 selectedPaths.length
-                  ? `Expand into ${pluralIfNeeded(selectedPaths.length, 'column')}`
+                  ? `Add ${pluralIfNeeded(selectedPaths.length, 'column')}`
                   : 'Select path'
               }
               disabled={!selectedPaths.length}
@@ -153,11 +154,13 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
                   ? namingScheme
                   : namingScheme + '[%]';
                 onApply(
-                  querySource.explodeColumn(
+                  querySource.addColumnAfter(
                     nestedColumn.getOutputName()!,
-                    selectedPaths.map(path =>
+                    ...selectedPaths.map(path =>
                       F('JSON_VALUE', nestedColumn, path).as(
-                        effectiveNamingScheme.replaceAll('%', path.replace(/^\$\./, '')),
+                        querySource.getAvailableName(
+                          effectiveNamingScheme.replaceAll('%', path.replace(/^\$\./, '')),
+                        ),
                       ),
                     ),
                   ),
