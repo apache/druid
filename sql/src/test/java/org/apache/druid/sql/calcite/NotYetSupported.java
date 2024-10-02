@@ -82,7 +82,6 @@ public @interface NotYetSupported
     EXPRESSION_NOT_GROUPED(DruidException.class, "Expression '[a-z]+' is not being grouped"),
     NULLS_FIRST_LAST(DruidException.class, "NULLS (FIRST|LAST)"),
     BIGINT_TO_DATE(DruidException.class, "BIGINT to type (DATE|TIME)"),
-    AGGREGATION_NOT_SUPPORT_TYPE(DruidException.class, "Aggregation \\[(MIN|MAX)\\] does not support type \\[STRING\\]"),
     ALLDATA_CSV(DruidException.class, "allData.csv"),
     BIGINT_TIME_COMPARE(DruidException.class, "Cannot apply '.' to arguments of type"),
     VIEWS_NOT_SUPPORTED(DruidException.class, "Incorrect syntax near the keyword 'CREATE'"),
