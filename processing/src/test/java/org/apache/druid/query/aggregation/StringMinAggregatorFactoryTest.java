@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
@@ -65,10 +64,22 @@ public class StringMinAggregatorFactoryTest
   @Test
   public void testFailingBuilds()
   {
-    Assert.assertThrows(IllegalArgumentException.class, () -> new StringMinAggregatorFactory("name", "fieldName", -1024, true));
-    Assert.assertThrows(IllegalArgumentException.class, () -> new StringMinAggregatorFactory("name", "fieldName", Integer.MAX_VALUE - 3, true));
-    Assert.assertThrows(IllegalArgumentException.class, () -> new StringMinAggregatorFactory("name", "fieldName", null, true, "fieldName", macroTable));
-    Assert.assertThrows(IllegalArgumentException.class, () -> new StringMinAggregatorFactory("name",null, null, true, null, macroTable));
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new StringMinAggregatorFactory("name", "fieldName", -1024, true)
+    );
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new StringMinAggregatorFactory("name", "fieldName", Integer.MAX_VALUE - 3, true)
+    );
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new StringMinAggregatorFactory("name", "fieldName", null, true, "fieldName", macroTable)
+    );
+    Assert.assertThrows(
+        IllegalArgumentException.class,
+        () -> new StringMinAggregatorFactory("name", null, null, true, null, macroTable)
+    );
   }
 
   @Test
