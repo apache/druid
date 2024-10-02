@@ -930,31 +930,6 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 null,
                 null
             )
-        ),
-        new TaskContextReport(getId(), getContext())
-    );
-  }
-
-  protected TaskReport.ReportMap buildLiveIngestionStatsReportWithoutContext(
-      IngestionState ingestionState,
-      Map<String, Object> unparseableEvents,
-      Map<String, Object> rowStats
-  )
-  {
-    return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrors(
-                ingestionState,
-                unparseableEvents,
-                rowStats,
-                null,
-                false,
-                0L,
-                null,
-                null,
-                null
-            )
         )
     );
   }
@@ -964,7 +939,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    *  {@link IngestionStatsAndErrorsTaskReport#REPORT_KEY} : {@link IngestionStatsAndErrorsTaskReport}.
    *  {@link TaskContextReport#REPORT_KEY} : {@link TaskContextReport}.
    */
-  protected TaskReport.ReportMap buildIngestionStatsReport(
+  protected TaskReport.ReportMap buildIngestionStatsAndContextReport(
       IngestionState ingestionState,
       String errorMessage,
       Long segmentsRead,
@@ -972,20 +947,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   )
   {
     return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrors(
-                ingestionState,
-                getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats(),
-                errorMessage,
-                segmentAvailabilityConfirmationCompleted,
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                segmentsRead,
-                segmentsPublished
-            )
-        ),
+        buildIngestionStatsTaskReport(ingestionState, errorMessage, segmentsRead, segmentsPublished),
         new TaskContextReport(getId(), getContext())
     );
   }
@@ -994,7 +956,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
    * Builds a singleton map with {@link IngestionStatsAndErrorsTaskReport#REPORT_KEY}
    * as key and an {@link IngestionStatsAndErrorsTaskReport} for this task as value.
    */
-  protected TaskReport.ReportMap buildIngestionStatsReportWithoutContext(
+  protected TaskReport.ReportMap buildIngestionStatsReport(
       IngestionState ingestionState,
       String errorMessage,
       Long segmentsRead,
@@ -1002,19 +964,32 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   )
   {
     return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrors(
-                ingestionState,
-                getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats(),
-                errorMessage,
-                segmentAvailabilityConfirmationCompleted,
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                segmentsRead,
-                segmentsPublished
-            )
+        buildIngestionStatsTaskReport(ingestionState, errorMessage, segmentsRead, segmentsPublished)
+    );
+  }
+
+  /**
+   * Helper method to create IngestionStatsAndErrorsTaskReport.
+   */
+  private IngestionStatsAndErrorsTaskReport buildIngestionStatsTaskReport(
+      IngestionState ingestionState,
+      String errorMessage,
+      Long segmentsRead,
+      Long segmentsPublished
+  )
+  {
+    return new IngestionStatsAndErrorsTaskReport(
+        getId(),
+        new IngestionStatsAndErrors(
+            ingestionState,
+            getTaskCompletionUnparseableEvents(),
+            getTaskCompletionRowStats(),
+            errorMessage,
+            segmentAvailabilityConfirmationCompleted,
+            segmentAvailabilityWaitTimeMs,
+            Collections.emptyMap(),
+            segmentsRead,
+            segmentsPublished
         )
     );
   }

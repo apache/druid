@@ -242,7 +242,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
    */
   private TaskReport.ReportMap getTaskCompletionReports(Long segmentsRead)
   {
-    return buildIngestionStatsReportWithoutContext(
+    return buildIngestionStatsReport(
         IngestionState.COMPLETED,
         "",
         segmentsRead,

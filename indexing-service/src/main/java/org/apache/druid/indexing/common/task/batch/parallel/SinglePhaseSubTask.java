@@ -539,7 +539,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
 
   TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
   {
-    return buildLiveIngestionStatsReportWithoutContext(
+    return buildLiveIngestionStatsReport(
         ingestionState,
         getTaskCompletionUnparseableEvents(),
         doGetRowStats(isFullReport)
@@ -572,7 +572,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
    */
   private TaskReport.ReportMap getTaskCompletionReports()
   {
-    return buildIngestionStatsReportWithoutContext(IngestionState.COMPLETED, errorMsg, null, null);
+    return buildIngestionStatsReport(IngestionState.COMPLETED, errorMsg, null, null);
   }
 
   @Override
