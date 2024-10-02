@@ -78,6 +78,7 @@ import org.apache.druid.sql.http.SqlParameter;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -5883,10 +5884,25 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_DIFFERENT_RESULTSET, separateDefaultModeTest = true)
   @Test
   public void testUnnestWithNotFiltersOnUnnestedColumn()
   {
+    List<Object[]> expectedResults = new ArrayList<Object[]>();
+    expectedResults.add(new Object[] {"a"});
+    expectedResults.add(new Object[] {"b"});
+    expectedResults.add(new Object[] {"b"});
+    expectedResults.add(new Object[] {"c"});
+
+    if (!useDefault) {
+      expectedResults.add(new Object[] {""}); // ImmutableList.of("")
+    } else {
+      if (!testBuilder().isDecoupledMode()) {
+        expectedResults.add(new Object[] {""}); // ImmutableList.of("")
+        expectedResults.add(new Object[] {""}); // ImmutableList.of()
+        expectedResults.add(new Object[] {""}); // null
+      }
+    }
+
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3!='d' ",
         QUERY_CONTEXT_UNNEST,
@@ -5903,23 +5919,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .columns(ImmutableList.of("j0.unnest"))
                   .build()
         ),
-        useDefault ?
-        ImmutableList.of(
-            new Object[]{"a"},
-            new Object[]{"b"},
-            new Object[]{"b"},
-            new Object[]{"c"},
-            new Object[]{""},
-            new Object[]{""},
-            new Object[]{""}
-        ) :
-        ImmutableList.of(
-            new Object[]{"a"},
-            new Object[]{"b"},
-            new Object[]{"b"},
-            new Object[]{"c"},
-            new Object[]{""}
-        )
+        expectedResults
     );
   }
 
@@ -6125,10 +6125,26 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_DIFFERENT_RESULTSET, separateDefaultModeTest = true)
   @Test
   public void testUnnestWithMultipleOrFiltersOnVariationsOfUnnestedColumns()
   {
+    List<Object[]> expectedResults = new ArrayList<Object[]>();
+    expectedResults.add(new Object[] {"a"});
+    expectedResults.add(new Object[] {"b"});
+    expectedResults.add(new Object[] {"b"});
+    expectedResults.add(new Object[] {"c"});
+    expectedResults.add(new Object[] {"d"});
+
+    if (!useDefault) {
+      expectedResults.add(new Object[] {""}); // ImmutableList.of("")
+    } else {
+      if (!testBuilder().isDecoupledMode()) {
+        expectedResults.add(new Object[] {""}); // ImmutableList.of("")
+        expectedResults.add(new Object[] {""}); // ImmutableList.of()
+        expectedResults.add(new Object[] {""}); // null
+      }
+    }
+
     testQuery(
         "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where strlen(d3) < 2 or d3='d' ",
         QUERY_CONTEXT_UNNEST,
@@ -6148,25 +6164,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .columns(ImmutableList.of("j0.unnest"))
                   .build()
         ),
-        useDefault ?
-        ImmutableList.of(
-            new Object[]{"a"},
-            new Object[]{"b"},
-            new Object[]{"b"},
-            new Object[]{"c"},
-            new Object[]{"d"},
-            new Object[]{""},
-            new Object[]{""},
-            new Object[]{""}
-        ) :
-        ImmutableList.of(
-            new Object[]{"a"},
-            new Object[]{"b"},
-            new Object[]{"b"},
-            new Object[]{"c"},
-            new Object[]{"d"},
-            new Object[]{""}
-        )
+        expectedResults
     );
   }
 
@@ -7193,7 +7191,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_DIFFERENT_RESULTSET, separateDefaultModeTest = true)
   @Test
   public void testUnnestExtractionFn()
   {
@@ -7216,7 +7213,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .columns(ImmutableList.of("v0"))
                   .build()
         ),
-        useDefault ?
+        useDefault && !testBuilder().isDecoupledMode() ?
         ImmutableList.of(
             new Object[]{"a"},
             new Object[]{"c"},
