@@ -24,6 +24,8 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
+
 public class HttpInputSourceConfigTest
 {
   @Test
@@ -35,21 +37,33 @@ public class HttpInputSourceConfigTest
   @Test
   public void testNullAllowedProtocolsUseDefault()
   {
-    HttpInputSourceConfig config = new HttpInputSourceConfig(null);
+    HttpInputSourceConfig config = new HttpInputSourceConfig(null, null);
     Assert.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
+    Assert.assertEquals(Collections.emptySet(), config.getAllowedHeaders());
   }
 
   @Test
   public void testEmptyAllowedProtocolsUseDefault()
   {
-    HttpInputSourceConfig config = new HttpInputSourceConfig(ImmutableSet.of());
+    HttpInputSourceConfig config = new HttpInputSourceConfig(ImmutableSet.of(), null);
     Assert.assertEquals(HttpInputSourceConfig.DEFAULT_ALLOWED_PROTOCOLS, config.getAllowedProtocols());
   }
 
   @Test
   public void testCustomAllowedProtocols()
   {
-    HttpInputSourceConfig config = new HttpInputSourceConfig(ImmutableSet.of("druid"));
+    HttpInputSourceConfig config = new HttpInputSourceConfig(ImmutableSet.of("druid"), null);
     Assert.assertEquals(ImmutableSet.of("druid"), config.getAllowedProtocols());
+  }
+
+  @Test
+  public void testAllowedHeaders()
+  {
+    HttpInputSourceConfig config = new HttpInputSourceConfig(
+        ImmutableSet.of("druid"),
+        ImmutableSet.of("Content-Type", "Referer")
+    );
+    Assert.assertEquals(ImmutableSet.of("druid"), config.getAllowedProtocols());
+    Assert.assertEquals(ImmutableSet.of("content-type", "referer"), config.getAllowedHeaders());
   }
 }

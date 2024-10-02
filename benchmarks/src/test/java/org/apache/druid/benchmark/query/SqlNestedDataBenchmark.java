@@ -63,6 +63,7 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -198,7 +199,7 @@ public class SqlNestedDataBenchmark
       // 42, 43 big cardinality like predicate filter
       "SELECT SUM(long1) FROM foo WHERE string5 LIKE '%1%'",
       "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%'",
-      // 44, 45 big cardinality like filter + selector filter
+      // 44, 45 big cardinality like filter + selector filter with different ordering
       "SELECT SUM(long1) FROM foo WHERE string5 LIKE '%1%' AND string1 = '1000'",
       "SELECT SUM(JSON_VALUE(nested, '$.long1' RETURNING BIGINT)) FROM foo WHERE JSON_VALUE(nested, '$.nesteder.string5') LIKE '%1%' AND JSON_VALUE(nested, '$.nesteder.string1') = '1000'",
       "SELECT SUM(long1) FROM foo WHERE string1 = '1000' AND string5 LIKE '%1%'",
@@ -402,7 +403,8 @@ public class SqlNestedDataBenchmark
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
 
     try {

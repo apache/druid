@@ -19,10 +19,8 @@
 
 package org.apache.druid.msq.exec;
 
-import org.apache.druid.msq.kernel.WorkOrder;
-
 /**
- * Introspector used to generate {@link ControllerMemoryParameters}.
+ * Introspector used to generate {@link WorkerMemoryParameters} and {@link ControllerMemoryParameters}.
  */
 public interface MemoryIntrospector
 {
@@ -32,34 +30,23 @@ public interface MemoryIntrospector
   long totalMemoryInJvm();
 
   /**
-   * Amount of memory usable for the multi-stage query engine in the entire JVM.
-   *
-   * This may be an expensive operation. For example, the production implementation {@link MemoryIntrospectorImpl}
-   * estimates size of all lookups as part of computing this value.
+   * Amount of memory alloted to each {@link Worker} or {@link Controller}.
    */
-  long usableMemoryInJvm();
+  long memoryPerTask();
 
   /**
-   * Amount of total JVM memory required for a particular amount of usable memory to be available.
-   *
-   * This may be an expensive operation. For example, the production implementation {@link MemoryIntrospectorImpl}
-   * estimates size of all lookups as part of computing this value.
+   * Computes the amount of total JVM memory that would be required for a particular memory allotment per task, i.e.,
+   * a particular return value from {@link #memoryPerTask()}.
    */
-  long computeJvmMemoryRequiredForUsableMemory(long usableMemory);
+  long computeJvmMemoryRequiredForTaskMemory(long memoryPerTask);
 
   /**
-   * Maximum number of queries that run simultaneously in this JVM.
-   *
-   * On workers, this is the maximum number of {@link Worker} that run simultaneously in this JVM. See
-   * {@link WorkerMemoryParameters} for how memory is divided among and within {@link WorkOrder} run by a worker.
-   *
-   * On controllers, this is the maximum number of {@link Controller} that run simultaneously. See
-   * {@link ControllerMemoryParameters} for how memory is used by controllers.
+   * Maximum number of tasks ({@link Worker} or {@link Controller}) that run simultaneously in this JVM.
    */
-  int numQueriesInJvm();
+  int numTasksInJvm();
 
   /**
-   * Maximum number of processing threads that can be used at once in this JVM.
+   * Maximum number of processing threads that can be used at once by each {@link Worker} or {@link Controller}.
    */
-  int numProcessorsInJvm();
+  int numProcessingThreads();
 }

@@ -19,7 +19,7 @@
 
 package org.apache.druid.query.aggregation.constant;
 
-import org.apache.commons.lang.math.RandomUtils;
+import org.apache.commons.lang3.RandomUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -52,7 +52,7 @@ public class LongConstantAggregatorTest
   @Test
   public void testFloat()
   {
-    Assert.assertEquals((float) randomVal, aggregator.getFloat(), 0.0001f);
+    Assert.assertEquals(randomVal, aggregator.getFloat(), 0.0001f);
   }
 
   @Test

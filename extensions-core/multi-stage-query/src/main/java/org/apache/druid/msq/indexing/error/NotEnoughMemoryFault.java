@@ -20,8 +20,10 @@
 package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.Objects;
 
@@ -35,6 +37,8 @@ public class NotEnoughMemoryFault extends BaseMSQFault
   private final long usableMemory;
   private final int serverWorkers;
   private final int serverThreads;
+  private final int inputWorkers;
+  private final int maxConcurrentStages;
 
   @JsonCreator
   public NotEnoughMemoryFault(
@@ -42,17 +46,32 @@ public class NotEnoughMemoryFault extends BaseMSQFault
       @JsonProperty("serverMemory") final long serverMemory,
       @JsonProperty("usableMemory") final long usableMemory,
       @JsonProperty("serverWorkers") final int serverWorkers,
-      @JsonProperty("serverThreads") final int serverThreads
+      @JsonProperty("serverThreads") final int serverThreads,
+      @JsonProperty("inputWorkers") final int inputWorkers,
+      @JsonProperty("maxConcurrentStages") final int maxConcurrentStages
   )
   {
     super(
         CODE,
-        "Not enough memory. Required at least %,d bytes. (total = %,d bytes; usable = %,d bytes; "
-        + "worker capacity = %,d; processing threads = %,d). Increase JVM memory with the -Xmx option"
-        + (serverWorkers > 1 ? " or reduce worker capacity on this server" : ""),
-        suggestedServerMemory,
+        "Not enough memory. "
+        + (suggestedServerMemory > 0
+           ? StringUtils.format("Minimum bytes[%,d] is needed for the current configuration. ", suggestedServerMemory)
+           : "")
+        + "(total bytes[%,d]; "
+        + "usable bytes[%,d]; "
+        + "input workers[%,d]; "
+        + "concurrent stages[%,d]; "
+        + "server worker capacity[%,d]; "
+        + "server processing threads[%,d]). "
+        + "Increase JVM memory with the -Xmx option"
+        + (inputWorkers > 1 ? ", or reduce maxNumTasks for this query" : "")
+        + (maxConcurrentStages > 1 ? ", or reduce maxConcurrentStages for this query" : "")
+        + (serverWorkers > 1 ? ", or reduce worker capacity on this server" : "")
+        + (serverThreads > 1 ? ", or reduce processing threads on this server" : ""),
         serverMemory,
         usableMemory,
+        inputWorkers,
+        maxConcurrentStages,
         serverWorkers,
         serverThreads
     );
@@ -62,9 +81,12 @@ public class NotEnoughMemoryFault extends BaseMSQFault
     this.usableMemory = usableMemory;
     this.serverWorkers = serverWorkers;
     this.serverThreads = serverThreads;
+    this.inputWorkers = inputWorkers;
+    this.maxConcurrentStages = maxConcurrentStages;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public long getSuggestedServerMemory()
   {
     return suggestedServerMemory;
@@ -94,6 +116,20 @@ public class NotEnoughMemoryFault extends BaseMSQFault
     return serverThreads;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public int getInputWorkers()
+  {
+    return inputWorkers;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public int getMaxConcurrentStages()
+  {
+    return maxConcurrentStages;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -107,12 +143,13 @@ public class NotEnoughMemoryFault extends BaseMSQFault
       return false;
     }
     NotEnoughMemoryFault that = (NotEnoughMemoryFault) o;
-    return
-        suggestedServerMemory == that.suggestedServerMemory
-        && serverMemory == that.serverMemory
-        && usableMemory == that.usableMemory
-        && serverWorkers == that.serverWorkers
-        && serverThreads == that.serverThreads;
+    return suggestedServerMemory == that.suggestedServerMemory
+           && serverMemory == that.serverMemory
+           && usableMemory == that.usableMemory
+           && serverWorkers == that.serverWorkers
+           && serverThreads == that.serverThreads
+           && inputWorkers == that.inputWorkers
+           && maxConcurrentStages == that.maxConcurrentStages;
   }
 
   @Override
@@ -124,7 +161,9 @@ public class NotEnoughMemoryFault extends BaseMSQFault
         serverMemory,
         usableMemory,
         serverWorkers,
-        serverThreads
+        serverThreads,
+        inputWorkers,
+        maxConcurrentStages
     );
   }
 
@@ -133,10 +172,12 @@ public class NotEnoughMemoryFault extends BaseMSQFault
   {
     return "NotEnoughMemoryFault{" +
            "suggestedServerMemory=" + suggestedServerMemory +
-           " bytes, serverMemory=" + serverMemory +
-           " bytes, usableMemory=" + usableMemory +
-           " bytes, serverWorkers=" + serverWorkers +
+           ", serverMemory=" + serverMemory +
+           ", usableMemory=" + usableMemory +
+           ", serverWorkers=" + serverWorkers +
            ", serverThreads=" + serverThreads +
+           ", inputWorkers=" + inputWorkers +
+           ", maxConcurrentStages=" + maxConcurrentStages +
            '}';
   }
 }

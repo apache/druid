@@ -19,6 +19,7 @@
 
 package org.apache.druid.java.util.common.guava;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import org.joda.time.DateTimeComparator;
 import org.joda.time.Interval;
@@ -49,6 +50,23 @@ public class Comparators
   public static <T> Ordering<T> alwaysEqual()
   {
     return (Ordering<T>) ALWAYS_EQUAL;
+  }
+
+  /**
+   * Creates an ordering which always gives priority to the specified value.
+   * Other values are considered equal to each other.
+   */
+  public static <T> Ordering<T> alwaysFirst(T value)
+  {
+    Preconditions.checkNotNull(value, "value cannot be null");
+
+    return Ordering.from((o1, o2) -> {
+      if (value.equals(o1)) {
+        return value.equals(o2) ? 0 : -1;
+      } else {
+        return value.equals(o2) ? 1 : 0;
+      }
+    });
   }
 
   @SuppressWarnings("unchecked")

@@ -149,7 +149,7 @@ parameters across the cluster at runtime.
 
 ### Task-related tables
 
-Task-related tables are created and used by the [Overlord](../design/overlord.md) and [MiddleManager](../design/middlemanager.md) when managing tasks.
+Task-related tables are created and used by the [Overlord](../design/overlord.md) and [Middle Manager](../design/middlemanager.md) when managing tasks.
 
 ### Audit table
 

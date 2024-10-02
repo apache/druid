@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
@@ -39,7 +40,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
   private DruidServer historicalT21;
   private DruidServer historicalT22;
 
-  private final String datasource = DS.WIKI;
+  private final String datasource = TestDataSource.WIKI;
   private final List<DataSegment> segments = Segments.WIKI_10X1D;
 
   @Override
@@ -73,7 +74,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
     startSimulation(sim);
     runCoordinatorCycle();
 
-    // Verify that that replicationThrottleLimit is honored
+    // Verify that replicationThrottleLimit is honored
     verifyValue(Metric.ASSIGNED_COUNT, 2L);
 
     loadQueuedSegments();
@@ -409,7 +410,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
 
     // Verify that all the segments are broadcast to all historicals
     // irrespective of throttle limit
-    verifyValue(Metric.ASSIGNED_COUNT, filterByDatasource(DS.WIKI), 30L);
+    verifyValue(Metric.ASSIGNED_COUNT, filterByDatasource(datasource), 30L);
     verifyNotEmitted(Metric.DROPPED_COUNT);
   }
 
@@ -517,7 +518,7 @@ public class SegmentLoadingTest extends CoordinatorSimulationBaseTest
                              .withServers(historicalT11, historicalT12)
                              .withDynamicConfig(withReplicationThrottleLimit(100))
                              .withRules(datasource, Load.on(Tier.T1, 1).forever())
-                             .withRules(DS.KOALA, Load.on(Tier.T1, 1).forever())
+                             .withRules(TestDataSource.KOALA, Load.on(Tier.T1, 1).forever())
                              .build();
 
     startSimulation(sim);

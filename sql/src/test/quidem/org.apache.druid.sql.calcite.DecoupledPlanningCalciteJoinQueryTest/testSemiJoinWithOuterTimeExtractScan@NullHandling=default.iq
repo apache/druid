@@ -1,0 +1,131 @@
+# testSemiJoinWithOuterTimeExtractScan@NullHandling=default case-crc:f91c4c1d
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT dim1, EXTRACT(MONTH FROM __time) FROM druid.foo
+ WHERE dim2 IN (
+   SELECT dim2
+   FROM druid.foo
+   WHERE dim1 = 'def'
+ ) AND dim1 <> '';
++------+--------+
+| dim1 | EXPR$1 |
++------+--------+
+| def  |      1 |
++------+--------+
+(1 row)
+
+!ok
+LogicalProject(dim1=[$1], EXPR$1=[EXTRACT(FLAG(MONTH), $0)])
+  LogicalJoin(condition=[=($2, $3)], joinType=[inner])
+    LogicalFilter(condition=[<>($1, '')])
+      LogicalProject(__time=[$0], dim1=[$1], dim2=[$2])
+        LogicalTableScan(table=[[druid, foo]])
+    LogicalAggregate(group=[{2}])
+      LogicalFilter(condition=[=($1, 'def')])
+        LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidProject(dim1=[$1], EXPR$1=[EXTRACT(FLAG(MONTH), $0)], druid=[logical])
+  DruidJoin(condition=[=($2, $3)], joinType=[inner])
+    DruidFilter(condition=[<>($1, '')])
+      DruidProject(__time=[$0], dim1=[$1], dim2=[$2], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidAggregate(group=[{2}], druid=[logical])
+      DruidFilter(condition=[=($1, 'def')])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "selector",
+            "dimension" : "dim1",
+            "value" : null
+          }
+        },
+        "columns" : [ "__time", "dim1", "dim2" ],
+        "columnTypes" : [ "LONG", "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "selector",
+          "dimension" : "dim1",
+          "value" : "def"
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "dim2",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim2\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "timestamp_extract(\"__time\",'MONTH','UTC')",
+    "outputType" : "LONG"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim1", "v0" ],
+  "columnTypes" : [ "STRING", "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

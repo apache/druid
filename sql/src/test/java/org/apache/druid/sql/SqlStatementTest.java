@@ -58,6 +58,7 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
 import org.hamcrest.MatcherAssert;
@@ -158,7 +159,8 @@ public class SqlStatementTest
         new CalciteRulesManager(ImmutableSet.of()),
         joinableFactoryWrapper,
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
 
     this.sqlStatementFactory = new SqlStatementFactory(

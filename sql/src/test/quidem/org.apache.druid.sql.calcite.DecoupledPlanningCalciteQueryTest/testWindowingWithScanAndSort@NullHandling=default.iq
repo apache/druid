@@ -1,8 +1,7 @@
-# testWindowingWithScanAndSort@NullHandling=default case-crc:bb1d6e53
+# testWindowingWithScanAndSort@NullHandling=default case-crc:45108080
 # quidem testcase reason: SLIGHTLY_WORSE_PLAN
 !set debug true
 !set defaultTimeout 300000
-!set enableWindowing true
 !set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
 !set sqlCurrentTimestamp 2000-01-01T00:00:00Z
@@ -142,7 +141,8 @@ DruidProject(ranking=[$2], trend_score=[$1], druid=[logical])
       "columnTypes" : [ "LONG", "DOUBLE", "LONG" ],
       "granularity" : {
         "type" : "all"
-      }
+      },
+      "legacy" : false
     }
   },
   "intervals" : {

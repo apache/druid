@@ -561,6 +561,26 @@ public abstract class AbstractStreamIndexingTest extends AbstractIndexerTest
           "wait for no more creation of indexing tasks"
       );
 
+      indexer.shutdownSupervisor(generatedTestConfig.getSupervisorId());
+      indexer.submitSupervisor(taskSpec);
+
+      ITRetryUtil.retryUntil(
+          () -> SupervisorStateManager.BasicState.IDLE.equals(indexer.getSupervisorStatus(generatedTestConfig.getSupervisorId())),
+          true,
+          10000,
+          30,
+          "Waiting for supervisor to be idle"
+      );
+      ITRetryUtil.retryUntil(
+          () -> indexer.getRunningTasks()
+                       .stream()
+                       .noneMatch(taskResponseObject -> taskResponseObject.getId().contains(dataSource)),
+          true,
+          1000,
+          10,
+          "wait for no more creation of indexing tasks"
+      );
+
       // Start generating remainning half of the data
       numWritten += streamGenerator.run(
           generatedTestConfig.getStreamName(),

@@ -90,6 +90,7 @@ exports[`ColumnTree matches snapshot 1`] = `
           usePortal={true}
         >
           <Blueprint5.Button
+            data-tooltip="Search settings"
             icon="settings"
           />
         </Blueprint5.Popover>
@@ -110,10 +111,10 @@ exports[`ColumnTree matches snapshot 1`] = `
                   aria-hidden={true}
                   autoLoad={true}
                   className="bp5-tree-node-icon"
+                  data-tooltip="TIMESTAMP"
                   icon="time"
                   tabIndex={-1}
                   tagName="span"
-                  title="TIMESTAMP"
                 />,
                 "id": "__time",
                 "label": <Blueprint5.Popover
@@ -151,10 +152,10 @@ exports[`ColumnTree matches snapshot 1`] = `
                   aria-hidden={true}
                   autoLoad={true}
                   className="bp5-tree-node-icon"
+                  data-tooltip="BIGINT"
                   icon="numerical"
                   tabIndex={-1}
                   tagName="span"
-                  title="BIGINT"
                 />,
                 "id": "added",
                 "label": <Blueprint5.Popover
@@ -192,10 +193,10 @@ exports[`ColumnTree matches snapshot 1`] = `
                   aria-hidden={true}
                   autoLoad={true}
                   className="bp5-tree-node-icon"
+                  data-tooltip="FLOAT"
                   icon="floating-point"
                   tabIndex={-1}
                   tagName="span"
-                  title="FLOAT"
                 />,
                 "id": "addedBy10",
                 "label": <Blueprint5.Popover

@@ -194,7 +194,7 @@ export interface ExecutionValue {
 
 export class Execution {
   static USE_TASK_PAYLOAD = true;
-  static USE_TASK_REPORTS = true;
+  static USE_TASK_REPORTS = false;
   static INLINE_DATASOURCE_MARKER = '__query_select';
 
   static getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined =
@@ -235,7 +235,7 @@ export class Execution {
     sqlQuery?: string,
     queryContext?: QueryContext,
   ): Execution {
-    const { queryId, schema, result, errorDetails } = asyncSubmitResult;
+    const { queryId, schema, result, errorDetails, stages, counters, warnings } = asyncSubmitResult;
 
     let queryResult: QueryResult | undefined;
     if (schema && result?.sampleRecords) {
@@ -255,14 +255,17 @@ export class Execution {
       };
     }
 
+    const { createdAt, durationMs, state } = asyncSubmitResult;
     return new Execution({
       engine: 'sql-msq-task',
       id: queryId,
-      startTime: new Date(asyncSubmitResult.createdAt),
-      duration: asyncSubmitResult.durationMs,
-      status: Execution.normalizeAsyncState(asyncSubmitResult.state),
+      startTime: new Date(createdAt),
+      duration: durationMs >= 0 ? durationMs : undefined,
+      status: Execution.normalizeAsyncState(state),
       sqlQuery,
       queryContext,
+      stages: Array.isArray(stages) && counters ? new Stages(stages, counters) : undefined,
+      warnings: Array.isArray(warnings) ? warnings : undefined,
       error: executionError,
       destination:
         typeof result?.dataSource === 'string'
@@ -333,7 +336,7 @@ export class Execution {
       status: Execution.normalizeTaskStatus(status),
       segmentStatus: segmentLoaderStatus,
       startTime: isNaN(startTime.getTime()) ? undefined : startTime,
-      duration: typeof durationMs === 'number' ? durationMs : undefined,
+      duration: typeof durationMs === 'number' && durationMs >= 0 ? durationMs : undefined,
       usageInfo: getUsageInfoFromStatusPayload(
         deepGet(taskReport, 'multiStageQuery.payload.status'),
       ),
@@ -437,6 +440,13 @@ export class Execution {
 
       _payload: this._payload,
     };
+  }
+
+  public changeEngine(engine: DruidEngine): Execution {
+    return new Execution({
+      ...this.valueOf(),
+      engine,
+    });
   }
 
   public changeSqlQuery(sqlQuery: string, queryContext?: QueryContext): Execution {

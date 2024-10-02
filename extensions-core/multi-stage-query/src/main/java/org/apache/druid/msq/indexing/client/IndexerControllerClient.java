@@ -125,11 +125,11 @@ public class IndexerControllerClient implements ControllerClient
   }
 
   @Override
-  public void postWorkerError(String workerId, MSQErrorReport errorWrapper) throws IOException
+  public void postWorkerError(MSQErrorReport errorWrapper) throws IOException
   {
     final String path = StringUtils.format(
         "/workerError/%s",
-        StringUtils.urlEncode(workerId)
+        StringUtils.urlEncode(errorWrapper.getTaskId())
     );
 
     doRequest(
@@ -152,7 +152,7 @@ public class IndexerControllerClient implements ControllerClient
   }
 
   @Override
-  public List<String> getTaskList() throws IOException
+  public List<String> getWorkerIds() throws IOException
   {
     final BytesFullResponseHolder retVal = doRequest(
         new RequestBuilder(HttpMethod.GET, "/taskList"),

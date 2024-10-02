@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.balancer;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
@@ -50,7 +51,7 @@ public class ReservoirSegmentSamplerTest
    * num segments = 10 x 100 days
    */
   private final List<DataSegment> segments =
-      CreateDataSegments.ofDatasource("wiki")
+      CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                         .forIntervals(100, Granularities.DAY)
                         .startingAt("2022-01-01")
                         .withNumPartitions(10)

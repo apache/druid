@@ -20,19 +20,22 @@
 package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.indexer.TaskInfo;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ProvisioningStrategy;
 import org.apache.druid.indexing.overlord.http.TaskStateLookup;
 import org.apache.druid.indexing.overlord.http.TotalWorkerCapacityResponse;
 import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -40,6 +43,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.TaskLookupType;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -49,6 +53,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -65,7 +70,7 @@ public class TaskQueryTool
   private final TaskStorage storage;
   private final TaskLockbox taskLockbox;
   private final TaskMaster taskMaster;
-  private final JacksonConfigManager configManager;
+  private final Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier;
   private final ProvisioningStrategy provisioningStrategy;
 
   @Inject
@@ -74,13 +79,13 @@ public class TaskQueryTool
       TaskLockbox taskLockbox,
       TaskMaster taskMaster,
       ProvisioningStrategy provisioningStrategy,
-      JacksonConfigManager configManager
+      Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier
   )
   {
     this.storage = storage;
     this.taskLockbox = taskLockbox;
     this.taskMaster = taskMaster;
-    this.configManager = configManager;
+    this.workerBehaviorConfigSupplier = workerBehaviorConfigSupplier;
     this.provisioningStrategy = provisioningStrategy;
   }
 
@@ -94,19 +99,12 @@ public class TaskQueryTool
   }
 
   /**
-   * Gets a List of Intervals locked by higher priority tasks for each datasource.
-   *
-   * @param minTaskPriority Minimum task priority for each datasource. Only the
-   *                        Intervals that are locked by Tasks with equal or
-   *                        higher priority than this are returned. Locked intervals
-   *                        for datasources that are not present in this Map are
-   *                        not returned.
-   * @return Map from Datasource to List of Intervals locked by Tasks that have
-   * priority greater than or equal to the {@code minTaskPriority} for that datasource.
+   * @param lockFilterPolicies Requests for active locks for various datasources
+   * @return Map from datasource to conflicting lock infos
    */
-  public Map<String, List<Interval>> getLockedIntervals(Map<String, Integer> minTaskPriority)
+  public Map<String, List<TaskLock>> getActiveLocks(List<LockFilterPolicy> lockFilterPolicies)
   {
-    return taskLockbox.getLockedIntervals(minTaskPriority);
+    return taskLockbox.getActiveLocks(lockFilterPolicies);
   }
 
   public List<TaskInfo<Task, TaskStatus>> getActiveTaskInfo(@Nullable String dataSource)
@@ -114,12 +112,17 @@ public class TaskQueryTool
     return storage.getTaskInfos(TaskLookup.activeTasksOnly(), dataSource);
   }
 
-  private List<TaskStatusPlus> getTaskStatusPlusList(
-      Map<TaskLookupType, TaskLookup> taskLookups,
-      @Nullable String dataSource
-  )
+  public Map<String, TaskStatus> getMultipleTaskStatuses(Set<String> taskIds)
   {
-    return storage.getTaskStatusPlusList(taskLookups, dataSource);
+    final Map<String, TaskStatus> result = Maps.newHashMapWithExpectedSize(taskIds.size());
+    for (String taskId : taskIds) {
+      final Optional<TaskStatus> optional = getTaskStatus(taskId);
+      if (optional.isPresent()) {
+        result.put(taskId, optional.get());
+      }
+    }
+
+    return result;
   }
 
   public Optional<Task> getTask(final String taskId)
@@ -150,6 +153,45 @@ public class TaskQueryTool
     return storage.getTaskInfo(taskId);
   }
 
+  public List<TaskStatusPlus> getAllActiveTasks()
+  {
+    final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+    if (taskQueue.isPresent()) {
+      // Serve active task statuses from memory
+      final List<TaskStatusPlus> taskStatusPlusList = new ArrayList<>();
+
+      // Use a dummy created time as this is not used by the caller, just needs to be non-null
+      final DateTime createdTime = DateTimes.nowUtc();
+
+      final List<Task> activeTasks = taskQueue.get().getTasks();
+      for (Task task : activeTasks) {
+        final Optional<TaskStatus> statusOptional = taskQueue.get().getTaskStatus(task.getId());
+        if (statusOptional.isPresent()) {
+          final TaskStatus status = statusOptional.get();
+          taskStatusPlusList.add(
+              new TaskStatusPlus(
+                  task.getId(),
+                  task.getGroupId(),
+                  task.getType(),
+                  createdTime,
+                  createdTime,
+                  status.getStatusCode(),
+                  null,
+                  status.getDuration(),
+                  status.getLocation(),
+                  task.getDataSource(),
+                  status.getErrorMsg()
+              )
+          );
+        }
+      }
+
+      return taskStatusPlusList;
+    } else {
+      return getTaskStatusPlusList(TaskStateLookup.ALL, null, null, 0, null);
+    }
+  }
+
   public List<TaskStatusPlus> getTaskStatusPlusList(
       TaskStateLookup state,
       @Nullable String dataSource,
@@ -178,7 +220,7 @@ public class TaskQueryTool
     // This way, we can use the snapshot from taskStorage as the source of truth for the set of tasks to process
     // and use the snapshot from taskRunner as a reference for potential task state updates happened
     // after the first snapshotting.
-    Stream<TaskStatusPlus> taskStatusPlusStream = getTaskStatusPlusList(
+    Stream<TaskStatusPlus> taskStatusPlusStream = getTaskStatusPlusStream(
         state,
         dataSource,
         createdTimeDuration,
@@ -244,7 +286,7 @@ public class TaskQueryTool
     return taskStatuses;
   }
 
-  private Stream<TaskStatusPlus> getTaskStatusPlusList(
+  private Stream<TaskStatusPlus> getTaskStatusPlusStream(
       TaskStateLookup state,
       @Nullable String dataSource,
       Duration createdTimeDuration,
@@ -280,10 +322,8 @@ public class TaskQueryTool
         throw new IAE("Unknown state: [%s]", state);
     }
 
-    final Stream<TaskStatusPlus> taskStatusPlusStream = getTaskStatusPlusList(
-        taskLookups,
-        dataSource
-    ).stream();
+    final Stream<TaskStatusPlus> taskStatusPlusStream
+        = storage.getTaskStatusPlusList(taskLookups, dataSource).stream();
     if (type != null) {
       return taskStatusPlusStream.filter(
           statusPlus -> type.equals(statusPlus == null ? null : statusPlus.getType())
@@ -375,10 +415,7 @@ public class TaskQueryTool
 
   public WorkerBehaviorConfig getLatestWorkerConfig()
   {
-    return configManager.watch(
-        WorkerBehaviorConfig.CONFIG_KEY,
-        WorkerBehaviorConfig.class
-    ).get();
+    return workerBehaviorConfigSupplier.get();
   }
 
 }

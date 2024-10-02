@@ -19,22 +19,13 @@
 
 package org.apache.druid.testing.tools;
 
-import com.fasterxml.jackson.databind.Module;
 import com.google.inject.Binder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.sql.guice.SqlBindings;
 
-import java.util.Collections;
-import java.util.List;
-
 public class SleepModule implements DruidModule
 {
-  @Override
-  public List<? extends Module> getJacksonModules()
-  {
-    return Collections.emptyList();
-  }
 
   @Override
   public void configure(Binder binder)

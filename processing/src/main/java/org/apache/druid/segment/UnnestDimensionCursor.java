@@ -29,7 +29,6 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 
@@ -74,6 +73,7 @@ public class UnnestDimensionCursor implements Cursor
   @MonotonicNonNull
   private IndexedInts indexedIntsForCurrentRow;
   private boolean needInitialization;
+  @MonotonicNonNull
   private SingleIndexInts indexIntsForRow;
   private final int nullId;
   private final int idOffset;
@@ -251,18 +251,12 @@ public class UnnestDimensionCursor implements Cursor
       public ColumnCapabilities getColumnCapabilities(String column)
       {
         if (outputName.equals(column)) {
-          return UnnestStorageAdapter.computeOutputColumnCapabilities(baseColumnSelectorFactory, unnestColumn);
+          return UnnestCursorFactory.computeOutputColumnCapabilities(baseColumnSelectorFactory, unnestColumn);
         }
 
         return baseColumnSelectorFactory.getColumnCapabilities(column);
       }
     };
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    return baseCursor.getTime();
   }
 
   @Override

@@ -36,6 +36,9 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.task.KillUnusedSegmentsTask;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
@@ -61,6 +64,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
@@ -141,7 +145,7 @@ public class OverlordResourceTest
         taskLockbox,
         taskMaster,
         provisioningStrategy,
-        configManager
+        () -> configManager.watch(WorkerBehaviorConfig.CONFIG_KEY, WorkerBehaviorConfig.class).get()
     );
     indexerMetadataStorageAdapter = EasyMock.createStrictMock(IndexerMetadataStorageAdapter.class);
     req = EasyMock.createStrictMock(HttpServletRequest.class);
@@ -1057,31 +1061,33 @@ public class OverlordResourceTest
   @Test
   public void testGetLockedIntervals() throws Exception
   {
-    final Map<String, Integer> minTaskPriority = Collections.singletonMap("ds1", 0);
-    final Map<String, List<Interval>> expectedLockedIntervals = Collections.singletonMap(
+    final List<LockFilterPolicy> lockFilterPolicies = ImmutableList.of(
+        new LockFilterPolicy("ds1", 25, null, null)
+    );
+    final Map<String, List<Interval>> expectedIntervals = Collections.singletonMap(
         "ds1",
         Arrays.asList(
             Intervals.of("2012-01-01/2012-01-02"),
-            Intervals.of("2012-01-02/2012-01-03")
+            Intervals.of("2012-01-01/2012-01-02")
         )
     );
 
-    EasyMock.expect(taskLockbox.getLockedIntervals(minTaskPriority))
-            .andReturn(expectedLockedIntervals);
+    EasyMock.expect(taskLockbox.getLockedIntervals(lockFilterPolicies))
+            .andReturn(expectedIntervals);
     replayAll();
 
-    final Response response = overlordResource.getDatasourceLockedIntervals(minTaskPriority);
+    final Response response = overlordResource.getDatasourceLockedIntervals(lockFilterPolicies);
     Assert.assertEquals(200, response.getStatus());
 
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    Map<String, List<Interval>> observedLockedIntervals = jsonMapper.readValue(
+    Map<String, List<Interval>> observedIntervals = jsonMapper.readValue(
         jsonMapper.writeValueAsString(response.getEntity()),
         new TypeReference<Map<String, List<Interval>>>()
         {
         }
     );
 
-    Assert.assertEquals(expectedLockedIntervals, observedLockedIntervals);
+    Assert.assertEquals(expectedIntervals, observedIntervals);
   }
 
   @Test
@@ -1092,7 +1098,65 @@ public class OverlordResourceTest
     Response response = overlordResource.getDatasourceLockedIntervals(null);
     Assert.assertEquals(400, response.getStatus());
 
-    response = overlordResource.getDatasourceLockedIntervals(Collections.emptyMap());
+    response = overlordResource.getDatasourceLockedIntervals(Collections.emptyList());
+    Assert.assertEquals(400, response.getStatus());
+  }
+
+  @Test
+  public void testGetActiveLocks() throws Exception
+  {
+    final List<LockFilterPolicy> lockFilterPolicies = ImmutableList.of(
+        new LockFilterPolicy("ds1", 25, null, null)
+    );
+    final Map<String, List<TaskLock>> expectedLocks = Collections.singletonMap(
+        "ds1",
+        Arrays.asList(
+            new TimeChunkLock(
+                TaskLockType.REPLACE,
+                "groupId",
+                "datasource",
+                Intervals.of("2012-01-01/2012-01-02"),
+                "version",
+                25
+            ),
+            new TimeChunkLock(
+                TaskLockType.EXCLUSIVE,
+                "groupId",
+                "datasource",
+                Intervals.of("2012-01-02/2012-01-03"),
+                "version",
+                75
+                )
+        )
+    );
+
+    EasyMock.expect(taskLockbox.getActiveLocks(lockFilterPolicies))
+            .andReturn(expectedLocks);
+    replayAll();
+
+    final Response response = overlordResource.getActiveLocks(lockFilterPolicies);
+    Assert.assertEquals(200, response.getStatus());
+
+    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    Map<String, List<TaskLock>> observedLocks = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(response.getEntity()),
+        new TypeReference<TaskLockResponse>()
+        {
+        }
+    ).getDatasourceToLocks();
+
+    Assert.assertEquals(expectedLocks, observedLocks);
+  }
+
+  @Test
+  public void testGetActiveLocksWithEmptyBody()
+  {
+    replayAll();
+
+    Response response = overlordResource.getActiveLocks(null);
+    Assert.assertEquals(400, response.getStatus());
+
+    response = overlordResource.getActiveLocks(Collections.emptyList());
     Assert.assertEquals(400, response.getStatus());
   }
 

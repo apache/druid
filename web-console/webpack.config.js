@@ -24,6 +24,8 @@ const webpack = require('webpack');
 
 const { version } = require('./package.json');
 
+const supportedLocales = ['en-US'];
+
 function friendlyErrorFormatter(e) {
   return `${e.severity}: ${e.content} [TS${e.code}]\n    at (${e.file}:${e.line}:${e.character})`;
 }
@@ -47,6 +49,13 @@ module.exports = env => {
       'global': {},
       'NODE_ENV': JSON.stringify(mode),
     }),
+
+    // Prune date-fns locales to only those that are supported
+    // https://date-fns.org/v2.30.0/docs/webpack
+    new webpack.ContextReplacementPlugin(
+      /^date-fns[/\\]locale$/,
+      new RegExp(`\\.[/\\\\](${supportedLocales.join('|')})[/\\\\]index\\.js$`),
+    ),
   ];
 
   return {
@@ -137,7 +146,7 @@ module.exports = env => {
                     // have access to them at this point. None of the components that use svg icons
                     // via CSS are themselves being used by the web console, so we can safely omit the icons.
                     //
-                    // TODO: Re-evaluate after upgrading to Blueprint v5
+                    // TODO: Re-evaluate after upgrading to Blueprint v6
                     'svg-icon($_icon, $_path)': () => new SassString('transparent'),
                   },
                 },

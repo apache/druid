@@ -93,6 +93,10 @@ The request body takes the following properties:
         {
             "type": "VARCHAR",
             "value": "bar"
+        },
+        {
+            "type": "ARRAY",
+            "value": [-25.7, null, 36.85]
         }
     ]
     ```
@@ -629,9 +633,20 @@ Retrieves information about the query associated with the given query ID. The re
   - `sizeInBytes`: the size of the page.
   - `id`: the page number that you can use to reference a specific page when you get query results.
 
+If the optional query parameter `detail` is supplied, then the response also includes the following:
+- A `stages` object that summarizes information about the different stages being used for query execution, such as stage number, phase, start time, duration, input and output information, processing methods, and partitioning.
+- A `counters` object that provides details on the rows, bytes, and files processed at various stages for each worker across different channels, along with sort progress.
+- A `warnings` object that provides details about any warnings.
+
 #### URL
 
 `GET` `/druid/v2/sql/statements/{queryId}`
+
+#### Query parameters
+* `detail` (optional)
+    * Type: Boolean
+    * Default: false
+    * Fetch additional details about the query, which includes the information about different stages, counters for each stage, and any warnings.
 
 #### Responses
 
@@ -672,7 +687,7 @@ The following example retrieves the status of a query with specified ID `query-9
 
 
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804?detail=true"
 ```
 
 </TabItem>
@@ -680,7 +695,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-9b93f6f7-ab0e-4
 
 
 ```HTTP
-GET /druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804 HTTP/1.1
+GET /druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804?detail=true HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
@@ -835,7 +850,421 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "sizeInBytes": 375
             }
         ]
-    }
+    },
+    "stages": [
+        {
+            "stageNumber": 0,
+            "definition": {
+                "id": "query-9b93f6f7-ab0e-48f5-986a-3520f84f0804_0",
+                "input": [
+                    {
+                        "type": "table",
+                        "dataSource": "wikipedia",
+                        "intervals": [
+                            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+                        ],
+                        "filter": {
+                            "type": "equals",
+                            "column": "user",
+                            "matchValueType": "STRING",
+                            "matchValue": "BlueMoon2662"
+                        },
+                        "filterFields": [
+                            "user"
+                        ]
+                    }
+                ],
+                "processor": {
+                    "type": "scan",
+                    "query": {
+                        "queryType": "scan",
+                        "dataSource": {
+                            "type": "inputNumber",
+                            "inputNumber": 0
+                        },
+                        "intervals": {
+                            "type": "intervals",
+                            "intervals": [
+                                "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+                            ]
+                        },
+                        "virtualColumns": [
+                            {
+                                "type": "expression",
+                                "name": "v0",
+                                "expression": "'BlueMoon2662'",
+                                "outputType": "STRING"
+                            }
+                        ],
+                        "resultFormat": "compactedList",
+                        "limit": 1001,
+                        "filter": {
+                            "type": "equals",
+                            "column": "user",
+                            "matchValueType": "STRING",
+                            "matchValue": "BlueMoon2662"
+                        },
+                        "columns": [
+                            "__time",
+                            "added",
+                            "channel",
+                            "cityName",
+                            "comment",
+                            "commentLength",
+                            "countryIsoCode",
+                            "countryName",
+                            "deleted",
+                            "delta",
+                            "deltaBucket",
+                            "diffUrl",
+                            "flags",
+                            "isAnonymous",
+                            "isMinor",
+                            "isNew",
+                            "isRobot",
+                            "isUnpatrolled",
+                            "metroCode",
+                            "namespace",
+                            "page",
+                            "regionIsoCode",
+                            "regionName",
+                            "v0"
+                        ],
+                        "context": {
+                            "__resultFormat": "array",
+                            "__user": "allowAll",
+                            "executionMode": "async",
+                            "finalize": true,
+                            "maxNumTasks": 2,
+                            "maxParseExceptions": 0,
+                            "queryId": "33b53acb-7533-4880-a81b-51c16c489eab",
+                            "scanSignature": "[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"channel\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"comment\",\"type\":\"STRING\"},{\"name\":\"commentLength\",\"type\":\"LONG\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"deleted\",\"type\":\"LONG\"},{\"name\":\"delta\",\"type\":\"LONG\"},{\"name\":\"deltaBucket\",\"type\":\"LONG\"},{\"name\":\"diffUrl\",\"type\":\"STRING\"},{\"name\":\"flags\",\"type\":\"STRING\"},{\"name\":\"isAnonymous\",\"type\":\"STRING\"},{\"name\":\"isMinor\",\"type\":\"STRING\"},{\"name\":\"isNew\",\"type\":\"STRING\"},{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"isUnpatrolled\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"STRING\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"page\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"v0\",\"type\":\"STRING\"}]",
+                            "sqlOuterLimit": 1001,
+                            "sqlQueryId": "33b53acb-7533-4880-a81b-51c16c489eab",
+                            "sqlStringifyArrays": false
+                        },
+                        "columnTypes": [
+                            "LONG",
+                            "LONG",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "LONG",
+                            "STRING",
+                            "STRING",
+                            "LONG",
+                            "LONG",
+                            "LONG",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING"
+                        ],
+                        "granularity": {
+                            "type": "all"
+                        },
+                        "legacy": false
+                    }
+                },
+                "signature": [
+                    {
+                        "name": "__boost",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "__time",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "added",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "channel",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "cityName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "comment",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "commentLength",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "countryIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "countryName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "deleted",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "delta",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "deltaBucket",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "diffUrl",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "flags",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isAnonymous",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isMinor",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isNew",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isRobot",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isUnpatrolled",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "metroCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "namespace",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "page",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "v0",
+                        "type": "STRING"
+                    }
+                ],
+                "shuffleSpec": {
+                    "type": "mix"
+                },
+                "maxWorkerCount": 1
+            },
+            "phase": "FINISHED",
+            "workerCount": 1,
+            "partitionCount": 1,
+            "shuffle": "mix",
+            "output": "localStorage",
+            "startTime": "2024-07-31T15:20:21.255Z",
+            "duration": 103
+        },
+        {
+            "stageNumber": 1,
+            "definition": {
+                "id": "query-9b93f6f7-ab0e-48f5-986a-3520f84f0804_1",
+                "input": [
+                    {
+                        "type": "stage",
+                        "stage": 0
+                    }
+                ],
+                "processor": {
+                    "type": "limit",
+                    "limit": 1001
+                },
+                "signature": [
+                    {
+                        "name": "__boost",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "__time",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "added",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "channel",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "cityName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "comment",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "commentLength",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "countryIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "countryName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "deleted",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "delta",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "deltaBucket",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "diffUrl",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "flags",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isAnonymous",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isMinor",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isNew",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isRobot",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isUnpatrolled",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "metroCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "namespace",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "page",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "v0",
+                        "type": "STRING"
+                    }
+                ],
+                "shuffleSpec": {
+                    "type": "maxCount",
+                    "clusterBy": {
+                        "columns": [
+                            {
+                                "columnName": "__boost",
+                                "order": "ASCENDING"
+                            }
+                        ]
+                    },
+                    "partitions": 1
+                },
+                "maxWorkerCount": 1
+            },
+            "phase": "FINISHED",
+            "workerCount": 1,
+            "partitionCount": 1,
+            "shuffle": "globalSort",
+            "output": "localStorage",
+            "startTime": "2024-07-31T15:20:21.355Z",
+            "duration": 10,
+            "sort": true
+        }
+    ],
+    "counters": {
+        "0": {
+            "0": {
+                "input0": {
+                    "type": "channel",
+                    "rows": [
+                        24433
+                    ],
+                    "bytes": [
+                        7393933
+                    ],
+                    "files": [
+                        22
+                    ],
+                    "totalFiles": [
+                        22
+                    ]
+                }
+            }
+        },
+        "1": {
+            "0": {
+                "sortProgress": {
+                    "type": "sortProgress",
+                    "totalMergingLevels": -1,
+                    "levelToTotalBatches": {},
+                    "levelToMergedBatches": {},
+                    "totalMergersForUltimateLevel": -1,
+                    "triviallyComplete": true,
+                    "progressDigest": 1
+                }
+            }
+        }
+    },
+    "warnings": []
 }
   ```
 </details>

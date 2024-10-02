@@ -25,6 +25,7 @@ import {
   Intent,
   Tab,
   Tabs,
+  TabsExpander,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
@@ -40,10 +41,11 @@ import { Api } from '../../../singletons';
 import type { QueryExplanation } from '../../../utils';
 import {
   deepGet,
-  formatSignature,
+  formatColumnMappingsAndSignature,
   getDruidErrorMessage,
   nonEmptyArray,
   queryDruidSql,
+  queryDruidSqlDart,
 } from '../../../utils';
 
 import './explain-dialog.scss';
@@ -94,13 +96,25 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
       };
 
       let result: any[];
-      try {
-        result =
-          engine === 'sql-msq-task'
-            ? (await Api.instance.post(`/druid/v2/sql/task`, payload)).data
-            : await queryDruidSql(payload);
-      } catch (e) {
-        throw new Error(getDruidErrorMessage(e));
+      switch (engine) {
+        case 'sql-native':
+          result = await queryDruidSql(payload);
+          break;
+
+        case 'sql-msq-task':
+          try {
+            result = (await Api.instance.post(`/druid/v2/sql/task`, payload)).data;
+          } catch (e) {
+            throw new Error(getDruidErrorMessage(e));
+          }
+          break;
+
+        case 'sql-msq-dart':
+          result = await queryDruidSqlDart(payload);
+          break;
+
+        default:
+          throw new Error(`Explain not supported for engine ${engine}`);
       }
 
       const plan = deepGet(result, '0.PLAN');
@@ -141,7 +155,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
           />
         </FormGroup>
         <FormGroup className="signature-group" label="Signature">
-          <InputGroup defaultValue={formatSignature(queryExplanation)} readOnly />
+          <InputGroup defaultValue={formatColumnMappingsAndSignature(queryExplanation)} readOnly />
         </FormGroup>
         {openQueryLabel && (
           <Button
@@ -180,7 +194,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
               panel={renderQueryExplanation(queryExplanation)}
             />
           ))}
-          <Tabs.Expander />
+          <TabsExpander />
         </Tabs>
       );
     }

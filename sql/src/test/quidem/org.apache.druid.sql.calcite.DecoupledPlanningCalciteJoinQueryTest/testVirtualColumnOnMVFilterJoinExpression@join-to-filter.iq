@@ -1,5 +1,5 @@
-# testVirtualColumnOnMVFilterJoinExpression@join-to-filter case-crc:8f235220
-# quidem testcase reason: SLIGHTLY_WORSE_PLAN
+# testVirtualColumnOnMVFilterJoinExpression@join-to-filter case-crc:30584b55
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false
@@ -70,7 +70,8 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
         "columnTypes" : [ "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "right" : {
@@ -102,7 +103,8 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
         "columnTypes" : [ "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "rightPrefix" : "j0.",
@@ -118,6 +120,7 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
   "columnTypes" : [ "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan

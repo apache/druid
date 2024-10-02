@@ -20,14 +20,10 @@
 package org.apache.druid.quidem;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
-import com.google.inject.TypeLiteral;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -36,59 +32,38 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycleFactory;
-import org.apache.druid.server.QueryScheduler;
-import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.server.log.RequestLogger;
-import org.apache.druid.server.log.TestRequestLogger;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.server.security.AuthenticatorMapper;
-import org.apache.druid.server.security.AuthorizerMapper;
-import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.avatica.AvaticaMonitor;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ConfigurationInstance;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
-import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
-import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
-import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.Builder;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
-import org.apache.druid.sql.guice.SqlModule;
-import org.apache.http.NameValuePair;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.client.utils.URLEncodedUtils;
 import org.eclipse.jetty.server.Server;
 
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -98,10 +73,13 @@ public class DruidAvaticaTestDriver implements Driver
     new DruidAvaticaTestDriver().register();
   }
 
-  public static final String URI_PREFIX = "druidtest://";
+  public static final String SCHEME = "druidtest";
+  public static final String URI_PREFIX = SCHEME + "://";
   public static final String DEFAULT_URI = URI_PREFIX + "/";
 
-  static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore();
+  static final SqlTestFrameworkConfigStore CONFIG_STORE = new SqlTestFrameworkConfigStore(
+      x -> new AvaticaBasedTestConnectionSupplier(x)
+  );
 
   public DruidAvaticaTestDriver()
   {
@@ -114,13 +92,8 @@ public class DruidAvaticaTestDriver implements Driver
       return null;
     }
     try {
-      SqlTestFrameworkConfig config = buildConfigfromURIParams(url);
-
-      ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(
-          config,
-          x -> new AvaticaBasedTestConnectionSupplier(x)
-      );
-
+      SqlTestFrameworkConfig config = SqlTestFrameworkConfig.fromURL(url);
+      ConfigurationInstance ci = CONFIG_STORE.getConfigurationInstance(config);
       AvaticaJettyServer server = ci.framework.injector().getInstance(AvaticaJettyServer.class);
       return server.getConnection(info);
     }
@@ -148,9 +121,13 @@ public class DruidAvaticaTestDriver implements Driver
 
     @Provides
     @LazySingleton
-    public DruidConnectionExtras getConnectionExtras(ObjectMapper objectMapper)
+    public DruidConnectionExtras getConnectionExtras(
+        ObjectMapper objectMapper,
+        DruidHookDispatcher druidHookDispatcher,
+        @Named("isExplainSupported") Boolean isExplainSupported
+    )
     {
-      return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper);
+      return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper, druidHookDispatcher, isExplainSupported);
     }
 
     @Provides
@@ -250,31 +227,12 @@ public class DruidAvaticaTestDriver implements Driver
     public void configureGuice(DruidInjectorBuilder builder)
     {
       delegate.configureGuice(builder);
-      TestRequestLogger testRequestLogger = new TestRequestLogger();
       builder.addModule(connectionModule);
       builder.addModule(
           binder -> {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-            binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
-            binder.bind(AuthorizerMapper.class).toInstance(CalciteTests.TEST_AUTHORIZER_MAPPER);
-            binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
-            binder.bind(RequestLogger.class).toInstance(testRequestLogger);
-            binder.bind(String.class)
-                .annotatedWith(DruidSchemaName.class)
-                .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
-            binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
-            binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
-            binder.bind(QueryScheduler.class)
-                .toProvider(QuerySchedulerProvider.class)
-                .in(LazySingleton.class);
-            binder.install(new SqlModule.SqlStatementFactoryModule());
-            binder.bind(new TypeLiteral<Supplier<DefaultQueryConfig>>()
-            {
-            }).toInstance(Suppliers.ofInstance(new DefaultQueryConfig(ImmutableMap.of())));
-            binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
-            binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
           }
       );
     }
@@ -328,6 +286,12 @@ public class DruidAvaticaTestDriver implements Driver
     {
       return delegate.getPlannerComponentSupplier();
     }
+
+    @Override
+    public Boolean isExplainSupported()
+    {
+      return delegate.isExplainSupported();
+    }
   }
 
   protected File createTempFolder(String prefix)
@@ -347,24 +311,6 @@ public class DruidAvaticaTestDriver implements Driver
       }
     });
     return tempDir;
-  }
-
-  public static SqlTestFrameworkConfig buildConfigfromURIParams(String url) throws SQLException
-  {
-    Map<String, String> queryParams;
-    queryParams = new HashMap<>();
-    try {
-      List<NameValuePair> params = URLEncodedUtils.parse(new URI(url), StandardCharsets.UTF_8);
-      for (NameValuePair pair : params) {
-        queryParams.put(pair.getName(), pair.getValue());
-      }
-      // possible caveat: duplicate entries overwrite earlier ones
-    }
-    catch (URISyntaxException e) {
-      throw new SQLException("Can't decode URI", e);
-    }
-
-    return new SqlTestFrameworkConfig(queryParams);
   }
 
   private void register()

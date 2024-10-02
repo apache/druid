@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>31.0.0-SNAPSHOT</version>
+    <version>32.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -231,17 +231,18 @@
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
         <module>extensions-contrib/kubernetes-overlord-extensions</module>
+        <module>extensions-contrib/grpc-query</module>
         <module>extensions-contrib/druid-iceberg-extensions</module>
         <module>extensions-contrib/druid-deltalake-extensions</module>
         <module>extensions-contrib/spectator-histogram</module>
         <module>extensions-contrib/rabbit-stream-indexing-service</module>
-
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
         <module>integration-tests-ex/tools</module>
         <module>integration-tests-ex/image</module>
         <module>integration-tests-ex/cases</module>
+        <module>quidem-ut</module>
     </modules>
 
     <repositories>
@@ -506,6 +507,10 @@
                   <exclusion>
                     <groupId>com.google.guava</groupId>
                     <artifactId>guava</artifactId>
+                  </exclusion>
+                  <exclusion>
+                      <groupId>net.hydromatic</groupId>
+                      <artifactId>aggdesigner-algorithm</artifactId>
                   </exclusion>
                 </exclusions>
             </dependency>
@@ -1362,6 +1367,11 @@
               </exclusion>
             </exclusions>
           </dependency>
+          <dependency>
+              <groupId>org.jruby.joni</groupId>
+              <artifactId>joni</artifactId>
+              <version>2.1.34</version>
+          </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -1390,6 +1400,11 @@
                         <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-testing-frameworks</artifactId>
                         <version>2.6.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-apache</artifactId>
+                        <version>1.2.2</version>
                     </dependency>
                 </dependencies>
             </plugin>
@@ -1764,8 +1779,6 @@
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
                             ${jdk.security.manager.allow.argLine}
-                            <!-- Bump up memory from 1.5 GB to 2 GB. This is particularly needed for JDK 17 where
-                            we have jfr profiler enabled which adds additional memory pressure. -->
                             -Xmx2048m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
@@ -1777,6 +1790,8 @@
                             -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
                             -Daws.region=us-east-1 <!-- required for s3-related unit tests -->
                             -Ddruid.test.stupidPool.poison=true
+                            -XX:OnOutOfMemoryError=${project.parent.basedir}/dev/chmod-heap-dumps.sh
+                            -XX:HeapDumpPath=${project.parent.basedir}/target
                             <!--@TODO After fixing https://github.com/apache/druid/issues/4964 remove this parameter-->
                             -Ddruid.indexing.doubleStorage=double
                             ${jfrProfilerArgLine}

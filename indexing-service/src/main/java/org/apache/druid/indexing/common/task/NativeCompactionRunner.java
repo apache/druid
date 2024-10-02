@@ -88,7 +88,7 @@ public class NativeCompactionRunner implements CompactionRunner
       CompactionTask compactionTask
   )
   {
-    return new CompactionConfigValidationResult(true, null);
+    return CompactionConfigValidationResult.success();
   }
 
   /**

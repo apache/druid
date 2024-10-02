@@ -30,8 +30,10 @@ import type {
   QueryWithContext,
 } from '../../druid-models';
 import {
+  DEFAULT_SERVER_QUERY_CONTEXT,
   Execution,
   externalConfigToIngestQueryPattern,
+  getQueryContextKey,
   ingestQueryPatternToQuery,
 } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
@@ -65,12 +67,20 @@ export interface SqlDataLoaderViewProps {
   goToTask(taskId: string): void;
   goToTaskGroup(taskGroupId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
+  serverQueryContext?: QueryContext;
 }
 
 export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
   props: SqlDataLoaderViewProps,
 ) {
-  const { capabilities, goToQuery, goToTask, goToTaskGroup, getClusterCapacity } = props;
+  const {
+    capabilities,
+    goToQuery,
+    goToTask,
+    goToTaskGroup,
+    getClusterCapacity,
+    serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
+  } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
   const [externalConfigStep, setExternalConfigStep] = useState<Partial<ExternalConfig>>({});
   const [content, setContent] = useLocalStorageState<LoaderContent | undefined>(
@@ -138,6 +148,17 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
         <SchemaStep
           queryString={content.queryString}
           onQueryStringChange={queryString => setContent({ ...content, queryString })}
+          forceSegmentSortByTime={getQueryContextKey(
+            'forceSegmentSortByTime',
+            content.queryContext || {},
+            serverQueryContext,
+          )}
+          changeForceSegmentSortByTime={forceSegmentSortByTime =>
+            setContent({
+              ...content,
+              queryContext: { ...content?.queryContext, forceSegmentSortByTime },
+            })
+          }
           enableAnalyze={false}
           goToQuery={() => goToQuery(content)}
           onBack={() => setContent(undefined)}
@@ -187,6 +208,7 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
               clusterCapacity={capabilities.getMaxTaskSlots()}
               queryContext={content.queryContext || {}}
               changeQueryContext={queryContext => setContent({ ...content, queryContext })}
+              defaultQueryContext={serverQueryContext}
               minimal
             />
           }
@@ -234,7 +256,6 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
         <TitleFrame title="Load data" subtitle="Select input type">
           <InputSourceStep
             initInputSource={inputSource}
-            mode="sampler"
             onSet={(inputSource, inputFormat) => {
               setExternalConfigStep({ inputSource, inputFormat });
             }}

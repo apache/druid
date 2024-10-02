@@ -34,8 +34,8 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -69,11 +69,13 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.nested.NestedPathField;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest.NestedComponentSupplier;
+import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
@@ -196,7 +198,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     public void configureGuice(DruidInjectorBuilder builder)
     {
       super.configureGuice(builder);
-      builder.addModule(new NestedDataModule());
     }
 
     @SuppressWarnings("resource")
@@ -207,7 +208,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         final Injector injector
     )
     {
-      NestedDataModule.registerHandlersAndSerde();
+      BuiltInTypesModule.registerHandlersAndSerde();
       final QueryableIndex index =
           IndexBuilder.create()
                       .tmpDir(tempDirProducer.newTempFolder())
@@ -4922,6 +4923,55 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testJsonMerging()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_MERGE('{\"a\":\"x\"}',JSON_OBJECT(KEY 'x' VALUE JSON_VALUE(nest, '$.x')))\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "json_merge('{\\u0022a\\u0022:\\u0022x\\u0022}',json_object('x',\"v1\"))",
+                          ColumnType.NESTED_DATA,
+                          queryFramework().macroTable()
+                      ),
+                      new NestedFieldVirtualColumn(
+                          "nest",
+                          "v1",
+                          ColumnType.STRING,
+                          ImmutableList.of(
+                            new NestedPathField("x")
+                          ),
+                          false,
+                          null,
+                          false
+                      )
+                  )
+                  .columns("v0")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"{\"a\":\"x\",\"x\":\"100\"}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"},
+            new Object[]{"{\"a\":\"x\",\"x\":\"200\"}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"},
+            new Object[]{"{\"a\":\"x\",\"x\":\"100\"}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.NESTED_DATA)
+                    .build()
+    );
+  }
+
+  @Test
   public void testCompositionTyping()
   {
     testQuery(
@@ -7298,6 +7348,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @NotYetSupported(Modes.ERROR_CANNOT_TRANSLATE_COUNT_DISTINCT)
   @Test
   public void testApproxCountDistinctOnUnsupportedComplexColumn()
   {

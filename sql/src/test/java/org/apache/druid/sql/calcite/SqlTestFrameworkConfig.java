@@ -30,15 +30,23 @@ import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.quidem.DruidAvaticaTestDriver;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.reflections.Configuration;
 import org.reflections.Reflections;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.util.ClasspathHelper;
+import org.reflections.util.ConfigurationBuilder;
+import org.reflections.util.FilterBuilder;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
@@ -51,6 +59,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -224,11 +234,18 @@ public class SqlTestFrameworkConfig
 
   public static class SqlTestFrameworkConfigStore implements Closeable
   {
+    private final Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper;
+
+    public SqlTestFrameworkConfigStore(
+        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper)
+    {
+      this.queryComponentSupplierWrapper = queryComponentSupplierWrapper;
+    }
+
     Map<SqlTestFrameworkConfig, ConfigurationInstance> configMap = new HashMap<>();
 
     public ConfigurationInstance getConfigurationInstance(
-        SqlTestFrameworkConfig config,
-        Function<QueryComponentSupplier, QueryComponentSupplier> queryComponentSupplierWrapper) throws Exception
+        SqlTestFrameworkConfig config) throws Exception
     {
       ConfigurationInstance ret = configMap.get(config);
       if (!configMap.containsKey(config)) {
@@ -267,7 +284,7 @@ public class SqlTestFrameworkConfig
    */
   public static class Rule implements AfterAllCallback, BeforeEachCallback
   {
-    SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore();
+    SqlTestFrameworkConfigStore configStore = new SqlTestFrameworkConfigStore(Function.identity());
     private SqlTestFrameworkConfig config;
     private Method method;
     private String testName;
@@ -318,7 +335,7 @@ public class SqlTestFrameworkConfig
 
     public SqlTestFramework get() throws Exception
     {
-      return configStore.getConfigurationInstance(config, Function.identity()).framework;
+      return configStore.getConfigurationInstance(config).framework;
     }
 
     public <T extends Annotation> T getAnnotation(Class<T> annotationType)
@@ -344,6 +361,7 @@ public class SqlTestFrameworkConfig
           .minTopNThreshold(config.minTopNThreshold)
           .mergeBufferCount(config.numMergeBuffers)
           .withOverrideModule(config.resultCache.makeModule());
+
       framework = builder.build();
     }
 
@@ -393,10 +411,41 @@ public class SqlTestFrameworkConfig
     if (def.minTopNThreshold != minTopNThreshold) {
       map.put("minTopNThreshold", String.valueOf(minTopNThreshold));
     }
+    if (def.componentSupplier != componentSupplier) {
+      map.put("componentSupplier", componentSupplier.getSimpleName());
+    }
     if (!equals(new SqlTestFrameworkConfig(map))) {
       throw new IAE("Can't reproduce config via map!");
     }
     return map;
+  }
+
+  public static SqlTestFrameworkConfig fromURL(String url) throws SQLException
+  {
+
+    Map<String, String> queryParams;
+    queryParams = new HashMap<>();
+    try {
+      URI uri = new URI(url);
+      if (!DruidAvaticaTestDriver.SCHEME.equals(uri.getScheme())) {
+        throw new SQLException(
+            StringUtils.format("URI [%s] is invalid ; only scheme [%s] is supported.", url, DruidAvaticaTestDriver.SCHEME)
+        );
+      }
+      if (uri.getHost() != null || uri.getPort() != -1) {
+        throw new SQLException(StringUtils.format("URI [%s] is invalid ; only query parameters are supported.", url));
+      }
+      List<NameValuePair> params = URLEncodedUtils.parse(uri, StandardCharsets.UTF_8);
+      for (NameValuePair pair : params) {
+        queryParams.put(pair.getName(), pair.getValue());
+      }
+      // possible caveat: duplicate entries overwrite earlier ones
+    }
+    catch (URISyntaxException e) {
+      throw new SQLException("Can't decode URI", e);
+    }
+
+    return new SqlTestFrameworkConfig(queryParams);
   }
 
   abstract static class ConfigOptionProcessor<T>
@@ -459,7 +508,15 @@ public class SqlTestFrameworkConfig
         @Override
         public Set<Class<? extends QueryComponentSupplier>> load(String pkg)
         {
-          return new Reflections(pkg).getSubTypesOf(QueryComponentSupplier.class);
+          Configuration cfg = new ConfigurationBuilder()
+              .setScanners(new SubTypesScanner(true))
+              .setUrls(ClasspathHelper.forJavaClassPath())
+              .filterInputsBy(
+                  new FilterBuilder()
+                      .includePackage(pkg)
+                      .and(s -> s.contains("ComponentSupplier"))
+              );
+          return new Reflections(cfg).getSubTypesOf(QueryComponentSupplier.class);
         }
       });
 

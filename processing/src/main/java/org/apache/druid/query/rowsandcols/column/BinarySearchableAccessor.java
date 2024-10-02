@@ -22,6 +22,10 @@ package org.apache.druid.query.rowsandcols.column;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.util.FindResult;
 
+/**
+ * The implementations of this interface will not validate that things are sorted for the binary search, it assumes that
+ * they must be. As such, behavior are undefined if the column is not actually sorted.
+ */
 public interface BinarySearchableAccessor extends ColumnAccessor
 {
   static BinarySearchableAccessor fromColumn(Column col)

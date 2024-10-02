@@ -1251,7 +1251,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
    */
   private TaskReport.ReportMap getTaskCompletionReports(TaskStatus taskStatus)
   {
-    return buildIngestionStatsReport(
+    return buildIngestionStatsAndContextReport(
         IngestionState.COMPLETED,
         taskStatus.getErrorMsg(),
         segmentsRead,

@@ -28,9 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.collections.StupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.AggregatorsModule;
@@ -792,7 +790,19 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(null, null, null);
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
+        null,
+        () -> new GroupByQueryConfig()
+        {
+          @Override
+          public boolean isIntermediateResultAsMapCompat()
+          {
+            return true;
+          }
+        },
+        null,
+        null
+    );
 
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(
@@ -1281,10 +1291,6 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final Supplier<ByteBuffer> bufferSupplier =
         () -> ByteBuffer.allocateDirect(processingConfig.intermediateComputeSizeBytes());
 
-    final NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
-        "GroupByQueryEngine-bufferPool",
-        bufferSupplier
-    );
     final BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
@@ -1293,7 +1299,6 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         queryConfigSupplier,
-        bufferPool,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),

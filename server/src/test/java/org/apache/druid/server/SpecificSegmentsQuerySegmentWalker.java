@@ -49,6 +49,7 @@ import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
@@ -133,11 +134,13 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                 conglomerate,
                 segmentWrangler,
                 joinableFactoryWrapper,
-                scheduler
+                scheduler,
+                new NoopServiceEmitter()
             ),
             conglomerate,
             joinableFactoryWrapper.getJoinableFactory(),
-            new ServerConfig()
+            new ServerConfig(),
+            new NoopServiceEmitter()
         )
     );
   }

@@ -42,7 +42,8 @@ select cityName, countryName from wikipedia where cityName='New York' limit 1;
   "columnTypes" : [ "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan
 LogicalSort(fetch=[1])

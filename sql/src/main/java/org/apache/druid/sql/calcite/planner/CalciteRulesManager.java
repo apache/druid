@@ -37,10 +37,11 @@ import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
+import org.apache.calcite.rel.rules.FilterJoinRule.FilterIntoJoinRule.FilterIntoJoinRuleConfig;
+import org.apache.calcite.rel.rules.JoinExtractFilterRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
 import org.apache.calcite.rel.rules.ProjectMergeRule;
 import org.apache.calcite.rel.rules.PruneEmptyRules;
-import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql2rel.RelDecorrelator;
@@ -68,8 +69,12 @@ import org.apache.druid.sql.calcite.rule.ReverseLookupRule;
 import org.apache.druid.sql.calcite.rule.RewriteFirstValueLastValueRule;
 import org.apache.druid.sql.calcite.rule.SortCollapseRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidAggregateRemoveRedundancyRule;
+import org.apache.druid.sql.calcite.rule.logical.DruidJoinRule;
 import org.apache.druid.sql.calcite.rule.logical.DruidLogicalRules;
+import org.apache.druid.sql.calcite.rule.logical.LogicalUnnestRule;
+import org.apache.druid.sql.calcite.rule.logical.UnnestInputCleanupRule;
 import org.apache.druid.sql.calcite.run.EngineFeature;
+import org.apache.druid.sql.hook.DruidHook;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -273,10 +278,12 @@ public class CalciteRulesManager
   {
     final HepProgramBuilder builder = HepProgram.builder();
     builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
-    builder.addGroupBegin();
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
-    builder.addGroupEnd();
+    builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
+    builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
+    builder.addRuleInstance(new LogicalUnnestRule());
+    builder.addRuleInstance(new UnnestInputCleanupRule());
     return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
   }
 
@@ -395,7 +402,8 @@ public class CalciteRulesManager
     public RelNode run(RelOptPlanner planner, RelNode rel, RelTraitSet requiredOutputTraits,
         List<RelOptMaterialization> materializations, List<RelOptLattice> lattices)
     {
-      Hook.TRIMMED.run(rel);
+      PlannerContext pctx = planner.getContext().unwrapOrThrow(PlannerContext.class);
+      pctx.dispatchHook(DruidHook.LOGICAL_PLAN, rel);
       return rel;
     }
   }
@@ -493,6 +501,8 @@ public class CalciteRulesManager
       rules.addAll(FANCY_JOIN_RULES);
     }
 
+    rules.add(DruidAggregateRemoveRedundancyRule.instance());
+
     if (!plannerConfig.isUseApproximateCountDistinct()) {
       if (plannerConfig.isUseGroupingSetForExactDistinct()
           && plannerContext.featureAvailable(EngineFeature.GROUPING_SETS)) {
@@ -506,7 +516,6 @@ public class CalciteRulesManager
     rules.add(FilterJoinExcludePushToChildRule.FILTER_ON_JOIN_EXCLUDE_PUSH_TO_CHILD);
     rules.add(SortCollapseRule.instance());
     rules.add(ProjectAggregatePruneUnusedCallRule.instance());
-    rules.add(DruidAggregateRemoveRedundancyRule.instance());
 
     return rules.build();
   }

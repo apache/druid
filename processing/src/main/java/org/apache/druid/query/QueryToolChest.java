@@ -88,6 +88,11 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * For most queries, this is a no-op, but it can be useful for query types that support more than one result
    * serialization format. Queries that implement this method must not modify the provided ObjectMapper, but instead
    * must return a copy.
+   * <p>
+   * Jackson's default implementation of deserialization is usually optimised and this method should be overriden
+   * only if there is a functional requirement of so. The method must be benchmarked in isolation, without other portions
+   * of the query engine executing as modifying this method can alter the performance of queries where deserializing is
+   * a major portion of the execution.
    */
   public ObjectMapper decorateObjectMapper(final ObjectMapper objectMapper, final QueryType query)
   {

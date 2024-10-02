@@ -36,6 +36,7 @@ import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexedIntWriter;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -220,9 +221,9 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
 
     writeV0Header(channel, columnNameBytes);
     writeDictionaryFile(smoosher);
-    writeInternal(smoosher, encodedValueSerializer, ENCODED_VALUE_COLUMN_FILE_NAME);
+    writeInternal(smoosher, encodedValueSerializer, ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME);
     writeValueColumn(smoosher);
-    writeInternal(smoosher, bitmapIndexWriter, BITMAP_INDEX_FILE_NAME);
+    writeInternal(smoosher, bitmapIndexWriter, ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME);
 
     log.info("Column [%s] serialized successfully.", name);
   }

@@ -1,0 +1,13 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    cityName,
+    array_concat_agg(ARRAY[cityName], 10000) over (PARTITION BY cityName)
+  FROM wikipedia
+  WHERE countryName='Austria' and cityName is not null
+  GROUP BY cityName
+
+expectedResults:
+  - ["Horsching",["Horsching"]]
+  - ["Vienna",["Vienna"]]

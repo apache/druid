@@ -22,12 +22,15 @@ package org.apache.druid.segment.incremental;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.Aggregator;
+import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.LongMaxAggregator;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.segment.CloserRule;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Rule;
@@ -50,7 +53,7 @@ public class IncrementalIndexIngestionTest extends InitializedNullHandlingTest
 
   public IncrementalIndexIngestionTest(String indexType) throws JsonProcessingException
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
     indexCreator = closer.closeLater(new IncrementalIndexCreator(indexType, (builder, args) -> builder
         .setIndexSchema((IncrementalIndexSchema) args[0])
         .setMaxRowCount(MAX_ROWS)
@@ -69,22 +72,39 @@ public class IncrementalIndexIngestionTest extends InitializedNullHandlingTest
   {
     // Prepare the mocks & set close() call count expectation to 1
     Aggregator mockedAggregator = EasyMock.createMock(LongMaxAggregator.class);
+    EasyMock.expect(mockedAggregator.aggregateWithSize()).andReturn(0L).anyTimes();
     mockedAggregator.close();
     EasyMock.expectLastCall().times(1);
 
-    final IncrementalIndex genericIndex = indexCreator.createIndex(
+
+    EasyMock.replay(mockedAggregator);
+
+    final IncrementalIndex incrementalIndex = indexCreator.createIndex(
         new IncrementalIndexSchema.Builder()
             .withQueryGranularity(Granularities.MINUTE)
-            .withMetrics(new LongMaxAggregatorFactory("max", "max"))
+            .withMetrics(new LongMaxAggregatorFactory("max", "max")
+            {
+              @Override
+              protected Aggregator factorize(ColumnSelectorFactory metricFactory, ColumnValueSelector selector)
+              {
+                return mockedAggregator;
+              }
+
+              @Override
+              public AggregatorAndSize factorizeWithSize(ColumnSelectorFactory metricFactory)
+              {
+                return new AggregatorAndSize(mockedAggregator, Long.BYTES);
+              }
+            })
             .build()
     );
 
     // This test is specific to the on-heap index
-    if (!(genericIndex instanceof OnheapIncrementalIndex)) {
+    if (!(incrementalIndex instanceof OnheapIncrementalIndex)) {
       return;
     }
 
-    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) genericIndex;
+    final OnheapIncrementalIndex index = (OnheapIncrementalIndex) incrementalIndex;
 
     index.add(new MapBasedInputRow(
             0,
@@ -92,11 +112,7 @@ public class IncrementalIndexIngestionTest extends InitializedNullHandlingTest
             ImmutableMap.of("billy", 1, "max", 1)
     ));
 
-    // override the aggregators with the mocks
-    index.concurrentGet(0)[0] = mockedAggregator;
-
     // close the indexer and validate the expectations
-    EasyMock.replay(mockedAggregator);
     index.close();
     EasyMock.verify(mockedAggregator);
   }

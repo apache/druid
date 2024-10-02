@@ -27,6 +27,8 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -42,6 +44,7 @@ import javax.annotation.Nullable;
  */
 public class DimensionSchemaUtils
 {
+  private static final EmittingLogger LOG = new EmittingLogger(DimensionSchemaUtils.class);
 
   /**
    * Creates a dimension schema for creating {@link org.apache.druid.data.input.InputSourceReader}.
@@ -89,7 +92,7 @@ public class DimensionSchemaUtils
       return new AutoTypeColumnSchema(column, null);
     } else {
       // dimensionType may not be identical to queryType, depending on arrayIngestMode.
-      final ColumnType dimensionType = getDimensionType(queryType, arrayIngestMode);
+      final ColumnType dimensionType = getDimensionType(column, queryType, arrayIngestMode);
 
       if (dimensionType.getType() == ValueType.STRING) {
         return new StringDimensionSchema(
@@ -121,6 +124,7 @@ public class DimensionSchemaUtils
    * @throws org.apache.druid.error.DruidException if there is some problem
    */
   public static ColumnType getDimensionType(
+      final String columnName,
       @Nullable final ColumnType queryType,
       final ArrayIngestMode arrayIngestMode
   )
@@ -131,19 +135,16 @@ public class DimensionSchemaUtils
     } else if (queryType.getType() == ValueType.ARRAY) {
       ValueType elementType = queryType.getElementType().getType();
       if (elementType == ValueType.STRING) {
-        if (arrayIngestMode == ArrayIngestMode.NONE) {
-          throw InvalidInput.exception(
-              "String arrays can not be ingested when '%s' is set to '%s'. Set '%s' in query context "
-              + "to 'array' to ingest the string array as an array, or ingest it as an MVD by explicitly casting the "
-              + "array to an MVD with the ARRAY_TO_MV function.",
-              MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
-              StringUtils.toLowerCase(arrayIngestMode.name()),
-              MultiStageQueryContext.CTX_ARRAY_INGEST_MODE
-          );
-        } else if (arrayIngestMode == ArrayIngestMode.MVD) {
+        if (arrayIngestMode == ArrayIngestMode.MVD) {
+          final String msgFormat = "Inserting a multi-value string column[%s] relying on deprecated"
+                                   + " ArrayIngestMode.MVD. This query should be rewritten to use the ARRAY_TO_MV"
+                                   + " operator to insert ARRAY types as multi-value strings.";
+          LOG.makeWarningAlert(msgFormat, columnName)
+             .severity(AlertEvent.Severity.DEPRECATED)
+             .addData("feature", "ArrayIngestMode.MVD")
+             .emit();
           return ColumnType.STRING;
         } else {
-          assert arrayIngestMode == ArrayIngestMode.ARRAY;
           return queryType;
         }
       } else if (elementType.isNumeric()) {

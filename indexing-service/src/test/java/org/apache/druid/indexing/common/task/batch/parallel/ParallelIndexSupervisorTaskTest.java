@@ -263,14 +263,11 @@ public class ParallelIndexSupervisorTaskTest
           .withLogParseExceptions(false)
           .build();
       final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              "datasource",
-              new TimestampSpec(null, null, null),
-              DimensionsSpec.EMPTY,
-              null,
-              null,
-              null
-          ),
+          DataSchema.builder()
+                    .withDataSource("datasource")
+                    .withTimestamp(new TimestampSpec(null, null, null))
+                    .withDimensions(DimensionsSpec.EMPTY)
+                    .build(),
           ioConfig,
           tuningConfig
       );
@@ -325,25 +322,24 @@ public class ParallelIndexSupervisorTaskTest
       expectedException.expect(IAE.class);
       expectedException.expectMessage("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       new ParallelIndexIngestionSpec(
-          new DataSchema(
-              "datasource",
-              mapper.convertValue(
-                  new StringInputRowParser(
-                      new JSONParseSpec(
-                          new TimestampSpec(null, null, null),
-                          DimensionsSpec.EMPTY,
-                          null,
-                          null,
-                          null
-                      )
-                  ),
-                  Map.class
-              ),
-              null,
-              null,
-              null,
-              mapper
-          ),
+          DataSchema.builder()
+                    .withDataSource("datasource")
+                    .withParserMap(
+                        mapper.convertValue(
+                            new StringInputRowParser(
+                                new JSONParseSpec(
+                                    new TimestampSpec(null, null, null),
+                                    DimensionsSpec.EMPTY,
+                                    null,
+                                    null,
+                                    null
+                                )
+                            ),
+                            Map.class
+                        )
+                    )
+                    .withObjectMapper(mapper)
+                    .build(),
           ioConfig,
           tuningConfig
       );
@@ -559,14 +555,11 @@ public class ParallelIndexSupervisorTaskTest
           .build();
 
       final ParallelIndexIngestionSpec indexIngestionSpec = new ParallelIndexIngestionSpec(
-              new DataSchema(
-                      "datasource",
-                      new TimestampSpec(null, null, null),
-                      DimensionsSpec.EMPTY,
-                      null,
-                      null,
-                      null
-              ),
+          DataSchema.builder()
+                    .withDataSource("datasource")
+                    .withTimestamp(new TimestampSpec(null, null, null))
+                    .withDimensions(DimensionsSpec.EMPTY)
+                    .build(),
               ioConfig,
               tuningConfig
       );

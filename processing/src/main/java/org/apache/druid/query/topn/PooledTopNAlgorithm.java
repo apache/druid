@@ -26,6 +26,7 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.SimpleDoubleBufferAggregator;
 import org.apache.druid.query.monomorphicprocessing.SpecializationService;
@@ -34,7 +35,6 @@ import org.apache.druid.query.monomorphicprocessing.StringRuntimeShape;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.FilteredOffset;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.Offset;
@@ -191,7 +191,7 @@ public class PooledTopNAlgorithm
     if (SPECIALIZE_GENERIC_ONE_AGG_POOLED_TOPN) {
       SPECIALIZED_SCAN_AND_AGGREGATE_IMPLEMENTATIONS.add((params, positions, theAggregators) -> {
         if (theAggregators.length == 1) {
-          return scanAndAggregateGeneric1Agg(params, positions, theAggregators[0], params.getCursor());
+          return scanAndAggregateGeneric1Agg(params, positions, theAggregators[0]);
         }
         return -1;
       });
@@ -199,7 +199,7 @@ public class PooledTopNAlgorithm
     if (SPECIALIZE_GENERIC_TWO_AGG_POOLED_TOPN) {
       SPECIALIZED_SCAN_AND_AGGREGATE_IMPLEMENTATIONS.add((params, positions, theAggregators) -> {
         if (theAggregators.length == 2) {
-          return scanAndAggregateGeneric2Agg(params, positions, theAggregators, params.getCursor());
+          return scanAndAggregateGeneric2Agg(params, positions, theAggregators);
         }
         return -1;
       });
@@ -211,18 +211,18 @@ public class PooledTopNAlgorithm
   private static final int AGG_UNROLL_COUNT = 8; // Must be able to fit loop below
 
   public PooledTopNAlgorithm(
-      StorageAdapter storageAdapter,
       TopNQuery query,
+      TopNCursorInspector cursorInspector,
       NonBlockingPool<ByteBuffer> bufferPool
   )
   {
-    super(storageAdapter);
+    super(cursorInspector);
     this.query = query;
     this.bufferPool = bufferPool;
   }
 
   @Override
-  public PooledTopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor)
+  public PooledTopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor, CursorGranularizer granularizer)
   {
     final DimensionSelector dimSelector = (DimensionSelector) selectorPlus.getSelector();
     final int cardinality = dimSelector.getValueCardinality();
@@ -231,11 +231,7 @@ public class PooledTopNAlgorithm
       throw new UnsupportedOperationException("Cannot operate on a dimension with no dictionary");
     }
 
-    final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<int[]>(
-        dimSelector,
-        query,
-        storageAdapter
-    )
+    final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<int[]>(dimSelector, query, cursorInspector)
     {
       private final int[] positions = new int[cardinality];
 
@@ -272,6 +268,7 @@ public class PooledTopNAlgorithm
       return PooledTopNParams.builder()
                              .withSelectorPlus(selectorPlus)
                              .withCursor(cursor)
+                             .withGranularizer(granularizer)
                              .withResultsBufHolder(resultsBufHolder)
                              .withResultsBuf(resultsBuf)
                              .withArrayProvider(arrayProvider)
@@ -387,8 +384,7 @@ public class PooledTopNAlgorithm
   private static long scanAndAggregateGeneric1Agg(
       PooledTopNParams params,
       int[] positions,
-      BufferAggregator aggregator,
-      Cursor cursor
+      BufferAggregator aggregator
   )
   {
     String runtimeShape = StringRuntimeShape.of(aggregator);
@@ -400,7 +396,8 @@ public class PooledTopNAlgorithm
         params.getDimSelector(),
         aggregator,
         params.getAggregatorSizes()[0],
-        cursor,
+        params.getCursor(),
+        params.getGranularizer(),
         positions,
         params.getResultsBuf()
     );
@@ -411,8 +408,7 @@ public class PooledTopNAlgorithm
   private static long scanAndAggregateGeneric2Agg(
       PooledTopNParams params,
       int[] positions,
-      BufferAggregator[] theAggregators,
-      Cursor cursor
+      BufferAggregator[] theAggregators
   )
   {
     String runtimeShape = StringRuntimeShape.of(theAggregators);
@@ -427,7 +423,8 @@ public class PooledTopNAlgorithm
         aggregatorSizes[0],
         theAggregators[1],
         aggregatorSizes[1],
-        cursor,
+        params.getCursor(),
+        params.getGranularizer(),
         positions,
         params.getResultsBuf()
     );
@@ -467,6 +464,7 @@ public class PooledTopNAlgorithm
     final int numBytesPerRecord = params.getNumBytesPerRecord();
     final int[] aggregatorSizes = params.getAggregatorSizes();
     final Cursor cursor = params.getCursor();
+    final CursorGranularizer granularizer = params.getGranularizer();
     final DimensionSelector dimSelector = params.getDimSelector();
 
     final int[] aggregatorOffsets = new int[aggregatorSizes.length];
@@ -666,8 +664,10 @@ public class PooledTopNAlgorithm
             currentPosition
         );
       }
-      cursor.advanceUninterruptibly();
       processedRows++;
+      if (!granularizer.advanceCursorWithinBucketUninterruptedly()) {
+        break;
+      }
     }
     return processedRows;
   }
@@ -799,6 +799,7 @@ public class PooledTopNAlgorithm
     public PooledTopNParams(
         ColumnSelectorPlus selectorPlus,
         Cursor cursor,
+        CursorGranularizer granularizer,
         ResourceHolder<ByteBuffer> resultsBufHolder,
         ByteBuffer resultsBuf,
         int[] aggregatorSizes,
@@ -807,7 +808,7 @@ public class PooledTopNAlgorithm
         TopNMetricSpecBuilder<int[]> arrayProvider
     )
     {
-      super(selectorPlus, cursor, numValuesPerPass);
+      super(selectorPlus, cursor, granularizer, numValuesPerPass);
 
       this.resultsBufHolder = resultsBufHolder;
       this.resultsBuf = resultsBuf;
@@ -850,6 +851,7 @@ public class PooledTopNAlgorithm
     {
       private ColumnSelectorPlus selectorPlus;
       private Cursor cursor;
+      private CursorGranularizer granularizer;
       private ResourceHolder<ByteBuffer> resultsBufHolder;
       private ByteBuffer resultsBuf;
       private int[] aggregatorSizes;
@@ -866,6 +868,12 @@ public class PooledTopNAlgorithm
       public Builder withCursor(Cursor cursor)
       {
         this.cursor = cursor;
+        return this;
+      }
+
+      public Builder withGranularizer(CursorGranularizer granularizer)
+      {
+        this.granularizer = granularizer;
         return this;
       }
 
@@ -910,6 +918,7 @@ public class PooledTopNAlgorithm
         return new PooledTopNParams(
             selectorPlus,
             cursor,
+            granularizer,
             resultsBufHolder,
             resultsBuf,
             aggregatorSizes,

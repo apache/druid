@@ -21,9 +21,11 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Objects;
 
 public class DefaultColumnFormatConfig
@@ -39,16 +41,44 @@ public class DefaultColumnFormatConfig
     }
   }
 
+  private static void validateMultiValueHandlingMode(@Nullable String stringMultiValueHandlingMode)
+  {
+    if (stringMultiValueHandlingMode != null) {
+      try {
+        DimensionSchema.MultiValueHandling.fromString(stringMultiValueHandlingMode);
+      }
+      catch (IllegalArgumentException e) {
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.INVALID_INPUT)
+                            .build(
+                                "Invalid value[%s] specified for 'druid.indexing.formats.stringMultiValueHandlingMode'."
+                                + " Supported values are [%s].",
+                                stringMultiValueHandlingMode,
+                                Arrays.toString(DimensionSchema.MultiValueHandling.values())
+                            );
+      }
+    }
+  }
+
+  @Nullable
   @JsonProperty("nestedColumnFormatVersion")
   private final Integer nestedColumnFormatVersion;
 
+  @Nullable
+  @JsonProperty("stringMultiValueHandlingMode")
+  private final String stringMultiValueHandlingMode;
+
   @JsonCreator
   public DefaultColumnFormatConfig(
-      @JsonProperty("nestedColumnFormatVersion") @Nullable Integer nestedColumnFormatVersion
+      @JsonProperty("nestedColumnFormatVersion") @Nullable Integer nestedColumnFormatVersion,
+      @JsonProperty("stringMultiValueHandlingMode") @Nullable String stringMultiValueHandlingMode
   )
   {
+    validateNestedFormatVersion(nestedColumnFormatVersion);
+    validateMultiValueHandlingMode(stringMultiValueHandlingMode);
+
     this.nestedColumnFormatVersion = nestedColumnFormatVersion;
-    validateNestedFormatVersion(this.nestedColumnFormatVersion);
+    this.stringMultiValueHandlingMode = stringMultiValueHandlingMode;
   }
 
   @Nullable
@@ -56,6 +86,13 @@ public class DefaultColumnFormatConfig
   public Integer getNestedColumnFormatVersion()
   {
     return nestedColumnFormatVersion;
+  }
+
+  @Nullable
+  @JsonProperty("stringMultiValueHandlingMode")
+  public String getStringMultiValueHandlingMode()
+  {
+    return stringMultiValueHandlingMode;
   }
 
   @Override
@@ -68,13 +105,14 @@ public class DefaultColumnFormatConfig
       return false;
     }
     DefaultColumnFormatConfig that = (DefaultColumnFormatConfig) o;
-    return Objects.equals(nestedColumnFormatVersion, that.nestedColumnFormatVersion);
+    return Objects.equals(nestedColumnFormatVersion, that.nestedColumnFormatVersion)
+           && Objects.equals(stringMultiValueHandlingMode, that.stringMultiValueHandlingMode);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(nestedColumnFormatVersion);
+    return Objects.hash(nestedColumnFormatVersion, stringMultiValueHandlingMode);
   }
 
   @Override
@@ -82,6 +120,7 @@ public class DefaultColumnFormatConfig
   {
     return "DefaultColumnFormatConfig{" +
            "nestedColumnFormatVersion=" + nestedColumnFormatVersion +
+           ", stringMultiValueHandlingMode=" + stringMultiValueHandlingMode +
            '}';
   }
 }
