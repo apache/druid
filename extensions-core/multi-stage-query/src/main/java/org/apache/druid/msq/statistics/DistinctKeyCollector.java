@@ -146,10 +146,12 @@ public class DistinctKeyCollector implements KeyCollector<DistinctKeyCollector>
 
     if (retainedKeys.isEmpty()) {
       this.spaceReductionFactor = other.spaceReductionFactor;
-    }
-
-    for (final Object2LongMap.Entry<RowKey> otherEntry : other.retainedKeys.object2LongEntrySet()) {
-      add(otherEntry.getKey(), otherEntry.getLongValue());
+      this.retainedKeys.putAll(other.retainedKeys);
+      this.maxBytes = other.maxBytes;
+    } else {
+      for (final Object2LongMap.Entry<RowKey> otherEntry : other.retainedKeys.object2LongEntrySet()) {
+        add(otherEntry.getKey(), otherEntry.getLongValue());
+      }
     }
   }
 
