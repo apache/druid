@@ -74,7 +74,8 @@ public class VectorStringProcessors
     for (int i = 0; i < inputs.size(); i++) {
       inputProcessors[i] = CastToTypeVectorProcessor.cast(
           inputs.get(i).asVectorProcessor(inspector),
-          ExpressionType.STRING
+          ExpressionType.STRING,
+          inspector.getMaxVectorSize()
       );
     }
     final ExprVectorProcessor processor = new ObjectOutMultiObjectInVectorProcessor(

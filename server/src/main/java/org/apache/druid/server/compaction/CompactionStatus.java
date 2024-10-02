@@ -20,7 +20,7 @@
 package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
@@ -223,9 +223,25 @@ public class CompactionStatus
           partitionsSpecFromTuningConfig.getMaxRowsPerSegment(),
           ((DynamicPartitionsSpec) partitionsSpecFromTuningConfig).getMaxTotalRowsOr(Long.MAX_VALUE)
       );
+    } else if (partitionsSpecFromTuningConfig instanceof DimensionRangePartitionsSpec) {
+      return getEffectiveRangePartitionsSpec((DimensionRangePartitionsSpec) partitionsSpecFromTuningConfig);
     } else {
       return partitionsSpecFromTuningConfig;
     }
+  }
+
+  /**
+   * Converts to have only the effective maxRowsPerSegment to avoid false positives when targetRowsPerSegment is set but
+   * effectively translates to the same maxRowsPerSegment.
+   */
+  static DimensionRangePartitionsSpec getEffectiveRangePartitionsSpec(DimensionRangePartitionsSpec partitionsSpec)
+  {
+    return new DimensionRangePartitionsSpec(
+        null,
+        partitionsSpec.getMaxRowsPerSegment(),
+        partitionsSpec.getPartitionDimensions(),
+        partitionsSpec.isAssumeGrouped()
+    );
   }
 
   /**
@@ -286,10 +302,14 @@ public class CompactionStatus
 
     private CompactionStatus partitionsSpecIsUpToDate()
     {
+      PartitionsSpec existingPartionsSpec = lastCompactionState.getPartitionsSpec();
+      if (existingPartionsSpec instanceof DimensionRangePartitionsSpec) {
+        existingPartionsSpec = getEffectiveRangePartitionsSpec((DimensionRangePartitionsSpec) existingPartionsSpec);
+      }
       return CompactionStatus.completeIfEqual(
           "partitionsSpec",
           findPartitionsSpecFromConfig(tuningConfig),
-          lastCompactionState.getPartitionsSpec(),
+          existingPartionsSpec,
           CompactionStatus::asString
       );
     }

@@ -20,7 +20,6 @@
 package org.apache.druid.msq.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
@@ -43,7 +42,8 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.msq.guice.MSQTerminalStageSpecFactory;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
@@ -74,6 +74,9 @@ import java.util.Set;
 
 public class MSQTaskSqlEngine implements SqlEngine
 {
+  /**
+   * Context parameters disallowed for all MSQ engines: task (this one) as well as {@link DartSqlEngine#toString()}.
+   */
   public static final Set<String> SYSTEM_CONTEXT_PARAMETERS =
       ImmutableSet.<String>builder()
                   .addAll(NativeSqlEngine.SYSTEM_CONTEXT_PARAMETERS)
@@ -90,12 +93,6 @@ public class MSQTaskSqlEngine implements SqlEngine
   private final MSQTerminalStageSpecFactory terminalStageSpecFactory;
 
   @Inject
-  public MSQTaskSqlEngine(final OverlordClient overlordClient, final ObjectMapper jsonMapper)
-  {
-    this(overlordClient, jsonMapper, new MSQTerminalStageSpecFactory());
-  }
-
-  @VisibleForTesting
   public MSQTaskSqlEngine(
       final OverlordClient overlordClient,
       final ObjectMapper jsonMapper,
@@ -120,13 +117,21 @@ public class MSQTaskSqlEngine implements SqlEngine
   }
 
   @Override
-  public RelDataType resultTypeForSelect(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForSelect(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     return getMSQStructType(typeFactory);
   }
 
   @Override
-  public RelDataType resultTypeForInsert(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForInsert(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     return getMSQStructType(typeFactory);
   }
@@ -394,7 +399,11 @@ public class MSQTaskSqlEngine implements SqlEngine
         final ColumnType oldDruidType = Calcites.getColumnTypeForRelDataType(oldSqlTypeField.getType());
         final RelDataType newSqlType = rootRel.getRowType().getFieldList().get(columnIndex).getType();
         final ColumnType newDruidType =
-            DimensionSchemaUtils.getDimensionType(Calcites.getColumnTypeForRelDataType(newSqlType), arrayIngestMode);
+            DimensionSchemaUtils.getDimensionType(
+                columnName,
+                Calcites.getColumnTypeForRelDataType(newSqlType),
+                arrayIngestMode
+            );
 
         if (newDruidType.isArray() && oldDruidType.is(ValueType.STRING)
             || (newDruidType.is(ValueType.STRING) && oldDruidType.isArray())) {

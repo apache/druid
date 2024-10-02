@@ -27,6 +27,7 @@ import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
@@ -35,7 +36,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.ClusterCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -76,7 +76,8 @@ public class CompactionRunSimulator
    */
   public CompactionSimulateResult simulateRunWithConfig(
       DruidCompactionConfig compactionConfig,
-      Map<String, SegmentTimeline> datasourceTimelines
+      Map<String, SegmentTimeline> datasourceTimelines,
+      CompactionEngine defaultEngine
   )
   {
     final Table compactedIntervals
@@ -109,7 +110,9 @@ public class CompactionRunSimulator
       )
       {
         final CompactionStatus status = candidateSegments.getCurrentStatus();
-        if (status.getState() == CompactionStatus.State.COMPLETE) {
+        if (status == null) {
+          // do nothing
+        } else if (status.getState() == CompactionStatus.State.COMPLETE) {
           compactedIntervals.addRow(
               createRow(candidateSegments, null, null)
           );
@@ -130,20 +133,21 @@ public class CompactionRunSimulator
         // Add a row for each task in order of submission
         final CompactionStatus status = candidateSegments.getCurrentStatus();
         queuedIntervals.addRow(
-            createRow(candidateSegments, taskPayload.getTuningConfig(), status.getReason())
+            createRow(candidateSegments, taskPayload.getTuningConfig(), status == null ? "" : status.getReason())
         );
       }
     };
 
     // Unlimited task slots to ensure that simulator does not skip any interval
     final DruidCompactionConfig configWithUnlimitedTaskSlots = compactionConfig.withClusterConfig(
-        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null, null)
+        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null)
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();
     new CompactSegments(simulationStatusTracker, readOnlyOverlordClient).run(
         configWithUnlimitedTaskSlots,
         datasourceTimelines,
+        defaultEngine,
         stats
     );
 
@@ -285,13 +289,13 @@ public class CompactionRunSimulator
     }
 
     @Override
-    public ListenableFuture<List<AutoCompactionSnapshot>> getCompactionSnapshots(@Nullable String dataSource)
+    public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
     {
       throw new UnsupportedOperationException();
     }
 
     @Override
-    public ListenableFuture<Long> getBytesAwaitingCompaction(String dataSource)
+    public ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource)
     {
       throw new UnsupportedOperationException();
     }

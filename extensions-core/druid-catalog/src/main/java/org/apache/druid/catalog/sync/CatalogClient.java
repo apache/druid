@@ -86,7 +86,7 @@ public class CatalogClient implements CatalogSource
   @Override
   public List<TableMetadata> tablesForSchema(String dbSchema)
   {
-    String url = StringUtils.replace(SCHEMA_SYNC_PATH, "{schema}", dbSchema);
+    String url = StringUtils.replace(SCHEMA_SYNC_PATH, "{schema}", StringUtils.urlEncode(dbSchema));
     List<TableMetadata> results = send(url, LIST_OF_TABLE_METADATA_TYPE);
 
     // Not found for a list is an empty list.
@@ -96,8 +96,8 @@ public class CatalogClient implements CatalogSource
   @Override
   public TableMetadata table(TableId id)
   {
-    String url = StringUtils.replace(TABLE_SYNC_PATH, "{schema}", id.schema());
-    url = StringUtils.replace(url, "{name}", id.name());
+    String url = StringUtils.replace(TABLE_SYNC_PATH, "{schema}", StringUtils.urlEncode(id.schema()));
+    url = StringUtils.replace(url, "{name}", StringUtils.urlEncode(id.name()));
     return send(url, TABLE_METADATA_TYPE);
   }
 

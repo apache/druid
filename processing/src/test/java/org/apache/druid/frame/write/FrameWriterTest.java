@@ -35,10 +35,8 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyComparator;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.segment.FrameSegment;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -50,6 +48,7 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowBasedSegment;
@@ -438,15 +437,11 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       final RowSignature signature
   )
   {
-    final FrameStorageAdapter frameAdapter = new FrameStorageAdapter(
-        frame,
-        FrameReader.create(signature),
-        Intervals.ETERNITY
-    );
+    final CursorFactory cursorFactory = FrameReader.create(signature).makeCursorFactory(frame);
 
     FrameTestUtil.assertRowsEqual(
         expectedRows,
-        FrameTestUtil.readRowsFromAdapter(frameAdapter, signature, false)
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory, signature, false)
     );
   }
 
@@ -577,8 +572,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       inputSegment = new FrameSegment(inputFrame, FrameReader.create(signature), SegmentId.dummy("xxx"));
     }
 
-    try (final CursorHolder cursorHolder = inputSegment.asStorageAdapter()
-                                                       .makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    try (final CursorHolder cursorHolder = inputSegment.asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       final Cursor cursor = cursorHolder.asCursor();
 
       int numRows = 0;

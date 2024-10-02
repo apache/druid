@@ -40,7 +40,7 @@ import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.StringEncodingStrategy;
@@ -234,15 +234,15 @@ public class ExpressionVectorSelectorsTest extends InitializedNullHandlingTest
             )
         )
     );
-    final QueryableIndexStorageAdapter storageAdapter = new QueryableIndexStorageAdapter(index);
+    final QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
     final CursorBuildSpec buildSpec = CursorBuildSpec.builder()
                                                      .setVirtualColumns(virtualColumns)
                                                      .build();
-    try (final CursorHolder cursorHolder = storageAdapter.makeCursorHolder(buildSpec)) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
       final VectorCursor cursor = cursorHolder.asVectorCursor();
       Assert.assertNotNull(cursor);
 
-      ColumnCapabilities capabilities = virtualColumns.getColumnCapabilitiesWithFallback(storageAdapter, "v");
+      ColumnCapabilities capabilities = virtualColumns.getColumnCapabilitiesWithFallback(cursorFactory, "v");
 
       int rowCount = 0;
       if (capabilities.isDictionaryEncoded().isTrue()) {

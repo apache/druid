@@ -61,15 +61,14 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
+import org.apache.druid.segment.CompleteSegment;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
@@ -86,6 +85,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.mockito.Mockito;
@@ -161,11 +161,10 @@ public class CalciteMSQTestsHelper
               )
           );
           ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
-          IndexIO indexIO = new IndexIO(testMapper, ColumnConfig.DEFAULT);
           SegmentCacheManager segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
               .manufacturate(cacheManagerDir);
           LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-          MSQTestSegmentManager segmentManager = new MSQTestSegmentManager(segmentCacheManager, indexIO);
+          MSQTestSegmentManager segmentManager = new MSQTestSegmentManager(segmentCacheManager);
           config.storageDirectory = storageDir;
           binder.bind(DataSegmentPusher.class).toProvider(() -> new MSQTestDelegateDataSegmentPusher(
               new LocalDataSegmentPusher(config),
@@ -206,7 +205,10 @@ public class CalciteMSQTestsHelper
     return mockFactory;
   }
 
-  private static Supplier<ResourceHolder<Segment>> getSupplierForSegment(Function<String, File> tempFolderProducer, SegmentId segmentId)
+  protected static Supplier<ResourceHolder<CompleteSegment>> getSupplierForSegment(
+      Function<String, File> tempFolderProducer,
+      SegmentId segmentId
+  )
   {
     final QueryableIndex index;
     switch (segmentId.getDataSource()) {
@@ -440,9 +442,9 @@ public class CalciteMSQTestsHelper
       }
 
       @Override
-      public StorageAdapter asStorageAdapter()
+      public CursorFactory asCursorFactory()
       {
-        return new QueryableIndexStorageAdapter(index);
+        return new QueryableIndexCursorFactory(index);
       }
 
       @Override
@@ -450,6 +452,13 @@ public class CalciteMSQTestsHelper
       {
       }
     };
-    return () -> new ReferenceCountingResourceHolder<>(segment, Closer.create());
+    DataSegment dataSegment = DataSegment.builder()
+                                         .dataSource(segmentId.getDataSource())
+                                         .interval(segmentId.getInterval())
+                                         .version(segmentId.getVersion())
+                                         .shardSpec(new LinearShardSpec(0))
+                                         .size(0)
+                                         .build();
+    return () -> new ReferenceCountingResourceHolder<>(new CompleteSegment(dataSegment, segment), Closer.create());
   }
 }

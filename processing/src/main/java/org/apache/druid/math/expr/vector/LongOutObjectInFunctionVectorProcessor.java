@@ -33,7 +33,7 @@ public abstract class LongOutObjectInFunctionVectorProcessor
       ExpressionType inputType
   )
   {
-    super(CastToTypeVectorProcessor.cast(processor, inputType), maxVectorSize, new long[maxVectorSize]);
+    super(CastToTypeVectorProcessor.cast(processor, inputType, maxVectorSize), maxVectorSize, new long[maxVectorSize]);
   }
 
   @Override

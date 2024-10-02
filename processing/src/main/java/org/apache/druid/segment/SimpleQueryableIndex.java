@@ -33,6 +33,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -48,6 +49,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   private final Map<String, Supplier<ColumnHolder>> columns;
   private final SmooshedFileMapper fileMapper;
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
+  private final List<OrderBy> ordering;
 
   public SimpleQueryableIndex(
       Interval dataInterval,
@@ -61,11 +63,16 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     Preconditions.checkNotNull(columns.get(ColumnHolder.TIME_COLUMN_NAME));
     this.dataInterval = Preconditions.checkNotNull(dataInterval, "dataInterval");
     ImmutableList.Builder<String> columnNamesBuilder = ImmutableList.builder();
-    for (String column : columns.keySet()) {
-      if (!ColumnHolder.TIME_COLUMN_NAME.equals(column)) {
-        columnNamesBuilder.add(column);
+    LinkedHashSet<String> dimsFirst = new LinkedHashSet<>();
+    for (String dimName : dimNames) {
+      dimsFirst.add(dimName);
+    }
+    for (String columnName : columns.keySet()) {
+      if (!ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
+        dimsFirst.add(columnName);
       }
     }
+    columnNamesBuilder.addAll(dimsFirst);
     this.columnNames = columnNamesBuilder.build();
     this.availableDimensions = dimNames;
     this.bitmapFactory = bitmapFactory;
@@ -76,6 +83,14 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       this.dimensionHandlers = Suppliers.memoize(() -> initDimensionHandlers(availableDimensions));
     } else {
       this.dimensionHandlers = () -> initDimensionHandlers(availableDimensions);
+    }
+
+    final Metadata metadata = getMetadata();
+    if (metadata != null && metadata.getOrdering() != null) {
+      this.ordering = metadata.getOrdering();
+    } else {
+      // When sort order isn't set in metadata.drd, assume the segment is sorted by __time.
+      this.ordering = Cursors.ascendingTimeOrder();
     }
   }
 
@@ -106,13 +121,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   @Override
   public List<OrderBy> getOrdering()
   {
-    final Metadata metadata = getMetadata();
-    if (metadata != null && metadata.getOrdering() != null) {
-      return metadata.getOrdering();
-    } else {
-      // When sort order isn't set in metadata.drd, assume the segment is sorted by __time.
-      return Cursors.ascendingTimeOrder();
-    }
+    return ordering;
   }
 
   @Override

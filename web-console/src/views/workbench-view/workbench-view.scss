@@ -34,12 +34,20 @@ $recent-query-task-panel-width: 250px;
     @include card-like;
   }
 
-  .recent-query-task-panel {
+  .recent-panel {
     position: absolute;
     top: 0;
     right: 0;
     height: 100%;
     width: $recent-query-task-panel-width;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    .recent-query-task-panel,
+    .current-dart-panel {
+      flex: 1;
+    }
   }
 
   .center-panel {
@@ -94,7 +102,7 @@ $recent-query-task-panel-width: 250px;
           }
         }
 
-        .add-tab {
+        .new-tab {
           display: inline-block;
           vertical-align: top;
           padding: 6px 14px;
@@ -116,7 +124,7 @@ $recent-query-task-panel-width: 250px;
     left: 0;
   }
 
-  &.hide-work-history .center-panel {
+  &.hide-right-panel .center-panel {
     right: 0;
   }
 }

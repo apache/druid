@@ -39,7 +39,7 @@ public class ControllerMemoryParametersTest
         1
     );
 
-    Assert.assertEquals(100_400_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
+    Assert.assertEquals(101_400_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
   }
 
   @Test
@@ -50,7 +50,7 @@ public class ControllerMemoryParametersTest
         100
     );
 
-    Assert.assertEquals(103_800_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
+    Assert.assertEquals(104_800_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
   }
 
   @Test
@@ -61,7 +61,7 @@ public class ControllerMemoryParametersTest
         1
     );
 
-    Assert.assertEquals(49_200_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
+    Assert.assertEquals(50_200_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
   }
 
   @Test
@@ -91,7 +91,6 @@ public class ControllerMemoryParametersTest
     Assert.assertEquals(1, fault.getServerWorkers());
     Assert.assertEquals(NUM_PROCESSORS_IN_JVM, fault.getServerThreads());
     Assert.assertEquals(24_000_000, fault.getUsableMemory());
-    Assert.assertEquals(33_750_000, fault.getSuggestedServerMemory());
   }
 
   @Test
@@ -102,7 +101,7 @@ public class ControllerMemoryParametersTest
         1
     );
 
-    Assert.assertEquals(25_000_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
+    Assert.assertEquals(26_000_000, memoryParameters.getPartitionStatisticsMaxRetainedBytes());
   }
 
   private MemoryIntrospector makeMemoryIntrospector(
@@ -111,11 +110,11 @@ public class ControllerMemoryParametersTest
   )
   {
     return new MemoryIntrospectorImpl(
-        new TestLookupProvider(ImmutableMap.of()),
         totalMemoryInJvm,
         USABLE_MEMORY_FRACTION,
         numQueriesInJvm,
-        NUM_PROCESSORS_IN_JVM
+        NUM_PROCESSORS_IN_JVM,
+        new TestLookupProvider(ImmutableMap.of())
     );
   }
 }

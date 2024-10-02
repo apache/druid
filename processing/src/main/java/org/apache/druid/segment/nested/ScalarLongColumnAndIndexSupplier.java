@@ -247,6 +247,12 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
 
         @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
+
+        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int id = dictionary.indexOf(longValue);
@@ -305,6 +311,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
               bitmapFactory,
               ColumnType.LONG.getNullableStrategy(),
               tailSet,
+              tailSet.size(),
               dictionary,
               valueIndexes,
               unknownsIndex
@@ -314,6 +321,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
             bitmapFactory,
             tailSet,
+            tailSet.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
@@ -326,6 +334,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
                 sortedValues,
                 DimensionHandlerUtils::convertObjectToLong
             ),
+            sortedValues.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
@@ -346,6 +355,11 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       final Long longValue = GuavaUtils.tryParseLong(value);
       return new SimpleBitmapColumnIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -390,6 +404,12 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     {
       return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return values.size();
+        }
+
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {

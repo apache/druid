@@ -51,11 +51,10 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.SupervisorCleanupModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.http.JettyHttpClientModule;
-import org.apache.druid.indexing.overlord.TaskMaster;
-import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -89,7 +88,6 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
-import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
@@ -276,16 +274,6 @@ public class CliCoordinator extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DataSourcesResource.class);
 
-            if (properties.containsKey("druid.coordinator.merge.on")) {
-              throw new UnsupportedOperationException(
-                  "'druid.coordinator.merge.on' is not supported anymore. "
-                  + "Please consider using Coordinator's automatic compaction instead. "
-                  + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
-                  + "https://druid.apache.org/docs/latest/api-reference/api-reference.html#compaction-configuration "
-                  + "for more details about compaction."
-              );
-            }
-
             bindAnnouncer(
                 binder,
                 Coordinator.class,
@@ -296,10 +284,6 @@ public class CliCoordinator extends ServerRunnable
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
 
             if (!beOverlord) {
-              // These are needed to deserialize SupervisorSpec for Supervisor Auto Cleanup
-              binder.bind(TaskStorage.class).toProvider(Providers.of(null));
-              binder.bind(TaskMaster.class).toProvider(Providers.of(null));
-              binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.of(null));
               // Bind HeartbeatSupplier only when the service operates independently of Overlord.
               binder.bind(new TypeLiteral<Supplier<Map<String, Object>>>() {})
                   .annotatedWith(Names.named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING))
@@ -342,6 +326,7 @@ public class CliCoordinator extends ServerRunnable
       // Only add LookupSerdeModule if !beOverlord, since CliOverlord includes it, and having two copies causes
       // the injector to get confused due to having multiple bindings for the same classes.
       modules.add(new LookupSerdeModule());
+      modules.add(new SupervisorCleanupModule());
     }
 
     return modules;

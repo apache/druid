@@ -32,8 +32,8 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TimeBoundaryInspector;
 
 import javax.annotation.Nullable;
@@ -62,7 +62,7 @@ public class TimeseriesQueryRunnerFactory
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> createRunner(final Segment segment)
   {
-    return new TimeseriesQueryRunner(engine, segment.asStorageAdapter(), segment.as(TimeBoundaryInspector.class));
+    return new TimeseriesQueryRunner(engine, segment.asCursorFactory(), segment.as(TimeBoundaryInspector.class));
   }
 
   @Override
@@ -83,18 +83,18 @@ public class TimeseriesQueryRunnerFactory
   private static class TimeseriesQueryRunner implements QueryRunner<Result<TimeseriesResultValue>>
   {
     private final TimeseriesQueryEngine engine;
-    private final StorageAdapter adapter;
+    private final CursorFactory cursorFactory;
     @Nullable
     private final TimeBoundaryInspector timeBoundaryInspector;
 
     private TimeseriesQueryRunner(
         TimeseriesQueryEngine engine,
-        StorageAdapter adapter,
+        CursorFactory cursorFactory,
         @Nullable TimeBoundaryInspector timeBoundaryInspector
     )
     {
       this.engine = engine;
-      this.adapter = adapter;
+      this.cursorFactory = cursorFactory;
       this.timeBoundaryInspector = timeBoundaryInspector;
     }
 
@@ -111,11 +111,10 @@ public class TimeseriesQueryRunnerFactory
 
       return engine.process(
           (TimeseriesQuery) input,
-          adapter,
+          cursorFactory,
           timeBoundaryInspector,
           (TimeseriesQueryMetrics) queryPlus.getQueryMetrics()
       );
     }
   }
-
 }

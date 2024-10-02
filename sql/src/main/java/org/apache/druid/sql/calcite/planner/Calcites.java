@@ -218,6 +218,9 @@ public class Calcites
       if (elementType != null) {
         return ColumnType.ofArray(elementType);
       }
+      if (type.getComponentType().getSqlTypeName() == SqlTypeName.NULL) {
+        return ColumnType.LONG_ARRAY;
+      }
       return null;
     } else {
       return null;

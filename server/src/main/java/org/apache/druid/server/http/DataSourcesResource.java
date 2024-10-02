@@ -29,7 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorServerView;
