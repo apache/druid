@@ -364,8 +364,10 @@ public class IndexMergerV9 implements IndexMerger
       for (IndexableAdapter adapter : adapters) {
         projectionAdapters.add(adapter.getProjectionAdapter(spec.getName()));
       }
+      // todo (clint): why not from projection spec grouping columns?
       final List<String> dimensions = projectionAdapters.get(0).getDimensionNames(false);
 
+      // todo (clint): add comments for the stuff that is DIFFERENT from calling function
       final List<String> metrics = Arrays.stream(spec.getAggregators())
                                          .map(AggregatorFactory::getName)
                                          .collect(Collectors.toList());
@@ -405,6 +407,7 @@ public class IndexMergerV9 implements IndexMerger
         timeWriter = null;
       }
       final ArrayList<GenericColumnSerializer> metricWriters =
+          // todo (clint): call static method to build column name
           setupMetricsWriters(segmentWriteOutMedium, metrics, columnFormats, indexSpec, spec.getName() + ".");
 
       Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn =

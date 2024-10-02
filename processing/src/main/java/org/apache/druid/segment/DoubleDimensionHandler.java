@@ -94,7 +94,7 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
 
   @Override
   public DimensionMergerV9 makeProjectionMerger(
-      String name,
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
@@ -104,7 +104,7 @@ public class DoubleDimensionHandler implements DimensionHandler<Double, Double, 
   {
     return new DoubleDimensionMergerV9(
         dimensionName,
-        name,
+        outputName,
         indexSpec,
         segmentWriteOutMedium
     );

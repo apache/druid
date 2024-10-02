@@ -130,10 +130,10 @@ public class MetadataTest
         ImmutableList.of(
             new AggregateProjectionSpec(
                 "some_projection",
-                ImmutableList.of(new StringDimensionSchema("a"), new LongDimensionSchema("b")),
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
                 ),
+                ImmutableList.of(new StringDimensionSchema("a"), new LongDimensionSchema("b")),
                 new AggregatorFactory[] {
                     new LongLastAggregatorFactory("atLongLast", "d", null)
                 }

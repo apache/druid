@@ -122,7 +122,7 @@ public interface DimensionHandler
   );
 
   default DimensionMergerV9 makeProjectionMerger(
-      String name,
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,

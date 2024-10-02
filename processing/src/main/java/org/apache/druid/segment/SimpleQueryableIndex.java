@@ -29,10 +29,8 @@ import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
@@ -42,12 +40,9 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.stream.Collectors;
 
@@ -231,37 +226,13 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   @Override
   public Projection<QueryableIndex> getProjection(CursorBuildSpec cursorBuildSpec)
   {
-    if (cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CTX_NO_PROJECTION, false)) {
-      return null;
-    }
-    final String name = cursorBuildSpec.getQueryContext().getString(QueryContexts.CTX_USE_PROJECTION);
-
-    if (cursorBuildSpec.isAggregate()) {
-      for (AggregateProjectionSpec spec : projections) {
-        if (name != null && !name.equals(spec.getName())) {
-          continue;
-        }
-        final Map<String, String> rewriteColumns = new HashMap<>();
-        final Set<VirtualColumn> referenced = new HashSet<>();
-
-        Projections.PhysicalColumnChecker physicalChecker = columnName ->
-            projectionColumns.get(spec.getName()).containsKey(columnName) || getColumnCapabilities(columnName) == null;
-
-        if (spec.matches(cursorBuildSpec, referenced, rewriteColumns, physicalChecker)) {
-          final CursorBuildSpec rewrittenBuildSpec =
-              CursorBuildSpec.builder(cursorBuildSpec)
-                             .setVirtualColumns(VirtualColumns.fromIterable(referenced))
-                             .build();
-          final QueryableIndex projectionIndex = getProjectionQueryableIndex(spec.getName());
-
-          return new Projection<>(rewrittenBuildSpec, rewriteColumns, projectionIndex);
-        }
-      }
-    }
-    if (name != null) {
-      throw InvalidInput.exception("Projection[%s] specified, but does not satisfy query", name);
-    }
-    return null;
+    return Projections.findMatchingProjection(
+        cursorBuildSpec,
+        projections,
+        (projectionName, columnName) ->
+            projectionColumns.get(projectionName).containsKey(columnName) || getColumnCapabilities(columnName) == null,
+        this::getProjectionQueryableIndex
+    );
   }
 
   @Override

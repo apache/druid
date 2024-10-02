@@ -719,10 +719,14 @@ public class IndexIO
               }
           ));
         } else {
-          registerColumnHolder(true, projectionColumns, groupingColumn.getName(),
-                               mapper, colBuffer,
-                               smooshedFiles,
-                               loadFailed
+          registerColumnHolder(
+              true,
+              projectionColumns,
+              groupingColumn.getName(),
+              mapper,
+              colBuffer,
+              smooshedFiles,
+              loadFailed
           );
         }
 

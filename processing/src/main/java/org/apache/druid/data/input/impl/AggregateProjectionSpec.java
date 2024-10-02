@@ -32,10 +32,10 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
@@ -100,8 +100,8 @@ public class AggregateProjectionSpec
   @JsonCreator
   public AggregateProjectionSpec(
       @JsonProperty("name") String name,
-      @JsonProperty("groupingColumns") @Nullable List<DimensionSchema> groupingColumns,
       @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns,
+      @JsonProperty("groupingColumns") @Nullable List<DimensionSchema> groupingColumns,
       @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators
   )
   {
@@ -178,16 +178,16 @@ public class AggregateProjectionSpec
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public List<DimensionSchema> getGroupingColumns()
+  public VirtualColumns getVirtualColumns()
   {
-    return groupingColumns;
+    return virtualColumns;
   }
 
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-  public VirtualColumns getVirtualColumns()
+  public List<DimensionSchema> getGroupingColumns()
   {
-    return virtualColumns;
+    return groupingColumns;
   }
 
   @JsonProperty
@@ -223,37 +223,37 @@ public class AggregateProjectionSpec
   }
 
   public boolean matches(
-      CursorBuildSpec buildSpec,
+      CursorBuildSpec queryCursorBuildSpec,
       Set<VirtualColumn> referencedVirtualColumns,
       Map<String, String> rewriteColumns,
       Projections.PhysicalColumnChecker physicalColumnChecker
   )
   {
-    if (!buildSpec.isCompatibleOrdering(ordering)) {
+    if (!queryCursorBuildSpec.isCompatibleOrdering(ordering)) {
       return false;
     }
-    if (CollectionUtils.isNullOrEmpty(buildSpec.getGroupingColumns()) && CollectionUtils.isNullOrEmpty(buildSpec.getAggregators())) {
+    if (CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getGroupingColumns()) && CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getAggregators())) {
       return false;
     }
-    final List<String> grouping = buildSpec.getGroupingColumns();
+    final List<String> grouping = queryCursorBuildSpec.getGroupingColumns();
     if (grouping != null) {
       for (String column : grouping) {
-        if (!hasRequiredColumn(column, buildSpec.getVirtualColumns(), referencedVirtualColumns, rewriteColumns, physicalColumnChecker)) {
+        if (!hasRequiredColumn(column, queryCursorBuildSpec.getVirtualColumns(), referencedVirtualColumns, rewriteColumns, physicalColumnChecker)) {
           return false;
         }
       }
     }
-    if (buildSpec.getFilter() != null) {
-      for (String column : buildSpec.getFilter().getRequiredColumns()) {
-        if (!hasRequiredColumn(column, buildSpec.getVirtualColumns(), referencedVirtualColumns, rewriteColumns, physicalColumnChecker)) {
+    if (queryCursorBuildSpec.getFilter() != null) {
+      for (String column : queryCursorBuildSpec.getFilter().getRequiredColumns()) {
+        if (!hasRequiredColumn(column, queryCursorBuildSpec.getVirtualColumns(), referencedVirtualColumns, rewriteColumns, physicalColumnChecker)) {
           return false;
         }
       }
     }
-    if (!CollectionUtils.isNullOrEmpty(buildSpec.getAggregators())) {
+    if (!CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getAggregators())) {
       int matchCount = 0;
       boolean allMatch = true;
-      for (AggregatorFactory factory : buildSpec.getAggregators()) {
+      for (AggregatorFactory factory : queryCursorBuildSpec.getAggregators()) {
         boolean foundMatch = false;
         for (AggregatorFactory schemaFactory : aggregators) {
           if (schemaFactory.withName(factory.getName()).equals(factory)) {
@@ -264,7 +264,7 @@ public class AggregateProjectionSpec
         }
         allMatch = allMatch && foundMatch;
       }
-      if (!allMatch || matchCount < buildSpec.getAggregators().size()) {
+      if (!allMatch || matchCount < queryCursorBuildSpec.getAggregators().size()) {
         return false;
       }
     }
@@ -344,6 +344,9 @@ public class AggregateProjectionSpec
       requiredBuildSpecVirtualColumns.add(buildSpecVirtualColumn);
       final List<String> requiredInputs = buildSpecVirtualColumn.requiredColumns();
       if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
+        // wtb some sort of virtual column comparison function that can check if projection granularity time column
+        // satisifies query granularity virtual column
+        // can rebind? q.canRebind("__time", p)
         // special handle time granularity
         final Granularity virtualGranularity = Granularities.fromVirtualColumn(buildSpecVirtualColumn);
         if (virtualGranularity != null) {
@@ -372,7 +375,7 @@ public class AggregateProjectionSpec
       return true;
     } else {
       // a physical column must either be present or also missing from the base table
-      return physicalColumnChecker.check(column);
+      return physicalColumnChecker.check(name, column);
     }
   }
 }

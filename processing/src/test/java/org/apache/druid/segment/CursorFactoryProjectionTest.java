@@ -146,13 +146,13 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   private static final List<AggregateProjectionSpec> PROJECTIONS = Arrays.asList(
       new AggregateProjectionSpec(
           "ab_hourly_cd_sum",
+          VirtualColumns.create(
+              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+          ),
           Arrays.asList(
               new StringDimensionSchema("a"),
               new StringDimensionSchema("b"),
               new LongDimensionSchema("__gran")
-          ),
-          VirtualColumns.create(
-              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
           ),
           new AggregatorFactory[]{
               new LongSumAggregatorFactory("_c_sum", "c"),
@@ -161,12 +161,12 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "a_hourly_c_sum_with_count_latest",
+          VirtualColumns.create(
+              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+          ),
           Arrays.asList(
               new LongDimensionSchema("__gran"),
               new StringDimensionSchema("a")
-          ),
-          VirtualColumns.create(
-              Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
           ),
           new AggregatorFactory[]{
               new CountAggregatorFactory("chocula"),
@@ -176,13 +176,13 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "bf_daily_c_sum",
+          VirtualColumns.create(
+              Granularities.toVirtualColumn(Granularities.DAY, "__gran")
+          ),
           Arrays.asList(
               new LongDimensionSchema("__gran"),
               new StringDimensionSchema("b"),
               new FloatDimensionSchema("e")
-          ),
-          VirtualColumns.create(
-              Granularities.toVirtualColumn(Granularities.DAY, "__gran")
           ),
           new AggregatorFactory[]{
               new LongSumAggregatorFactory("_c_sum", "c")
@@ -190,19 +190,15 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       ),
       new AggregateProjectionSpec(
           "ab_daily",
+          null,
           Arrays.asList(
               new StringDimensionSchema("a"),
               new StringDimensionSchema("b")
           ),
-          null,
           null
       ),
       new AggregateProjectionSpec(
           "abfoo_daily",
-          Arrays.asList(
-              new StringDimensionSchema("a"),
-              new StringDimensionSchema("bfoo")
-          ),
           VirtualColumns.create(
               new ExpressionVirtualColumn(
                   "bfoo",
@@ -210,6 +206,10 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                   ColumnType.STRING,
                   TestExprMacroTable.INSTANCE
               )
+          ),
+          Arrays.asList(
+              new StringDimensionSchema("a"),
+              new StringDimensionSchema("bfoo")
           ),
           null
       )

@@ -46,6 +46,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
   {
     Projection<QueryableIndex> projection = index.getProjection(spec);
     if (projection != null) {
+      // todo (clint): add 'projection' dimension to query metrics
       return new QueryableIndexCursorHolder(projection.getRowSelector(), projection.getCursorBuildSpec())
       {
         @Override

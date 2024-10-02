@@ -176,7 +176,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
 
   @Override
   public DimensionMergerV9 makeProjectionMerger(
-      String name,
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
@@ -195,7 +195,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
 
     return new StringDimensionMergerV9(
         dimensionName,
-        name,
+        outputName,
         indexSpec,
         segmentWriteOutMedium,
         capabilities,

@@ -45,15 +45,15 @@ public class AggregateProjectionSpecTest extends InitializedNullHandlingTest
   {
     AggregateProjectionSpec spec = new AggregateProjectionSpec(
         "some_projection",
+        VirtualColumns.create(
+            Granularities.toVirtualColumn(Granularities.HOUR, "time")
+        ),
         Arrays.asList(
             new StringDimensionSchema("a"),
             new LongDimensionSchema("b"),
             new LongDimensionSchema("time"),
             new FloatDimensionSchema("c"),
             new DoubleDimensionSchema("d")
-        ),
-        VirtualColumns.create(
-            Granularities.toVirtualColumn(Granularities.HOUR, "time")
         ),
         new AggregatorFactory[] {
             new CountAggregatorFactory("count"),
@@ -81,8 +81,8 @@ public class AggregateProjectionSpecTest extends InitializedNullHandlingTest
         DruidException.class,
         () -> new AggregateProjectionSpec(
             "other_projection",
-            Collections.emptyList(),
             null,
+            Collections.emptyList(),
             null
         )
     );
