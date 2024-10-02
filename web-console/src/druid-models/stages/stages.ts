@@ -18,6 +18,7 @@
 
 import { max, sum } from 'd3-array';
 
+import { AutoForm } from '../../components';
 import { countBy, deleteKeys, filterMap, groupByAsMap, oneOf, zeroDivide } from '../../utils';
 import type { InputFormat } from '../input-format/input-format';
 import type { InputSource } from '../input-source/input-source';
@@ -252,26 +253,16 @@ export const CPUS_COUNTER_FIELDS: CpusCounterFields[] = [
 
 export function cpusCounterFieldTitle(k: CpusCounterFields) {
   switch (k) {
-    case 'main':
-      return 'Main';
-
     case 'collectKeyStatistics':
       return 'Collect key stats';
 
-    case 'mergeInput':
-      return 'Merge input';
-
-    case 'hashPartitionOutput':
-      return 'Hash partition out';
-
-    case 'mixOutput':
-      return 'Mix output';
-
-    case 'sortOutput':
-      return 'Sort output';
-
     default:
-      return k;
+      // main
+      // mergeInput
+      // hashPartitionOutput
+      // mixOutput
+      // sortOutput
+      return AutoForm.makeLabelName(k);
   }
 }
 

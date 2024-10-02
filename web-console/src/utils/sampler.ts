@@ -17,6 +17,7 @@
  */
 
 import { dedupe, F, SqlExpression, SqlFunction } from '@druid-toolkit/query';
+import type { CancelToken } from 'axios';
 import * as JSONBig from 'json-bigint-native';
 
 import type {
@@ -40,6 +41,7 @@ import {
   getSpecType,
   getTimestampSchema,
   isDruidSource,
+  isFixedFormatSource,
   PLACEHOLDER_TIMESTAMP_SPEC,
   REINDEX_TIMESTAMP_SPEC,
   TIME_COLUMN,
@@ -187,12 +189,15 @@ export async function getProxyOverlordModules(): Promise<string[]> {
 export async function postToSampler(
   sampleSpec: SampleSpec,
   forStr: string,
+  cancelToken?: CancelToken,
 ): Promise<SampleResponse> {
   sampleSpec = fixSamplerLookups(fixSamplerTypes(sampleSpec));
 
   let sampleResp: any;
   try {
-    sampleResp = await Api.instance.post(`/druid/indexer/v1/sampler?for=${forStr}`, sampleSpec);
+    sampleResp = await Api.instance.post(`/druid/indexer/v1/sampler?for=${forStr}`, sampleSpec, {
+      cancelToken,
+    });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -269,8 +274,7 @@ export async function sampleForConnect(
     sampleStrategy,
   );
 
-  const reingestMode = isDruidSource(spec);
-  if (!reingestMode) {
+  if (!isFixedFormatSource(spec)) {
     ioConfig = deepSet(
       ioConfig,
       'inputFormat',
@@ -282,6 +286,7 @@ export async function sampleForConnect(
     );
   }
 
+  const reingestMode = isDruidSource(spec);
   const sampleSpec: SampleSpec = {
     type: samplerType,
     spec: {
@@ -290,7 +295,7 @@ export async function sampleForConnect(
       dataSchema: {
         dataSource: 'sample',
         timestampSpec: reingestMode ? REINDEX_TIMESTAMP_SPEC : PLACEHOLDER_TIMESTAMP_SPEC,
-        dimensionsSpec: {},
+        dimensionsSpec: { useSchemaDiscovery: true },
         granularitySpec: {
           rollup: false,
         },

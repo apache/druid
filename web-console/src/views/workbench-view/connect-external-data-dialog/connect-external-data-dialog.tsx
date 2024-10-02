@@ -83,7 +83,6 @@ export const ConnectExternalDataDialog = React.memo(function ConnectExternalData
         ) : (
           <InputSourceStep
             initInputSource={inputSource}
-            mode="sampler"
             onSet={(inputSource, inputFormat, partitionedByHint) => {
               setExternalConfigStep({ inputSource, inputFormat, partitionedByHint });
             }}

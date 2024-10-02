@@ -1,0 +1,1252 @@
+#The queries in this file were generated; see README.generated
+#started Wed Jul 10 17:02:53 IST 2024
+!use druidtest:///?componentSupplier=KttmNestedComponentSupplier
+!set outputformat mysql
+# Wed Jul 10 19:07:21 IST 2024
+SELECT
+MAX(CAST(t."__time" AS TIMESTAMP)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+GROUP BY ();
++-------------------------+
+| __VALUE__               |
++-------------------------+
+| 2019-08-25 23:59:59.686 |
++-------------------------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:07:21 IST 2024
+SELECT
+MAX(CAST(t."__time" AS TIMESTAMP)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+GROUP BY ();
++-------------------------+
+| __VALUE__               |
++-------------------------+
+| 2019-08-25 23:59:59.686 |
++-------------------------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:07:21 IST 2024
+SELECT
+(COUNT(*)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY ();
++-----------+
+| __VALUE__ |
++-----------+
+|    465346 |
++-----------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:07:30 IST 2024
+SELECT
+CAST(t."app_version" AS VARCHAR) AS "app_version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++-------------+--------+
+| app_version | count  |
++-------------+--------+
+| 1.9.6       | 465346 |
++-------------+--------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:07:31 IST 2024
+SELECT
+(COUNT(*)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6'))
+GROUP BY ();
++-----------+
+| __VALUE__ |
++-----------+
+|    465346 |
++-----------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:07:35 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++------------------+--------+
+| Browser_Version  | count  |
++------------------+--------+
+| 76.0.3809.100    | 133145 |
+| 12.1.2           |  86940 |
+| 76.0.3809.111    |  43738 |
+| 12.1.1           |  26409 |
+| 76.0.3809.102    |  20389 |
+| 75.0.3770.144    |  20121 |
+| 64.0.3282.140    |  18359 |
+|                  |   9221 |
+| 68.0             |   7441 |
+| 12.0             |   6111 |
+| 75.0.3770.142    |   5795 |
+| 67.0.3396.87     |   5371 |
+| 12.1             |   5079 |
+| 70.0.3538.102    |   4374 |
+| 74.0.3729.159    |   4053 |
+| 11.0             |   3543 |
+| 75.0.3770.100    |   2847 |
+| 11.1.2           |   2786 |
+| 12.0.3           |   2378 |
+| 13.0             |   2191 |
+| 19.7.3.172       |   1940 |
+| 76.0.3809.89     |   1907 |
+| 62.0.3331.116    |   1846 |
+| 76.0.3809.123    |   1765 |
+| 10.1.2           |   1653 |
+| 75.0.3770.143    |   1642 |
+| 63.0.3239.132    |   1487 |
+| 75.0.3770.101    |   1478 |
+| 75.0.3770.129    |   1324 |
+| 49.0.2623.112    |   1268 |
+| rv:11.0          |   1224 |
+| 19.7.2.516       |   1184 |
+| 10.0             |   1178 |
+| 12.0.2           |   1104 |
+| 76.2.1           |   1043 |
+| 74.0.3729.169    |   1031 |
+| 12.0.1           |    933 |
+| 74.0.3729.125    |    919 |
+| 73.0.3683.86     |    867 |
+| 75.0.3770.102    |    792 |
+| 72.0.3626.121    |    729 |
+| 72.0.3626.122    |    666 |
+| 19.7.1.114       |    664 |
+| 76.0.3809.87     |    650 |
+| 70.0.3538.110    |    645 |
+| 74.0.3729.136    |    631 |
+| 9.1.3            |    601 |
+| 73.0.3683.90     |    586 |
+| 69.0.3497.100    |    555 |
+| 11.1             |    536 |
+| 74.0.3729.157    |    529 |
+| 69.0.3497.128    |    502 |
+| 73.0.3683.103    |    488 |
+| 74.0.3729.131    |    486 |
+| 52.0.2743.116    |    483 |
+| 58.0.3029.110    |    471 |
+| 75.0.3770.80     |    451 |
+| 73.0.3683.114    |    419 |
+| 9.0              |    408 |
+| 71.0.3578.99     |    398 |
+| 71.0.3578.141    |    389 |
+| 73.0.3683.88     |    387 |
+| 71.0.3578.127    |    379 |
+| 67.0.3396.99     |    336 |
+| 11.0.3           |    325 |
+| 56.0.2924.87     |    323 |
+| 9.1.2            |    310 |
+| 51.0.2704.79     |    308 |
+| 72.0.3626.109    |    299 |
+| 76.0.3809.81     |    285 |
+| 11.1.1           |    280 |
+| 77.0.3865.35     |    280 |
+| 71.0.3578.98     |    275 |
+| 58.0.2988.0      |    250 |
+| 67.0             |    233 |
+| 68.0.3440.91     |    231 |
+| 72.0.3626.117    |    228 |
+| 66.0.3359.126    |    216 |
+| 78.0.3877.0      |    210 |
+| 65.0.3325.109    |    207 |
+| 75.0.3770.90     |    206 |
+| 62.0.3331.132    |    201 |
+| 59.0.3043.0      |    200 |
+| 64.0.3282.137    |    199 |
+| 42.0.2311.135    |    194 |
+| 63.0.3368.43     |    193 |
+| 62.0.3331.119    |    188 |
+| 46.0.2486.0      |    186 |
+| 48.0             |    183 |
+| 57.0.2987.133    |    178 |
+| 72.0.3626.81     |    174 |
+| 66.0             |    173 |
+| 73.0.3683.75     |    171 |
+| 65.0.3325.181    |    169 |
+| 5.2.2            |    165 |
+| 19.7.3.91.00     |    163 |
+| 70.0.3538.76     |    163 |
+| 6.1.6            |    155 |
+| 19.7.2.455       |    153 |
+| 10.0.1           |    145 |
+| 11.0.2           |    142 |
+| 70.0.3538.77     |    140 |
+| 52.0             |    136 |
+| 72.0.3626.105    |    136 |
+| 58.0.3012.0      |    135 |
+| 74.0.3729.180    |    134 |
+| 70.0.3538.80     |    133 |
+| 77.0.3865.42     |    132 |
+| 56.2.13          |    129 |
+| 63.0.3239.111    |    127 |
+| 59.0.3071.125    |    126 |
+| 19.9.1.167.10    |    124 |
+| 10.0.2           |    121 |
+| 10.1.1           |    120 |
+| 78.0.3879.0      |    119 |
+| 74.0.3729.108    |    117 |
+| 11.0.1           |    115 |
+| 60.0             |    115 |
+| 61.0.3163.100    |    114 |
+| 55.0.2883.91     |    113 |
+| 6.2.8            |    112 |
+| 75.0.3770.67     |    112 |
+| 75.0.3770.89     |    111 |
+| 57.0.2987.110    |    106 |
+| 60.0.3255.69     |    105 |
+| 66.0.3359.181    |    105 |
+| 63.0.3368.35     |    103 |
+| 72.0.3626.96     |    101 |
+| 58.0.3029.140    |     98 |
+| 10.1             |     96 |
+| 57.0.2987.108    |     95 |
+| 53.0.2785.34     |     89 |
+| 51.0.2683.0      |     88 |
+| 63.0.3235.0      |     85 |
+| 43.0.2357.93     |     84 |
+| 72.0.3626.119    |     81 |
+| 57.0             |     80 |
+| 69.0.3497.120    |     80 |
+| 45.0.2454.85     |     77 |
+| 19.3.1.333.00    |     73 |
+| 70.0.3538.25     |     73 |
+| 78.0.3892.0      |     73 |
+| 19.7.2.90.00     |     69 |
+| 19.9.2.83        |     69 |
+| 74.0.3729.112    |     68 |
+| 72.0.3626.76     |     66 |
+| 65.0.3325.209    |     65 |
+| 74.0.3729.141    |     65 |
+| 17.1.0.2034      |     63 |
+| 68.0.3440.118    |     61 |
+| 68.0.3440.106    |     59 |
+| 9.1.1            |     59 |
+| 53.0.2569.141117 |     57 |
+| 62.0.3331.99     |     56 |
+| 8.0.5            |     55 |
+| 60.0.3255.95     |     54 |
+| 4.0              |     52 |
+| 2.X              |     51 |
+| 19.7.0.117.00    |     50 |
+| 8.0.8            |     50 |
+| 5.1.9            |     49 |
+| 66.0.3359.158    |     49 |
+| 47.0.2526.69     |     46 |
+| 77.0.3865.18     |     46 |
+| 53.0.2785.143    |     45 |
+| 69.0.3497.95     |     44 |
+| 61.0.3163.120    |     43 |
+| 7.8.2.40664      |     43 |
+| 64.0             |     41 |
+| 18.11.1.805      |     40 |
+| 53.0.2785.154    |     39 |
+| 18.4.1.871       |     38 |
+| 38.0.1025.166    |     38 |
+| 61.0.3163.125    |     38 |
+| 65.0             |     38 |
+| 64.0.3282.167    |     37 |
+| 19.7.1.93.00     |     36 |
+| 55.0.2883.87     |     36 |
+| 60.0.3112.116    |     36 |
+| 19.6.3.318.00    |     35 |
+| 56.0.2924.0      |     35 |
+| 61.0.3163.98     |     35 |
+| 71.0.3578.89     |     35 |
+| 58.0.3029.83     |     32 |
+| 58.0.3029.96     |     32 |
+| 7.8.1.40497      |     32 |
+| 12.4             |     31 |
+| 47.0             |     31 |
+| 50.0             |     31 |
+| 63.0.3237.0      |     31 |
+| 76.0.3809.38     |     31 |
+| 19.6.0.1583      |     30 |
+| 38.0.2125.111    |     30 |
+| 36.0.1985.125    |     28 |
+| 42.0.2311.111    |     28 |
+| 66.0.3359.117    |     28 |
+| 70.0.3538.64     |     28 |
+| 71.0.3578.80     |     28 |
+| 10.0.3           |     27 |
+| 18.6.1.770       |     27 |
+| 19.1.2.337.00    |     27 |
+| 37.0.2062.124    |     27 |
+| 51.0             |     27 |
+| 63.0.3239.84     |     27 |
+| 63.0.3239.86     |     27 |
+| 72.0.3626.120    |     27 |
+| 56.0.2924.84     |     25 |
+| 37.0.2062.94     |     24 |
+| 38.0.2125.102    |     24 |
+| 58.0.3014.0      |     24 |
+| 51.0.2704.103    |     23 |
+| 60.0.3112.113    |     23 |
+| 76.0.3809.68     |     23 |
+| 19.4.2.702       |     22 |
+| 43.0.2357.121    |     22 |
+| 63.0.3239.73     |     22 |
+| 75.0.3770.103    |     22 |
+| 39.0.0.0         |     21 |
+| 44.6.2246.127414 |     21 |
+| 45.0.2454.94     |     21 |
+| 53.0.2785.146    |     20 |
+| 57.16.2987.98    |     20 |
+| 58.0.3025.0      |     20 |
+| 62.0.3331.107    |     20 |
+| 19.7.1.42.10     |     19 |
+| 3.2              |     19 |
+| 5.0.2            |     19 |
+| 58.0.3029.81     |     19 |
+| 64.0.3282.119    |     19 |
+| 69.0             |     19 |
+| 5.2.6.1000       |     18 |
+| 72.0.3626.97     |     18 |
+| 38.0.2125.122    |     17 |
+| 51.0.2704.84     |     17 |
+| 68.0.3440.85     |     17 |
+| 5.2.7.5000       |     16 |
+| 53.0.2785.116    |     16 |
+| 62.0.3331.117    |     16 |
+| 62.0.3331.88     |     16 |
+| 9.1              |     16 |
+| 19.9.1.167.11    |     15 |
+| 50.0.2661.94     |     15 |
+| 62.0.3202.84     |     15 |
+| 49.0.2623.110    |     14 |
+| 58.0.2993.0      |     14 |
+| 63.0.3223.0      |     14 |
+| 66.0.3359.139    |     14 |
+| 78.0.3887.4      |     14 |
+| 30.0.0.0         |     13 |
+| 75.0.3770.70     |     13 |
+| 36.0.2130.80     |     12 |
+| 57.0.2987.132    |     12 |
+| 53.0.2785.124    |     11 |
+| 67.0.3396.79     |     11 |
+| 70.0             |     11 |
+| 46.0.2490.80     |     10 |
+| 50.0.2631.0      |     10 |
+| 50.0.2661.89     |     10 |
+| 7537.78.2        |     10 |
+| 77.0.3865.19     |     10 |
+| 62.0.3331.101    |      9 |
+| 64.0.3282.186    |      8 |
+| 71.0.3578.5      |      7 |
+| 73.0.3683.68     |      7 |
+| 78.0.3887.7      |      7 |
+| 12.2             |      6 |
+| 73.0.3683.105    |      6 |
+| 35.0.1916.122    |      5 |
+| 44.0.2403.133    |      5 |
+| 47.0.2526.111    |      5 |
+| 63.0.3239.108    |      5 |
+| 7.0              |      5 |
+| 40.0.2214.109    |      4 |
+| 48.0.2564.116    |      4 |
+| 61.0.3163.128    |      4 |
+| 68.0.3440.84     |      4 |
+| 75.4.10          |      4 |
+| 8.0              |      4 |
+| 74.0.3729.155    |      3 |
+| 75.0.3738.0      |      3 |
+| 75.4.8           |      3 |
+| 51.0.2704.106    |      2 |
+| 30.0.1599.103    |      1 |
+| 34.0.1847.114    |      1 |
+| 40.0.2214.85     |      1 |
+| 41.0.2272.118    |      1 |
+| 44.0             |      1 |
+| 45.0.2454.101    |      1 |
+| 46.0.2480.0      |      1 |
+| 47.0.2526.73     |      1 |
+| 48.0.2564.97     |      1 |
+| 65.0.3325.230    |      1 |
+| 72.0.3626.101    |      1 |
+| 76.0.3809.12     |      1 |
+| 9.0.3            |      1 |
++------------------+--------+
+(295 rows)
+
+!ok
+# Wed Jul 10 19:07:35 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','12.1.1','76.0.3809.102','75.0.3770.144','64.0.3282.140','','68.0','12.0','75.0.3770.142','67.0.3396.87','12.1','70.0.3538.102','74.0.3729.159','11.0','75.0.3770.100','11.1.2'))
+GROUP BY 1;
++-----------------+--------+
+| Browser_Version | count  |
++-----------------+--------+
+|                 |   9221 |
+| 11.0            |   3543 |
+| 11.1.2          |   2786 |
+| 12.0            |   6111 |
+| 12.1            |   5079 |
+| 12.1.1          |  26409 |
+| 12.1.2          |  86940 |
+| 64.0.3282.140   |  18359 |
+| 67.0.3396.87    |   5371 |
+| 68.0            |   7441 |
+| 70.0.3538.102   |   4374 |
+| 74.0.3729.159   |   4053 |
+| 75.0.3770.100   |   2847 |
+| 75.0.3770.142   |   5795 |
+| 75.0.3770.144   |  20121 |
+| 76.0.3809.100   | 133145 |
+| 76.0.3809.102   |  20389 |
+| 76.0.3809.111   |  43738 |
++-----------------+--------+
+(18 rows)
+
+!ok
+# Wed Jul 10 19:07:40 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','12.1.1','76.0.3809.102','75.0.3770.144','64.0.3282.140','','68.0','12.0','75.0.3770.142'))
+GROUP BY 1;
++-----------------+-------+
+| Browser_Version | count |
++-----------------+-------+
++-----------------+-------+
+(0 rows)
+
+!ok
+# Wed Jul 10 19:07:40 IST 2024
+SELECT
+(COUNT(*)) AS "v0",
+(COUNT(*) FILTER (WHERE (CAST(t."app_version" AS VARCHAR)='1.9.6'))) AS "v1"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00')
+GROUP BY ();
++----+----+
+| v0 | v1 |
++----+----+
+|  0 |  0 |
++----+----+
+(1 row)
+
+!ok
+# Wed Jul 10 19:07:45 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) AS "Layer",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++-------+--------+
+| Layer | count  |
++-------+--------+
+|       | 348477 |
+| 6     |  32551 |
+| 5     |  27013 |
+| 4     |  21946 |
+| 3     |  16349 |
+| 2     |  10320 |
+| 1     |   6047 |
+| 0     |   2643 |
++-------+--------+
+(8 rows)
+
+!ok
+# Wed Jul 10 19:07:45 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) AS "Layer",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','12.1.1','76.0.3809.102','75.0.3770.144','64.0.3282.140','','68.0','12.0','75.0.3770.142')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL OR CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IN ('6','5')))
+GROUP BY 1,2;
++-----------------+-------+-------+
+| Browser_Version | Layer | count |
++-----------------+-------+-------+
+|                 | 5     |   591 |
+|                 | 6     |   709 |
+|                 |       |  6913 |
+| 12.0            | 5     |   374 |
+| 12.0            | 6     |   462 |
+| 12.0            |       |  4606 |
+| 12.1.1          | 5     |  1603 |
+| 12.1.1          | 6     |  1996 |
+| 12.1.1          |       | 19867 |
+| 12.1.2          | 5     |  5507 |
+| 12.1.2          | 6     |  6688 |
+| 12.1.2          |       | 65343 |
+| 64.0.3282.140   | 5     |  1091 |
+| 64.0.3282.140   | 6     |  1187 |
+| 64.0.3282.140   |       | 13546 |
+| 68.0            | 5     |   441 |
+| 68.0            | 6     |   476 |
+| 68.0            |       |  5536 |
+| 75.0.3770.142   | 5     |   318 |
+| 75.0.3770.142   | 6     |   355 |
+| 75.0.3770.142   |       |  4334 |
+| 75.0.3770.144   | 5     |  1077 |
+| 75.0.3770.144   | 6     |  1189 |
+| 75.0.3770.144   |       | 15078 |
+| 76.0.3809.100   | 5     |  7290 |
+| 76.0.3809.100   | 6     |  8054 |
+| 76.0.3809.100   |       | 99760 |
+| 76.0.3809.102   | 5     |  1166 |
+| 76.0.3809.102   | 6     |  1305 |
+| 76.0.3809.102   |       | 15198 |
+| 76.0.3809.111   | 5     |  2556 |
+| 76.0.3809.111   | 6     |  3994 |
+| 76.0.3809.111   |       | 32704 |
++-----------------+-------+-------+
+(33 rows)
+
+!ok
+# Wed Jul 10 19:07:45 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) AS "Layer",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','12.1.1','76.0.3809.102','75.0.3770.144','64.0.3282.140','','68.0','12.0','75.0.3770.142')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL OR CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IN ('6','5')))
+GROUP BY 1,2;
++-----------------+-------+-------+
+| Browser_Version | Layer | count |
++-----------------+-------+-------+
++-----------------+-------+-------+
+(0 rows)
+
+!ok
+# Wed Jul 10 19:07:45 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v0",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v1",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v2",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v3",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='6')))) AS "v4",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='6')))) AS "v5",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='6')))) AS "v6",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='6')))) AS "v7",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='5')))) AS "v8",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='5')))) AS "v9",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='5')))) AS "v10",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='5')))) AS "v11"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL OR CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IN ('6','5')))
+GROUP BY ();
++--------+----+--------+----+-------+----+-------+----+-------+----+-------+-----+
+| v0     | v1 | v2     | v3 | v4    | v5 | v6    | v7 | v8    | v9 | v10   | v11 |
++--------+----+--------+----+-------+----+-------+----+-------+----+-------+-----+
+| 348477 |  0 | 348477 |  0 | 32551 |  0 | 32551 |  0 | 27013 |  0 | 27013 |   0 |
++--------+----+--------+----+-------+----+-------+----+-------+----+-------+-----+
+(1 row)
+
+!ok
+# Wed Jul 10 19:07:49 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+(COUNT(*)) AS "r"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY 1
+ORDER BY "r" DESC
+LIMIT 101;
++-----------------------+--------+
+| Browser               | r      |
++-----------------------+--------+
+| Chrome                | 232603 |
+| Mobile Safari         | 113617 |
+| Chrome Mobile         |  60173 |
+| Safari                |  38323 |
+| Firefox               |   8307 |
+| Yandex.Browser        |   4258 |
+| Opera                 |   2819 |
+| IE                    |   1238 |
+| Mozilla               |   1224 |
+| Silk                  |   1050 |
+| Yandex.Browser mobile |    583 |
+| Mobile Firefox        |    253 |
+| Puffin                |    240 |
+| Chromium              |    149 |
+| Waterfox              |    129 |
+| Opera Mobile          |     78 |
+| PS4 Web browser       |     77 |
+| Android browser       |     52 |
+| Sogou Explorer        |     51 |
+| IE Mobile             |     35 |
+| Maxthon               |     34 |
+| PS Vita browser       |     19 |
+| unknown               |     17 |
+|                       |     10 |
+| Apple Mail            |      7 |
++-----------------------+--------+
+(25 rows)
+
+!ok
+# Wed Jul 10 19:07:53 IST 2024
+SELECT
+CAST(t."app_version" AS VARCHAR) AS "app_version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++-------------+--------+
+| app_version | count  |
++-------------+--------+
+| 1.9.6       | 406393 |
++-------------+--------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:07:53 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v1"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile'))
+GROUP BY ();
++--------+----+
+| v0     | v1 |
++--------+----+
+| 406393 |  0 |
++--------+----+
+(1 row)
+
+!ok
+# Wed Jul 10 19:07:53 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) AS "Layer",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++-------+--------+
+| Layer | count  |
++-------+--------+
+|       | 304306 |
+| 6     |  28908 |
+| 5     |  23807 |
+| 4     |  19197 |
+| 3     |  14164 |
+| 2     |   8780 |
+| 1     |   5056 |
+| 0     |   2175 |
++-------+--------+
+(8 rows)
+
+!ok
+# Wed Jul 10 19:07:53 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND (CAST(t."app_version" AS VARCHAR)='1.9.6'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++-----------------+--------+
+| Browser_Version | count  |
++-----------------+--------+
+| 76.0.3809.100   | 133113 |
+| 12.1.2          |  72287 |
+| 76.0.3809.111   |  43738 |
+| 76.0.3809.102   |  20389 |
+| 75.0.3770.144   |  20121 |
+| 12.1.1          |  18434 |
+| 64.0.3282.140   |  18359 |
+|                 |   9110 |
+| 75.0.3770.142   |   5795 |
+| 67.0.3396.87    |   5371 |
+| 12.0            |   4995 |
+| 70.0.3538.102   |   4374 |
+| 74.0.3729.159   |   4053 |
+| 12.1            |   3144 |
+| 75.0.3770.100   |   2847 |
+| 11.0            |   2252 |
+| 76.0.3809.89    |   1907 |
+| 13.0            |   1867 |
+| 76.0.3809.123   |   1765 |
+| 75.0.3770.143   |   1642 |
+| 63.0.3239.132   |   1487 |
+| 75.0.3770.101   |   1478 |
+| 75.0.3770.129   |   1324 |
+| 49.0.2623.112   |   1268 |
+| 10.0            |   1089 |
+| 74.0.3729.169   |   1027 |
+| 74.0.3729.125   |    919 |
+| 73.0.3683.86    |    867 |
+| 75.0.3770.102   |    792 |
+| 72.0.3626.121   |    714 |
+| 72.0.3626.122   |    666 |
+| 70.0.3538.110   |    645 |
+| 74.0.3729.136   |    631 |
+| 76.0.3809.87    |    615 |
+| 73.0.3683.90    |    586 |
+| 69.0.3497.100   |    555 |
+| 74.0.3729.157   |    529 |
+| 69.0.3497.128   |    502 |
+| 73.0.3683.103   |    488 |
+| 74.0.3729.131   |    486 |
+| 52.0.2743.116   |    483 |
+| 58.0.3029.110   |    471 |
+| 75.0.3770.80    |    451 |
+| 73.0.3683.114   |    419 |
+| 71.0.3578.99    |    398 |
+| 71.0.3578.141   |    389 |
+| 73.0.3683.88    |    387 |
+| 71.0.3578.127   |    379 |
+| 9.0             |    376 |
+| 67.0.3396.99    |    336 |
+| 56.0.2924.87    |    323 |
+| 51.0.2704.79    |    308 |
+| 72.0.3626.109   |    299 |
+| 76.0.3809.81    |    285 |
+| 77.0.3865.35    |    280 |
+| 71.0.3578.98    |    275 |
+| 58.0.2988.0     |    250 |
+| 68.0.3440.91    |    231 |
+| 72.0.3626.117   |    228 |
+| 66.0.3359.126   |    216 |
+| 78.0.3877.0     |    210 |
+| 65.0.3325.109   |    207 |
+| 75.0.3770.90    |    206 |
+| 59.0.3043.0     |    200 |
+| 64.0.3282.137   |    199 |
+| 42.0.2311.135   |    194 |
+| 46.0.2486.0     |    186 |
+| 57.0.2987.133   |    178 |
+| 72.0.3626.81    |    174 |
+| 73.0.3683.75    |    171 |
+| 70.0.3538.76    |    163 |
+| 65.0.3325.181   |    142 |
+| 70.0.3538.77    |    140 |
+| 72.0.3626.105   |    136 |
+| 58.0.3012.0     |    135 |
+| 74.0.3729.180   |    134 |
+| 70.0.3538.80    |    133 |
+| 77.0.3865.42    |    132 |
+| 63.0.3239.111   |    127 |
+| 59.0.3071.125   |    126 |
+| 78.0.3879.0     |    119 |
+| 74.0.3729.108   |    117 |
+| 61.0.3163.100   |    114 |
+| 55.0.2883.91    |    113 |
+| 75.0.3770.67    |    112 |
+| 75.0.3770.89    |    111 |
+| 57.0.2987.110   |    106 |
+| 66.0.3359.181   |    105 |
+| 72.0.3626.96    |    101 |
+| 58.0.3029.140   |     98 |
+| 57.0.2987.108   |     95 |
+| 53.0.2785.34    |     89 |
+| 51.0.2683.0     |     88 |
+| 63.0.3235.0     |     85 |
+| 43.0.2357.93    |     84 |
+| 72.0.3626.119   |     81 |
+| 69.0.3497.120   |     80 |
+| 45.0.2454.85    |     77 |
+| 70.0.3538.25    |     73 |
+| 78.0.3892.0     |     73 |
+| 74.0.3729.112   |     68 |
+| 72.0.3626.76    |     66 |
+| 65.0.3325.209   |     65 |
+| 74.0.3729.141   |     65 |
+| 68.0.3440.118   |     61 |
+| 68.0.3440.106   |     59 |
+| 66.0.3359.158   |     49 |
+| 47.0.2526.69    |     46 |
+| 77.0.3865.18    |     46 |
+| 53.0.2785.143   |     45 |
+| 69.0.3497.95    |     44 |
+| 61.0.3163.120   |     43 |
+| 53.0.2785.154   |     39 |
+| 38.0.1025.166   |     38 |
+| 61.0.3163.125   |     38 |
+| 55.0.2883.87    |     36 |
+| 60.0.3112.116   |     36 |
+| 56.0.2924.0     |     35 |
+| 61.0.3163.98    |     35 |
+| 71.0.3578.89    |     35 |
+| 58.0.3029.83    |     32 |
+| 58.0.3029.96    |     32 |
+| 12.4            |     31 |
+| 63.0.3237.0     |     31 |
+| 76.0.3809.38    |     31 |
+| 38.0.2125.111   |     30 |
+| 36.0.1985.125   |     28 |
+| 42.0.2311.111   |     28 |
+| 66.0.3359.117   |     28 |
+| 70.0.3538.64    |     28 |
+| 71.0.3578.80    |     28 |
+| 37.0.2062.124   |     27 |
+| 63.0.3239.84    |     27 |
+| 63.0.3239.86    |     27 |
+| 72.0.3626.120   |     27 |
+| 56.0.2924.84    |     25 |
+| 37.0.2062.94    |     24 |
+| 38.0.2125.102   |     24 |
+| 58.0.3014.0     |     24 |
+| 51.0.2704.103   |     23 |
+| 60.0.3112.113   |     23 |
+| 76.0.3809.68    |     23 |
+| 43.0.2357.121   |     22 |
+| 63.0.3239.73    |     22 |
+| 75.0.3770.103   |     22 |
+| 39.0.0.0        |     21 |
+| 45.0.2454.94    |     21 |
+| 53.0.2785.146   |     20 |
+| 57.16.2987.98   |     20 |
+| 58.0.3025.0     |     20 |
+| 5.0.2           |     19 |
+| 58.0.3029.81    |     19 |
+| 64.0.3282.119   |     19 |
+| 72.0.3626.97    |     18 |
+| 38.0.2125.122   |     17 |
+| 51.0.2704.84    |     17 |
+| 68.0.3440.85    |     17 |
+| 53.0.2785.116   |     16 |
+| 50.0.2661.94    |     15 |
+| 62.0.3202.84    |     15 |
+| 49.0.2623.110   |     14 |
+| 58.0.2993.0     |     14 |
+| 63.0.3223.0     |     14 |
+| 66.0.3359.139   |     14 |
+| 78.0.3887.4     |     14 |
+| 30.0.0.0        |     13 |
+| 75.0.3770.70    |     13 |
+| 57.0.2987.132   |     12 |
+| 53.0.2785.124   |     11 |
+| 67.0.3396.79    |     11 |
+| 46.0.2490.80    |     10 |
+| 50.0.2631.0     |     10 |
+| 50.0.2661.89    |     10 |
+| 77.0.3865.19    |     10 |
+| 64.0.3282.186   |      8 |
+| 71.0.3578.5     |      7 |
+| 73.0.3683.68    |      7 |
+| 78.0.3887.7     |      7 |
+| 12.2            |      6 |
+| 73.0.3683.105   |      6 |
+| 35.0.1916.122   |      5 |
+| 44.0.2403.133   |      5 |
+| 47.0.2526.111   |      5 |
+| 63.0.3239.108   |      5 |
+| 7.0             |      5 |
+| 40.0.2214.109   |      4 |
+| 48.0.2564.116   |      4 |
+| 61.0.3163.128   |      4 |
+| 68.0.3440.84    |      4 |
+| 74.0.3729.155   |      3 |
+| 75.0.3738.0     |      3 |
+| 51.0.2704.106   |      2 |
+| 8.0             |      2 |
+| 30.0.1599.103   |      1 |
+| 34.0.1847.114   |      1 |
+| 40.0.2214.85    |      1 |
+| 41.0.2272.118   |      1 |
+| 45.0.2454.101   |      1 |
+| 46.0.2480.0     |      1 |
+| 47.0.2526.73    |      1 |
+| 48.0.2564.97    |      1 |
+| 64.0.3282.167   |      1 |
+| 65.0.3325.230   |      1 |
+| 72.0.3626.101   |      1 |
+| 76.0.3809.12    |      1 |
++-----------------+--------+
+(205 rows)
+
+!ok
+# Wed Jul 10 19:07:53 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')))) AS "v0",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')))) AS "v1",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v2",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v3",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v4",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v5",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='6')))) AS "v6",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='6')))) AS "v7",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='6')))) AS "v8",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='6')))) AS "v9",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='5')))) AS "v10",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='5')))) AS "v11",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='5')))) AS "v12",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='5')))) AS "v13"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile'))
+GROUP BY ();
++--------+----+--------+----+--------+----+-------+----+-------+----+-------+-----+-------+-----+
+| v0     | v1 | v2     | v3 | v4     | v5 | v6    | v7 | v8    | v9 | v10   | v11 | v12   | v13 |
++--------+----+--------+----+--------+----+-------+----+-------+----+-------+-----+-------+-----+
+| 406393 |  0 | 304306 |  0 | 304306 |  0 | 28908 |  0 | 28908 |  0 | 23807 |   0 | 23807 |   0 |
++--------+----+--------+----+--------+----+-------+----+-------+----+-------+-----+-------+-----+
+(1 row)
+
+!ok
+# Wed Jul 10 19:07:53 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) AS "Layer",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','76.0.3809.102','75.0.3770.144','12.1.1','64.0.3282.140','','75.0.3770.142','67.0.3396.87','12.0')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL OR CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IN ('6','5')))
+GROUP BY 1,2;
++-----------------+-------+-------+
+| Browser_Version | Layer | count |
++-----------------+-------+-------+
+|                 | 5     |   583 |
+|                 | 6     |   700 |
+|                 |       |  6829 |
+| 12.0            | 5     |   316 |
+| 12.0            | 6     |   396 |
+| 12.0            |       |  3763 |
+| 12.1.1          | 5     |  1183 |
+| 12.1.1          | 6     |  1455 |
+| 12.1.1          |       | 13910 |
+| 12.1.2          | 5     |  4745 |
+| 12.1.2          | 6     |  5853 |
+| 12.1.2          |       | 54312 |
+| 64.0.3282.140   | 5     |  1091 |
+| 64.0.3282.140   | 6     |  1187 |
+| 64.0.3282.140   |       | 13546 |
+| 67.0.3396.87    | 5     |   329 |
+| 67.0.3396.87    | 6     |   528 |
+| 67.0.3396.87    |       |  3982 |
+| 75.0.3770.142   | 5     |   318 |
+| 75.0.3770.142   | 6     |   355 |
+| 75.0.3770.142   |       |  4334 |
+| 75.0.3770.144   | 5     |  1077 |
+| 75.0.3770.144   | 6     |  1189 |
+| 75.0.3770.144   |       | 15078 |
+| 76.0.3809.100   | 5     |  7288 |
+| 76.0.3809.100   | 6     |  8052 |
+| 76.0.3809.100   |       | 99736 |
+| 76.0.3809.102   | 5     |  1166 |
+| 76.0.3809.102   | 6     |  1305 |
+| 76.0.3809.102   |       | 15198 |
+| 76.0.3809.111   | 5     |  2556 |
+| 76.0.3809.111   | 6     |  3994 |
+| 76.0.3809.111   |       | 32704 |
++-----------------+-------+-------+
+(33 rows)
+
+!ok
+# Wed Jul 10 19:07:53 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) AS "Layer",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','76.0.3809.102','75.0.3770.144','12.1.1','64.0.3282.140','','75.0.3770.142','67.0.3396.87','12.0')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL OR CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IN ('6','5')))
+GROUP BY 1,2;
++-----------------+-------+-------+
+| Browser_Version | Layer | count |
++-----------------+-------+-------+
++-----------------+-------+-------+
+(0 rows)
+
+!ok
+# Wed Jul 10 19:07:53 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','76.0.3809.102','75.0.3770.144','12.1.1','64.0.3282.140','','75.0.3770.142','67.0.3396.87','12.0'))
+GROUP BY 1;
++-----------------+--------+
+| Browser_Version | count  |
++-----------------+--------+
+|                 |   9110 |
+| 12.0            |   4995 |
+| 12.1.1          |  18434 |
+| 12.1.2          |  72287 |
+| 64.0.3282.140   |  18359 |
+| 67.0.3396.87    |   5371 |
+| 75.0.3770.142   |   5795 |
+| 75.0.3770.144   |  20121 |
+| 76.0.3809.100   | 133113 |
+| 76.0.3809.102   |  20389 |
+| 76.0.3809.111   |  43738 |
++-----------------+--------+
+(11 rows)
+
+!ok
+# Wed Jul 10 19:07:53 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','76.0.3809.102','75.0.3770.144','12.1.1','64.0.3282.140','','75.0.3770.142','67.0.3396.87','12.0'))
+GROUP BY 1;
++-----------------+-------+
+| Browser_Version | count |
++-----------------+-------+
++-----------------+-------+
+(0 rows)
+
+!ok
+# Wed Jul 10 19:08:00 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR) AS "Os",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='6'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++-------------------------+-------+
+| Os                      | count |
++-------------------------+-------+
+| iOS                     |  9277 |
+| Windows                 |  7255 |
+| Android                 |  5487 |
+| Chrome OS               |  3135 |
+| OS X                    |  1505 |
+| Windows 7               |  1351 |
+| Windows 8.1             |   468 |
+| OS X 10.10 Yosemite     |   101 |
+| Linux                   |    87 |
+| Windows 8               |    69 |
+| Android 4.4 KitKat      |    41 |
+| OS X 10.9 Mavericks     |    38 |
+| Windows Vista           |    25 |
+| Windows XP              |    18 |
+| OS X 10.8 Mountain Lion |    17 |
+| OS X 10.7 Lion          |    15 |
+| OS X 10.6 Snow Leopard  |    12 |
+| iOS 4                   |     3 |
+| Android 4.2 Jelly Bean  |     2 |
+| Windows 2003 Server     |     2 |
++-------------------------+-------+
+(20 rows)
+
+!ok
+# Wed Jul 10 19:08:00 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR) AS "Os",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL)
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++--------------------------+-------+
+| Os                       | count |
++--------------------------+-------+
+| Windows                  | 89562 |
+| iOS                      | 87069 |
+| Android                  | 44460 |
+| Chrome OS                | 38301 |
+| OS X                     | 18426 |
+| Windows 7                | 15975 |
+| Windows 8.1              |  5530 |
+| OS X 10.10 Yosemite      |  1317 |
+| Linux                    |   855 |
+| Windows 8                |   802 |
+| OS X 10.9 Mavericks      |   549 |
+| Android 4.4 KitKat       |   369 |
+| Windows Vista            |   301 |
+| Windows XP               |   243 |
+| OS X 10.7 Lion           |   163 |
+| OS X 10.8 Mountain Lion  |   141 |
+| OS X 10.6 Snow Leopard   |   131 |
+| Android 4.2 Jelly Bean   |    61 |
+| Windows 2003 Server      |    28 |
+| iOS 4                    |    13 |
+| iOS 7                    |     5 |
+| iOS 8                    |     2 |
+| Android 4.1.x Jelly Bean |     1 |
+| Android 4.3 Jelly Bean   |     1 |
+| Windows Mobile           |     1 |
++--------------------------+-------+
+(25 rows)
+
+!ok
+# Wed Jul 10 19:08:00 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR) AS "Os",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='5'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++-------------------------+-------+
+| Os                      | count |
++-------------------------+-------+
+| iOS                     |  7506 |
+| Windows                 |  6587 |
+| Android                 |  3502 |
+| Chrome OS               |  2816 |
+| OS X                    |  1368 |
+| Windows 7               |  1223 |
+| Windows 8.1             |   417 |
+| OS X 10.10 Yosemite     |    99 |
+| Linux                   |    73 |
+| Windows 8               |    66 |
+| OS X 10.9 Mavericks     |    34 |
+| Android 4.4 KitKat      |    30 |
+| Windows Vista           |    21 |
+| OS X 10.8 Mountain Lion |    16 |
+| Windows XP              |    16 |
+| OS X 10.7 Lion          |    15 |
+| OS X 10.6 Snow Leopard  |    12 |
+| Android 4.2 Jelly Bean  |     2 |
+| Windows 2003 Server     |     2 |
+| iOS 4                   |     2 |
++-------------------------+-------+
+(20 rows)
+
+!ok
+# Wed Jul 10 19:08:00 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','76.0.3809.102','75.0.3770.144','12.1.1','64.0.3282.140','','75.0.3770.142','67.0.3396.87','12.0')) AND (CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR)='6')) AND (CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR)='iOS'))
+GROUP BY 1;
++-----------------+-------+
+| Browser_Version | count |
++-----------------+-------+
+|                 |   700 |
+| 12.0            |   396 |
+| 12.1.1          |  1455 |
+| 12.1.2          |  5853 |
++-----------------+-------+
+(4 rows)
+
+!ok
+# Wed Jul 10 19:08:00 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR) AS "Os",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','76.0.3809.102','75.0.3770.144','12.1.1','64.0.3282.140','','75.0.3770.142','67.0.3396.87')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL) AND CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR) IN ('Windows','iOS'))
+GROUP BY 1,2;
++-----------------+---------+-------+
+| Browser_Version | Os      | count |
++-----------------+---------+-------+
+|                 | iOS     |  6829 |
+| 12.1.1          | iOS     | 13910 |
+| 12.1.2          | iOS     | 54312 |
+| 64.0.3282.140   | Windows | 13546 |
+| 67.0.3396.87    | Windows |    41 |
+| 75.0.3770.142   | Windows |  1320 |
+| 76.0.3809.100   | Windows | 66478 |
++-----------------+---------+-------+
+(7 rows)
+
+!ok
+# Wed Jul 10 19:08:00 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) AS "Browser_Version",
+CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR) AS "Os",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR) IN ('76.0.3809.100','12.1.2','76.0.3809.111','76.0.3809.102','75.0.3770.144','12.1.1','64.0.3282.140','','75.0.3770.142','67.0.3396.87')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL) AND CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR) IN ('Windows','iOS'))
+GROUP BY 1,2;
++-----------------+----+-------+
+| Browser_Version | Os | count |
++-----------------+----+-------+
++-----------------+----+-------+
+(0 rows)
+
+!ok
+# Wed Jul 10 19:08:00 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR)='Windows')))) AS "v0",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR)='Windows')))) AS "v1",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR)='Windows')))) AS "v2",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR)='Windows')))) AS "v3",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR)='iOS')))) AS "v4",
+(COUNT(*) FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR)='iOS')))) AS "v5",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR)='iOS')))) AS "v6",
+(COUNT(*) FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR)='iOS')))) AS "v7"
+FROM "kttm_nested" AS t
+WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL) AND CAST(JSON_VALUE("t"."agent",'$.os') AS VARCHAR) IN ('Windows','iOS'))
+GROUP BY ();
++-------+----+-------+----+-------+----+-------+----+
+| v0    | v1 | v2    | v3 | v4    | v5 | v6    | v7 |
++-------+----+-------+----+-------+----+-------+----+
+| 89562 |  0 | 89562 |  0 | 87069 |  0 | 87069 |  0 |
++-------+----+-------+----+-------+----+-------+----+
+(1 row)
+
+!ok
+# Wed Jul 10 19:08:09 IST 2024
+SELECT
+(SUM(t."session_length") FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00'))) AS "v0",
+(SUM(t."session_length") FILTER (WHERE (TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00'))) AS "v1",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')))) AS "v2",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')))) AS "v3",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v4",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')))) AS "v5",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v6",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')))) AS "v7",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.111')))) AS "v8",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.111')))) AS "v9",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.102')))) AS "v10",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.102')))) AS "v11",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='75.0.3770.144')))) AS "v12",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='75.0.3770.144')))) AS "v13",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.1')))) AS "v14",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.1')))) AS "v15",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='64.0.3282.140')))) AS "v16",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='64.0.3282.140')))) AS "v17",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='')))) AS "v18",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='')))) AS "v19",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='75.0.3770.142')))) AS "v20",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='75.0.3770.142')))) AS "v21",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v22",
+(SUM(t."session_length") FILTER (WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v23",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v24",
+(SUM(t."session_length") FILTER (WHERE (((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v25",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v26",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.100')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v27",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v28",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.2')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v29",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.111')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v30",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.111')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v31",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.102')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v32",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='76.0.3809.102')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v33",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='75.0.3770.144')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v34",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='75.0.3770.144')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v35",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.1')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v36",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='12.1.1')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v37",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='64.0.3282.140')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v38",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='64.0.3282.140')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v39",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v40",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v41",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='75.0.3770.142')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v42",
+(SUM(t."session_length") FILTER (WHERE ((((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 00:00:00') AND (CAST(t."app_version" AS VARCHAR)='1.9.6')) AND (CAST(JSON_VALUE("t"."agent",'$.browser_version') AS VARCHAR)='75.0.3770.142')) AND CAST(JSON_VALUE("t"."event",'$.layer') AS VARCHAR) IS NULL))) AS "v43"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-24 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile'))
+GROUP BY ();
++--------------+----+--------------+----+-------------+----+-------------+----+------------+----+------------+-----+-------------+-----+------------+-----+------------+-----+-----------+-----+-------------+-----+--------------+-----+--------------+-----+-------------+-----+------------+-----+------------+-----+------------+-----+-------------+-----+------------+-----+------------+-----+-----------+-----+-------------+-----+
+| v0           | v1 | v2           | v3 | v4          | v5 | v6          | v7 | v8         | v9 | v10        | v11 | v12         | v13 | v14        | v15 | v16        | v17 | v18       | v19 | v20         | v21 | v22          | v23 | v24          | v25 | v26         | v27 | v28        | v29 | v30        | v31 | v32        | v33 | v34         | v35 | v36        | v37 | v38        | v39 | v40       | v41 | v42         | v43 |
++--------------+----+--------------+----+-------------+----+-------------+----+------------+----+------------+-----+-------------+-----+------------+-----+------------+-----+-----------+-----+-------------+-----+--------------+-----+--------------+-----+-------------+-----+------------+-----+------------+-----+------------+-----+-------------+-----+------------+-----+------------+-----+-----------+-----+-------------+-----+
+| 133124033761 |    | 133124033761 |    | 49117680583 |    | 10361056506 |    | 2751483608 |    | 6468845935 |     | 22372524758 |     | 2181120477 |     | 5083248143 |     | 702523015 |     | 18631635033 |     | 102524502779 |     | 102524502779 |     | 38761109484 |     | 7853581296 |     | 2129886091 |     | 4951657880 |     | 15768017920 |     | 1723648309 |     | 3716248632 |     | 556074498 |     | 14686870996 |     |
++--------------+----+--------------+----+-------------+----+-------------+----+------------+----+------------+-----+-------------+-----+------------+-----+------------+-----+-----------+-----+-------------+-----+--------------+-----+--------------+-----+-------------+-----+------------+-----+------------+-----+------------+-----+-------------+-----+------------+-----+------------+-----+-----------+-----+-------------+-----+
+(1 row)
+
+!ok

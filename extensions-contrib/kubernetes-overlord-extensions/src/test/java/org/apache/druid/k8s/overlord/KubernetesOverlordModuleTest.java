@@ -38,6 +38,10 @@ import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
+import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
+import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
+import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.metadata.MetadataStorageConnector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.server.DruidNode;
@@ -47,6 +51,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.net.URL;
 import java.util.Properties;
 
 @RunWith(EasyMockRunner.class)
@@ -99,6 +104,99 @@ public class KubernetesOverlordModuleTest
   {
     injector = makeInjectorWithProperties(initializePropertes(false), false, false);
     injector.getInstance(KubernetesAndWorkerTaskRunnerFactory.class);
+  }
+
+  @Test
+  public void test_build_withMultiContainerAdapterType_returnsWithMultiContainerTaskAdapter()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "overlordMultiContainer");
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+
+    injector = makeInjectorWithProperties(props, false, true);
+    TaskAdapter taskAdapter = injector.getInstance(
+        TaskAdapter.class);
+
+    Assert.assertNotNull(taskAdapter);
+    Assert.assertTrue(taskAdapter instanceof MultiContainerTaskAdapter);
+  }
+
+  @Test
+  public void test_build_withSingleContainerAdapterType_returnsKubernetesTaskRunnerWithSingleContainerTaskAdapter()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "overlordSingleContainer");
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    injector = makeInjectorWithProperties(props, false, true);
+    TaskAdapter taskAdapter = injector.getInstance(
+        TaskAdapter.class);
+
+    Assert.assertNotNull(taskAdapter);
+    Assert.assertTrue(taskAdapter instanceof SingleContainerTaskAdapter);
+  }
+
+  @Test
+  public void test_build_withSingleContainerAdapterTypeAndSidecarSupport_throwsProvisionException()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "overlordSingleContainer");
+    props.setProperty("druid.indexer.runner.sidecarSupport", "true");
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    injector = makeInjectorWithProperties(props, false, true);
+
+    Assert.assertThrows(
+        "Invalid pod adapter [overlordSingleContainer], only pod adapter [overlordMultiContainer] can be specified when sidecarSupport is enabled",
+        ProvisionException.class,
+        () -> injector.getInstance(TaskAdapter.class)
+    );
+  }
+
+  @Test
+  public void test_build_withSidecarSupport_returnsKubernetesTaskRunnerWithMultiContainerTaskAdapter()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.sidecarSupport", "true");
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    injector = makeInjectorWithProperties(props, false, true);
+
+
+    TaskAdapter adapter = injector.getInstance(TaskAdapter.class);
+
+    Assert.assertNotNull(adapter);
+    Assert.assertTrue(adapter instanceof MultiContainerTaskAdapter);
+  }
+
+  @Test
+  public void test_build_withoutSidecarSupport_returnsKubernetesTaskRunnerWithSingleContainerTaskAdapter()
+  {
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.sidecarSupport", "false");
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    injector = makeInjectorWithProperties(props, false, true);
+
+
+    TaskAdapter adapter = injector.getInstance(TaskAdapter.class);
+
+    Assert.assertNotNull(adapter);
+    Assert.assertTrue(adapter instanceof SingleContainerTaskAdapter);
+  }
+
+  @Test
+  public void test_build_withPodTemplateAdapterType_returnsKubernetesTaskRunnerWithPodTemplateTaskAdapter()
+  {
+    URL url = this.getClass().getClassLoader().getResource("basePodTemplate.yaml");
+
+    Properties props = new Properties();
+    props.setProperty("druid.indexer.runner.k8s.adapter.type", "customTemplateAdapter");
+    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", url.getPath());
+    props.setProperty("druid.indexer.runner.namespace", "NAMESPACE");
+    injector = makeInjectorWithProperties(props, false, true);
+
+
+    TaskAdapter adapter = injector.getInstance(TaskAdapter.class);
+
+    Assert.assertNotNull(adapter);
+    Assert.assertTrue(adapter instanceof PodTemplateTaskAdapter);
   }
 
   private Injector makeInjectorWithProperties(
