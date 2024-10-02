@@ -146,6 +146,7 @@ The web console now supports the Kinesis input format.
 - Added column mapping information to the explain plan [#16598](https://github.com/apache/druid/pull/16598)
 - Added the ability to initiate handoff for a supervisor [#16586](https://github.com/apache/druid/pull/16586)
 - Added an option to `Use concurrent locks` and moved all insert and replace options to a separate submenu [#16899](https://github.com/apache/druid/pull/16899)
+- Added Delta snapshot version [#17023](https://github.com/apache/druid/pull/17023)
 - Improved how the web console detects durable storage [#16493](https://github.com/apache/druid/pull/16493)
 - Made the following web console improvements:
   - Added titles to action menus
@@ -561,6 +562,7 @@ Bumped the versions of the following dependencies:
 - `io.grpc:grpc-netty-shaded` from 1.57.2 to 1.65.1 [#16731](https://github.com/apache/druid/pull/16731)
 - `jclouds.version` from 2.5.0 to 2.6.0 [#16796](https://github.com/apache/druid/pull/16796)
 - Axios to 1.7.4 [#16898](https://github.com/apache/druid/pull/16898)
+- Delta Kernel to 3.2.1 [#17179](https://github.com/apache/druid/pull/17179)
 
 Other dependency updates:
 
