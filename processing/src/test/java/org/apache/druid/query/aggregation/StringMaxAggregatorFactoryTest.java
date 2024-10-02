@@ -47,7 +47,10 @@ public class StringMaxAggregatorFactoryTest
     StringMaxAggregatorFactory factory = new StringMaxAggregatorFactory("name", "fieldName", 1024, true);
 
     Assert.assertEquals(factory, new StringMaxAggregatorFactory("name", "fieldName", null, true, null, macroTable));
-    Assert.assertEquals(factory.toString(), "StringMaxAggregatorFactory{name='name', fieldName='fieldName', maxStringBytes=1024, aggregateMultipleValues=true}");
+    Assert.assertEquals(
+        factory.toString(),
+        "StringMaxAggregatorFactory{name='name', fieldName='fieldName', maxStringBytes=1024, aggregateMultipleValues=true}"
+    );
 
     Aggregator aggregator = factory.buildAggregator(selector);
     Assert.assertNotNull(aggregator);
@@ -186,13 +189,17 @@ public class StringMaxAggregatorFactoryTest
     Assert.assertNotNull(mergingFactory);
     Assert.assertTrue(mergingFactory instanceof StringMaxAggregatorFactory);
 
-    StringMaxAggregatorFactory mismatchedFactory = new StringMaxAggregatorFactory("notSameName", "fieldName", 1024, true);
-    Assert.assertThrows(AggregatorFactoryNotMergeableException.class,
-                        () -> mismatchedFactory.getMergingFactory(factory1));
+    StringMaxAggregatorFactory mismatchedFactory = new StringMaxAggregatorFactory("newName", "fieldName", 1024, true);
+    Assert.assertThrows(
+        AggregatorFactoryNotMergeableException.class,
+        () -> mismatchedFactory.getMergingFactory(factory1)
+    );
 
     StringMinAggregatorFactory mismatchClassFactory = new StringMinAggregatorFactory("name", "fieldName", 1024, true);
-    Assert.assertThrows(AggregatorFactoryNotMergeableException.class,
-                        () -> mismatchClassFactory.getMergingFactory(factory1));
+    Assert.assertThrows(
+        AggregatorFactoryNotMergeableException.class,
+        () -> mismatchClassFactory.getMergingFactory(factory1)
+    );
   }
 
   @Test
