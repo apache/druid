@@ -16,17 +16,33 @@
  * limitations under the License.
  */
 
-export type DruidEngine = 'native' | 'sql-native' | 'sql-msq-task' | 'sql-msq-dart';
+interface QueryLogEntry {
+  time: Date;
+  sqlQuery: string;
+}
 
-export const DRUID_ENGINES: DruidEngine[] = [
-  'native',
-  'sql-native',
-  'sql-msq-task',
-  'sql-msq-dart',
-];
+const MAX_QUERIES_TO_LOG = 10;
 
-export function validDruidEngine(
-  possibleDruidEngine: string | undefined,
-): possibleDruidEngine is DruidEngine {
-  return Boolean(possibleDruidEngine && DRUID_ENGINES.includes(possibleDruidEngine as DruidEngine));
+export class QueryLog {
+  private readonly queryLog: QueryLogEntry[] = [];
+
+  public length(): number {
+    return this.queryLog.length;
+  }
+
+  public addQuery(sqlQuery: string): void {
+    const { queryLog } = this;
+    queryLog.unshift({ time: new Date(), sqlQuery });
+    while (queryLog.length > MAX_QUERIES_TO_LOG) queryLog.pop();
+  }
+
+  public getLastQuery(): string | undefined {
+    return this.queryLog[0]?.sqlQuery;
+  }
+
+  public getFormatted(): string {
+    return this.queryLog
+      .map(({ time, sqlQuery }) => `At ${time.toISOString()} ran query:\n\n${sqlQuery}`)
+      .join('\n\n-----------------------------------------------------\n\n');
+  }
 }

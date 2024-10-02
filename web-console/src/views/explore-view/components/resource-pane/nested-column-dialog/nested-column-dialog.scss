@@ -16,17 +16,29 @@
  * limitations under the License.
  */
 
-export type DruidEngine = 'native' | 'sql-native' | 'sql-msq-task' | 'sql-msq-dart';
+@import '../../../../../variables';
 
-export const DRUID_ENGINES: DruidEngine[] = [
-  'native',
-  'sql-native',
-  'sql-msq-task',
-  'sql-msq-dart',
-];
+.nested-column-dialog {
+  &.#{$bp-ns}-dialog {
+    width: 50vw;
+    min-height: 540px;
+  }
 
-export function validDruidEngine(
-  possibleDruidEngine: string | undefined,
-): possibleDruidEngine is DruidEngine {
-  return Boolean(possibleDruidEngine && DRUID_ENGINES.includes(possibleDruidEngine as DruidEngine));
+  .#{$bp-ns}-dialog-body {
+    display: flex;
+    flex-direction: column;
+
+    .path-selector {
+      flex: 1;
+      padding: 5px 0;
+      height: 400px;
+      overflow: auto;
+      border-left: 1px solid rgba(15, 19, 32, 0.4);
+      border-right: 1px solid rgba(15, 19, 32, 0.4);
+    }
+  }
+
+  .#{$bp-ns}-dialog-footer {
+    margin-top: 0;
+  }
 }

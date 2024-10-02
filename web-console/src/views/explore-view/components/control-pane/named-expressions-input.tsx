@@ -61,6 +61,7 @@ export const NamedExpressionsInput = function NamedExpressionsInput<
 
   const onDragOver = useCallback(
     (e: React.DragEvent, i: number) => {
+      if (dragIndex === -1) return;
       const targetRect = e.currentTarget.getBoundingClientRect();
       const before = e.clientX - targetRect.left <= targetRect.width / 2;
       setDropBefore(before);

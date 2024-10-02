@@ -20,6 +20,7 @@ import { C, SqlFunction, SqlQuery } from '@druid-toolkit/query';
 
 import { filterMap, uniq } from '../../../utils';
 import { Measure } from '../models';
+import { KNOWN_AGGREGATIONS } from '../utils';
 
 export function rewriteAggregate(query: SqlQuery, measures: Measure[]): SqlQuery {
   const usedMeasures: Map<string, boolean> = new Map();
@@ -35,7 +36,14 @@ export function rewriteAggregate(query: SqlQuery, measures: Measure[]): SqlQuery
       if (!measure) throw new Error(`${Measure.AGGREGATE} of unknown measure '${measureName}'`);
 
       usedMeasures.set(measureName, true);
-      return measure.expression;
+
+      let measureExpression = measure.expression;
+      const filter = ex.getWhereExpression();
+      if (filter) {
+        measureExpression = measureExpression.addFilterToAggregations(filter, KNOWN_AGGREGATIONS);
+      }
+
+      return measureExpression;
     }
 
     // If we encounter a (the) query with the measure definitions, and we have used those measures then expand out all the columns within them
