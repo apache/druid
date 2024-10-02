@@ -4058,6 +4058,13 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
+  @DrillTest("nestedAggs/woutPrtnBy_8")
+  @Test
+  public void test_nestedAggs_woutPrtnBy_8()
+  {
+    windowQueryTest();
+  }
+
   @NotYetSupported(Modes.ALLDATA_CSV)
   @DrillTest("aggregates/winFnQry_17")
   @Test
