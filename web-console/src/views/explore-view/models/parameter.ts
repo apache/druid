@@ -85,6 +85,7 @@ export type TypedParameterDefinition<Type extends keyof ParameterTypes> = TypedE
     | ParameterTypes[Type]
     | ((querySource: QuerySource) => ParameterTypes[Type] | undefined);
 
+  sticky?: boolean;
   required?: ModuleFunctor<boolean>;
   description?: ModuleFunctor<string>;
   placeholder?: string;

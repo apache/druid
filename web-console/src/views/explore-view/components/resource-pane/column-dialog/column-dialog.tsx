@@ -48,9 +48,8 @@ export const ColumnDialog = React.memo(function ColumnDialog(props: ColumnDialog
     if (!expression) return;
     return SqlQuery.from(QuerySource.stripToBaseSource(querySource.query))
       .addSelect(F.cast(expression, 'VARCHAR').as('v'), { addToGroupBy: 'end' })
-      .applyIf(
-        querySource.baseColumns.find(column => column.isTimeColumn()),
-        q => q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),
+      .applyIf(querySource.hasBaseTimeColumn(), q =>
+        q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),
       )
       .changeLimitValue(100)
       .toString();
@@ -151,7 +150,7 @@ export const ColumnDialog = React.memo(function ColumnDialog(props: ColumnDialog
                   } else {
                     onApply(
                       querySource.changeColumn(initExpressionName, newExpression),
-                      new Map([[initExpression.getOutputName()!, newExpression.getOutputName()!]]),
+                      new Map([[initExpressionName, newExpression.getOutputName()!]]),
                     );
                   }
                 } else {

@@ -16,15 +16,29 @@
  * limitations under the License.
  */
 
-export * from './date-format';
-export * from './duration';
-export * from './filter-pattern-helpers';
-export * from './general';
-export * from './get-auto-granularity';
-export * from './known-aggregations';
-export * from './max-time-for-table';
-export * from './misc';
-export * from './query-log';
-export * from './snap-to-granularity';
-export * from './table-query';
-export * from './time-manipulation';
+@import '../../../../../variables';
+
+.nested-column-dialog {
+  &.#{$bp-ns}-dialog {
+    width: 50vw;
+    min-height: 540px;
+  }
+
+  .#{$bp-ns}-dialog-body {
+    display: flex;
+    flex-direction: column;
+
+    .path-selector {
+      flex: 1;
+      padding: 5px 0;
+      height: 400px;
+      overflow: auto;
+      border-left: 1px solid rgba(15, 19, 32, 0.4);
+      border-right: 1px solid rgba(15, 19, 32, 0.4);
+    }
+  }
+
+  .#{$bp-ns}-dialog-footer {
+    margin-top: 0;
+  }
+}

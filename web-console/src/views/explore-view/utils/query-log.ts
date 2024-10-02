@@ -16,15 +16,33 @@
  * limitations under the License.
  */
 
-export * from './date-format';
-export * from './duration';
-export * from './filter-pattern-helpers';
-export * from './general';
-export * from './get-auto-granularity';
-export * from './known-aggregations';
-export * from './max-time-for-table';
-export * from './misc';
-export * from './query-log';
-export * from './snap-to-granularity';
-export * from './table-query';
-export * from './time-manipulation';
+interface QueryLogEntry {
+  time: Date;
+  sqlQuery: string;
+}
+
+const MAX_QUERIES_TO_LOG = 10;
+
+export class QueryLog {
+  private readonly queryLog: QueryLogEntry[] = [];
+
+  public length(): number {
+    return this.queryLog.length;
+  }
+
+  public addQuery(sqlQuery: string): void {
+    const { queryLog } = this;
+    queryLog.unshift({ time: new Date(), sqlQuery });
+    while (queryLog.length > MAX_QUERIES_TO_LOG) queryLog.pop();
+  }
+
+  public getLastQuery(): string | undefined {
+    return this.queryLog[0]?.sqlQuery;
+  }
+
+  public getFormatted(): string {
+    return this.queryLog
+      .map(({ time, sqlQuery }) => `At ${time.toISOString()} ran query:\n\n${sqlQuery}`)
+      .join('\n\n-----------------------------------------------------\n\n');
+  }
+}

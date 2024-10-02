@@ -21,10 +21,9 @@ import React, { useMemo } from 'react';
 
 import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
-import {
-  calculateInitPageSize,
-  GenericOutputTable,
-} from '../components/generic-output-table/generic-output-table';
+import type { ColumnHint } from '../../../utils';
+import { filterMap } from '../../../utils';
+import { calculateInitPageSize, GenericOutputTable } from '../components';
 import { ModuleRepository } from '../module-repository/module-repository';
 
 import './record-table-module.scss';
@@ -33,6 +32,7 @@ interface RecordTableParameterValues {
   maxRows: number;
   ascending: boolean;
   showTypeIcons: boolean;
+  hideNullColumns: boolean;
 }
 
 ModuleRepository.registerModule<RecordTableParameterValues>({
@@ -50,10 +50,18 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
     ascending: {
       type: 'boolean',
       defaultValue: false,
+      sticky: true,
     },
     showTypeIcons: {
       type: 'boolean',
       defaultValue: true,
+      sticky: true,
+    },
+    hideNullColumns: {
+      type: 'boolean',
+      label: 'Hide all null columns',
+      defaultValue: false,
+      sticky: true,
     },
   },
   component: function RecordTableModule(props) {
@@ -77,6 +85,18 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
     });
 
     const resultData = resultState.getSomeData();
+
+    let columnHints: Map<string, ColumnHint> | undefined;
+    if (parameterValues.hideNullColumns && resultData) {
+      columnHints = new Map<string, ColumnHint>(
+        filterMap(resultData.header, (column, i) =>
+          resultData.getColumnByIndex(i)?.every(v => v == null)
+            ? [column.name, { hidden: true }]
+            : undefined,
+        ),
+      );
+    }
+
     return (
       <div className="record-table-module module">
         {resultState.error ? (
@@ -84,6 +104,7 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
         ) : resultData ? (
           <GenericOutputTable
             queryResult={resultData}
+            columnHints={columnHints}
             showTypeIcons={parameterValues.showTypeIcons}
             onWhereChange={setWhere}
             initPageSize={calculateInitPageSize(stage.height)}
