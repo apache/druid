@@ -19,11 +19,13 @@
 
 package org.apache.druid.data.input.kafkainput;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
@@ -58,14 +60,13 @@ public class KafkaInputReader implements InputEntityReader
   private final String topicColumnName;
 
   /**
-   *
-   * @param inputRowSchema Actual schema from the ingestion spec
-   * @param source kafka record containing header, key & value that is wrapped inside SettableByteEntity
+   * @param inputRowSchema       Actual schema from the ingestion spec
+   * @param source               kafka record containing header, key & value that is wrapped inside SettableByteEntity
    * @param headerParserSupplier Function to get Header parser for parsing the header section, kafkaInputFormat allows users to skip header parsing section and hence an be null
-   * @param keyParserSupplier Function to get Key parser for key section, can be null as well. Key parser supplier can also return a null key parser.
-   * @param valueParser Value parser is a required section in kafkaInputFormat. It cannot be null.
-   * @param keyColumnName Default key column name
-   * @param timestampColumnName Default kafka record's timestamp column name
+   * @param keyParserSupplier    Function to get Key parser for key section, can be null as well. Key parser supplier can also return a null key parser.
+   * @param valueParser          Value parser is a required section in kafkaInputFormat. It cannot be null.
+   * @param keyColumnName        Default key column name
+   * @param timestampColumnName  Default kafka record's timestamp column name
    */
   public KafkaInputReader(
       InputRowSchema inputRowSchema,
@@ -144,14 +145,9 @@ public class KafkaInputReader implements InputEntityReader
       try (CloseableIterator<InputRow> keyIterator = keyParser.read()) {
         // Key currently only takes the first row and ignores the rest.
         if (keyIterator.hasNext()) {
-          // Return type for the key parser should be of type MapBasedInputRow
-          // Parsers returning other types are not compatible currently.
-          MapBasedInputRow keyRow = (MapBasedInputRow) keyIterator.next();
+          final InputRow keyRow = keyIterator.next();
           // Add the key to the mergeList only if the key string is not already present
-          mergedHeaderMap.putIfAbsent(
-              keyColumnName,
-              keyRow.getEvent().entrySet().stream().findFirst().get().getValue()
-          );
+          mergedHeaderMap.computeIfAbsent(keyColumnName, ignored -> getFirstValue(keyRow));
         }
       }
       catch (ClassCastException e) {
@@ -343,5 +339,27 @@ public class KafkaInputReader implements InputEntityReader
                        .collect(Collectors.toCollection(LinkedHashSet::new));
       }
     };
+  }
+
+  /**
+   * Get the first value from an {@link InputRow}. This is the first element from {@link InputRow#getDimensions()}
+   * if there are any. If there are not any, and the row is a {@link MapBasedInputRow} or {@link ListBasedInputRow},
+   * we'll peer inside to look for the first value.
+   *
+   * This method is used to extract keys.
+   */
+  @Nullable
+  private static Object getFirstValue(final InputRow row)
+  {
+    final List<String> dimensions = row.getDimensions();
+    if (!dimensions.isEmpty()) {
+      return row.getRaw(dimensions.get(0));
+    } else if (row instanceof MapBasedInputRow) {
+      return Iterables.getFirst(((MapBasedInputRow) row).getEvent().values(), null);
+    } else if (row instanceof ListBasedInputRow) {
+      return Iterables.getFirst(((ListBasedInputRow) row).asMap().values(), null);
+    } else {
+      return null;
+    }
   }
 }
