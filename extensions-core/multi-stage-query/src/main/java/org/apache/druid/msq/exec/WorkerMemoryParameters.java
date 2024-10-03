@@ -281,7 +281,7 @@ public class WorkerMemoryParameters
         frameSize,
         superSorterConcurrentProcessors,
         superSorterMaxChannelsPerMerger,
-        Math.min(Integer.MAX_VALUE, partitionStatsMemory / numProcessingThreads),
+        partitionStatsMemory,
         hasBroadcastInputs ? computeBroadcastBufferMemory(bundleMemory) : 0
     );
   }

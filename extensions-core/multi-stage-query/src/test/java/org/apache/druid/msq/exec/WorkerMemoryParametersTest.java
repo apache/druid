@@ -91,7 +91,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(892_000_000, frameSize, 4, 199, 22_300_000, 0),
+        new WorkerMemoryParameters(892_000_000, frameSize, 4, 199, 89_200_000, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
   }
@@ -111,7 +111,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(592_000_000, frameSize, 4, 132, 14_800_000, 200_000_000),
+        new WorkerMemoryParameters(592_000_000, frameSize, 4, 132, 59_200_000, 200_000_000),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
   }
@@ -145,7 +145,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(392_000_000, frameSize, 4, 87, 9_800_000, 0),
+        new WorkerMemoryParameters(392_000_000, frameSize, 4, 87, 39_200_000, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
     );
   }
@@ -162,7 +162,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(2_392_000_000L, frameSize, 4, 537, 59_800_000, 0),
+        new WorkerMemoryParameters(2_392_000_000L, frameSize, 4, 537, 239_200_000, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
     );
   }
@@ -179,7 +179,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(136_000_000, frameSize, 32, 2, 425_000, 0),
+        new WorkerMemoryParameters(136_000_000, frameSize, 32, 2, 13_600_000, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
   }
@@ -196,7 +196,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(109_000_000, frameSize, 32, 2, 330_303, 0),
+        new WorkerMemoryParameters(109_000_000, frameSize, 32, 2, 10_900_000, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
   }
@@ -276,7 +276,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(13_000_000, frameSize, 1, 2, 250_000, 0),
+        new WorkerMemoryParameters(13_000_000, frameSize, 1, 2, 10_000_000, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
   }
@@ -325,7 +325,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(13_000_000, frameSize, 1, 2, 250_000, 0),
+        new WorkerMemoryParameters(13_000_000, frameSize, 1, 2, 10_000_000, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
     );
   }
@@ -342,7 +342,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(1_096_000_000, frameSize, 4, 245, 27_400_000, 0),
+        new WorkerMemoryParameters(1_096_000_000, frameSize, 4, 245, 109_600_000, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
   }
@@ -359,7 +359,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(1_548_000_000, frameSize, 4, 347, 38_700_000, 0),
+        new WorkerMemoryParameters(1_548_000_000, frameSize, 4, 347, 154_800_000, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
   }
@@ -376,7 +376,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(96_000_000, frameSize, 4, 20, 2_500_000, 0),
+        new WorkerMemoryParameters(96_000_000, frameSize, 4, 20, 10_000_000, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
     );
   }
@@ -393,7 +393,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(1_762_666_666, frameSize, 64, 23, 2_754_166, 0),
+        new WorkerMemoryParameters(1_762_666_666, frameSize, 64, 23, 176_266_666, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
   }
@@ -410,7 +410,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(429_333_333, frameSize, 64, 5, 670_833, 0),
+        new WorkerMemoryParameters(429_333_333, frameSize, 64, 5, 42_933_333, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
     );
   }
@@ -428,7 +428,7 @@ public class WorkerMemoryParametersTest
     final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
     Assert.assertEquals(
-        new WorkerMemoryParameters(448_000_000, frameSize, 2, 200, 22_400_000, 0),
+        new WorkerMemoryParameters(448_000_000, frameSize, 2, 200, 44_800_000, 0),
         WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
     );
   }
