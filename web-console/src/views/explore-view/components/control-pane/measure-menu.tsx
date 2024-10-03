@@ -173,7 +173,7 @@ export const MeasureMenu = function MeasureMenu(props: MeasureMenuProps) {
             return (
               <MenuItem
                 key={i}
-                icon={IconNames.NUMERICAL}
+                icon={IconNames.PULSE}
                 text={aggregateMeasure.name}
                 disabled={disabledMeasureNames.includes(measure.name)}
                 labelElement={
