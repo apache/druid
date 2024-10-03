@@ -105,7 +105,8 @@ public class DruidLogicalRules
                 Convention.NONE,
                 DruidLogicalConvention.instance(),
                 DruidJoinRule.class.getSimpleName()
-            )
+            ),
+            DruidUnnestRule.INSTANCE
         )
     );
   }

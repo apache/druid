@@ -30,7 +30,15 @@ import { useStore } from 'zustand';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { useHashAndLocalStorageHybridState, useQueryManager } from '../../hooks';
 import { Api, AppToaster } from '../../singletons';
-import { DruidError, LocalStorageKeys, queryDruidSql } from '../../utils';
+import {
+  DruidError,
+  isEmpty,
+  localStorageGetJson,
+  LocalStorageKeys,
+  localStorageSetJson,
+  mapRecord,
+  queryDruidSql,
+} from '../../utils';
 
 import {
   ControlPane,
@@ -50,29 +58,14 @@ import { QuerySource } from './models';
 import { ModuleRepository } from './module-repository/module-repository';
 import { rewriteAggregate, rewriteMaxDataTime } from './query-macros';
 import type { Rename } from './utils';
-import { adjustTransferValue, normalizeType } from './utils';
+import { adjustTransferValue, normalizeType, QueryLog } from './utils';
 
 import './explore-view.scss';
 
-// ---------------------------------------
+const QUERY_LOG = new QueryLog();
 
-interface QueryHistoryEntry {
-  time: Date;
-  sqlQuery: string;
-}
-
-const MAX_PAST_QUERIES = 10;
-const QUERY_HISTORY: QueryHistoryEntry[] = [];
-
-function addQueryToHistory(sqlQuery: string): void {
-  QUERY_HISTORY.unshift({ time: new Date(), sqlQuery });
-  while (QUERY_HISTORY.length > MAX_PAST_QUERIES) QUERY_HISTORY.pop();
-}
-
-function getFormattedQueryHistory(): string {
-  return QUERY_HISTORY.map(
-    ({ time, sqlQuery }) => `At ${time.toISOString()} ran query:\n\n${sqlQuery}`,
-  ).join('\n\n-----------------------------------------------------\n\n');
+function getStickyParameterValuesForModule(moduleId: string): ParameterValues {
+  return localStorageGetJson(LocalStorageKeys.EXPLORE_STICKY)?.[moduleId] || {};
 }
 
 // ---------------------------------------
@@ -81,7 +74,7 @@ const queryRunner = new QueryRunner({
   inflateDateStrategy: 'fromSqlTypes',
   executor: async (sqlQueryPayload, isSql, cancelToken) => {
     if (!isSql) throw new Error('should never get here');
-    addQueryToHistory(sqlQueryPayload.query);
+    QUERY_LOG.addQuery(sqlQueryPayload.query);
     return Api.instance.post('/druid/v2/sql', sqlQueryPayload, { cancelToken });
   },
 });
@@ -90,6 +83,9 @@ async function runSqlQuery(query: string | SqlQuery): Promise<QueryResult> {
   try {
     return await queryRunner.runQuery({
       query,
+      defaultQueryContext: {
+        sqlStringifyArrays: false,
+      },
     });
   } catch (e) {
     throw new DruidError(e);
@@ -193,10 +189,25 @@ export const ExploreView = React.memo(function ExploreView() {
   }
 
   function resetParameterValues() {
-    setParameterValues({});
+    setParameterValues(getStickyParameterValuesForModule(moduleId));
   }
 
   function updateParameterValues(newParameterValues: ParameterValues) {
+    // Evaluate sticky-ness
+    if (module) {
+      const currentExploreSticky = localStorageGetJson(LocalStorageKeys.EXPLORE_STICKY) || {};
+      const currentModuleSticky = currentExploreSticky[moduleId] || {};
+      const newModuleSticky = {
+        ...currentModuleSticky,
+        ...mapRecord(newParameterValues, (v, k) => (module.parameters[k]?.sticky ? v : undefined)),
+      };
+
+      localStorageSetJson(LocalStorageKeys.EXPLORE_STICKY, {
+        ...currentExploreSticky,
+        [moduleId]: isEmpty(newModuleSticky) ? undefined : newModuleSticky,
+      });
+    }
+
     setParameterValues({ ...parameterValues, ...newParameterValues });
   }
 
@@ -311,7 +322,8 @@ export const ExploreView = React.memo(function ExploreView() {
             ]}
             selectedModuleId={moduleId}
             onSelectedModuleIdChange={newModuleId => {
-              const newParameterValues: ParameterValues = {};
+              const newParameterValues = getStickyParameterValuesForModule(newModuleId);
+
               const oldModule = ModuleRepository.getModule(moduleId);
               const newModule = ModuleRepository.getModule(newModuleId);
               if (oldModule && newModule) {
@@ -349,9 +361,9 @@ export const ExploreView = React.memo(function ExploreView() {
                 <MenuItem
                   icon={IconNames.DUPLICATE}
                   text="Copy last query"
-                  disabled={!QUERY_HISTORY.length}
+                  disabled={!QUERY_LOG.length()}
                   onClick={() => {
-                    copy(QUERY_HISTORY[0]?.sqlQuery, { format: 'text/plain' });
+                    copy(QUERY_LOG.getLastQuery()!, { format: 'text/plain' });
                     AppToaster.show({
                       message: `Copied query to clipboard`,
                       intent: Intent.SUCCESS,
@@ -360,9 +372,9 @@ export const ExploreView = React.memo(function ExploreView() {
                 />
                 <MenuItem
                   icon={IconNames.HISTORY}
-                  text="Show query history"
+                  text="Show query log"
                   onClick={() => {
-                    setShownText(getFormattedQueryHistory());
+                    setShownText(QUERY_LOG.getFormatted());
                   }}
                 />
                 <MenuItem

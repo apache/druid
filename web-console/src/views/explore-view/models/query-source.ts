@@ -95,7 +95,9 @@ export class QuerySource {
     let effectiveColumns = columns;
     if (query.getSelectExpressionsArray().some(ex => ex instanceof SqlStar)) {
       // The query has a star so carefully pick the columns that make sense
-      effectiveColumns = columns.filter(c => c.sqlType !== 'OTHER');
+      effectiveColumns = columns.filter(
+        c => c.sqlType !== 'OTHER' || c.nativeType === 'COMPLEX<json>',
+      );
     }
 
     let measures = Measure.extractQueryMeasures(query);
@@ -179,6 +181,10 @@ export class QuerySource {
     return this.measures.some(m => m.name === name);
   }
 
+  public hasBaseTimeColumn(): boolean {
+    return this.baseColumns.some(column => column.isTimeColumn());
+  }
+
   public getSourceExpressionForColumn(outputName: string): SqlExpression {
     const selectExpressionsArray = this.query.getSelectExpressionsArray();
 
@@ -224,12 +230,12 @@ export class QuerySource {
     return noStarQuery.addSelect(newExpression);
   }
 
-  public addColumnAfter(neighborName: string, newExpression: SqlExpression): SqlQuery {
+  public addColumnAfter(neighborName: string, ...newExpressions: SqlExpression[]): SqlQuery {
     const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
     return noStarQuery.changeSelectExpressions(
       noStarQuery
         .getSelectExpressionsArray()
-        .flatMap(ex => (ex.getOutputName() === neighborName ? [ex, newExpression] : ex)),
+        .flatMap(ex => (ex.getOutputName() === neighborName ? [ex, ...newExpressions] : ex)),
     );
   }
 

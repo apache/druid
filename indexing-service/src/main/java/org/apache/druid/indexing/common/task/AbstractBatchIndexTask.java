@@ -930,7 +930,24 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 null,
                 null
             )
-        ),
+        )
+    );
+  }
+
+  /**
+   * Builds a map with the following keys and values:
+   *  {@link IngestionStatsAndErrorsTaskReport#REPORT_KEY} : {@link IngestionStatsAndErrorsTaskReport}.
+   *  {@link TaskContextReport#REPORT_KEY} : {@link TaskContextReport}.
+   */
+  protected TaskReport.ReportMap buildIngestionStatsAndContextReport(
+      IngestionState ingestionState,
+      String errorMessage,
+      Long segmentsRead,
+      Long segmentsPublished
+  )
+  {
+    return TaskReport.buildTaskReports(
+        buildIngestionStatsTaskReport(ingestionState, errorMessage, segmentsRead, segmentsPublished),
         new TaskContextReport(getId(), getContext())
     );
   }
@@ -947,21 +964,33 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   )
   {
     return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrors(
-                ingestionState,
-                getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats(),
-                errorMessage,
-                segmentAvailabilityConfirmationCompleted,
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                segmentsRead,
-                segmentsPublished
-            )
-        ),
-        new TaskContextReport(getId(), getContext())
+        buildIngestionStatsTaskReport(ingestionState, errorMessage, segmentsRead, segmentsPublished)
+    );
+  }
+
+  /**
+   * Helper method to create IngestionStatsAndErrorsTaskReport.
+   */
+  private IngestionStatsAndErrorsTaskReport buildIngestionStatsTaskReport(
+      IngestionState ingestionState,
+      String errorMessage,
+      Long segmentsRead,
+      Long segmentsPublished
+  )
+  {
+    return new IngestionStatsAndErrorsTaskReport(
+        getId(),
+        new IngestionStatsAndErrors(
+            ingestionState,
+            getTaskCompletionUnparseableEvents(),
+            getTaskCompletionRowStats(),
+            errorMessage,
+            segmentAvailabilityConfirmationCompleted,
+            segmentAvailabilityWaitTimeMs,
+            Collections.emptyMap(),
+            segmentsRead,
+            segmentsPublished
+        )
     );
   }
 

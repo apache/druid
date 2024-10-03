@@ -35,6 +35,7 @@ export function changePage(pagination: Pagination, page: number): Pagination {
 export interface ColumnHint {
   displayName?: string;
   group?: string;
+  hidden?: boolean;
   expressionForWhere?: SqlExpression;
   formatter?: (x: any) => string;
 }
