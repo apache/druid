@@ -127,7 +127,7 @@ The following example shows a supervisor spec for a stream with the name `Kinesi
 
 ### `ioConfig`
 
-The `ioConfig` defines how Druid reads data from a source system, such as Amazon Kinesis, Amazon S3, a mounted filesystem, or any other supported source system.
+The `ioConfig` object defines how Druid reads data from a source system, such as Amazon Kinesis, Amazon S3, a mounted filesystem, or any other supported source system.
 
 The following table outlines the `ioConfig` configuration properties specific to Kinesis.
 
