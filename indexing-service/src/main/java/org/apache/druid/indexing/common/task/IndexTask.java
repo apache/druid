@@ -537,7 +537,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
 
   private void updateAndWriteCompletionReports(TaskToolbox toolbox, Long segmentsRead, Long segmentsPublished)
   {
-    completionReports = buildIngestionStatsReport(ingestionState, errorMsg, segmentsRead, segmentsPublished);
+    completionReports = buildIngestionStatsAndContextReport(ingestionState, errorMsg, segmentsRead, segmentsPublished);
     if (isStandAloneTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }

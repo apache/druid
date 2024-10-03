@@ -677,7 +677,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   private TaskReport.ReportMap getTaskCompletionReports()
   {
-    return buildIngestionStatsReport(ingestionState, errorMsg, null, null);
+    return buildIngestionStatsAndContextReport(ingestionState, errorMsg, null, null);
   }
 
   @Override
