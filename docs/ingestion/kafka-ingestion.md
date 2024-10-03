@@ -43,7 +43,7 @@ To use the Kafka indexing service, you must first load the `druid-kafka-indexing
 
 ## `spec`
 
-This section outlines the configuration properties that are specific to supervisor-led streaming ingestion for Kafka.
+This section outlines the configuration properties that are specific to Kafka streaming ingestion.
 
 For configuration properties shared across all streaming ingestion methods, see [supervisor spec](supervisor.md#spec).
 
