@@ -233,8 +233,8 @@ You can run automatic compaction using compaction supervisors on the Overlord ra
 
 * Can use the supervisor framework to get information about the auto-compaction, such as status or state
 * More easily suspend or resume compaction for a datasource
-* Can use either the native compaction engine and [MSQ task engine](#use-msq-for-auto-compaction) are available
-* More reactive and submit tasks as soon as a compaction slot is available
+* Can use either the native compaction engine or the [MSQ task engine](#use-msq-for-auto-compaction)
+* More reactive and submits tasks as soon as a compaction slot is available
 * Tracked compaction task status to avoid re-compacting an interval repeatedly
 
 
