@@ -45,7 +45,7 @@ The following table outlines the high-level configuration options for a supervis
 
 The `spec` section contains three parts:
 
-- `dataSchema`: The schema for the indexing task to use during ingestion.
+- `dataSchema`: Sets the schema for the indexing task to use during ingestion.
 - [`ioConfig`](#ioconfig): Instructs Druid how to connect to the [source system](./index.md#ingestion-methods) and how to parse data.
 - [`tuningConfig`](#tuningconfig): Controls performance-related settings for the supervisor and indexing tasks.
 
