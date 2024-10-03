@@ -441,7 +441,7 @@ When the fabric client is unable to communicate with the Kubernetes server, the 
 
 [#16711](https://github.com/apache/druid/pull/16711)
 
-#### `pjac4j` OIDC context
+#### `pac4j` OIDC context
 
 The `pac4j` extension now returns the OIDC context for `AuthenticationResult`.
 
@@ -465,7 +465,7 @@ You can now use the `caseSensitive` Boolean config to configure how Druid reads 
 
 #### Other extensions improvements
 
-- Added an informational entry to the supervisor log when task count is greater than the number of partitions [#16948](https://github.com/apache/druid/pull/16948)
+- Added an informational entry to the streaming supervisor log when task count is greater than the number of partitions [#16948](https://github.com/apache/druid/pull/16948)
 - Reduced logging in S3 output stream extension [#16853](https://github.com/apache/druid/pull/16853)
 - Reduced logging in basic security extension [#16767](https://github.com/apache/druid/pull/16767)
 
