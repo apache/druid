@@ -99,6 +99,12 @@ public class AggregateProjectionSpecTest extends InitializedNullHandlingTest
                       new StringDimensionSchema("a"),
                       new DoubleDimensionSchema("d")
                   )
+                  .withIgnoredFields(
+                      "timeColumnName",
+                      "countColumnName",
+                      "granularity",
+                      "timeColumnPosition"
+                  )
                   .verify();
   }
 }

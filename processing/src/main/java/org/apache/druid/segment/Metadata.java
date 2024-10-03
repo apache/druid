@@ -329,17 +329,36 @@ public class Metadata
     }
   }
 
+  @Nullable
   public static List<AggregateProjectionSpec> mergeProjections(List<List<AggregateProjectionSpec>> projectionsToMerge)
   {
     final Map<String, AggregateProjectionSpec> projectionsMap = new HashMap<>();
     // dedupe by name, fail if somehow incompatible projections are defined
+    int nullCount = 0;
+    int expectedSize = -1;
     for (List<AggregateProjectionSpec> projections : projectionsToMerge) {
+      if (projections == null) {
+        nullCount++;
+        continue;
+      }
+      if (expectedSize < 0) {
+        expectedSize = projections.size();
+      } else if (projections.size() != expectedSize) {
+        throw DruidException.defensive("Unable to merge projections: mismatched projections count");
+      }
       for (AggregateProjectionSpec projection : projections) {
         AggregateProjectionSpec prev = projectionsMap.putIfAbsent(projection.getName(), projection);
         if (prev != null && !prev.equals(projection)) {
-          throw DruidException.defensive("mismatched projections: [%s] and [%s]", prev, projection);
+          throw DruidException.defensive("Unable to merge projections: mismatched projections [%s] and [%s]", prev, projection);
         }
       }
+    }
+    if (nullCount > 0) {
+      if (nullCount != projectionsToMerge.size()) {
+        throw DruidException.defensive("Unable to merge projections: some projections were null");
+      }
+
+      return null;
     }
     return new ArrayList<>(projectionsMap.values());
   }

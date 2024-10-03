@@ -232,6 +232,31 @@ public class HllSketchAggregatorFactoryTest
   }
 
   @Test
+  public void testCanCombiningFactorCanCombine()
+  {
+    HllSketchBuildAggregatorFactory factory = new HllSketchBuildAggregatorFactory(
+        "other name",
+        FIELD_NAME,
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        true,
+        true
+    );
+    HllSketchBuildAggregatorFactory other = new HllSketchBuildAggregatorFactory(
+        "other name",
+        FIELD_NAME,
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        false,
+        false
+    );
+    Assert.assertTrue(other.canCombiningFactoryCombine(factory));
+    Assert.assertTrue(factory.canCombiningFactoryCombine(other));
+  }
+
+  @Test
   public void testToString()
   {
     String string = target.toString();

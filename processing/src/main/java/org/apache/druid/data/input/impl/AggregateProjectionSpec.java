@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Lists;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
@@ -40,7 +41,6 @@ import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -113,7 +113,10 @@ public class AggregateProjectionSpec
   )
   {
     this.name = name;
-    this.groupingColumns = groupingColumns == null ? Collections.emptyList() : groupingColumns;
+    if (CollectionUtils.isNullOrEmpty(groupingColumns)) {
+      throw InvalidInput.exception("groupingColumns must not be null or empty");
+    }
+    this.groupingColumns = groupingColumns;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     this.ordering = Lists.newArrayListWithCapacity(this.groupingColumns.size());
 
