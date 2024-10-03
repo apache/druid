@@ -711,9 +711,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             toolChest,
             limitAccumulator,
             limit,
-            subqueryStatsProvider,
-            emitMetrics,
-            emitter
+            emitMetrics
         );
         break;
       case MEMORY_LIMIT:
@@ -729,9 +727,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             memoryLimitAccumulator,
             memoryLimit,
             useNestedForUnknownTypeInSubquery,
-            subqueryStatsProvider,
-            emitMetrics,
-            emitter
+            emitMetrics
         );
         if (!maybeDataSource.isPresent()) {
           cannotMaterializeToFrames.set(true);
@@ -748,9 +744,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               toolChest,
               limitAccumulator,
               limit,
-              subqueryStatsProvider,
-              emitMetrics,
-              emitter
+              emitMetrics
           );
         } else {
           subqueryStatsProvider.incrementSubqueriesWithByteLimit();
@@ -767,7 +761,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    * This method materializes the query results as Frames. The method defaults back to materializing as rows in case
    * one cannot materialize the results as frames
    */
-  private static <T, QueryType extends Query<T>> Optional<DataSource> materializeResultsAsFrames(
+  private <T, QueryType extends Query<T>> Optional<DataSource> materializeResultsAsFrames(
       final QueryType query,
       final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
@@ -775,9 +769,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final AtomicLong memoryLimitAccumulator,
       final long memoryLimit,
       final boolean useNestedForUnknownTypeInSubquery,
-      final SubqueryCountStatsProvider subqueryStatsProvider,
-      final boolean emitMetrics,
-      final ServiceEmitter emitter
+      final boolean emitMetrics
   )
   {
     boolean startedAccumulating = false;
@@ -856,15 +848,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   /**
    * This method materializes the query results as {@code List<Objects[]>}
    */
-  private static <T, QueryType extends Query<T>> DataSource materializeResultsAsArray(
+  private <T, QueryType extends Query<T>> DataSource materializeResultsAsArray(
       final QueryType query,
       final Sequence<T> results,
       final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
       final int limit,
-      final SubqueryCountStatsProvider subqueryStatsProvider,
-      boolean emitMetrics,
-      final ServiceEmitter emitter
+      boolean emitMetrics
   )
   {
     final int rowLimitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
