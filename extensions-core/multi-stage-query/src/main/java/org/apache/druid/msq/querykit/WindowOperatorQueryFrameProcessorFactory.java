@@ -149,6 +149,11 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
     );
   }
 
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
 
   @Override
   public boolean equals(Object o)

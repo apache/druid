@@ -409,6 +409,8 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
                  .mapToObj(i -> new SleepyFrameProcessor())
                  .collect(Collectors.toList());
 
+    final String cancellationId = "xyzzy";
+    exec.registerCancellationId(cancellationId);
     final ListenableFuture<Long> future = exec.runAllFully(
         possiblyDelay(
             ensureClose(
@@ -418,7 +420,7 @@ public class RunAllFullyWidgetTest extends FrameProcessorExecutorTest.BaseFrameP
         ),
         maxOutstandingProcessors,
         bouncer,
-        "xyzzy"
+        cancellationId
     );
 
     for (int i = 0; i < expectedRunningProcessors; i++) {

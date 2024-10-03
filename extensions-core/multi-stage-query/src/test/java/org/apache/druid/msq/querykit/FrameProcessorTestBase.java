@@ -20,6 +20,7 @@
 package org.apache.druid.msq.querykit;
 
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
@@ -47,19 +48,21 @@ public class FrameProcessorTestBase extends InitializedNullHandlingTest
 {
   protected static final StagePartition STAGE_PARTITION = new StagePartition(new StageId("q", 0), 0);
 
+  private ListeningExecutorService innerExec;
   protected FrameProcessorExecutor exec;
 
   @Before
   public void setUp()
   {
-    exec = new FrameProcessorExecutor(MoreExecutors.listeningDecorator(Execs.singleThreaded("test-exec")));
+    innerExec = MoreExecutors.listeningDecorator(Execs.singleThreaded("test-exec"));
+    exec = new FrameProcessorExecutor(innerExec);
   }
 
   @After
   public void tearDown() throws Exception
   {
-    exec.getExecutorService().shutdownNow();
-    exec.getExecutorService().awaitTermination(10, TimeUnit.MINUTES);
+    innerExec.shutdownNow();
+    innerExec.awaitTermination(10, TimeUnit.MINUTES);
   }
 
   protected ReadableInput makeChannelFromCursorFactory(

@@ -51,6 +51,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -115,7 +116,8 @@ public class KillUnusedSegmentsTest
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector,
         null,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        NoopServiceEmitter.instance()
     );
     sqlSegmentsMetadataManager.start();
 
@@ -130,7 +132,8 @@ public class KillUnusedSegmentsTest
         .withBufferPeriod(Duration.standardSeconds(1));
     dynamicConfigBuilder = CoordinatorDynamicConfig.builder()
         .withKillTaskSlotRatio(1.0);
-    paramsBuilder = DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc());
+    paramsBuilder = DruidCoordinatorRuntimeParams.builder()
+                                                 .withUsedSegments(Collections.emptySet());
   }
 
   @Test

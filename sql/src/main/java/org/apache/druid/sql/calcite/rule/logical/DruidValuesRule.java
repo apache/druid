@@ -32,7 +32,6 @@ import org.apache.druid.sql.calcite.rel.logical.DruidValues;
  */
 public class DruidValuesRule extends ConverterRule
 {
-
   public DruidValuesRule(
       Class<? extends RelNode> clazz,
       RelTrait in,

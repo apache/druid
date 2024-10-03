@@ -109,6 +109,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     if (segmentGranularityVirtualColumn != null) {
       frameWriterVirtualColumns.add(segmentGranularityVirtualColumn);
     }
+    frameWriterVirtualColumns.add(this.partitionBoostVirtualColumn);
     this.frameWriterVirtualColumns = VirtualColumns.create(frameWriterVirtualColumns);
 
     initialiseOperator();

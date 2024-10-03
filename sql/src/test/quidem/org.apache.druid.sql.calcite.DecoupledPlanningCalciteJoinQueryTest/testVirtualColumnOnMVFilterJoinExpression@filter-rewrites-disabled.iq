@@ -1,5 +1,5 @@
-# testVirtualColumnOnMVFilterJoinExpression@filter-rewrites-disabled case-crc:c960c4d6
-# quidem testcase reason: SLIGHTLY_WORSE_PLAN
+# testVirtualColumnOnMVFilterJoinExpression@filter-rewrites-disabled case-crc:0b431ca5
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false

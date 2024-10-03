@@ -1837,33 +1837,38 @@ name: Apache Maven
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.1.1
+version: 3.6.0
 libraries:
-  - org.apache.maven: maven-aether-provider
-  - org.apache.maven: maven-model
-  - org.apache.maven: maven-model-builder
   - org.apache.maven: maven-repository-metadata
-  - org.apache.maven: maven-settings
-  - org.apache.maven: maven-settings-builder
+  - org.apache.maven: maven-builder-support
 notices:
-  - maven-aether-provider: |
-      Maven Aether Provider
-      Copyright 2001-2013 The Apache Software Foundation
-  - maven-model: |
-      Maven Model
-      Copyright 2001-2013 The Apache Software Foundation
-  - maven-model-builder: |
-      Maven Model Builder
-      Copyright 2001-2013 The Apache Software Foundation
   - maven-repository-metadata: |
       Maven Repository Metadata Model
-      Copyright 2001-2013 The Apache Software Foundation
-  - maven-settings: |
-      Maven Settings
-      Copyright 2001-2013 The Apache Software Foundation
-  - maven-settings-builder: |
-      Maven Settings Builder
-      Copyright 2001-2013 The Apache Software Foundation
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-builder-support: |
+      Maven Builder Support
+      Copyright 2001-2018 The Apache Software Foundation
+---
+
+name: Maven Artifact Resolver Provider
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.6.0
+libraries:
+  - org.apache.maven: maven-resolver-provider
+  - org.apache.maven: maven-model
+  - org.apache.maven: maven-model-builder
+notices:
+  - maven-resolver-provider: |
+      Maven Artifact Resolver Provider
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-model: |
+      Maven Model
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-model-builder: |
+      Maven Model Builder
+      Copyright 2001-2018 The Apache Software Foundation
 ---
 
 name: Apache Maven Artifact
@@ -1877,6 +1882,67 @@ notices:
   - maven-artifact: |
       Maven Artifact
       Copyright 2001-2018 The Apache Software Foundation
+---
+
+name: Maven Artifact Resolver Connector Basic
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3.1
+libraries:
+  - org.apache.maven.resolver: maven-resolver-connector-basic
+  - org.apache.maven.resolver: maven-resolver-spi
+  - org.apache.maven.resolver: maven-resolver-api
+  - org.apache.maven.resolver: maven-resolver-util
+notices:
+  - maven-resolver-connector-basic: |
+      Maven Artifact Resolver Connector Basic
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-resolver-spi: |
+      Maven Artifact Resolver SPI
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-resolver-api: |
+      Maven Artifact Resolver API
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-resolver-util: |
+      Maven Artifact Resolver Utilities
+      Copyright 2001-2018 The Apache Software Foundation
+---
+
+name: Maven Artifact Resolver Transport HTTP
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3.1
+libraries:
+  - org.apache.maven.resolver: maven-resolver-transport-http
+notices:
+  - maven-resolver-transport-http: |
+      Maven Artifact Resolver Transport HTTP
+      Copyright 2001-2018 The Apache Software Foundation
+
+---
+
+name: Maven Artifact Resolver Implementation
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3.1
+libraries:
+  - org.apache.maven.resolver: maven-resolver-impl
+notices:
+  - maven-resolver-impl: |
+      Maven Artifact Resolver Implementation
+      Copyright 2001-2018 The Apache Software Foundation
+---
+
+name: Plexus Component Annotations
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.7.1
+libraries:
+  - org.codehaus.plexus: plexus-component-annotations
 ---
 
 name: Apache Maven Wagon API
@@ -1967,7 +2033,7 @@ name: Plexus Interpolation API
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.19
+version: 1.25
 libraries:
   - org.codehaus.plexus: plexus-interpolation
 
@@ -3245,7 +3311,7 @@ name: JCodings
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.0.43
+version: 1.0.50
 copyright: JRuby Team
 license_file_path: licenses/bin/jcodings.MIT
 libraries:
@@ -3257,7 +3323,7 @@ name: Joni
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.1.27
+version: 2.1.34
 copyright: JRuby Team
 license_file_path: licenses/bin/joni.MIT
 libraries:
@@ -5089,24 +5155,6 @@ version: 0.22.22
 
 ---
 
-name: "@druid-toolkit/visuals-core"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Imply Data
-version: 0.3.3
-
----
-
-name: "@druid-toolkit/visuals-react"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Imply Data
-version: 0.3.3
-
----
-
 name: "@emotion/cache"
 license_category: binary
 module: web-console
@@ -5204,15 +5252,6 @@ license_name: SIL Open Font License 1.1
 copyright: Google Inc.
 version: 5.0.28
 license_file_path: licenses/bin/@fontsource-open-sans.OFL
-
----
-
-name: "@juggle/resize-observer"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Juggle
-version: 3.4.0
 
 ---
 
@@ -5572,6 +5611,16 @@ license_name: BSD-3-Clause License
 copyright: Mike Bostock
 version: 2.0.1
 license_file_path: licenses/bin/d3-interpolate.BSD3
+
+---
+
+name: "d3-scale-chromatic"
+license_category: binary
+module: web-console
+license_name: ISC License
+copyright: Mike Bostock
+version: 3.1.0
+license_file_path: licenses/bin/d3-scale-chromatic.ISC
 
 ---
 
@@ -6558,16 +6607,6 @@ license_name: MIT License
 copyright: Blake Embrey
 version: 2.0.2
 license_file_path: licenses/bin/upper-case.MIT
-
----
-
-name: "use-resize-observer"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Viktor Hubert
-version: 9.1.0
-license_file_path: licenses/bin/use-resize-observer.MIT
 
 ---
 

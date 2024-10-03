@@ -68,6 +68,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         null,
         null,
         null,
+        null,
         null
         );
   }
@@ -99,7 +100,9 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
-      @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll)
+      @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
+  )
   {
     super(
         appendableIndexSpec,
@@ -124,7 +127,8 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         numPersistThreads,
         recordBufferSize,
         recordBufferOfferTimeout,
-        maxRecordsPerPoll
+        maxRecordsPerPoll,
+        maxColumnsToMerge
     );
     this.workerThreads = workerThreads;
     this.chatRetries = (chatRetries != null ? chatRetries : DEFAULT_CHAT_RETRIES);
@@ -210,6 +214,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
         ", numPersistThreads=" + getNumPersistThreads() +
         ", maxRecordsPerPoll=" + getMaxRecordsPerPollConfigured() +
+        ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
         '}';
   }
 
@@ -239,7 +244,8 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
         getRecordBufferSizeConfigured(),
         getRecordBufferOfferTimeout(),
         getMaxRecordsPerPollConfigured(),
-        getNumPersistThreads()
+        getNumPersistThreads(),
+        getMaxColumnsToMerge()
         );
   }
 }

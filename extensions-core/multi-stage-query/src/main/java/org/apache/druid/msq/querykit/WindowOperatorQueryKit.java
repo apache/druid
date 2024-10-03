@@ -34,7 +34,6 @@ import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.operator.AbstractPartitioningOperatorFactory;
 import org.apache.druid.query.operator.AbstractSortOperatorFactory;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -64,11 +63,9 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
   @Override
   public QueryDefinition makeQueryDefinition(
-      String queryId,
+      QueryKitSpec queryKitSpec,
       WindowOperatorQuery originalQuery,
-      QueryKit<Query<?>> queryKit,
       ShuffleSpecFactory resultShuffleSpecFactory,
-      int maxWorkerCount,
       int minStageNumber
   )
   {
@@ -79,20 +76,22 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     log.info("Created operatorList with operator factories: [%s]", operatorList);
 
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
-        queryKit,
-        queryId,
+        queryKitSpec,
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
         null,
-        maxWorkerCount,
         minStageNumber,
         false
     );
 
-    ShuffleSpec nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(0), maxWorkerCount);
-    final QueryDefinitionBuilder queryDefBuilder = makeQueryDefinitionBuilder(queryId, dataSourcePlan, nextShuffleSpec);
+    ShuffleSpec nextShuffleSpec = findShuffleSpecForNextWindow(
+        operatorList.get(0),
+        queryKitSpec.getNumPartitionsForShuffle()
+    );
+    final QueryDefinitionBuilder queryDefBuilder =
+        makeQueryDefinitionBuilder(queryKitSpec.getQueryId(), dataSourcePlan, nextShuffleSpec);
 
     final int firstStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
     final WindowOperatorQuery queryToRun = (WindowOperatorQuery) originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
@@ -154,7 +153,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         stageRowSignature = finalWindowStageRowSignature;
         nextShuffleSpec = finalWindowStageShuffleSpec;
       } else {
-        nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(i + 1), maxWorkerCount);
+        nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(i + 1), queryKitSpec.getNumPartitionsForShuffle());
         if (nextShuffleSpec == null) {
           stageRowSignature = intermediateSignature;
         } else {
@@ -171,7 +170,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
           StageDefinition.builder(firstStageNumber + i)
                          .inputs(new StageInputSpec(firstStageNumber + i - 1))
                          .signature(stageRowSignature)
-                         .maxWorkerCount(maxWorkerCount)
+                         .maxWorkerCount(queryKitSpec.getMaxNonLeafWorkerCount())
                          .shuffleSpec(nextShuffleSpec)
                          .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
                              queryToRun,
@@ -225,7 +224,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     return operatorList;
   }
 
-  private ShuffleSpec findShuffleSpecForNextWindow(List<OperatorFactory> operatorFactories, int maxWorkerCount)
+  private ShuffleSpec findShuffleSpecForNextWindow(List<OperatorFactory> operatorFactories, int partitionCount)
   {
     AbstractPartitioningOperatorFactory partition = null;
     AbstractSortOperatorFactory sort = null;
@@ -265,7 +264,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       keyColsOfWindow.add(kc);
     }
 
-    return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), maxWorkerCount);
+    return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), partitionCount);
   }
 
   /**

@@ -103,6 +103,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
           taskActionClient,
           workerMemoryParameters,
           loadedSegmentMetadata,
+          cTask.getTaskLockType(),
           cTask.getQuerySpec().getQuery().context()
       );
 

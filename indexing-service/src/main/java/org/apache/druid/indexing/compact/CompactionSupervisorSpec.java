@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
@@ -40,6 +39,7 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   private final boolean suspended;
   private final DataSourceCompactionConfig spec;
   private final CompactionScheduler scheduler;
+  private final CompactionConfigValidationResult validationResult;
 
   @JsonCreator
   public CompactionSupervisorSpec(
@@ -48,14 +48,10 @@ public class CompactionSupervisorSpec implements SupervisorSpec
       @JacksonInject CompactionScheduler scheduler
   )
   {
-    final CompactionConfigValidationResult validationResult = scheduler.validateCompactionConfig(spec);
-    if (!validationResult.isValid()) {
-      throw InvalidInput.exception("Compaction supervisor 'spec' is invalid. Reason[%s].", validationResult.getReason());
-    }
-
     this.spec = spec;
     this.suspended = Configs.valueOrDefault(suspended, false);
     this.scheduler = scheduler;
+    this.validationResult = scheduler.validateCompactionConfig(spec);
   }
 
   @JsonProperty
@@ -75,6 +71,11 @@ public class CompactionSupervisorSpec implements SupervisorSpec
   public String getId()
   {
     return ID_PREFIX + spec.getDataSource();
+  }
+
+  public CompactionConfigValidationResult getValidationResult()
+  {
+    return validationResult;
   }
 
   @Override

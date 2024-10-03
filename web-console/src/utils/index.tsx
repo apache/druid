@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+export * from './base64-url';
 export * from './column-metadata';
 export * from './date';
 export * from './download';
@@ -26,6 +27,7 @@ export * from './formatter';
 export * from './general';
 export * from './local-storage-backed-visibility';
 export * from './local-storage-keys';
+export * from './mouse-tooltip/mouse-tooltip';
 export * from './null-mode-detection';
 export * from './object-change';
 export * from './query-action';

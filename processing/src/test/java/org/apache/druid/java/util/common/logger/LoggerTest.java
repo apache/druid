@@ -19,7 +19,7 @@
 
 package org.apache.druid.java.util.common.logger;
 
-import org.apache.commons.lang.mutable.MutableInt;
+import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -125,7 +125,7 @@ public class LoggerTest
     Logger.logSegmentIds(logger, segments, "Many segments");
 
     final int expected = (int) Math.ceil((double) numSegments / Logger.SEGMENTS_PER_LOG_MESSAGE);
-    Assert.assertEquals(expected, msgCount.getValue());
+    Assert.assertEquals(expected, msgCount.intValue());
   }
 
   @Test

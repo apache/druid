@@ -35,12 +35,14 @@ import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Evals;
+import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
@@ -558,6 +560,25 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new ExpressionVirtualColumn(name, expression, outputType, CalciteTests.createExprMacroTable());
   }
 
+  /**
+   * Optionally updates the VC defintion for the one planned by the decoupled planner.
+   *
+   * Compared to original plans; decoupled planner:
+   *  * moves the mv_to_array into the VC
+   *  * the type is an ARRAY
+   */
+  public ExpressionVirtualColumn nestedExpressionVirtualColumn(
+      String name,
+      String expression,
+      ColumnType outputType)
+  {
+    if (testBuilder().isDecoupledMode()) {
+      expression = StringUtils.format("mv_to_array(%s)", expression);
+      outputType = ColumnType.ofArray(outputType);
+    }
+    return expressionVirtualColumn(name, expression, outputType);
+  }
+
   public static JoinDataSource join(
       DataSource left,
       DataSource right,
@@ -982,23 +1003,55 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               mismatchMessage(row, column),
               (Float) expectedCell,
               (Float) resultCell,
-              ASSERTION_EPSILON);
+              ASSERTION_EPSILON
+          );
         } else if (expectedCell instanceof Double) {
           assertEquals(
               mismatchMessage(row, column),
               (Double) expectedCell,
               (Double) resultCell,
-              ASSERTION_EPSILON);
+              ASSERTION_EPSILON
+          );
+        } else if (expectedCell instanceof Object[] || expectedCell instanceof List) {
+          final Object[] expectedCellCasted = homogenizeArray(expectedCell);
+          final Object[] resultCellCasted = homogenizeArray(resultCell);
+          if (expectedCellCasted.length != resultCellCasted.length) {
+            throw new RE(
+                "Mismatched array lengths: expected[%s] with length[%d], actual[%s] with length[%d]",
+                Arrays.toString(expectedCellCasted),
+                expectedCellCasted.length,
+                Arrays.toString(resultCellCasted),
+                resultCellCasted.length
+            );
+          }
+          for (int i = 0; i < expectedCellCasted.length; ++i) {
+            validate(row, column, type, expectedCellCasted[i], resultCellCasted[i]);
+          }
         } else {
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
       }
     },
+
+    RELAX_NULLS_EPS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell == null) {
+          if (resultCell == null) {
+            return;
+          }
+          expectedCell = NullHandling.defaultValueForType(type);
+        }
+        EQUALS_EPS.validate(row, column, type, expectedCell, resultCell);
+      }
+    },
+
     /**
      * Comparision which accepts 1000 units of least precision.
      */
     EQUALS_RELATIVE_1000_ULPS {
-      static final int ASSERTION_ERROR_ULPS = 1000;
+      private static final int ASSERTION_ERROR_ULPS = 1000;
 
       @Override
       void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
@@ -1019,9 +1072,42 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               (Double) resultCell,
               eps
           );
+        } else if (expectedCell instanceof Object[] || expectedCell instanceof List) {
+          final Object[] expectedCellCasted = homogenizeArray(expectedCell);
+          final Object[] resultCellCasted = homogenizeArray(resultCell);
+
+          if (expectedCellCasted.length != resultCellCasted.length) {
+            throw new RE(
+                "Mismatched array lengths: expected[%s] with length[%d], actual[%s] with length[%d]",
+                Arrays.toString(expectedCellCasted),
+                expectedCellCasted.length,
+                Arrays.toString(resultCellCasted),
+                resultCellCasted.length
+            );
+          }
+          for (int i = 0; i < expectedCellCasted.length; ++i) {
+            validate(row, column, type, expectedCellCasted[i], resultCellCasted[i]);
+          }
         } else {
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
+      }
+    },
+
+    /**
+     * Relax nulls which accepts 1000 units of least precision.
+     */
+    RELAX_NULLS_RELATIVE_1000_ULPS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell == null) {
+          if (resultCell == null) {
+            return;
+          }
+          expectedCell = NullHandling.defaultValueForType(type);
+        }
+        EQUALS_RELATIVE_1000_ULPS.validate(row, column, type, expectedCell, resultCell);
       }
     };
 
@@ -1032,6 +1118,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       return StringUtils.format("column content mismatch at %d,%d", row, column);
     }
 
+    private static Object[] homogenizeArray(Object array)
+    {
+      if (array instanceof Object[]) {
+        return (Object[]) array;
+      } else if (array instanceof List) {
+        return ExprEval.coerceListToArray((List) array, true).rhs;
+      }
+      throw new ISE("Found array[%s] of type[%s] which is not handled", array.toString(), array.getClass().getName());
+    }
   }
 
   /**
@@ -1215,11 +1310,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected void skipVectorize()
   {
     skipVectorize = true;
-  }
-
-  protected void sqlNativeIncompatible()
-  {
-    assumeTrue(testBuilder().config.isRunningMSQ(), "test case is not SQL native compatible");
   }
 
   protected void msqIncompatible()

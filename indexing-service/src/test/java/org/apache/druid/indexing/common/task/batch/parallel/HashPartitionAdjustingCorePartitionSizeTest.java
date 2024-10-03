@@ -61,7 +61,8 @@ public class HashPartitionAdjustingCorePartitionSizeTest extends AbstractMultiPh
       null,
       false,
       false,
-      0
+      0,
+      null
   );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2020-01-01/P1M");
 

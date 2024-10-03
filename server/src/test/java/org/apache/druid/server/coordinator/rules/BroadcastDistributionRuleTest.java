@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.rules;
 
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.ServerType;
@@ -225,7 +224,7 @@ public class BroadcastDistributionRuleTest
   {
     StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
     rule.run(segment, segmentAssigner);
-    return segmentAssigner.getStats();
+    return params.getCoordinatorStats();
   }
 
   private DruidCoordinatorRuntimeParams makeParamsWithUsedSegments(
@@ -234,7 +233,7 @@ public class BroadcastDistributionRuleTest
   )
   {
     return DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc())
+        .builder()
         .withDruidCluster(druidCluster)
         .withUsedSegments(usedSegments)
         .withBalancerStrategy(new RandomBalancerStrategy())

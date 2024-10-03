@@ -18,397 +18,466 @@
 
 import './modules';
 
-import { Intent, Menu, MenuItem } from '@blueprintjs/core';
+import { Button, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression } from '@druid-toolkit/query';
-import { C, L, sql, SqlLiteral, SqlQuery, SqlTable, T } from '@druid-toolkit/query';
-import type { ExpressionMeta, TransferValue } from '@druid-toolkit/visuals-core';
-import {
-  useModuleContainer,
-  useParameterValues,
-  useSingleHost,
-} from '@druid-toolkit/visuals-react';
+import type { Column, QueryResult, SqlExpression } from '@druid-toolkit/query';
+import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
+import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
-import { useLocalStorageState, useQueryManager } from '../../hooks';
-import { AppToaster } from '../../singletons';
-import { deepGet, filterMap, LocalStorageKeys, oneOf, queryDruidSql } from '../../utils';
+import { useHashAndLocalStorageHybridState, useQueryManager } from '../../hooks';
+import { Api, AppToaster } from '../../singletons';
+import {
+  DruidError,
+  isEmpty,
+  localStorageGetJson,
+  LocalStorageKeys,
+  localStorageSetJson,
+  mapRecord,
+  queryDruidSql,
+} from '../../utils';
 
-import { ControlPane } from './control-pane/control-pane';
-import { DroppableContainer } from './droppable-container/droppable-container';
-import { FilterPane } from './filter-pane/filter-pane';
-import { HighlightBubble } from './highlight-bubble/highlight-bubble';
+import {
+  ControlPane,
+  DroppableContainer,
+  FilterPane,
+  HighlightBubble,
+  ModulePane,
+  ModulePicker,
+  ResourcePane,
+  SourcePane,
+  SourceQueryPane,
+} from './components';
+import { ExploreState } from './explore-state';
 import { highlightStore } from './highlight-store/highlight-store';
-import BarChartEcharts from './modules/bar-chart-echarts-module';
-import MultiAxisChartEcharts from './modules/multi-axis-chart-echarts-module';
-import PieChartEcharts from './modules/pie-chart-echarts-module';
-import TableReact from './modules/table-react-module';
-import TimeChartEcharts from './modules/time-chart-echarts-module';
-import { ResourcePane } from './resource-pane/resource-pane';
-import { SourcePane } from './source-pane/source-pane';
-import { TilePicker } from './tile-picker/tile-picker';
-import type { Dataset } from './utils';
-import { adjustTransferValue, normalizeType } from './utils';
+import type { Measure, ParameterValues } from './models';
+import { QuerySource } from './models';
+import { ModuleRepository } from './module-repository/module-repository';
+import { rewriteAggregate, rewriteMaxDataTime } from './query-macros';
+import type { Rename } from './utils';
+import { adjustTransferValue, normalizeType, QueryLog } from './utils';
 
 import './explore-view.scss';
 
-const VISUAL_MODULES = [
-  {
-    moduleName: 'time_chart_echarts',
-    icon: IconNames.TIMELINE_LINE_CHART,
-    label: 'Time chart',
-    module: TimeChartEcharts,
-    transfer: ['splitColumn', 'metric'],
-  },
-  {
-    moduleName: 'bar_chart_echarts',
-    icon: IconNames.TIMELINE_BAR_CHART,
-    label: 'Bar chart',
-    module: BarChartEcharts,
-    transfer: ['splitColumn', 'metric'],
-  },
-  {
-    moduleName: 'table_react',
-    icon: IconNames.TH,
-    label: 'Table',
-    module: TableReact,
-    transfer: ['splitColumns', 'metrics'],
-  },
-  {
-    moduleName: 'pie_chart_echarts',
-    icon: IconNames.PIE_CHART,
-    label: 'Pie chart',
-    module: PieChartEcharts,
-    transfer: ['splitColumn', 'metric'],
-  },
-  {
-    moduleName: 'multi-axis_chart_echarts',
-    icon: IconNames.SERIES_ADD,
-    label: 'Multi-axis chart',
-    module: MultiAxisChartEcharts,
-    transfer: ['metrics'],
-  },
-] as const;
+const QUERY_LOG = new QueryLog();
 
-type ModuleType = (typeof VISUAL_MODULES)[number]['moduleName'];
-
-// ---------------------------------------
-
-interface QueryHistoryEntry {
-  time: Date;
-  sqlQuery: string;
-}
-
-const MAX_PAST_QUERIES = 10;
-const QUERY_HISTORY: QueryHistoryEntry[] = [];
-
-function addQueryToHistory(sqlQuery: string): void {
-  QUERY_HISTORY.unshift({ time: new Date(), sqlQuery });
-  while (QUERY_HISTORY.length > MAX_PAST_QUERIES) QUERY_HISTORY.pop();
-}
-
-function getFormattedQueryHistory(): string {
-  return QUERY_HISTORY.map(
-    ({ time, sqlQuery }) => `At ${time.toISOString()} ran query:\n\n${sqlQuery}`,
-  ).join('\n\n-----------------------------------------------------\n\n');
+function getStickyParameterValuesForModule(moduleId: string): ParameterValues {
+  return localStorageGetJson(LocalStorageKeys.EXPLORE_STICKY)?.[moduleId] || {};
 }
 
 // ---------------------------------------
 
-async function introspect(tableName: SqlTable): Promise<Dataset> {
-  const columns = await queryDruidSql({
-    query: `SELECT COLUMN_NAME AS "name", DATA_TYPE AS "sqlType" FROM INFORMATION_SCHEMA.COLUMNS
-          WHERE TABLE_SCHEMA = 'druid' AND TABLE_NAME = ${L(tableName.getName())}`,
-  });
+const queryRunner = new QueryRunner({
+  inflateDateStrategy: 'fromSqlTypes',
+  executor: async (sqlQueryPayload, isSql, cancelToken) => {
+    if (!isSql) throw new Error('should never get here');
+    QUERY_LOG.addQuery(sqlQueryPayload.query);
+    return Api.instance.post('/druid/v2/sql', sqlQueryPayload, { cancelToken });
+  },
+});
 
-  return {
-    table: tableName,
-    columns: columns.map(({ name, sqlType }) => ({ name, expression: C(name), sqlType })),
-  };
-}
-
-// micro-cache
-const MAX_TIME_TTL = 60000;
-let lastMaxTimeTable: string | undefined;
-let lastMaxTimeValue: Date | undefined;
-let lastMaxTimeTimestamp = 0;
-
-async function getMaxTimeForTable(tableName: string): Promise<Date | undefined> {
-  // micro-cache get
-  if (
-    lastMaxTimeTable === tableName &&
-    lastMaxTimeValue &&
-    Date.now() < lastMaxTimeTimestamp + MAX_TIME_TTL
-  ) {
-    return lastMaxTimeValue;
+async function runSqlQuery(query: string | SqlQuery): Promise<QueryResult> {
+  try {
+    return await queryRunner.runQuery({
+      query,
+      defaultQueryContext: {
+        sqlStringifyArrays: false,
+      },
+    });
+  } catch (e) {
+    throw new DruidError(e);
   }
-
-  const d = await queryDruidSql({
-    query: sql`SELECT MAX(__time) AS "maxTime" FROM ${T(tableName)}`,
-  });
-
-  let maxTime = new Date(deepGet(d, '0.maxTime'));
-  if (isNaN(maxTime.valueOf())) return;
-
-  // Add 1ms to the maxTime date so as to allow filters like `"__time" < {maxTime}" to capture the last event which might also be the only event
-  maxTime = new Date(maxTime.valueOf() + 1);
-
-  // micro-cache set
-  lastMaxTimeTable = tableName;
-  lastMaxTimeValue = maxTime;
-  lastMaxTimeTimestamp = Date.now();
-
-  return maxTime;
 }
 
-function getFirstTableName(q: SqlQuery): string | undefined {
-  let tableName: string | undefined;
-  q.walk(ex => {
-    if (ex instanceof SqlTable) {
-      tableName = ex.getName();
-      return;
-    }
-    return ex;
-  });
-  return tableName;
-}
+async function introspectSource(source: string): Promise<QuerySource> {
+  const query = SqlQuery.parse(source);
+  const introspectResult = await runSqlQuery(QuerySource.makeLimitZeroIntrospectionQuery(query));
 
-async function extendedQueryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]> {
-  if (sqlQueryPayload.query.includes('MAX_DATA_TIME()')) {
-    const parsed = SqlQuery.parse(sqlQueryPayload.query);
-    const tableName = getFirstTableName(parsed);
-    if (tableName) {
-      const maxTime = await getMaxTimeForTable(tableName);
-      if (maxTime) {
-        sqlQueryPayload = {
-          ...sqlQueryPayload,
-          query: sqlQueryPayload.query.replace(/MAX_DATA_TIME\(\)/g, L(maxTime)),
-        };
-      }
-    }
-  }
+  const baseIntrospectResult = QuerySource.isSingleStarQuery(query)
+    ? introspectResult
+    : await runSqlQuery(
+        QuerySource.makeLimitZeroIntrospectionQuery(QuerySource.stripToBaseSource(query)),
+      );
 
-  addQueryToHistory(sqlQueryPayload.query);
-  console.debug(`Running query:\n${sqlQueryPayload.query}`);
-
-  return queryDruidSql(sqlQueryPayload);
+  return QuerySource.fromIntrospectResult(
+    query,
+    baseIntrospectResult.header,
+    introspectResult.header,
+  );
 }
 
 export const ExploreView = React.memo(function ExploreView() {
   const [shownText, setShownText] = useState<string | undefined>();
-  const filterPane = useRef<{ filterOn(column: ExpressionMeta): void }>();
+  const filterPane = useRef<{ filterOn(column: Column): void }>();
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const [moduleName, setModuleName] = useLocalStorageState<ModuleType>(
-    LocalStorageKeys.EXPLORE_CONTENT,
-    VISUAL_MODULES[0].moduleName,
+  const [exploreState, setExploreState] = useHashAndLocalStorageHybridState<ExploreState>(
+    '#explore/v/',
+    LocalStorageKeys.EXPLORE_STATE,
+    ExploreState.DEFAULT_STATE,
+    s => {
+      return ExploreState.fromJS(s);
+    },
   );
 
   const { dropHighlight } = useStore(highlightStore);
 
-  const [timezone] = useState('Etc/UTC');
+  // -------------------------------------------------------
+  // If no table selected, change to first table if possible
+  async function initWithFirstTable() {
+    const tables = await queryDruidSql<{ TABLE_NAME: string }>({
+      query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'TABLE' LIMIT 1`,
+    });
 
-  const [columns, setColumns] = useState<ExpressionMeta[]>([]);
-
-  const { host, where, table, visualModule, updateWhere, updateTable } = useSingleHost({
-    sqlQuery: extendedQueryDruidSql,
-    persist: { name: LocalStorageKeys.EXPLORE_ESSENCE, storage: 'localStorage' },
-    visualModules: Object.fromEntries(VISUAL_MODULES.map(v => [v.moduleName, v.module])),
-    selectedModule: moduleName,
-    moduleState: {
-      parameterValues: {},
-      table: T('select source'),
-      where: SqlLiteral.TRUE,
-    },
-  });
-
-  useEffect(() => {
-    host.store.setState({ context: { timezone } });
-  }, [timezone, host.store]);
-
-  const { parameterValues, updateParameterValues, resetParameterValues } = useParameterValues({
-    host,
-    selectedModule: moduleName,
-    columns,
-  });
-
-  const [datasetState] = useQueryManager<SqlExpression, Dataset>({
-    query: table,
-    processQuery: tableName => introspect(tableName as SqlTable),
-  });
-
-  const onShow = useMemo(() => {
-    const currentShowTransfers =
-      VISUAL_MODULES.find(vm => vm.moduleName === moduleName)?.transfer || [];
-    if (currentShowTransfers.length) {
-      const paramName = currentShowTransfers[0];
-      const showControlType = visualModule?.parameterDefinitions?.[paramName]?.type;
-
-      if (paramName && oneOf(showControlType, 'column', 'columns')) {
-        return (column: ExpressionMeta) => {
-          updateParameterValues({ [paramName]: showControlType === 'column' ? column : [column] });
-        };
-      }
+    const firstTableName = tables[0].TABLE_NAME;
+    if (firstTableName) {
+      setTable(firstTableName);
     }
-    return;
-  }, [updateParameterValues, moduleName, visualModule?.parameterDefinitions]);
-
-  const dataset = datasetState.getSomeData();
+  }
 
   useEffect(() => {
-    setColumns(dataset?.columns ?? []);
-  }, [dataset?.columns]);
+    if (exploreState.isInitState()) {
+      void initWithFirstTable();
+    }
+  });
 
-  const [containerRef] = useModuleContainer({ host, selectedModule: moduleName, columns });
+  // -------------------------------------------------------
+
+  const { moduleId, source, parsedSource, parseError, where, parameterValues, showSourceQuery } =
+    exploreState;
+  const module = ModuleRepository.getModule(moduleId);
+
+  const [querySourceState] = useQueryManager<string, QuerySource>({
+    query: parsedSource ? String(parsedSource) : undefined,
+    processQuery: introspectSource,
+  });
+
+  // -------------------------------------------------------
+  // If we have a __time::TIMESTAMP column and no filter add a filter
+
+  useEffect(() => {
+    const columns = querySourceState.data?.columns;
+    if (!columns) return;
+    const newExploreState = exploreState.addInitTimeFilterIfNeeded(columns);
+    if (exploreState !== newExploreState) {
+      setExploreState(newExploreState);
+    }
+  }, [querySourceState.data]);
+
+  // -------------------------------------------------------
+
+  useEffect(() => {
+    const querySource = querySourceState.data;
+    if (!querySource || !module) return;
+    const newExploreState = exploreState.restrictToQuerySource(querySource);
+    if (exploreState !== newExploreState) {
+      setExploreState(newExploreState);
+    }
+  }, [module, parameterValues, querySourceState.data]);
+
+  function setModuleId(moduleId: string, parameterValues: Record<string, any>) {
+    if (exploreState.moduleId === moduleId) return;
+    setExploreState(exploreState.change({ moduleId, parameterValues }));
+  }
+
+  function setParameterValues(newParameterValues: ParameterValues) {
+    if (newParameterValues === parameterValues) return;
+    setExploreState(exploreState.change({ parameterValues: newParameterValues }));
+  }
+
+  function resetParameterValues() {
+    setParameterValues(getStickyParameterValuesForModule(moduleId));
+  }
+
+  function updateParameterValues(newParameterValues: ParameterValues) {
+    // Evaluate sticky-ness
+    if (module) {
+      const currentExploreSticky = localStorageGetJson(LocalStorageKeys.EXPLORE_STICKY) || {};
+      const currentModuleSticky = currentExploreSticky[moduleId] || {};
+      const newModuleSticky = {
+        ...currentModuleSticky,
+        ...mapRecord(newParameterValues, (v, k) => (module.parameters[k]?.sticky ? v : undefined)),
+      };
+
+      localStorageSetJson(LocalStorageKeys.EXPLORE_STICKY, {
+        ...currentExploreSticky,
+        [moduleId]: isEmpty(newModuleSticky) ? undefined : newModuleSticky,
+      });
+    }
+
+    setParameterValues({ ...parameterValues, ...newParameterValues });
+  }
+
+  function setSource(source: SqlQuery | string, rename?: Rename) {
+    setExploreState(exploreState.changeSource(source, rename));
+  }
+
+  function setTable(tableName: string) {
+    setExploreState(exploreState.changeToTable(tableName));
+  }
+
+  function setWhere(where: SqlExpression) {
+    setExploreState(exploreState.change({ where }));
+  }
+
+  function onShowColumn(column: Column) {
+    setExploreState(exploreState.applyShowColumn(column));
+  }
+
+  function onShowMeasure(measure: Measure) {
+    setExploreState(exploreState.applyShowMeasure(measure));
+  }
+
+  function onShowSourceQuery() {
+    setExploreState(exploreState.change({ showSourceQuery: true }));
+  }
+
+  const querySource = querySourceState.getSomeData();
+
+  const runSqlPlusQuery = useMemo(() => {
+    return async (query: string | SqlQuery) => {
+      if (!querySource) throw new Error('no querySource');
+      return await runSqlQuery(
+        await rewriteMaxDataTime(rewriteAggregate(SqlQuery.parse(query), querySource.measures)),
+      );
+    };
+  }, [querySource]);
 
   return (
-    <>
-      <div className="explore-view">
-        <SourcePane
-          selectedTableName={table ? (table as SqlTable).getName() : '-'}
-          onSelectedTableNameChange={t => updateTable(T(t))}
-          disabled={Boolean(dataset && datasetState.loading)}
+    <div className={classNames('explore-view', { 'show-source-query': showSourceQuery })}>
+      {showSourceQuery && (
+        <SourceQueryPane
+          source={source}
+          onSourceChange={setSource}
+          onClose={() => setExploreState(exploreState.change({ showSourceQuery: false }))}
         />
-        <FilterPane
-          ref={filterPane}
-          dataset={dataset}
-          filter={where}
-          onFilterChange={updateWhere}
-          queryDruidSql={extendedQueryDruidSql}
-        />
-        <TilePicker<ModuleType>
-          modules={VISUAL_MODULES}
-          selectedTileName={moduleName}
-          onSelectedTileNameChange={m => {
-            const currentParameterDefinitions = visualModule?.parameterDefinitions || {};
-            const valuesToTransfer: TransferValue[] = filterMap(
-              VISUAL_MODULES.find(vm => vm.moduleName === visualModule?.moduleName)?.transfer || [],
-              paramName => {
-                const parameterDefinition = currentParameterDefinitions[paramName];
-                if (!parameterDefinition) return;
-                const parameterValue = parameterValues[paramName];
-                if (typeof parameterValue === 'undefined') return;
-                return [parameterDefinition.type, parameterValue];
-              },
-            );
-
-            dropHighlight();
-            setModuleName(m);
-            resetParameterValues();
-
-            const newModuleDef = VISUAL_MODULES.find(vm => vm.moduleName === m);
-            if (newModuleDef) {
-              const newParameters: any = newModuleDef.module?.parameters || {};
-              const transferParameterValues: [name: string, value: any][] = filterMap(
-                newModuleDef.transfer || [],
-                t => {
-                  const p = newParameters[t];
-                  if (!p) return;
-                  const normalizedTargetType = normalizeType(p.type);
-                  const transferSource = valuesToTransfer.find(
-                    ([t]) => normalizeType(t) === normalizedTargetType,
-                  );
-                  if (!transferSource) return;
-                  const targetValue = adjustTransferValue(
-                    transferSource[1],
-                    transferSource[0],
-                    p.type,
-                  );
-                  if (typeof targetValue === 'undefined') return;
-                  return [t, targetValue];
-                },
+      )}
+      {parseError && (
+        <div className="source-error">
+          <p>{parseError}</p>
+          {source === '' && (
+            <p>
+              <SourcePane
+                selectedSource={undefined}
+                onSelectTable={setTable}
+                disabled={Boolean(querySource && querySourceState.loading)}
+              />
+            </p>
+          )}
+          {!showSourceQuery && (
+            <p>
+              <Button text="Show source query" onClick={onShowSourceQuery} />
+            </p>
+          )}
+        </div>
+      )}
+      {parsedSource && (
+        <div className="explore-container">
+          <SourcePane
+            selectedSource={parsedSource}
+            onSelectTable={setTable}
+            onShowSourceQuery={onShowSourceQuery}
+            fill
+            minimal
+            disabled={Boolean(querySource && querySourceState.loading)}
+          />
+          <FilterPane
+            ref={filterPane}
+            querySource={querySource}
+            filter={where}
+            onFilterChange={setWhere}
+            runSqlQuery={runSqlPlusQuery}
+            onAddToSourceQueryAsColumn={expression => {
+              if (!querySource) return;
+              setExploreState(
+                exploreState.changeSource(
+                  querySource.addColumn(querySource.transformToBaseColumns(expression)),
+                  undefined,
+                ),
               );
-
-              if (transferParameterValues.length) {
-                updateParameterValues(Object.fromEntries(transferParameterValues));
-              }
-            }
-          }}
-          moreMenu={
-            <Menu>
-              <MenuItem
-                icon={IconNames.DUPLICATE}
-                text="Copy last query"
-                disabled={!QUERY_HISTORY.length}
-                onClick={() => {
-                  copy(QUERY_HISTORY[0]?.sqlQuery, { format: 'text/plain' });
-                  AppToaster.show({
-                    message: `Copied query to clipboard`,
-                    intent: Intent.SUCCESS,
-                  });
-                }}
-              />
-              <MenuItem
-                icon={IconNames.HISTORY}
-                text="Show query history"
-                onClick={() => {
-                  setShownText(getFormattedQueryHistory());
-                }}
-              />
-              <MenuItem
-                icon={IconNames.RESET}
-                text="Reset visualization state"
-                onClick={() => {
-                  resetParameterValues();
-                }}
-              />
-            </Menu>
-          }
-        />
-        <div className="resource-pane-cnt">
-          {!dataset && datasetState.loading && 'Loading...'}
-          {dataset && (
-            <ResourcePane
-              dataset={dataset}
-              onFilter={c => {
-                filterPane.current?.filterOn(c);
-              }}
-              onShow={onShow}
-            />
-          )}
-        </div>
-        <DroppableContainer
-          ref={containerRef}
-          onDropColumn={column => {
-            let nextModuleName: ModuleType;
-            if (column.sqlType === 'TIMESTAMP') {
-              nextModuleName = 'time_chart_echarts';
-            } else {
-              nextModuleName = 'table_react';
-            }
-
-            setModuleName(nextModuleName);
-
-            if (column.sqlType === 'TIMESTAMP') {
-              resetParameterValues();
-            } else {
-              updateParameterValues({ splitColumns: [column] });
-            }
-          }}
-        />
-        <div className="control-pane-cnt">
-          {dataset && visualModule?.parameterDefinitions && (
-            <ControlPane
-              columns={dataset.columns}
-              onUpdateParameterValues={updateParameterValues}
-              parameterValues={parameterValues}
-              visualModule={visualModule}
-            />
-          )}
-        </div>
-        {shownText && (
-          <ShowValueDialog
-            title="Query history"
-            str={shownText}
-            onClose={() => {
-              setShownText(undefined);
+            }}
+            onMoveToSourceQueryAsClause={(expression, changeWhere) => {
+              if (!querySource) return;
+              setExploreState(
+                exploreState
+                  .change({ where: changeWhere })
+                  .changeSource(
+                    querySource.addWhereClause(querySource.transformToBaseColumns(expression)),
+                    undefined,
+                  ),
+              );
             }}
           />
-        )}
-      </div>
+          <ModulePicker
+            modules={[
+              { id: 'grouping-table', icon: IconNames.PANEL_TABLE, label: 'Grouping table' },
+              { id: 'record-table', icon: IconNames.TH, label: 'Record table' },
+              { id: 'time-chart', icon: IconNames.TIMELINE_LINE_CHART, label: 'Time chart' },
+              { id: 'bar-chart', icon: IconNames.VERTICAL_BAR_CHART_DESC, label: 'Bar chart' },
+              { id: 'pie-chart', icon: IconNames.PIE_CHART, label: 'Pie chart' },
+              { id: 'multi-axis-chart', icon: IconNames.SERIES_ADD, label: 'Multi-axis chart' },
+            ]}
+            selectedModuleId={moduleId}
+            onSelectedModuleIdChange={newModuleId => {
+              const newParameterValues = getStickyParameterValuesForModule(newModuleId);
+
+              const oldModule = ModuleRepository.getModule(moduleId);
+              const newModule = ModuleRepository.getModule(newModuleId);
+              if (oldModule && newModule) {
+                const oldModuleParameters = oldModule.parameters || {};
+                const newModuleParameters = newModule.parameters || {};
+                for (const paramName in oldModuleParameters) {
+                  const parameterValue = parameterValues[paramName];
+                  if (typeof parameterValue === 'undefined') continue;
+
+                  const oldParameterDefinition = oldModuleParameters[paramName];
+                  const transferGroup = oldParameterDefinition.transferGroup;
+                  if (typeof transferGroup !== 'string') continue;
+
+                  const normalizedType = normalizeType(oldParameterDefinition.type);
+                  const target = Object.entries(newModuleParameters).find(
+                    ([_, def]) =>
+                      def.transferGroup === transferGroup &&
+                      normalizeType(def.type) === normalizedType,
+                  );
+                  if (!target) continue;
+
+                  newParameterValues[target[0]] = adjustTransferValue(
+                    parameterValue,
+                    oldParameterDefinition.type,
+                    target[1].type,
+                  );
+                }
+              }
+
+              dropHighlight();
+              setModuleId(newModuleId, newParameterValues);
+            }}
+            moreMenu={
+              <Menu>
+                <MenuItem
+                  icon={IconNames.DUPLICATE}
+                  text="Copy last query"
+                  disabled={!QUERY_LOG.length()}
+                  onClick={() => {
+                    copy(QUERY_LOG.getLastQuery()!, { format: 'text/plain' });
+                    AppToaster.show({
+                      message: `Copied query to clipboard`,
+                      intent: Intent.SUCCESS,
+                    });
+                  }}
+                />
+                <MenuItem
+                  icon={IconNames.HISTORY}
+                  text="Show query log"
+                  onClick={() => {
+                    setShownText(QUERY_LOG.getFormatted());
+                  }}
+                />
+                <MenuItem
+                  icon={IconNames.RESET}
+                  text="Reset visualization parameters"
+                  onClick={() => {
+                    resetParameterValues();
+                  }}
+                />
+                <MenuDivider />
+                <MenuItem
+                  icon={IconNames.TRASH}
+                  text="Clear all view state"
+                  intent={Intent.DANGER}
+                  onClick={() => {
+                    localStorage.removeItem(LocalStorageKeys.EXPLORE_STATE);
+                    location.hash = '#explore';
+                    location.reload();
+                  }}
+                />
+              </Menu>
+            }
+          />
+          <div className="resource-pane-cnt">
+            {!querySource && querySourceState.loading && 'Loading...'}
+            {querySource && (
+              <ResourcePane
+                querySource={querySource}
+                onQueryChange={setSource}
+                onFilter={c => {
+                  filterPane.current?.filterOn(c);
+                }}
+                runSqlQuery={runSqlPlusQuery}
+                onShowColumn={onShowColumn}
+                onShowMeasure={onShowMeasure}
+              />
+            )}
+          </div>
+          <DroppableContainer
+            className="main-cnt"
+            ref={containerRef}
+            onDropColumn={onShowColumn}
+            onDropMeasure={onShowMeasure}
+          >
+            {querySourceState.error && (
+              <div className="error-display">{querySourceState.getErrorMessage()}</div>
+            )}
+            {querySource && (
+              <ModulePane
+                moduleId={moduleId}
+                querySource={querySource}
+                where={where}
+                setWhere={setWhere}
+                parameterValues={parameterValues}
+                setParameterValues={updateParameterValues}
+                runSqlQuery={runSqlPlusQuery}
+              />
+            )}
+          </DroppableContainer>
+          <div className="control-pane-cnt">
+            {module && (
+              <ControlPane
+                querySource={querySource}
+                onUpdateParameterValues={updateParameterValues}
+                parameters={module.parameters}
+                parameterValues={parameterValues}
+                onAddToSourceQueryAsColumn={expression => {
+                  if (!querySource) return;
+                  setExploreState(
+                    exploreState.changeSource(
+                      querySource.addColumn(querySource.transformToBaseColumns(expression)),
+                      undefined,
+                    ),
+                  );
+                }}
+                onAddToSourceQueryAsMeasure={measure => {
+                  if (!querySource) return;
+                  setExploreState(
+                    exploreState.changeSource(
+                      querySource.addMeasure(
+                        measure.changeExpression(
+                          querySource.transformToBaseColumns(measure.expression),
+                        ),
+                      ),
+                      undefined,
+                    ),
+                  );
+                }}
+              />
+            )}
+          </div>
+          {shownText && (
+            <ShowValueDialog
+              title="Query history"
+              str={shownText}
+              onClose={() => {
+                setShownText(undefined);
+              }}
+            />
+          )}
+        </div>
+      )}
       <HighlightBubble referenceContainer={containerRef.current} />
-    </>
+    </div>
   );
 });
