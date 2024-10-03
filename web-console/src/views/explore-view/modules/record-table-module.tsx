@@ -79,7 +79,7 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
         .toString();
     }, [querySource, where, parameterValues]);
 
-    const [resultState] = useQueryManager({
+    const [resultState, queryManager] = useQueryManager({
       query: query,
       processQuery: runSqlQuery,
     });
@@ -110,7 +110,9 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
             initPageSize={calculateInitPageSize(stage.height)}
           />
         ) : undefined}
-        {resultState.loading && <Loader />}
+        {resultState.loading && (
+          <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
+        )}
       </div>
     );
   },
