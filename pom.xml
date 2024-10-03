@@ -83,7 +83,7 @@
         <gson.version>2.10.1</gson.version>
         <scala.library.version>2.13.14</scala.library.version>
         <avatica.version>1.25.0</avatica.version>
-        <avro.version>1.11.3</avro.version>
+        <avro.version>1.11.4</avro.version>
         <!--
             The base calcite parser was copied into the project; when updating Calcite run dev/upgrade-calcite-parser to adopt upstream changes
           -->
