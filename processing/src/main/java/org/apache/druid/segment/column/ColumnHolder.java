@@ -50,7 +50,10 @@ public interface ColumnHolder
   BaseColumn getColumn();
 
   @Nullable
-  Supplier<? extends BaseColumn> getColumnSupplier();
+  default Supplier<? extends BaseColumn> getColumnSupplier()
+  {
+    return this::getColumn;
+  }
 
   @Nullable
   ColumnIndexSupplier getIndexSupplier();

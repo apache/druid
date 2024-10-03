@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.read.columnar;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -62,12 +61,6 @@ public class ColumnPlus implements ColumnHolder
   public BaseColumn getColumn()
   {
     return column;
-  }
-
-  @Override
-  public Supplier<? extends BaseColumn> getColumnSupplier()
-  {
-    return () -> column;
   }
 
   @Nullable

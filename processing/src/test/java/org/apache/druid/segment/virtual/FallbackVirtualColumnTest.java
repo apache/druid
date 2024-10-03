@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.virtual;
 
-import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.cache.CacheKeyBuilder;
@@ -570,13 +569,6 @@ public class FallbackVirtualColumnTest
 
     @Override
     public BaseColumn getColumn()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Nullable
-    @Override
-    public Supplier<? extends BaseColumn> getColumnSupplier()
     {
       throw new UnsupportedOperationException();
     }

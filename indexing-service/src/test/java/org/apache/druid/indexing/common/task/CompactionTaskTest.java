@@ -2002,13 +2002,6 @@ public class CompactionTaskTest
 
     @Nullable
     @Override
-    public Supplier<? extends BaseColumn> getColumnSupplier()
-    {
-      return null;
-    }
-
-    @Nullable
-    @Override
     public ColumnIndexSupplier getIndexSupplier()
     {
       return null;
