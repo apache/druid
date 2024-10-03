@@ -407,8 +407,13 @@ public class IndexMergerV9 implements IndexMerger
         timeWriter = null;
       }
       final ArrayList<GenericColumnSerializer> metricWriters =
-          // todo (clint): call static method to build column name
-          setupMetricsWriters(segmentWriteOutMedium, metrics, columnFormats, indexSpec, spec.getName() + ".");
+          setupMetricsWriters(
+              segmentWriteOutMedium,
+              metrics,
+              columnFormats,
+              indexSpec,
+              Projections.getProjectionSmooshV9Prefix(spec)
+          );
 
       Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn =
           rowIterators -> new RowCombiningTimeAndDimsIterator(rowIterators, spec.getAggregators(), metrics);
@@ -487,7 +492,8 @@ public class IndexMergerV9 implements IndexMerger
       if (spec.getTimeColumnName() != null) {
         makeTimeColumn(
             smoosher,
-            progress, timeWriter,
+            progress,
+            timeWriter,
             indexSpec,
             Projections.getProjectionSmooshV9FileName(spec, spec.getTimeColumnName())
         );
@@ -925,23 +931,24 @@ public class IndexMergerV9 implements IndexMerger
 
     for (String metric : mergedMetrics) {
       TypeSignature<ValueType> type = metricsTypes.get(metric).getLogicalType();
+      final String outputName = prefix + metric;
       GenericColumnSerializer writer;
       switch (type.getType()) {
         case LONG:
-          writer = createLongColumnSerializer(segmentWriteOutMedium, prefix + metric, indexSpec);
+          writer = createLongColumnSerializer(segmentWriteOutMedium, outputName, indexSpec);
           break;
         case FLOAT:
-          writer = createFloatColumnSerializer(segmentWriteOutMedium, prefix + metric, indexSpec);
+          writer = createFloatColumnSerializer(segmentWriteOutMedium, outputName, indexSpec);
           break;
         case DOUBLE:
-          writer = createDoubleColumnSerializer(segmentWriteOutMedium, prefix + metric, indexSpec);
+          writer = createDoubleColumnSerializer(segmentWriteOutMedium, outputName, indexSpec);
           break;
         case COMPLEX:
           ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(type.getComplexTypeName());
           if (serde == null) {
             throw new ISE("Unknown type[%s]", type.getComplexTypeName());
           }
-          writer = serde.getSerializer(segmentWriteOutMedium, prefix + metric, indexSpec);
+          writer = serde.getSerializer(segmentWriteOutMedium, outputName, indexSpec);
           break;
         default:
           throw new ISE("Unknown type[%s]", type);

@@ -748,11 +748,10 @@ public class IndexIO
         );
       }
       if (projectionSpec.getTimeColumnName() == null) {
-        // todo (clint): get the count column name from project spec since if it was doing things correctly it might
-        //  possibly not be __count
-        // todo (clint): also, why do we still have to read columns just to know the stupid row count
+        // we need some numeric column to get row count, every projection has a count, use it if time is not available
         try (BaseColumn count = projectionColumns.get(projectionSpec.getCountColumnName()).get().getColumn()) {
           final int numRows = ((NumericColumn) count).length();
+          // it still has to be stored as the time column because
           projectionColumns.put(
               ColumnHolder.TIME_COLUMN_NAME,
               Projections.makeConstantTimeSupplier(numRows, dataInterval.getStartMillis())

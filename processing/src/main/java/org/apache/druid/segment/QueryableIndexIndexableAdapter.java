@@ -265,7 +265,9 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   @Override
   public IndexableAdapter getProjectionAdapter(String projection)
   {
-    return new QueryableIndexIndexableAdapter(input.getProjectionQueryableIndex(projection));
+    QueryableIndex projectionIndex = input.getProjectionQueryableIndex(projection);
+    DruidException.conditionalDefensive(projectionIndex != null, "Projection[%s] was not found", projection);
+    return new QueryableIndexIndexableAdapter(projectionIndex);
   }
 
   /**

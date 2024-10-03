@@ -1160,10 +1160,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     private final AggregatorFactory[] aggregatorFactories;
     private final Map<String, DimensionDesc> dimensionsMap;
     private final Map<String, MetricDesc> aggregatorsMap;
+    private final Map<String, ColumnFormat> columnFormats;
     private final FactsHolder factsHolder;
     private final InputRowHolder inputRowHolder = new InputRowHolder();
-    private final ColumnSelectorFactory virtualSelectorFactory;
     private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
+    private final ColumnSelectorFactory virtualSelectorFactory;
     private final Map<String, ColumnSelectorFactory> aggSelectors;
     private final boolean useMaxMemoryEstimates;
     private final long maxBytesPerRowForAggregators;
@@ -1200,10 +1201,22 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       this.aggSelectors = new LinkedHashMap<>();
       this.aggregatorsMap = new LinkedHashMap<>();
       this.aggregatorFactories = new AggregatorFactory[schema.getAggregators().length];
+      this.columnFormats = new LinkedHashMap<>();
+      for (DimensionDesc dimension : dimensions) {
+        if (dimension.getName().equals(projectionSpec.getTimeColumnName())) {
+          columnFormats.put(
+              dimension.getName(),
+              new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG))
+          );
+        } else {
+          columnFormats.put(dimension.getName(), dimension.getIndexer().getFormat());
+        }
+      }
       int i = 0;
       for (AggregatorFactory agg : schema.getAggregators()) {
         MetricDesc metricDesc = new MetricDesc(aggregatorsMap.size(), agg);
         aggregatorsMap.put(metricDesc.getName(), metricDesc);
+        columnFormats.put(metricDesc.getName(), new CapabilitiesBasedFormat(metricDesc.getCapabilities()));
         final ColumnSelectorFactory factory;
         if (agg.getIntermediateType().is(ValueType.COMPLEX)) {
           factory = new CachingColumnSelectorFactory(
@@ -1375,19 +1388,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     @Override
     public ColumnFormat getColumnFormat(String columnName)
     {
-      // todo (clint): hella jank, just build this up front
-      DimensionDesc dimensionDesc = getDimension(columnName);
-      if (dimensionDesc == null) {
-        if (columnName.equals(projectionSpec.getTimeColumnName())) {
-          return new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG));
-        }
-        MetricDesc metricDesc = getMetric(columnName);
-        if (metricDesc == null) {
-          return null;
-        }
-        return new CapabilitiesBasedFormat(metricDesc.getCapabilities());
-      }
-      return dimensionDesc.getIndexer().getFormat();
+      return columnFormats.get(columnName);
     }
 
     @Override
