@@ -64,14 +64,14 @@ In the Web Console, select *Edit context* from the context from the *Engine:* me
 
 ```json
 {
-  ...
-  "indexSpec": {
-    "stringDictionaryEncoding": {
-      "type": "frontCoded",
-      "bucketSize": 4,
-      "formatVersion": 1
-    }
+...
+"indexSpec": {
+  "stringDictionaryEncoding": {
+  "type": "frontCoded",
+  "bucketSize": 4,
+  "formatVersion": 1
   }
+}
 }
 ```
 
@@ -79,16 +79,15 @@ For API calls to the SQL-based ingestion API, include the `indexSpec` in the con
 
 ```json
 {
-  "query": ...
-  "context": {
-    "maxNumTasks": 3
-    "indexSpec": {
-    "stringDictionaryEncoding": {
-      "type": "frontCoded",
-      "bucketSize": 4,
-      "formatVersion": 1
+"query": ...
+"context": {
+  "maxNumTasks": 3
+  "indexSpec": {
+  "stringDictionaryEncoding": {
+    "type": "frontCoded",
+    "bucketSize": 4,
+    "formatVersion": 1}
     }
-  }
   }
 }
 ```
