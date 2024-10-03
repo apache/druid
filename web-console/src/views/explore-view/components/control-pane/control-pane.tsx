@@ -221,6 +221,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
           : filterMap(effectiveValue as ExpressionMeta[], ({ expression }) =>
               expression instanceof SqlColumn ? expression.getName() : undefined,
             );
+
         return {
           element: (
             <NamedExpressionsInput<ExpressionMeta>
@@ -295,6 +296,10 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
       }
 
       case 'measures': {
+        const disabledMeasureNames = parameter.allowDuplicates
+          ? []
+          : filterMap(effectiveValue as Measure[], measure => measure.getAggregateMeasureName());
+
         return {
           element: (
             <NamedExpressionsInput<Measure>
@@ -307,6 +312,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                   columns={columns}
                   measures={measures}
                   initMeasure={initMeasure}
+                  disabledMeasureNames={disabledMeasureNames}
                   onSelectMeasure={m => onValueChange(changeOrAdd(effectiveValue, initMeasure, m))}
                   onClose={onClose}
                   onAddToSourceQueryAsMeasure={onAddToSourceQueryAsMeasure}

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { C, F, L, SqlCase, SqlQuery } from '@druid-toolkit/query';
+import { C, F, L, SqlCase } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
@@ -134,7 +134,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
 
     const dataQuery = useMemo(() => {
       return {
-        baseQuery: SqlQuery.from(querySource.query).addWhere(where),
+        initQuery: querySource.getInitQuery(where),
         measure,
         splitExpression: splitColumn?.expression,
         numberToStack,
@@ -145,7 +145,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
       processQuery: async (
-        { baseQuery, measure, splitExpression, numberToStack, showOthers },
+        { initQuery, measure, splitExpression, numberToStack, showOthers },
         cancelToken,
       ) => {
         if (!timeColumnName) {
@@ -155,7 +155,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
         const vs = splitExpression
           ? (
               await runSqlQuery(
-                baseQuery
+                initQuery
                   .addSelect(splitExpression.as('v'), { addToGroupBy: 'end' })
                   .changeOrderByExpression(measure.expression.toOrderByExpression('DESC'))
                   .changeLimitValue(numberToStack),
@@ -168,7 +168,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
 
         const dataset = (
           await runSqlQuery(
-            baseQuery
+            initQuery
               .applyIf(splitExpression && vs && !showOthers, q =>
                 q.addWhere(splitExpression!.in(vs!)),
               )

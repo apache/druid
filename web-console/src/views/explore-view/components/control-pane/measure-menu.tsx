@@ -48,17 +48,25 @@ export interface MeasureMenuProps {
   columns: readonly Column[];
   measures: readonly Measure[];
   initMeasure: Measure | undefined;
+  disabledMeasureNames?: string[];
   onSelectMeasure(measure: Measure): void;
   onClose(): void;
   onAddToSourceQueryAsMeasure?(measure: Measure): void;
 }
 
 export const MeasureMenu = function MeasureMenu(props: MeasureMenuProps) {
-  const { columns, measures, initMeasure, onSelectMeasure, onClose, onAddToSourceQueryAsMeasure } =
-    props;
+  const {
+    columns,
+    measures,
+    initMeasure,
+    disabledMeasureNames = [],
+    onSelectMeasure,
+    onClose,
+    onAddToSourceQueryAsMeasure,
+  } = props;
 
   const [tab, setTab] = useState<MeasureMenuTab>(() => {
-    if (!initMeasure) return 'compose';
+    if (!initMeasure) return measures.length > 1 ? 'saved' : 'compose';
     if (measures.some(measure => measure.equivalent(initMeasure))) return 'saved';
     return MeasurePattern.fit(initMeasure.expression) ? 'compose' : 'sql';
   });
@@ -167,6 +175,7 @@ export const MeasureMenu = function MeasureMenu(props: MeasureMenuProps) {
                 key={i}
                 icon={IconNames.NUMERICAL}
                 text={aggregateMeasure.name}
+                disabled={disabledMeasureNames.includes(measure.name)}
                 labelElement={
                   aggregateMeasure.equals(initMeasure) ? <Icon icon={IconNames.TICK} /> : undefined
                 }

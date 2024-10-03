@@ -16,7 +16,8 @@
  * limitations under the License.
  */
 
-import { C, F, L, SqlQuery } from '@druid-toolkit/query';
+import type { SqlQuery } from '@druid-toolkit/query';
+import { C, F, L } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
@@ -82,10 +83,8 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
     const { measures } = parameterValues;
 
     const dataQuery = useMemo(() => {
-      const source = querySource.query;
-
-      return SqlQuery.from(source)
-        .addWhere(where)
+      return querySource
+        .getInitQuery(where)
         .addSelect(F.timeFloor(C(timeColumnName || '__time'), L(timeGranularity)).as('time'), {
           addToGroupBy: 'end',
           addToOrderBy: 'end',
