@@ -21,6 +21,7 @@ package org.apache.druid.query.union;
 
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -31,6 +32,7 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class RealUnionQueryRunner implements QueryRunner<RealUnionResult>
@@ -47,12 +49,30 @@ public class RealUnionQueryRunner implements QueryRunner<RealUnionResult>
   {
     UnionQuery unionQuery = queryPlus.unwrapQuery(UnionQuery.class);
 
-//    for (Query<?> q: unionQuery.queries) {
-//      if(q instanceof TimeseriesQuery) {
-//        runTsQuery(queryPlus,(TimeseriesQuery)q, responseContext);
-//      }
-//    }
-    return Sequences.empty();
+    List<RealUnionResult> seqs = new ArrayList<RealUnionResult>();
+    for (Query<?> query : unionQuery.queries) {
+      seqs.add(makeUnionResult(queryPlus.withQuery(query), responseContext));
+    }
+    return Sequences.simple(seqs);
+
+    // return Sequences.map(
+    // Sequences.simple(unionQuery.queries),
+    // this::makeUnionResult
+    // );
+  }
+
+  // private RealUnionResult makeUnionResult(Query<?> query)
+  // {
+  // QueryRunner<?> runner = query.getRunner(walker);
+  // return new RealUnionResult(
+  // runner.run
+  // }
+
+  private <T> RealUnionResult makeUnionResult(QueryPlus<T> withQuery, ResponseContext responseContext)
+  {
+    QueryRunner<T> runner = withQuery.getQuery().getRunner(walker);
+    Sequence<T> seq = runner.run(withQuery, responseContext);
+    return new RealUnionResult(seq);
   }
 
   private void runTsQuery(QueryPlus<RowsAndColumns> queryPlus, TimeseriesQuery q, ResponseContext responseContext)
@@ -63,10 +83,8 @@ public class RealUnionQueryRunner implements QueryRunner<RealUnionResult>
     TimeseriesQueryQueryToolChest tsToolChest = new TimeseriesQueryQueryToolChest();
     Sequence<Object[]> res1 = tsToolChest.resultsAsArrays(q, res);
     List<Object[]> li = res1.toList();
-//    tsToolChest.mergeResults()
+    // tsToolChest.mergeResults()
 
   }
-
-
 
 }

@@ -30,6 +30,7 @@ public class RealUnionQueryRunnerFactory implements QueryRunnerFactory<RealUnion
 
   public RealUnionQueryRunnerFactory(String string)
   {
+    int asd=1;
   }
 
   @Override

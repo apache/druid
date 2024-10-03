@@ -19,7 +19,21 @@
 
 package org.apache.druid.query.union;
 
+import org.apache.druid.java.util.common.guava.Sequence;
+
+/**
+ * Holds the resulting Sequence for a union query branch.
+ *
+ * Caveat: the index of the ResultUnionResult in the output sequence is in line
+ * with the index of the executed query.
+ */
 public class RealUnionResult
 {
+  private Sequence<?> seq;
+
+  public RealUnionResult(Sequence<?> seq)
+  {
+    this.seq = seq;
+  }
 
 }

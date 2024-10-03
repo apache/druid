@@ -43,10 +43,18 @@ import java.util.Optional;
 public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, UnionQuery>
 {
 
+  public void RealUnionQueryQueryToolChest()
+  {
+    int asd=1;
+  }
   @Override
   @SuppressWarnings("unchecked")
   public QueryRunner<RealUnionResult> mergeResults(QueryRunner<RealUnionResult> runner)
   {
+    if(true) {
+      throw new  UnsupportedOperationException("Not supported");
+    }
+
     return new RealUnionResultSerializingQueryRunner(
         (queryPlus, responseContext) -> {
           return runner.run(queryPlus, responseContext);
@@ -94,7 +102,7 @@ public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult
       Sequence<RealUnionResult> resultSequence
   )
   {
-    // Dark magic; see RealUnionResultSerializingQueryRunner.
+
     return (Sequence) resultSequence;
   }
 
@@ -107,8 +115,7 @@ public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult
       boolean useNestedForUnknownTypes
   )
   {
-    // see RealUnionResultSerializingQueryRunner
-    return Optional.of((Sequence) resultSequence);
+    throw new  UnsupportedOperationException("Not supported");
   }
 
   /**
