@@ -31,7 +31,7 @@ Supervisors oversee the state of indexing tasks to coordinate [handoffs](../desi
 This topic uses the Apache Kafka term _offset_ to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is _sequence number_.
 :::
 
-Druid uses a JSON formatted supervisor spec, to specify how Druid should consume, process, and index streaming data. A supervisor spec is a type of [native ingestion spec](ingestion-spec.md).
+Druid uses a JSON-formatted supervisor spec to define how it consumes, processes, and indexes streaming data. A supervisor spec is a type of [native ingestion spec](ingestion-spec.md).
 
 The following table outlines the high-level configuration options for a supervisor spec:
 
