@@ -461,7 +461,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         return toInlineDataSource(
             subQuery,
             queryResults,
-            warehouse.getToolChest(subQuery),
             subqueryRowLimitAccumulator,
             subqueryMemoryLimitAccumulator,
             cannotMaterializeToFrames,
@@ -684,7 +683,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T, QueryType extends Query<T>> DataSource toInlineDataSource(
       final QueryType query,
       final Sequence<T> queryResults,
-      final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
       final AtomicBoolean cannotMaterializeToFrames,
@@ -708,7 +706,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         dataSource = materializeResultsAsArray(
             query,
             queryResults,
-            toolChest,
             limitAccumulator,
             limit,
             emitMetrics
@@ -722,7 +719,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         Optional<DataSource> maybeDataSource = materializeResultsAsFrames(
             query,
             queryResults,
-            toolChest,
             limitAccumulator,
             memoryLimitAccumulator,
             memoryLimit,
@@ -741,7 +737,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           dataSource = materializeResultsAsArray(
               query,
               queryResults,
-              toolChest,
               limitAccumulator,
               limit,
               emitMetrics
@@ -764,7 +759,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T, QueryType extends Query<T>> Optional<DataSource> materializeResultsAsFrames(
       final QueryType query,
       final Sequence<T> results,
-      final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
       final long memoryLimit,
@@ -772,6 +766,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final boolean emitMetrics
   )
   {
+    QueryToolChest<T, QueryType> toolChest = getToolChest(query);
     boolean startedAccumulating = false;
     try {
       Optional<Sequence<FrameSignaturePair>> framesOptional = toolChest.resultsAsFrames(
@@ -845,18 +840,23 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     }
   }
 
+  private <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
+  {
+    return warehouse.getToolChest(query);
+  }
+
   /**
    * This method materializes the query results as {@code List<Objects[]>}
    */
   private <T, QueryType extends Query<T>> DataSource materializeResultsAsArray(
       final QueryType query,
       final Sequence<T> results,
-      final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
       final int limit,
       boolean emitMetrics
   )
   {
+    QueryToolChest<T, QueryType> toolChest = warehouse.getToolChest(query);
     final int rowLimitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
     final RowSignature signature = toolChest.resultArraySignature(query);
 
