@@ -58,7 +58,6 @@ public class RealUnionQueryRunner implements QueryRunner<RowsAndColumns>
 
   private void runTsQuery(QueryPlus<RowsAndColumns> queryPlus, TimeseriesQuery q, ResponseContext responseContext)
   {
-    // FIXME: is passing the walker here correct?
     QueryRunner<Result<TimeseriesResultValue>> runner = q.getRunner(walker);
     Sequence<Result<TimeseriesResultValue>> res = runner.run(queryPlus.withQuery(q), responseContext);
 

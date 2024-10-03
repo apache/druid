@@ -36,7 +36,6 @@ import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelecto
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -144,7 +143,7 @@ public interface DimensionSelector extends ColumnValueSelector<Object>, Dimensio
   {
     int rowSize = row.size();
     if (rowSize == 0) {
-      return Collections.emptyList();
+      return null;
     } else if (rowSize == 1) {
       return selector.lookupName(row.get(0));
     } else {
