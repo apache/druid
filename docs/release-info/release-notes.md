@@ -62,21 +62,27 @@ This section contains important information about new and existing features.
 Druid now supports the following features:
 
 - Compaction scheduler with greater flexibility and control over when and what to compact.
-- MSQ-based compaction for performant compaction jobs.
+- MSQ task engine-based compaction for more performant compaction jobs.
 
 See [Automatic compaction](../data-management/automatic-compaction.md) for details.
 
-Concurrent compaction is now generally available.
+Compaction tasks that take advantage of concurrent append and replace is now generally available.
 
 [#16291](https://github.com/apache/druid/pull/16291)
 
 ### Window functions are GA
 
-[Window functions](../querying/sql-window-functions.md) are now generally available in classic Druid and in the MSQ engine.
+[Window functions](../querying/sql-window-functions.md) are now generally available in Druid's native engine and in the MSQ task engine.
 
 ### Projections (TBC)
 
-### MSQ-interactive (TBC)
+### High complexity queries (TBC)
+
+Distributed Asynchronous Runtime Topology (DART) supports high complexity queries, such as large joins, high cardinality group by, subqueries, and CTEs, commonly found in ad-hoc data warehouse workloads. DART uses multi-threaded workers, in-memory shuffles, and locally cached data to run these high complexity queries with low latency.
+
+DART is fully compatible with current Druid query shapes and Druid's storage format. 
+
+[#17140](https://github.com/apache/druid/pull/17140)
 
 ### Upgrade-related changes
 
@@ -190,7 +196,6 @@ Improved lookup performance for queries that use the MSQ task engine by only loa
 
 #### Other SQL-based ingestion improvements
 
-- Added query context parameter `maxNumSegments` [#16637](https://github.com/apache/druid/pull/16637)
 - Reduced memory usage when transferring sketches between the MSQ task engine controller and worker [#16269](https://github.com/apache/druid/pull/16269)
 - Improved error handling when retrieving Avro schemas from registry [#16684](https://github.com/apache/druid/pull/16684)
 - Fixed issues related to partitioning boundaries in the MSQ task engine's window functions [#16729](https://github.com/apache/druid/pull/16729)
@@ -278,7 +283,9 @@ Added the following fields from the query-based ingestion task report to the res
 
 #### Added cluster configuration for multivalue handling
 
-Added  an optional cluster configuration property `druid.indexing.formats.stringMultiValueHandlingMode` which overrides `SORTED_SET` for string dimensions. Possible settings are `SORTED_SET` (default), `SORTED_ARRAY`, `ARRAY`.
+Added an optional cluster configuration property `druid.indexing.formats.stringMultiValueHandlingMode` which overrides the default mode `SORTED_SET` used for string dimensions. Possible values are `SORTED_SET` (default), `SORTED_ARRAY`, `ARRAY`.
+
+Note that we recommend you use array types instead of MVDs where possible. For more information, see [Migration guide: MVD to arrays](./migr-mvd-array.md).
 
 [#16822](https://github.com/apache/druid/pull/16822)
 
@@ -320,13 +327,6 @@ The `druid.indexer.queue.maxTaskPayloadSize` config defines the maximum size in 
 
 [TBC]
 
-#### Different task locks for kill tasks (experimental)
-
-Kill tasks can now use different types of locks, such as APPEND or REPLACE. This change is experimental and not recommended for produciton use.
-
-As part of this change, kill tasks no longer use the `markAsUnused` parameter.
-
-[#16362](https://github.com/apache/druid/pull/16362)
 
 #### Optimized query for unused segments
 
@@ -334,11 +334,10 @@ Improved the performance of the metadata query to fetch unused segments for a da
 
 [#16623](https://github.com/apache/druid/pull/16623)
 
-#### Improved logic to kill datasources
+#### Kill tasks
 
-The `KillUnusedSegments` coordinator duty now selects datasources in a round-robin manner during each run, ensuring varied selection instead of repeatedly choosing the same set of datasources.
-
-[#16719](https://github.com/apache/druid/pull/16719)
+* The `KillUnusedSegments` coordinator duty now selects datasources in a round-robin manner during each run, ensuring varied selection instead of repeatedly choosing the same set of datasources [#16719](https://github.com/apache/druid/pull/16719)
+* Kill tasks can now use different types of locks, such as APPEND or REPLACE. This change is experimental and not recommended for production use [#16362](https://github.com/apache/druid/pull/16362)
 
 #### Other data management improvements
 
@@ -459,9 +458,15 @@ In MiddleManager-less ingestion, Druid adds the pod template name as an annotati
 
 #### Configure case sensitivity for Iceberg
 
-You can now use the `caseSensitive` Boolean config to configure how Druid reads column names from Iceberg.
+You can now optionally use the `caseSensitive` Boolean config to configure how Druid reads column names from Iceberg. Iceberg table scans are case sensitive by default.
 
 [#16496](https://github.com/apache/druid/pull/16496)
+
+#### Improved Deltalake input source support
+
+Added support for delta structs, arrays, and maps to the `delta` input source. 
+
+[#16884](https://github.com/apache/druid/pull/16884)
 
 #### Other extensions improvements
 
@@ -553,7 +558,7 @@ Move to HTTP-based segment loading first and then perform the version upgrade.
 Bumped the versions of the following dependencies:
 
 - Apache Calcite to 1.37.0 [#16621](https://github.com/apache/druid/pull/16621)
-- Delta Kernel from 3.1.0 to 3.2.0 [#16513](https://github.com/apache/druid/pull/16513)
+- Delta Kernel from 3.1.0 to 3.2.1 [#16513](https://github.com/apache/druid/pull/16513) [#17179](https://github.com/apache/druid/pull/17179)
 - MySQL Java connector to 8.2.0 [#16024](https://github.com/apache/druid/pull/16024)
 - OpenRewrite maven plugin from 5.27.0 to 5.31.0  [#16477](https://github.com/apache/druid/pull/16477)
 - Scala library from 2.13.11 to 2.13.14 [#16364](https://github.com/apache/druid/pull/16364)
@@ -562,8 +567,4 @@ Bumped the versions of the following dependencies:
 - `io.grpc:grpc-netty-shaded` from 1.57.2 to 1.65.1 [#16731](https://github.com/apache/druid/pull/16731)
 - `jclouds.version` from 2.5.0 to 2.6.0 [#16796](https://github.com/apache/druid/pull/16796)
 - Axios to 1.7.4 [#16898](https://github.com/apache/druid/pull/16898)
-- Delta Kernel to 3.2.1 [#17179](https://github.com/apache/druid/pull/17179)
 
-Other dependency updates:
-
-- Added support for delta structs, arrays, and maps to the `delta` input source [#16884](https://github.com/apache/druid/pull/16884)
