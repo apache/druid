@@ -366,6 +366,16 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
+   * @return true if {@link #getCombiningFactory()} of this aggregator can be used to combine the non-finalized results
+   * of the other aggregator. This does not imply that the opposite is true, the combining factory of the other
+   * aggregator might not necessarily be able to combine the intermediary results of this aggregator.
+   */
+  public boolean canCombiningFactoryCombine(AggregatorFactory other)
+  {
+    return equals(other.withName(getName()));
+  }
+
+  /**
    * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and
    * returns merged AggregatorFactory[] (for the metadata for merged segment).
    * Null is returned if it is not possible to do the merging for any of the following reason.

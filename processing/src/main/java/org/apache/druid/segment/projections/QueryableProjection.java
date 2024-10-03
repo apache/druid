@@ -49,18 +49,18 @@ import java.util.Map;
  * the selectors needed to satisfy the original {@link CursorBuildSpec} are available at the correct names.
  * 
  * @see org.apache.druid.segment.QueryableIndexCursorFactory#makeCursorHolder(CursorBuildSpec)
- * @see org.apache.druid.segment.incremental.IncrementalIndexCursorFactory#makeCursorHolder(CursorBuildSpec) 
+ * @see org.apache.druid.segment.incremental.IncrementalIndexCursorFactory#makeCursorHolder(CursorBuildSpec)
  */
-public class Projection<TRowSelector>
+public class QueryableProjection<T>
 {
   private final CursorBuildSpec cursorBuildSpec;
   private final Map<String, String> remapColumns;
-  private final TRowSelector rowSelector;
+  private final T rowSelector;
 
-  public Projection(
+  public QueryableProjection(
       CursorBuildSpec cursorBuildSpec,
       Map<String, String> remapColumns,
-      TRowSelector rowSelector
+      T rowSelector
   )
   {
     this.cursorBuildSpec = cursorBuildSpec;
@@ -112,7 +112,7 @@ public class Projection<TRowSelector>
    * Backing storage for the rows of the projection as is appropriate for the type of
    * {@link org.apache.druid.segment.CursorFactory}
    */
-  public TRowSelector getRowSelector()
+  public T getRowSelector()
   {
     return rowSelector;
   }

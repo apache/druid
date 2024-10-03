@@ -61,7 +61,7 @@ import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.projections.Projection;
+import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.JvmUtils;
 
@@ -530,7 +530,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
   @Nullable
   @Override
-  public Projection<IncrementalIndexRowSelector> getProjection(CursorBuildSpec buildSpec)
+  public QueryableProjection<IncrementalIndexRowSelector> getProjection(CursorBuildSpec buildSpec)
   {
     return Projections.findMatchingProjection(
         buildSpec,
@@ -1231,16 +1231,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         aggregatorFactories[i++] = agg;
       }
       this.ordering = getOrder(dimensions, projectionSpec.getTimeColumnPosition());
-    }
-
-    public boolean matches(
-        CursorBuildSpec buildSpec,
-        Set<VirtualColumn> referencedVirtualColumns,
-        Map<String, String> rewriteColumns,
-        Projections.PhysicalColumnChecker physicalColumnChecker
-    )
-    {
-      return projectionSpec.matches(buildSpec, referencedVirtualColumns, rewriteColumns, physicalColumnChecker);
     }
 
     private List<OrderBy> getOrder(List<DimensionDesc> dimensions, int foundTimePosition)

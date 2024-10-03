@@ -54,6 +54,12 @@ public class AggregateProjectionSpec
 {
   public static final String TYPE_NAME = "aggregate";
 
+  /**
+   * It is not likely the best way to find the best matching projections, but it is the one we have for now. This
+   * comparator is used to sort all the projections in a segment "best" first, where best is defined as fewest grouping
+   * columns, most virtual columns and aggregators, as an approximation of likely to have the fewest number of rows to
+   * scan.
+   */
   public static final Comparator<AggregateProjectionSpec> COMPARATOR = (o1, o2) -> {
     // coarsest granularity first
     if (o1.getGranularity().isFinerThan(o2.getGranularity())) {
@@ -122,7 +128,6 @@ public class AggregateProjectionSpec
     for (int i = 0; i < this.getGroupingColumns().size(); i++) {
       final DimensionSchema dimension = this.getGroupingColumns().get(i);
       columnNames.add(dimension.getName());
-      ordering.add(OrderBy.ascending(dimension.getName()));
       if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
         timeColumnName = dimension.getName();
         foundTimePosition = i;
@@ -144,6 +149,13 @@ public class AggregateProjectionSpec
     this.timeColumnName = timeColumnName;
     this.timeColumnPosition = foundTimePosition;
     this.granularity = granularity == null ? Granularities.ALL : granularity;
+    for (DimensionSchema dimension : this.groupingColumns) {
+      if (dimension.getName().equals(timeColumnName)) {
+        ordering.add(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME));
+      } else {
+        ordering.add(OrderBy.ascending(dimension.getName()));
+      }
+    }
 
     boolean hasCount = false;
 
@@ -166,7 +178,7 @@ public class AggregateProjectionSpec
       System.arraycopy(aggregators, 0, this.aggregators, 0, aggregators.length);
       this.aggregators[aggregators.length] = new CountAggregatorFactory(countName);
     } else {
-      this.aggregators = new AggregatorFactory[] {new CountAggregatorFactory(countName)};
+      this.aggregators = new AggregatorFactory[]{new CountAggregatorFactory(countName)};
     }
   }
 
@@ -222,6 +234,24 @@ public class AggregateProjectionSpec
     return granularity;
   }
 
+  /**
+   * Check if this projection "matches" a {@link CursorBuildSpec}.
+   *
+   * @param queryCursorBuildSpec      {@link CursorBuildSpec} the contains the required inputs to build a
+   *                                  {@link org.apache.druid.segment.CursorHolder}
+   * @param referencedVirtualColumns  collection of {@link VirtualColumn} from the queryCursorBuildSpec which are still
+   *                                  required after matching the projection. The projection may contain pre-computed
+   *                                  {@link VirtualColumn} which will not be included in this set since they are
+   *                                  physical columns on the projection
+   * @param rewriteColumns            Mapping of {@link CursorBuildSpec} column names to projection column names, used
+   *                                  to allow column selector factories to provide projection column selectors as the
+   *                                  names the queryCursorBuildSpec needs
+   * @param physicalColumnChecker     {@link Projections.PhysicalColumnChecker} which can determine if a physical column
+   *                                  required by queryCursorBuildSpec is available on the projection OR does not exist
+   *                                  on the base table either
+   * @return true if the projection can be used to correctly satisfy the queryCursorBuildSpec, populating
+   *         referencedVirtualColumns and rewriteColumns by side-effect
+   */
   public boolean matches(
       CursorBuildSpec queryCursorBuildSpec,
       Set<VirtualColumn> referencedVirtualColumns,
@@ -232,41 +262,46 @@ public class AggregateProjectionSpec
     if (!queryCursorBuildSpec.isCompatibleOrdering(ordering)) {
       return false;
     }
-    if (CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getGroupingColumns()) && CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getAggregators())) {
-      return false;
-    }
-    final List<String> grouping = queryCursorBuildSpec.getGroupingColumns();
-    if (grouping != null) {
-      for (String column : grouping) {
-        if (!hasRequiredColumn(column, queryCursorBuildSpec.getVirtualColumns(), referencedVirtualColumns, rewriteColumns, physicalColumnChecker)) {
+    final List<String> queryGrouping = queryCursorBuildSpec.getGroupingColumns();
+    if (queryGrouping != null) {
+      for (String queryColumn : queryGrouping) {
+        if (!hasRequiredColumn(
+            queryColumn,
+            queryCursorBuildSpec.getVirtualColumns(),
+            referencedVirtualColumns,
+            rewriteColumns,
+            physicalColumnChecker
+        )) {
           return false;
         }
       }
     }
     if (queryCursorBuildSpec.getFilter() != null) {
-      for (String column : queryCursorBuildSpec.getFilter().getRequiredColumns()) {
-        if (!hasRequiredColumn(column, queryCursorBuildSpec.getVirtualColumns(), referencedVirtualColumns, rewriteColumns, physicalColumnChecker)) {
+      for (String queryColumn : queryCursorBuildSpec.getFilter().getRequiredColumns()) {
+        if (!hasRequiredColumn(
+            queryColumn,
+            queryCursorBuildSpec.getVirtualColumns(),
+            referencedVirtualColumns,
+            rewriteColumns,
+            physicalColumnChecker
+        )) {
           return false;
         }
       }
     }
     if (!CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getAggregators())) {
-      int matchCount = 0;
       boolean allMatch = true;
-      for (AggregatorFactory factory : queryCursorBuildSpec.getAggregators()) {
+      for (AggregatorFactory queryAgg : queryCursorBuildSpec.getAggregators()) {
         boolean foundMatch = false;
-        for (AggregatorFactory schemaFactory : aggregators) {
-          if (schemaFactory.withName(factory.getName()).equals(factory)) {
-            rewriteColumns.put(factory.getName(), schemaFactory.getName());
+        for (AggregatorFactory projectionAgg : aggregators) {
+          if (queryAgg.canCombiningFactoryCombine(projectionAgg)) {
+            rewriteColumns.put(queryAgg.getName(), projectionAgg.getName());
             foundMatch = true;
-            matchCount++;
           }
         }
         allMatch = allMatch && foundMatch;
       }
-      if (!allMatch || matchCount < queryCursorBuildSpec.getAggregators().size()) {
-        return false;
-      }
+      return allMatch;
     }
     return true;
   }
@@ -314,7 +349,7 @@ public class AggregateProjectionSpec
    * name will be added to the 'rewriteVirtualColumns' parameter  so that the build spec name can be mapped to the
    * projection name. If no equivalent virtual column exists, but the inputs are available on the projection to
    * compute it, it will be added to 'referencedVirtualColumns' parameter.
-   *
+   * <p>
    * If the column is not a virtual column, {@link Projections.PhysicalColumnChecker} is a helper method which returns
    * true if the column is present on the projection OR if the column is NOT present on the base table (meaning missing
    * columns that do not exist anywhere do not disqualify a projection from being used).

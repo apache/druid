@@ -55,7 +55,7 @@ public class CursorBuildSpec
   private final VirtualColumns virtualColumns;
   @Nullable
   private final List<AggregatorFactory> aggregators;
-  private final List<OrderBy> orderByColumns;
+  private final List<OrderBy> preferredOrdering;
 
   private final QueryContext queryContext;
 
@@ -80,7 +80,7 @@ public class CursorBuildSpec
     this.groupingColumns = groupingColumns;
     this.virtualColumns = Preconditions.checkNotNull(virtualColumns, "virtualColumns");
     this.aggregators = aggregators;
-    this.orderByColumns = Preconditions.checkNotNull(preferredOrdering, "preferredOrdering");
+    this.preferredOrdering = Preconditions.checkNotNull(preferredOrdering, "preferredOrdering");
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
     this.queryMetrics = queryMetrics;
     this.isAggregate = !CollectionUtils.isNullOrEmpty(groupingColumns) || !CollectionUtils.isNullOrEmpty(aggregators);
@@ -146,7 +146,7 @@ public class CursorBuildSpec
    */
   public List<OrderBy> getPreferredOrdering()
   {
-    return orderByColumns;
+    return preferredOrdering;
   }
 
   /**
@@ -180,18 +180,23 @@ public class CursorBuildSpec
     return isAggregate;
   }
 
+  /**
+   * Returns true if the supplied ordering matches {@link #getPreferredOrdering()}, meaning that the supplied ordering
+   * has everything which is in the preferred ordering in the same direction and order. The supplied ordering may have
+   * additional columns beyond the preferred ordering and still satisify this method.
+   */
   public boolean isCompatibleOrdering(List<OrderBy> ordering)
   {
     // if the build spec doesn't prefer an ordering, any order is ok
-    if (orderByColumns.isEmpty()) {
+    if (preferredOrdering.isEmpty()) {
       return true;
     }
     // all columns must be present in ordering if the build spec specifies them
-    if (ordering.size() < orderByColumns.size()) {
+    if (ordering.size() < preferredOrdering.size()) {
       return false;
     }
-    for (int i = 0; i < orderByColumns.size(); i++) {
-      if (!ordering.get(i).equals(orderByColumns.get(i))) {
+    for (int i = 0; i < preferredOrdering.size(); i++) {
+      if (!ordering.get(i).equals(preferredOrdering.get(i))) {
         return false;
       }
     }
@@ -227,7 +232,7 @@ public class CursorBuildSpec
       this.groupingColumns = buildSpec.groupingColumns;
       this.virtualColumns = buildSpec.virtualColumns;
       this.aggregators = buildSpec.aggregators;
-      this.preferredOrdering = buildSpec.orderByColumns;
+      this.preferredOrdering = buildSpec.preferredOrdering;
       this.queryContext = buildSpec.queryContext;
       this.queryMetrics = buildSpec.queryMetrics;
     }

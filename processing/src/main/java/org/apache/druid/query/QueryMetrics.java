@@ -243,6 +243,8 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void segment(String segmentIdentifier);
 
+  void projection(String projection);
+
   /**
    * @deprecated use {@link #filterBundle(FilterBundle.BundleInfo)} instead to collect details about filters which were
    * used to construct {@link org.apache.druid.segment.BitmapOffset} or

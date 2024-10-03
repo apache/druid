@@ -68,7 +68,7 @@ public class Projections
   }
 
   @Nullable
-  public static <T> Projection<T> findMatchingProjection(
+  public static <T> QueryableProjection<T> findMatchingProjection(
       CursorBuildSpec cursorBuildSpec,
       SortedSet<AggregateProjectionSpec> projections,
       PhysicalColumnChecker physicalChecker,
@@ -96,7 +96,10 @@ public class Projections
                              .setVirtualColumns(VirtualColumns.fromIterable(referenced))
                              .build();
 
-          return new Projection<>(rewrittenBuildSpec, rewriteColumns, getRowSelector.apply(spec.getName()));
+          if (cursorBuildSpec.getQueryMetrics() != null) {
+            cursorBuildSpec.getQueryMetrics().projection(spec.getName());
+          }
+          return new QueryableProjection<>(rewrittenBuildSpec, rewriteColumns, getRowSelector.apply(spec.getName()));
         }
       }
     }

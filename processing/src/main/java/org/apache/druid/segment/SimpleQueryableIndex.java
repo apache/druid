@@ -34,7 +34,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.apache.druid.segment.projections.Projection;
+import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.projections.Projections;
 import org.joda.time.Interval;
 
@@ -224,7 +224,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
 
   @Nullable
   @Override
-  public Projection<QueryableIndex> getProjection(CursorBuildSpec cursorBuildSpec)
+  public QueryableProjection<QueryableIndex> getProjection(CursorBuildSpec cursorBuildSpec)
   {
     return Projections.findMatchingProjection(
         cursorBuildSpec,

@@ -279,6 +279,22 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public boolean canCombiningFactoryCombine(AggregatorFactory o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (getClass() != o.getClass()) {
+      return false;
+    }
+    HllSketchAggregatorFactory that = (HllSketchAggregatorFactory) o;
+    return lgK == that.lgK
+           && tgtHllType == that.tgtHllType
+           && stringEncoding == that.stringEncoding
+           && Objects.equals(fieldName, that.fieldName);
+  }
+
+  @Override
   public int hashCode()
   {
     return Objects.hash(name, fieldName, lgK, tgtHllType, stringEncoding, shouldFinalize, round);

@@ -76,7 +76,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.projections.Projection;
+import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -371,7 +371,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   }
 
   @Nullable
-  public abstract Projection<IncrementalIndexRowSelector> getProjection(CursorBuildSpec buildSpec);
+  public abstract QueryableProjection<IncrementalIndexRowSelector> getProjection(CursorBuildSpec buildSpec);
 
   public abstract IncrementalIndexRowSelector getProjection(String name);
 

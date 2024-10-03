@@ -25,7 +25,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.Offset;
-import org.apache.druid.segment.projections.Projection;
+import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorOffset;
 
@@ -44,7 +44,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    Projection<QueryableIndex> projection = index.getProjection(spec);
+    QueryableProjection<QueryableIndex> projection = index.getProjection(spec);
     if (projection != null) {
       // todo (clint): add 'projection' dimension to query metrics
       return new QueryableIndexCursorHolder(projection.getRowSelector(), projection.getCursorBuildSpec())
