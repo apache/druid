@@ -21,6 +21,7 @@ import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
 
+import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
 import { formatEmpty, formatNumber } from '../../../utils';
 import { Issue } from '../components';
@@ -113,10 +114,10 @@ ModuleRepository.registerModule<PieChartParameterValues>({
       };
     }, [querySource, where, splitColumn, measure, limit, showOthers]);
 
-    const [sourceDataState] = useQueryManager({
+    const [sourceDataState, queryManager] = useQueryManager({
       query: dataQueries,
-      processQuery: async ({ mainQuery, splitExpression, othersPartialQuery }) => {
-        const result = await runSqlQuery(mainQuery);
+      processQuery: async ({ mainQuery, splitExpression, othersPartialQuery }, cancelToken) => {
+        const result = await runSqlQuery(mainQuery, cancelToken);
         const data = result.toObjectArray();
 
         if (splitExpression && othersPartialQuery) {
@@ -251,6 +252,9 @@ ModuleRepository.registerModule<PieChartParameterValues>({
           }}
         />
         {errorMessage && <Issue issue={errorMessage} />}
+        {sourceDataState.loading && (
+          <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
+        )}
       </div>
     );
   },

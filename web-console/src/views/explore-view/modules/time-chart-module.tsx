@@ -21,6 +21,7 @@ import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
 
+import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
 import {
   formatInteger,
@@ -141,9 +142,12 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       };
     }, [querySource, where, measure, splitColumn, numberToStack, showOthers]);
 
-    const [sourceDataState] = useQueryManager({
+    const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
-      processQuery: async ({ baseQuery, measure, splitExpression, numberToStack, showOthers }) => {
+      processQuery: async (
+        { baseQuery, measure, splitExpression, numberToStack, showOthers },
+        cancelToken,
+      ) => {
         if (!timeColumnName) {
           throw new Error(`Must have a column of type TIMESTAMP for the time chart to work`);
         }
@@ -155,9 +159,12 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
                   .addSelect(splitExpression.as('v'), { addToGroupBy: 'end' })
                   .changeOrderByExpression(measure.expression.toOrderByExpression('DESC'))
                   .changeLimitValue(numberToStack),
+                cancelToken,
               )
             ).getColumnByIndex(0)!
           : undefined;
+
+        cancelToken.throwIfRequested();
 
         const dataset = (
           await runSqlQuery(
@@ -181,6 +188,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
                 );
               })
               .addSelect(measure.expression.as(METRIC_NAME)),
+            cancelToken,
           )
         ).toObjectArray();
 
@@ -430,6 +438,9 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           }}
         />
         {errorMessage && <Issue issue={errorMessage} />}
+        {sourceDataState.loading && (
+          <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
+        )}
       </div>
     );
   },
