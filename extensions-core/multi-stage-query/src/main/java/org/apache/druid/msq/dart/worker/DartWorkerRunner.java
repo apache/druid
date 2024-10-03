@@ -36,8 +36,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.dart.worker.http.DartWorkerInfo;
 import org.apache.druid.msq.dart.worker.http.GetWorkersResponse;
 import org.apache.druid.msq.exec.Worker;
-import org.apache.druid.msq.indexing.error.CanceledFault;
-import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.rpc.ResourcePermissionMapper;
 import org.apache.druid.msq.rpc.WorkerResource;
 import org.apache.druid.query.QueryContext;
@@ -142,8 +141,7 @@ public class DartWorkerRunner
           holder.worker.run();
         }
         catch (Throwable t) {
-          if (Thread.interrupted()
-              || t instanceof MSQException && ((MSQException) t).getFault().getErrorCode().equals(CanceledFault.CODE)) {
+          if (Thread.interrupted() || MSQFaultUtils.isCanceledException(t)) {
             log.debug(t, "Canceled, exiting thread.");
           } else {
             log.warn(t, "Worker for query[%s] failed and stopped.", queryId);
