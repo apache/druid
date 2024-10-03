@@ -134,7 +134,10 @@ export class ExploreState {
     if (!QuerySource.isSingleStarQuery(this.parsedSource)) return this; // Only trigger for `SELECT * FROM ...` queries
     if (!this.where.equal(SqlLiteral.TRUE)) return this;
 
-    const timeColumn = columns.find(c => c.isTimeColumn());
+    // Either find the `__time::TIMESTAMP` column or use the first column if it is a TIMESTAMP
+    const timeColumn =
+      columns.find(c => c.isTimeColumn()) ||
+      (columns[0].sqlType === 'TIMESTAMP' ? columns[0] : undefined);
     if (!timeColumn) return this;
 
     return this.change({

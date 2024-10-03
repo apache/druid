@@ -17,8 +17,8 @@
  */
 
 import { Button } from '@blueprintjs/core';
-import type { SqlExpression, SqlOrderByDirection } from '@druid-toolkit/query';
-import { C, F, SqlQuery } from '@druid-toolkit/query';
+import type { SqlExpression, SqlOrderByDirection, SqlQuery } from '@druid-toolkit/query';
+import { C, F } from '@druid-toolkit/query';
 import React, { useMemo } from 'react';
 
 import { Loader } from '../../../components';
@@ -213,13 +213,14 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
       const maxPivotValues = parameterValues.maxPivotValues || 10;
       if (!pivotColumn) return;
 
-      return SqlQuery.from(querySource.query)
+      return querySource
+        .getInitQuery(where)
         .addSelect(pivotColumn.expression.as('v'), { addToGroupBy: 'end' })
         .changeOrderByExpression(
           (measures.length ? measures[0].expression : F.count()).toOrderByExpression('DESC'),
         )
         .changeLimitValue(maxPivotValues);
-    }, [querySource.query, parameterValues]);
+    }, [querySource, where, parameterValues]);
 
     const [pivotValueState, queryManager] = useQueryManager({
       query: pivotValueQuery,

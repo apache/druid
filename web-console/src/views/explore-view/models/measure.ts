@@ -217,6 +217,10 @@ export class Measure extends ExpressionMeta {
     return this.changeExpression(F(Measure.AGGREGATE, L(this.name)));
   }
 
+  public getAggregateMeasureName(): string | undefined {
+    return Measure.getAggregateMeasureName(this.expression);
+  }
+
   public getUsedAggregates(): string[] {
     return uniq(
       filterMap(

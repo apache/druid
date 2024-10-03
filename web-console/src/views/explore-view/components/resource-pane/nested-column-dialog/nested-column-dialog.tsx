@@ -27,14 +27,15 @@ import {
   Menu,
   Tag,
 } from '@blueprintjs/core';
-import type { SqlExpression } from '@druid-toolkit/query';
-import { type QueryResult, F, sql, SqlFunction, SqlQuery } from '@druid-toolkit/query';
+import type { SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import { type QueryResult, F, sql, SqlFunction } from '@druid-toolkit/query';
 import React, { useState } from 'react';
 
 import { ClearableInput, Loader, MenuCheckbox } from '../../../../../components';
 import { useQueryManager } from '../../../../../hooks';
 import { caseInsensitiveContains, filterMap, pluralIfNeeded } from '../../../../../utils';
-import { ExpressionMeta, QuerySource } from '../../../models';
+import type { QuerySource } from '../../../models';
+import { ExpressionMeta } from '../../../models';
 import { toggle } from '../../../utils';
 
 import './nested-column-dialog.scss';
@@ -60,7 +61,8 @@ export const NestedColumnDialog = React.memo(function NestedColumnDialog(
   const [pathsState] = useQueryManager({
     query: nestedColumn,
     processQuery: async nestedColumn => {
-      const query = SqlQuery.from(QuerySource.stripToBaseSource(querySource.query))
+      const query = querySource
+        .getInitBaseQuery()
         .addSelect(
           SqlFunction.decorated('ARRAY_CONCAT_AGG', 'DISTINCT', [
             F('JSON_PATHS', nestedColumn),

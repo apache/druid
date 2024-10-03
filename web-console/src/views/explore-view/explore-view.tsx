@@ -163,7 +163,7 @@ export const ExploreView = React.memo(function ExploreView() {
   });
 
   // -------------------------------------------------------
-  // If we have a __time::TIMESTAMP column and no filter add a filter
+  // If we have a TIMESTAMP column and no filter add a filter
 
   useEffect(() => {
     const columns = querySourceState.data?.columns;
