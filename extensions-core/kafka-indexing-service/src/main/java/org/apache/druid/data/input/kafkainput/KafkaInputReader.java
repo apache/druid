@@ -19,13 +19,11 @@
 
 package org.apache.druid.data.input.kafkainput;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
 import org.apache.druid.data.input.InputRowSchema;
-import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
@@ -343,23 +341,12 @@ public class KafkaInputReader implements InputEntityReader
 
   /**
    * Get the first value from an {@link InputRow}. This is the first element from {@link InputRow#getDimensions()}
-   * if there are any. If there are not any, and the row is a {@link MapBasedInputRow} or {@link ListBasedInputRow},
-   * we'll peer inside to look for the first value.
-   *
-   * This method is used to extract keys.
+   * if there are any. If there are not any, returns null. This method is used to extract keys.
    */
   @Nullable
-  private static Object getFirstValue(final InputRow row)
+  static Object getFirstValue(final InputRow row)
   {
     final List<String> dimensions = row.getDimensions();
-    if (!dimensions.isEmpty()) {
-      return row.getRaw(dimensions.get(0));
-    } else if (row instanceof MapBasedInputRow) {
-      return Iterables.getFirst(((MapBasedInputRow) row).getEvent().values(), null);
-    } else if (row instanceof ListBasedInputRow) {
-      return Iterables.getFirst(((ListBasedInputRow) row).asMap().values(), null);
-    } else {
-      return null;
-    }
+    return !dimensions.isEmpty() ? row.getRaw(dimensions.get(0)) : null;
   }
 }
