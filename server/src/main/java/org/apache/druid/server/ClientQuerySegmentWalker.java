@@ -842,7 +842,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
   private <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
   {
-    return warehouse.getToolChest(query);
+    QueryToolChest<T, QueryType> toolChest = warehouse.getToolChest(query);
+    toolChest.setWarehouse(warehouse);
+    return toolChest;
   }
 
   /**

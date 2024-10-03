@@ -47,6 +47,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
 {
   private final JavaType baseResultType;
   private final JavaType bySegmentResultType;
+  private QueryToolChestWarehouse warehouse;
 
   protected QueryToolChest()
   {
@@ -421,5 +422,10 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   )
   {
     return Optional.empty();
+  }
+
+  public void setWarehouse(QueryToolChestWarehouse warehouse)
+  {
+    this.warehouse=warehouse;
   }
 }
