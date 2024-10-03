@@ -198,7 +198,7 @@ The `tuningConfig` controls various tuning parameters specific to each ingestion
 
 The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configuration settings.
 
-For configuration properties specific to Kafka and Kinesis, see [Kafka  `tuningConfig`](kafka-ingestion.md#tuningconfig) and [Kinesis `tuningConfig`](kinesis-ingestion.md#tuningconfig) respectively.
+For configuration properties specific to Kafka and Kinesis, see [Kafka `tuningConfig`](kafka-ingestion.md#tuningconfig) and [Kinesis `tuningConfig`](kinesis-ingestion.md#tuningconfig) respectively.
 
 The following table outlines the tuning properties that apply to all streaming ingestion methods, including Apache Kafka and Amazon Kinesis.
 
