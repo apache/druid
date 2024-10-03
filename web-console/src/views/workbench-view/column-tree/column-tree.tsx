@@ -688,10 +688,10 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   };
 
   render() {
-    const { columnMetadataLoading } = this.props;
+    const { columnMetadata, columnMetadataLoading } = this.props;
     const { currentSchemaSubtree, searchString } = this.state;
 
-    if (columnMetadataLoading) {
+    if (columnMetadataLoading && !columnMetadata) {
       return (
         <div className="column-tree">
           <Loader />

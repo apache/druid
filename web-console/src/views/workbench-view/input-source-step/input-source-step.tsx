@@ -91,7 +91,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
     Execution
   >({
     processQuery: async ({ inputSource, suggestedInputFormat }, cancelToken) => {
-      const fixedFormat = FIXED_FORMAT_FOR_SOURCE['delta'];
+      const fixedFormat = FIXED_FORMAT_FOR_SOURCE[inputSource.type];
 
       const sampleSpec: SampleSpec = {
         type: 'index_parallel',

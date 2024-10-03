@@ -793,7 +793,10 @@ public class DruidQuery
   public static List<DimFilter> getAllFiltersUnderDataSource(DataSource d, List<DimFilter> dimFilterList)
   {
     if (d instanceof FilteredDataSource) {
-      dimFilterList.add(((FilteredDataSource) d).getFilter());
+      DimFilter filter = ((FilteredDataSource) d).getFilter();
+      if (filter != null) {
+        dimFilterList.add(filter);
+      }
     }
     for (DataSource ds : d.getChildren()) {
       dimFilterList.addAll(getAllFiltersUnderDataSource(ds, dimFilterList));
@@ -1745,5 +1748,10 @@ public class DruidQuery
       builder.add(columnName, capabilities.toColumnType());
     }
     return builder.build();
+  }
+
+  public DimFilter getFilter()
+  {
+    return filter;
   }
 }
