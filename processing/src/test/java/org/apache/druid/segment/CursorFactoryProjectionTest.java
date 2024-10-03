@@ -227,7 +227,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   );
 
   @Parameterized.Parameters(name = "name: {0}, sortByDim: {3}")
-  public static Collection<?> constructorFeeder() throws IOException
+  public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
     final DimensionsSpec.Builder dimensionsBuilder =
