@@ -129,6 +129,11 @@ public class RunWorkOrder
     STARTED,
 
     /**
+     * State entered upon failure of some work.
+     */
+    FAILED,
+
+    /**
      * State entered upon calling {@link #stop(Throwable)}.
      */
     STOPPING,
@@ -249,7 +254,8 @@ public class RunWorkOrder
   public void stop(@Nullable Throwable t) throws InterruptedException
   {
     if (state.compareAndSet(State.INIT, State.STOPPING)
-        || state.compareAndSet(State.STARTED, State.STOPPING)) {
+        || state.compareAndSet(State.STARTED, State.STOPPING)
+        || state.compareAndSet(State.FAILED, State.STOPPING)) {
       // Initiate stopping.
       try {
         exec.cancel(cancellationId);
@@ -562,7 +568,11 @@ public class RunWorkOrder
           @Override
           public void onFailure(final Throwable t)
           {
-            notifyListener(Either.error(t));
+            if (state.compareAndSet(State.STARTED, State.FAILED)) {
+              // Call notifyListener only if we were STARTED. In particular, if we were STOPPING, skip this and allow
+              // the stop() method to set its own Canceled error.
+              notifyListener(Either.error(t));
+            }
           }
         },
         Execs.directExecutor()
