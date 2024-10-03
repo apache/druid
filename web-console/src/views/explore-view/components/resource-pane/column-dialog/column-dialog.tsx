@@ -17,11 +17,13 @@
  */
 
 import { Button, Classes, Dialog, FormGroup, InputGroup, Intent, Tag } from '@blueprintjs/core';
-import { type QueryResult, F, sql, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import type { SqlQuery } from '@druid-toolkit/query';
+import { type QueryResult, F, sql, SqlExpression } from '@druid-toolkit/query';
 import React, { useMemo, useState } from 'react';
 
 import { AppToaster } from '../../../../../singletons';
-import { ExpressionMeta, QuerySource } from '../../../models';
+import type { QuerySource } from '../../../models';
+import { ExpressionMeta } from '../../../models';
 import type { Rename } from '../../../utils';
 import { PreviewPane } from '../../preview-pane/preview-pane';
 import { SqlInput } from '../../sql-input/sql-input';
@@ -46,7 +48,8 @@ export const ColumnDialog = React.memo(function ColumnDialog(props: ColumnDialog
   const previewQuery = useMemo(() => {
     const expression = SqlExpression.maybeParse(formula);
     if (!expression) return;
-    return SqlQuery.from(QuerySource.stripToBaseSource(querySource.query))
+    return querySource
+      .getInitBaseQuery()
       .addSelect(F.cast(expression, 'VARCHAR').as('v'), { addToGroupBy: 'end' })
       .applyIf(querySource.hasBaseTimeColumn(), q =>
         q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),

@@ -126,6 +126,14 @@ export class QuerySource {
     };
   }
 
+  public getInitQuery(where?: SqlExpression): SqlQuery {
+    return SqlQuery.from(this.query.as('t')).changeWhereExpression(where);
+  }
+
+  public getInitBaseQuery(): SqlQuery {
+    return SqlQuery.from(QuerySource.stripToBaseSource(this.query).as('t'));
+  }
+
   private materializeStarIfNeeded(): SqlQuery {
     const { query, columns, measures } = this;
     let columnsToExpand = columns.map(c => c.name);

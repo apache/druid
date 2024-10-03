@@ -516,7 +516,7 @@ function makeNonCompareTableQueryAndHints(
 
   return {
     columnHints: makeBaseColumnHints(splitColumns, timeBucket, showColumns),
-    query: SqlQuery.from(source)
+    query: SqlQuery.from(source.as('t'))
       .addWhere(where)
       .applyForEach(mainGroupByExpressions, (q, groupByExpression) =>
         q.addSelect(groupByExpression, {
@@ -868,7 +868,7 @@ function makeFilteredCompareTableQueryAndHints(
   );
 
   const columnHints = makeBaseColumnHints(splitColumns, timeBucket, showColumns);
-  const query = SqlQuery.from(source)
+  const query = SqlQuery.from(source.as('t'))
     .addWhere(commonWhere)
     .applyForEach(mainGroupByExpressions, (q, groupByExpression) =>
       q.addSelect(groupByExpression, {
