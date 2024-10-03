@@ -2331,7 +2331,7 @@ public class MSQWindowTest extends MSQTestBase
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Encountered a multi value column [v0]. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
+                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
         ))
         .verifyExecutionError();
   }
@@ -2350,7 +2350,7 @@ public class MSQWindowTest extends MSQTestBase
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Encountered a multi value column [v0]. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
+                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
         ))
         .verifyExecutionError();
   }
