@@ -120,7 +120,7 @@ The following example shows a supervisor spec for the Kafka indexing service:
 
 ### `ioConfig`
 
-The `ioConfig` defines how Druid reads data from a source system, such as Apache Kafka, Amazon S3, a mounted filesystem, or any other supported source system.
+The `ioConfig` object defines how Druid reads data from a source system, such as Apache Kafka, Amazon S3, a mounted filesystem, or any other supported source system.
 
 The following table outlines the `ioConfig` configuration properties specific to Kafka.
 
