@@ -57,9 +57,9 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
   @Mock
   public DimensionSelector selectorUtf8;
 
-  private WritableMemory memory;
-  private FieldWriter fieldWriter;
-  private FieldWriter fieldWriterUtf8;
+  protected WritableMemory memory;
+  protected FieldWriter fieldWriter;
+  protected FieldWriter fieldWriterUtf8;
 
   @Before
   public void setUp()
@@ -104,6 +104,12 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
   public void testMultiValueStringContainingNulls()
   {
     doTest(Arrays.asList("foo", NullHandling.emptyToNullIfNeeded(""), "bar", null));
+  }
+
+  @Test
+  public void testNullBytes()
+  {
+    doTest(Arrays.asList("abc", "foo" + NullHandling.emptyToNullIfNeeded("") + "bar", "def"));
   }
 
   private void doTest(final List<String> values)
