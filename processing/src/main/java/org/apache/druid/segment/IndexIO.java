@@ -627,6 +627,7 @@ public class IndexIO
           mapper,
           timeBuffer,
           smooshedFiles,
+          null,
           loadFailed
       );
 
@@ -703,32 +704,22 @@ public class IndexIO
         final String smooshName = Projections.getProjectionSmooshV9FileName(projectionSpec, groupingColumn.getName());
         final ByteBuffer colBuffer = smooshedFiles.mapFile(smooshName);
 
+        final ColumnHolder parentColumn;
         if (columns.containsKey(groupingColumn.getName())) {
-          final String internedColumnName = SmooshedFileMapper.STRING_INTERNER.intern(groupingColumn.getName());
-          projectionColumns.put(internedColumnName, Suppliers.memoize(
-              () -> {
-                try {
-                  ColumnDescriptor serde = mapper.readValue(SERIALIZER_UTILS.readString(colBuffer), ColumnDescriptor.class);
-                  return serde.readProjection(colBuffer, columnConfig, smooshedFiles, columns.get(internedColumnName).get());
-                }
-                catch (IOException | RuntimeException e) {
-                  log.warn(e, "Throw exceptions when deserialize column [%s].", groupingColumn.getName());
-                  loadFailed.execute();
-                  throw Throwables.propagate(e);
-                }
-              }
-          ));
+          parentColumn = columns.get(groupingColumn.getName()).get();
         } else {
-          registerColumnHolder(
-              true,
-              projectionColumns,
-              groupingColumn.getName(),
-              mapper,
-              colBuffer,
-              smooshedFiles,
-              loadFailed
-          );
+          parentColumn = null;
         }
+        registerColumnHolder(
+            true,
+            projectionColumns,
+            groupingColumn.getName(),
+            mapper,
+            colBuffer,
+            smooshedFiles,
+            parentColumn,
+            loadFailed
+        );
 
         if (groupingColumn.getName().equals(projectionSpec.getTimeColumnName())) {
           projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(groupingColumn.getName()));
@@ -744,6 +735,7 @@ public class IndexIO
             mapper,
             aggBuffer,
             smooshedFiles,
+            null,
             loadFailed
         );
       }
@@ -842,6 +834,7 @@ public class IndexIO
             mapper,
             colBuffer,
             smooshedFiles,
+            null,
             loadFailed
         );
       }
@@ -854,6 +847,7 @@ public class IndexIO
         ObjectMapper mapper,
         ByteBuffer colBuffer,
         SmooshedFileMapper smooshedFiles,
+        @Nullable ColumnHolder parentColumn,
         SegmentLazyLoadFailCallback loadFailed
     ) throws IOException
     {
@@ -869,7 +863,8 @@ public class IndexIO
                     internedColumnName,
                     mapper,
                     colBuffer,
-                    smooshedFiles
+                    smooshedFiles,
+                    parentColumn
                 );
               }
               catch (IOException | RuntimeException e) {
@@ -884,7 +879,8 @@ public class IndexIO
             internedColumnName,
             mapper,
             colBuffer,
-            smooshedFiles
+            smooshedFiles,
+            parentColumn
         );
         columns.put(internedColumnName, () -> columnHolder);
       }
@@ -899,11 +895,12 @@ public class IndexIO
         String columnName, // columnName is not used in this method, but used in tests.
         ObjectMapper mapper,
         ByteBuffer byteBuffer,
-        SmooshedFileMapper smooshedFiles
+        SmooshedFileMapper smooshedFiles,
+        @Nullable ColumnHolder parentColumn
     ) throws IOException
     {
       ColumnDescriptor serde = mapper.readValue(SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class);
-      return serde.read(byteBuffer, columnConfig, smooshedFiles);
+      return serde.read(byteBuffer, columnConfig, smooshedFiles, parentColumn);
     }
   }
 

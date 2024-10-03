@@ -91,73 +91,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
-      ColumnConfig columnConfig
-  )
-  {
-    final byte version = bb.get();
-    final int columnNameLength = VByte.readInt(bb);
-    final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
-
-    if (version == NestedCommonFormatColumnSerializer.V0) {
-      try {
-
-        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
-
-        final ByteBuffer doubleDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
-        );
-        final ByteBuffer doublesValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.DOUBLE_VALUE_COLUMN_FILE_NAME
-        );
-
-        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier = FixedIndexed.read(
-            doubleDictionaryBuffer,
-            ColumnType.DOUBLE.getStrategy(),
-            byteOrder,
-            Double.BYTES
-        );
-
-        final Supplier<ColumnarDoubles> doubles = CompressedColumnarDoublesSuppliers.fromByteBuffer(
-            doublesValueColumn,
-            byteOrder
-        );
-        final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME
-        );
-        GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
-            valueIndexBuffer,
-            bitmapSerdeFactory.getObjectStrategy(),
-            columnBuilder.getFileMapper()
-        );
-        return new ScalarDoubleColumnAndIndexSupplier(
-            doubleDictionarySupplier,
-            doubles,
-            rBitmaps,
-            bitmapSerdeFactory.getBitmapFactory(),
-            columnConfig
-        );
-      }
-      catch (IOException ex) {
-        throw new RE(ex, "Failed to deserialize V%s column.", version);
-      }
-    } else {
-      throw new RE("Unknown version " + version);
-    }
-  }
-
-  public static ScalarDoubleColumnAndIndexSupplier readProjection(
-      ByteOrder byteOrder,
-      BitmapSerdeFactory bitmapSerdeFactory,
-      ByteBuffer bb,
-      ColumnBuilder columnBuilder,
       ColumnConfig columnConfig,
-      ScalarDoubleColumnAndIndexSupplier parent
+      @Nullable ScalarDoubleColumnAndIndexSupplier parent
   )
   {
     final byte version = bb.get();
@@ -175,7 +110,23 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
             ColumnSerializerUtils.DOUBLE_VALUE_COLUMN_FILE_NAME
         );
 
-        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier = parent.doubleDictionarySupplier;
+        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
+        if (parent != null) {
+          doubleDictionarySupplier = parent.doubleDictionarySupplier;
+        } else {
+          final ByteBuffer doubleDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
+          );
+
+          doubleDictionarySupplier = FixedIndexed.read(
+              doubleDictionaryBuffer,
+              ColumnType.DOUBLE.getStrategy(),
+              byteOrder,
+              Double.BYTES
+          );
+        }
 
         final Supplier<ColumnarDoubles> doubles = CompressedColumnarDoublesSuppliers.fromByteBuffer(
             doublesValueColumn,

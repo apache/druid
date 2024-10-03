@@ -294,7 +294,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     return new Deserializer()
     {
       @Override
-      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+      public void read(
+          ByteBuffer buffer,
+          ColumnBuilder builder,
+          ColumnConfig columnConfig,
+          @Nullable ColumnHolder parent
+      )
       {
         final VERSION rVersion = VERSION.fromByte(buffer.get());
         final int rFlags;
@@ -311,12 +316,17 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         builder.setType(ValueType.STRING);
 
-        final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier =
-            StringEncodingStrategies.getStringDictionarySupplier(
-                builder.getFileMapper(),
-                buffer,
-                byteOrder
-            );
+        final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
+        if (parent != null) {
+          final Supplier<? extends BaseColumn> parentSupplier = parent.getColumnSupplier();
+          dictionarySupplier = ((StringUtf8DictionaryEncodedColumnSupplier<?>) parentSupplier).getDictionary();
+        } else {
+          dictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
+              builder.getFileMapper(),
+              buffer,
+              byteOrder
+          );
+        }
 
         final WritableSupplier<ColumnarInts> rSingleValuedColumn;
         final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
@@ -361,84 +371,6 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
               new StringUtf8ColumnIndexSupplier(
                   bitmapSerdeFactory.getBitmapFactory(),
                   dictionarySupplier,
-                  rBitmaps,
-                  rSpatialIndex
-              ),
-              rBitmaps != null,
-              rSpatialIndex != null
-          );
-        }
-      }
-
-      @Override
-      public void readProjection(
-          ByteBuffer buffer,
-          ColumnBuilder builder,
-          ColumnConfig columnConfig,
-          ColumnHolder parent
-      )
-      {
-        final VERSION rVersion = VERSION.fromByte(buffer.get());
-        final int rFlags;
-
-        if (rVersion.compareTo(VERSION.COMPRESSED) >= 0) {
-          rFlags = buffer.getInt();
-        } else {
-          rFlags = rVersion.equals(VERSION.UNCOMPRESSED_MULTI_VALUE)
-                   ? Feature.MULTI_VALUE.getMask()
-                   : NO_FLAGS;
-        }
-
-        final boolean hasMultipleValues = Feature.MULTI_VALUE.isSet(rFlags) || Feature.MULTI_VALUE_V3.isSet(rFlags);
-
-        builder.setType(ValueType.STRING);
-
-        final WritableSupplier<ColumnarInts> rSingleValuedColumn;
-        final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
-
-        if (hasMultipleValues) {
-          rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags);
-          rSingleValuedColumn = null;
-        } else {
-          rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer);
-          rMultiValuedColumn = null;
-        }
-
-        final Supplier<? extends BaseColumn> parentSupplier = parent.getColumnSupplier();
-        final StringUtf8DictionaryEncodedColumnSupplier<?> dictionaryEncodedParent =
-            (StringUtf8DictionaryEncodedColumnSupplier<?>) parentSupplier;
-        final boolean hasNulls = dictionaryEncodedParent.getDictionary().get().get(0) == null;
-
-        final StringUtf8DictionaryEncodedColumnSupplier<?> supplier = new StringUtf8DictionaryEncodedColumnSupplier<>(
-            dictionaryEncodedParent.getDictionary(),
-            rSingleValuedColumn,
-            rMultiValuedColumn
-        );
-        builder.setHasMultipleValues(hasMultipleValues)
-               .setHasNulls(hasNulls)
-               .setDictionaryEncodedColumnSupplier(supplier);
-
-        GenericIndexed<ImmutableBitmap> rBitmaps = null;
-        ImmutableRTree rSpatialIndex = null;
-        if (!Feature.NO_BITMAP_INDEX.isSet(rFlags)) {
-          rBitmaps = GenericIndexed.read(
-              buffer,
-              bitmapSerdeFactory.getObjectStrategy(),
-              builder.getFileMapper()
-          );
-        }
-
-        if (buffer.hasRemaining()) {
-          rSpatialIndex = new ImmutableRTreeObjectStrategy(
-              bitmapSerdeFactory.getBitmapFactory()
-          ).fromByteBufferWithSize(buffer);
-        }
-
-        if (rBitmaps != null || rSpatialIndex != null) {
-          builder.setIndexSupplier(
-              new StringUtf8ColumnIndexSupplier(
-                  bitmapSerdeFactory.getBitmapFactory(),
-                  dictionaryEncodedParent.getDictionary(),
                   rBitmaps,
                   rSpatialIndex
               ),

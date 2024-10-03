@@ -317,7 +317,8 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob,
+        null
     );
     try (VariantColumn<?> column = (VariantColumn<?>) supplier.get()) {
       smokeTest(supplier, column, data, expectedTypes);
@@ -335,7 +336,8 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob,
+        null
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

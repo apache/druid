@@ -68,7 +68,8 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
-      ColumnBuilder columnBuilder
+      ColumnBuilder columnBuilder,
+      @Nullable VariantColumnAndIndexSupplier parent
   )
   {
     final byte version = bb.get();
@@ -95,144 +96,67 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier;
         final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier;
 
-        final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
-        );
+        if (parent != null) {
+          stringDictionarySupplier = parent.stringDictionarySupplier;
+          longDictionarySupplier = parent.longDictionarySupplier;
+          doubleDictionarySupplier = parent.doubleDictionarySupplier;
+          arrayDictionarySupplier = parent.arrayDictionarySupplier;
+          arrayElementDictionarySupplier = parent.arrayElementDictionarySupplier;
+        } else {
+          final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
+          );
+          final ByteBuffer longDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME
+          );
+          final ByteBuffer doubleDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
+          );
+          final ByteBuffer arrayDictionarybuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME
+          );
+          final ByteBuffer arrayElementDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.ARRAY_ELEMENT_DICTIONARY_FILE_NAME
+          );
 
-        stringDictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
-            mapper,
-            stringDictionaryBuffer,
-            byteOrder
-        );
-        final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME
-        );
-        final CompressedVSizeColumnarIntsSupplier ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
-            encodedValueColumn,
-            byteOrder
-        );
-        final ByteBuffer longDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME
-        );
-        final ByteBuffer doubleDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
-        );
-        final ByteBuffer arrayElementDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.ARRAY_ELEMENT_DICTIONARY_FILE_NAME
-        );
-        final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME
-        );
-        final GenericIndexed<ImmutableBitmap> valueIndexes = GenericIndexed.read(
-            valueIndexBuffer,
-            bitmapSerdeFactory.getObjectStrategy(),
-            columnBuilder.getFileMapper()
-        );
-        final ByteBuffer elementIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.ARRAY_ELEMENT_BITMAP_INDEX_FILE_NAME
-        );
-        final GenericIndexed<ImmutableBitmap> arrayElementIndexes = GenericIndexed.read(
-            elementIndexBuffer,
-            bitmapSerdeFactory.getObjectStrategy(),
-            columnBuilder.getFileMapper()
-        );
-
-        longDictionarySupplier = FixedIndexed.read(
-            longDictionaryBuffer,
-            ColumnType.LONG.getStrategy(),
-            byteOrder,
-            Long.BYTES
-        );
-        doubleDictionarySupplier = FixedIndexed.read(
-            doubleDictionaryBuffer,
-            ColumnType.DOUBLE.getStrategy(),
-            byteOrder,
-            Double.BYTES
-        );
-
-        final ByteBuffer arrayDictionarybuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME
-        );
-        arrayDictionarySupplier = FrontCodedIntArrayIndexed.read(
-            arrayDictionarybuffer,
-            byteOrder
-        );
-        arrayElementDictionarySupplier = FixedIndexed.read(
-            arrayElementDictionaryBuffer,
-            CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
-            byteOrder,
-            Integer.BYTES
-        );
-        return new VariantColumnAndIndexSupplier(
-            logicalType,
-            variantTypeByte,
-            stringDictionarySupplier,
-            longDictionarySupplier,
-            doubleDictionarySupplier,
-            arrayDictionarySupplier,
-            arrayElementDictionarySupplier,
-            ints,
-            valueIndexes,
-            arrayElementIndexes,
-            bitmapSerdeFactory.getBitmapFactory()
-        );
-      }
-      catch (IOException ex) {
-        throw new RE(ex, "Failed to deserialize V%s column.", version);
-      }
-    } else {
-      throw new RE("Unknown version " + version);
-    }
-  }
-
-  public static VariantColumnAndIndexSupplier readProjection(
-      ColumnType logicalType,
-      ByteOrder byteOrder,
-      BitmapSerdeFactory bitmapSerdeFactory,
-      ByteBuffer bb,
-      ColumnBuilder columnBuilder,
-      VariantColumnAndIndexSupplier parent
-  )
-  {
-    final byte version = bb.get();
-    final int columnNameLength = VByte.readInt(bb);
-    final String columnName = StringUtils.fromUtf8(bb, columnNameLength);
-
-    // variant types store an extra byte containing a FieldTypeInfo.TypeSet which has bits set for all types
-    // present in the varaint column. this is a smaller scale, single path version of what a full nested column stores
-    // for each nested path. If this value is present then the column is a mixed type and the logical type represents
-    // the 'least restrictive' native Druid type, if not then all values consistently match the logical type
-    final Byte variantTypeByte;
-    if (bb.hasRemaining()) {
-      variantTypeByte = bb.get();
-    } else {
-      variantTypeByte = null;
-    }
-
-    if (version == NestedCommonFormatColumnSerializer.V0) {
-      try {
-        final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
-        final Supplier<? extends Indexed<ByteBuffer>> stringDictionarySupplier = parent.stringDictionarySupplier;
-        final Supplier<FixedIndexed<Long>> longDictionarySupplier = parent.longDictionarySupplier;
-        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier = parent.doubleDictionarySupplier;
-        final Supplier<FrontCodedIntArrayIndexed> arrayDictionarySupplier = parent.arrayDictionarySupplier;
-        final Supplier<FixedIndexed<Integer>> arrayElementDictionarySupplier = parent.arrayElementDictionarySupplier;
+          stringDictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
+              mapper,
+              stringDictionaryBuffer,
+              byteOrder
+          );
+          longDictionarySupplier = FixedIndexed.read(
+              longDictionaryBuffer,
+              ColumnType.LONG.getStrategy(),
+              byteOrder,
+              Long.BYTES
+          );
+          doubleDictionarySupplier = FixedIndexed.read(
+              doubleDictionaryBuffer,
+              ColumnType.DOUBLE.getStrategy(),
+              byteOrder,
+              Double.BYTES
+          );
+          arrayDictionarySupplier = FrontCodedIntArrayIndexed.read(
+              arrayDictionarybuffer,
+              byteOrder
+          );
+          arrayElementDictionarySupplier = FixedIndexed.read(
+              arrayElementDictionaryBuffer,
+              CompressedNestedDataComplexColumn.INT_TYPE_STRATEGY,
+              byteOrder,
+              Integer.BYTES
+          );
+        }
 
         final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,

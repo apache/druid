@@ -192,7 +192,8 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         bitmapSerdeFactory,
         baseBuffer,
         bob,
-        ColumnConfig.SELECTION_SIZE
+        ColumnConfig.SELECTION_SIZE,
+        null
     );
     try (ScalarLongColumn column = (ScalarLongColumn) supplier.get()) {
       smokeTest(supplier, column);
@@ -210,7 +211,8 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         bitmapSerdeFactory,
         baseBuffer,
         bob,
-        ColumnConfig.SELECTION_SIZE
+        ColumnConfig.SELECTION_SIZE,
+        null
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

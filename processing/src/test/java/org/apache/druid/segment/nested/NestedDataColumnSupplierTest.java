@@ -244,7 +244,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     );
     bob.setFileMapper(fileMapper);
     ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();
-    deserializer.read(baseBuffer, bob, ColumnConfig.SELECTION_SIZE);
+    deserializer.read(baseBuffer, bob, ColumnConfig.SELECTION_SIZE, null);
     final ColumnHolder holder = bob.build();
     final ColumnCapabilities capabilities = holder.getCapabilities();
     Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());
@@ -268,7 +268,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
     );
     bob.setFileMapper(arrayFileMapper);
     ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();
-    deserializer.read(arrayBaseBuffer, bob, ColumnConfig.SELECTION_SIZE);
+    deserializer.read(arrayBaseBuffer, bob, ColumnConfig.SELECTION_SIZE, null);
     final ColumnHolder holder = bob.build();
     final ColumnCapabilities capabilities = holder.getCapabilities();
     Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());
@@ -291,7 +291,8 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
         bob,
         ColumnConfig.SELECTION_SIZE,
         bitmapSerdeFactory,
-        ByteOrder.nativeOrder()
+        ByteOrder.nativeOrder(),
+        null
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);
