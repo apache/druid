@@ -157,7 +157,7 @@ public class AggregateProjectionSpec
         ordering.add(OrderBy.ascending(dimension.getName()));
       }
     }
-    
+
     // every projection gets a count aggregator so we can still use projections whenever a count(*) is added to a query
     String countColumnName = null;
     if (aggregators != null) {
@@ -239,6 +239,12 @@ public class AggregateProjectionSpec
     return granularity;
   }
 
+  @JsonIgnore
+  public String getCountColumnName()
+  {
+    return countColumnName;
+  }
+
   /**
    * Check if this projection "matches" a {@link CursorBuildSpec}.
    *
@@ -248,19 +254,19 @@ public class AggregateProjectionSpec
    *                                  required after matching the projection. The projection may contain pre-computed
    *                                  {@link VirtualColumn} which will not be included in this set since they are
    *                                  physical columns on the projection
-   * @param rewriteColumns            Mapping of {@link CursorBuildSpec} column names to projection column names, used
+   * @param remapColumns              Mapping of {@link CursorBuildSpec} column names to projection column names, used
    *                                  to allow column selector factories to provide projection column selectors as the
    *                                  names the queryCursorBuildSpec needs
    * @param physicalColumnChecker     {@link Projections.PhysicalColumnChecker} which can determine if a physical column
    *                                  required by queryCursorBuildSpec is available on the projection OR does not exist
    *                                  on the base table either
    * @return true if the projection can be used to correctly satisfy the queryCursorBuildSpec, populating
-   *         referencedVirtualColumns and rewriteColumns by side-effect
+   *         referencedVirtualColumns and remapColumns by side-effect
    */
   public boolean matches(
       CursorBuildSpec queryCursorBuildSpec,
       Set<VirtualColumn> referencedVirtualColumns,
-      Map<String, String> rewriteColumns,
+      Map<String, String> remapColumns,
       Projections.PhysicalColumnChecker physicalColumnChecker
   )
   {
@@ -274,7 +280,7 @@ public class AggregateProjectionSpec
             queryColumn,
             queryCursorBuildSpec.getVirtualColumns(),
             referencedVirtualColumns,
-            rewriteColumns,
+            remapColumns,
             physicalColumnChecker
         )) {
           return false;
@@ -287,7 +293,7 @@ public class AggregateProjectionSpec
             queryColumn,
             queryCursorBuildSpec.getVirtualColumns(),
             referencedVirtualColumns,
-            rewriteColumns,
+            remapColumns,
             physicalColumnChecker
         )) {
           return false;
@@ -300,7 +306,7 @@ public class AggregateProjectionSpec
         boolean foundMatch = false;
         for (AggregatorFactory projectionAgg : aggregators) {
           if (queryAgg.canCombiningFactoryCombine(projectionAgg)) {
-            rewriteColumns.put(queryAgg.getName(), projectionAgg.getName());
+            remapColumns.put(queryAgg.getName(), projectionAgg.getName());
             foundMatch = true;
           }
         }
@@ -351,9 +357,9 @@ public class AggregateProjectionSpec
    * Ensure that the projection has the specified column required by a {@link CursorBuildSpec} in one form or another.
    * If the column is a {@link VirtualColumn} on the build spec, ensure that the projection has an equivalent virtual
    * column, or has the required inputs to compute the virtual column. If an equivalent virtual column exists, its
-   * name will be added to the 'rewriteVirtualColumns' parameter  so that the build spec name can be mapped to the
-   * projection name. If no equivalent virtual column exists, but the inputs are available on the projection to
-   * compute it, it will be added to 'referencedVirtualColumns' parameter.
+   * name will be added to the 'mapBuildSpecColumnToProjectionColumn' parameter so that the build spec name can be
+   * mapped to the projection name. If no equivalent virtual column exists, but the inputs are available on the
+   * projection to compute it, it will be added to 'requiredBuildSpecVirtualColumns' parameter.
    * <p>
    * If the column is not a virtual column, {@link Projections.PhysicalColumnChecker} is a helper method which returns
    * true if the column is present on the projection OR if the column is NOT present on the base table (meaning missing

@@ -751,7 +751,7 @@ public class IndexIO
         // todo (clint): get the count column name from project spec since if it was doing things correctly it might
         //  possibly not be __count
         // todo (clint): also, why do we still have to read columns just to know the stupid row count
-        try (BaseColumn count = projectionColumns.get("__count").get().getColumn()) {
+        try (BaseColumn count = projectionColumns.get(projectionSpec.getCountColumnName()).get().getColumn()) {
           final int numRows = ((NumericColumn) count).length();
           projectionColumns.put(
               ColumnHolder.TIME_COLUMN_NAME,

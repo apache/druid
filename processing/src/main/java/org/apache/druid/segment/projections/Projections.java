@@ -85,12 +85,12 @@ public class Projections
         if (name != null && !name.equals(spec.getName())) {
           continue;
         }
-        final Map<String, String> rewriteColumns = new HashMap<>();
+        final Map<String, String> remapColumns = new HashMap<>();
         if (spec.getTimeColumnName() != null) {
-          rewriteColumns.put(spec.getTimeColumnName(), ColumnHolder.TIME_COLUMN_NAME);
+          remapColumns.put(spec.getTimeColumnName(), ColumnHolder.TIME_COLUMN_NAME);
         }
         final Set<VirtualColumn> referenced = new HashSet<>();
-        if (spec.matches(cursorBuildSpec, referenced, rewriteColumns, physicalChecker)) {
+        if (spec.matches(cursorBuildSpec, referenced, remapColumns, physicalChecker)) {
           final CursorBuildSpec rewrittenBuildSpec =
               CursorBuildSpec.builder(cursorBuildSpec)
                              .setVirtualColumns(VirtualColumns.fromIterable(referenced))
@@ -99,7 +99,7 @@ public class Projections
           if (cursorBuildSpec.getQueryMetrics() != null) {
             cursorBuildSpec.getQueryMetrics().projection(spec.getName());
           }
-          return new QueryableProjection<>(rewrittenBuildSpec, rewriteColumns, getRowSelector.apply(spec.getName()));
+          return new QueryableProjection<>(rewrittenBuildSpec, remapColumns, getRowSelector.apply(spec.getName()));
         }
       }
     }
