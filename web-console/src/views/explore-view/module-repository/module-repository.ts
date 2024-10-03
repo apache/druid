@@ -17,6 +17,7 @@
  */
 
 import type { QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import type { CancelToken } from 'axios';
 
 import type { ParameterDefinition, QuerySource, Stage } from '../models';
 
@@ -34,7 +35,7 @@ interface ModuleComponentProps<P> {
   setWhere(where: SqlExpression): void;
   parameterValues: P;
   setParameterValues: (parameters: Partial<P>) => void;
-  runSqlQuery(query: string | SqlQuery): Promise<QueryResult>;
+  runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
 }
 
 export class ModuleRepository {

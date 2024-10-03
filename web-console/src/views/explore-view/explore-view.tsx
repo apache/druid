@@ -22,6 +22,7 @@ import { Button, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Column, QueryResult, SqlExpression } from '@druid-toolkit/query';
 import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
+import type { CancelToken } from 'axios';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -79,27 +80,33 @@ const queryRunner = new QueryRunner({
   },
 });
 
-async function runSqlQuery(query: string | SqlQuery): Promise<QueryResult> {
+async function runSqlQuery(
+  query: string | SqlQuery,
+  cancelToken?: CancelToken,
+): Promise<QueryResult> {
   try {
     return await queryRunner.runQuery({
       query,
       defaultQueryContext: {
         sqlStringifyArrays: false,
       },
+      cancelToken,
     });
   } catch (e) {
     throw new DruidError(e);
   }
 }
 
-async function introspectSource(source: string): Promise<QuerySource> {
+async function introspectSource(source: string, cancelToken?: CancelToken): Promise<QuerySource> {
   const query = SqlQuery.parse(source);
   const introspectResult = await runSqlQuery(QuerySource.makeLimitZeroIntrospectionQuery(query));
 
+  cancelToken?.throwIfRequested();
   const baseIntrospectResult = QuerySource.isSingleStarQuery(query)
     ? introspectResult
     : await runSqlQuery(
         QuerySource.makeLimitZeroIntrospectionQuery(QuerySource.stripToBaseSource(query)),
+        cancelToken,
       );
 
   return QuerySource.fromIntrospectResult(
@@ -238,11 +245,15 @@ export const ExploreView = React.memo(function ExploreView() {
   const querySource = querySourceState.getSomeData();
 
   const runSqlPlusQuery = useMemo(() => {
-    return async (query: string | SqlQuery) => {
+    return async (query: string | SqlQuery, cancelToken?: CancelToken) => {
       if (!querySource) throw new Error('no querySource');
-      return await runSqlQuery(
-        await rewriteMaxDataTime(rewriteAggregate(SqlQuery.parse(query), querySource.measures)),
-      );
+      const parsedQuery = SqlQuery.parse(query);
+      return (
+        await runSqlQuery(
+          await rewriteMaxDataTime(rewriteAggregate(parsedQuery, querySource.measures)),
+          cancelToken,
+        )
+      ).attachQuery({ query: '' }, parsedQuery);
     };
   }, [querySource]);
 

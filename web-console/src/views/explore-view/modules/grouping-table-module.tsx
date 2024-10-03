@@ -17,7 +17,7 @@
  */
 
 import { Button } from '@blueprintjs/core';
-import type { SqlOrderByDirection } from '@druid-toolkit/query';
+import type { SqlExpression, SqlOrderByDirection } from '@druid-toolkit/query';
 import { C, F, SqlQuery } from '@druid-toolkit/query';
 import React, { useMemo } from 'react';
 
@@ -42,6 +42,11 @@ import './grouping-table-module.scss';
 // As of this writing ordering the outer query on something other than __time sometimes throws an error, set this to false / remove it
 // when ordering on non __time is more robust
 const NEEDS_GROUPING_TO_ORDER = true;
+
+interface QueryAndMore {
+  originalWhere: SqlExpression;
+  queryAndHints: QueryAndHints;
+}
 
 interface GroupingTableParameterValues {
   splitColumns: ExpressionMeta[];
@@ -216,14 +221,14 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
         .changeLimitValue(maxPivotValues);
     }, [querySource.query, parameterValues]);
 
-    const [pivotValueState] = useQueryManager({
+    const [pivotValueState, queryManager] = useQueryManager({
       query: pivotValueQuery,
       processQuery: async (pivotValueQuery: SqlQuery) => {
         return (await runSqlQuery(pivotValueQuery)).getColumnByName('v') as string[];
       },
     });
 
-    const queryAndHints = useMemo((): QueryAndHints | undefined => {
+    const queryAndMore = useMemo((): QueryAndMore | undefined => {
       const pivotValues = pivotValueState.data;
       if (parameterValues.pivotColumn && !pivotValues) return;
       const { orderByColumn, orderByDirection } = parameterValues;
@@ -231,32 +236,43 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
         ? C(orderByColumn).toOrderByExpression(orderByDirection)
         : undefined;
 
-      return makeTableQueryAndHints({
-        source: querySource.query,
-        where,
-        splitColumns: parameterValues.splitColumns,
-        timeBucket: parameterValues.timeBucket,
-        showColumns: parameterValues.showColumns,
-        multipleValueMode: parameterValues.multipleValueMode,
-        pivotColumn: parameterValues.pivotColumn,
-        pivotValues,
-        measures: parameterValues.measures,
-        compares: parameterValues.compares || [],
-        compareStrategy: parameterValues.compareStrategy,
-        compareTypes: parameterValues.compareTypes,
-        restrictTop: parameterValues.restrictTop,
-        maxRows: parameterValues.maxRows,
-        orderBy,
-        useGroupingToOrderSubQueries: NEEDS_GROUPING_TO_ORDER,
-      });
+      return {
+        originalWhere: where,
+        queryAndHints: makeTableQueryAndHints({
+          source: querySource.query,
+          where,
+          splitColumns: parameterValues.splitColumns,
+          timeBucket: parameterValues.timeBucket,
+          showColumns: parameterValues.showColumns,
+          multipleValueMode: parameterValues.multipleValueMode,
+          pivotColumn: parameterValues.pivotColumn,
+          pivotValues,
+          measures: parameterValues.measures,
+          compares: parameterValues.compares || [],
+          compareStrategy: parameterValues.compareStrategy,
+          compareTypes: parameterValues.compareTypes,
+          restrictTop: parameterValues.restrictTop,
+          maxRows: parameterValues.maxRows,
+          orderBy,
+          useGroupingToOrderSubQueries: NEEDS_GROUPING_TO_ORDER,
+        }),
+      };
     }, [querySource.query, where, parameterValues, pivotValueState.data]);
 
     const [resultState] = useQueryManager({
-      query: queryAndHints,
-      processQuery: async (queryAndHints: QueryAndHints) => {
+      query: queryAndMore,
+      processQuery: async (queryAndMore, cancelToken) => {
+        const { originalWhere, queryAndHints } = queryAndMore;
         const { query, columnHints } = queryAndHints;
+        let result = await runSqlQuery(query, cancelToken);
+        if (result.sqlQuery) {
+          result = result.attachQuery(
+            { query: '' },
+            result.sqlQuery.changeWhereExpression(originalWhere),
+          );
+        }
         return {
-          result: await runSqlQuery(query),
+          result,
           columnHints,
         };
       },
@@ -297,7 +313,9 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
             initPageSize={calculateInitPageSize(stage.height)}
           />
         ) : undefined}
-        {resultState.loading && <Loader />}
+        {resultState.loading && (
+          <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
+        )}
       </div>
     );
   },
