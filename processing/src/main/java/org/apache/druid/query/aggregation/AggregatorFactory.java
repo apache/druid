@@ -370,9 +370,10 @@ public abstract class AggregatorFactory implements Cacheable
    * of the other aggregator. This does not imply that the opposite is true, the combining factory of the other
    * aggregator might not necessarily be able to combine the intermediary results of this aggregator.
    */
-  public boolean canCombiningFactoryCombine(AggregatorFactory other)
+  // todo (clint): naming things is the hardest, revisit this
+  public boolean canCombiningFactoryCombine(AggregatorFactory toCombine)
   {
-    return equals(other.withName(getName()));
+    return equals(toCombine.withName(getName()));
   }
 
   /**

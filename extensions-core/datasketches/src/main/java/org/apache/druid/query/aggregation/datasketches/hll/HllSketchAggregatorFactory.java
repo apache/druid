@@ -279,15 +279,15 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public boolean canCombiningFactoryCombine(AggregatorFactory o)
+  public boolean canCombiningFactoryCombine(AggregatorFactory toCombine)
   {
-    if (this == o) {
+    if (this == toCombine) {
       return true;
     }
-    if (getClass() != o.getClass()) {
+    if (getClass() != toCombine.getClass()) {
       return false;
     }
-    HllSketchAggregatorFactory that = (HllSketchAggregatorFactory) o;
+    HllSketchAggregatorFactory that = (HllSketchAggregatorFactory) toCombine;
     return lgK == that.lgK
            && tgtHllType == that.tgtHllType
            && stringEncoding == that.stringEncoding
