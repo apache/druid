@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.union;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
@@ -43,7 +44,11 @@ import java.util.function.Function;
 public class UnionQuery implements Query<RealUnionResult>
 {
   RealUnionQueryRunnerFactory a;
+
+  @JsonProperty
   protected final Map<String, Object> context;
+
+  @JsonProperty
   protected final List<Query<?>> queries;
 
   public UnionQuery(List<Query<?>> queries2)

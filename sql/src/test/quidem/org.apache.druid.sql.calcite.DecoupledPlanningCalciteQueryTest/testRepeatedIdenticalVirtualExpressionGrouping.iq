@@ -1,4 +1,4 @@
-# testRepeatedIdenticalVirtualExpressionGrouping case-crc:c6ee44b6
+# testRepeatedIdenticalVirtualExpressionGrouping case-crc:c0459668
 # quidem testcase reason: IMPROVED_PLAN
 !set debug true
 !set defaultTimeout 300000
@@ -33,39 +33,3 @@ DruidProject(col_a=[$0], col_b=[true], druid=[logical])
       DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
-{
-  "queryType" : "groupBy",
-  "dataSource" : {
-    "type" : "table",
-    "name" : "foo"
-  },
-  "intervals" : {
-    "type" : "intervals",
-    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-  },
-  "virtualColumns" : [ {
-    "type" : "expression",
-    "name" : "v0",
-    "expression" : "1",
-    "outputType" : "LONG"
-  } ],
-  "granularity" : {
-    "type" : "all"
-  },
-  "dimensions" : [ {
-    "type" : "default",
-    "dimension" : "v0",
-    "outputName" : "d0",
-    "outputType" : "LONG"
-  } ],
-  "postAggregations" : [ {
-    "type" : "expression",
-    "name" : "p0",
-    "expression" : "1",
-    "outputType" : "LONG"
-  } ],
-  "limitSpec" : {
-    "type" : "NoopLimitSpec"
-  }
-}
-!nativePlan

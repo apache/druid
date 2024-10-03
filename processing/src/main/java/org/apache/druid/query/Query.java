@@ -43,6 +43,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.utils.CollectionUtils;
@@ -69,6 +70,7 @@ import java.util.UUID;
     @JsonSubTypes.Type(name = Query.TIMESERIES, value = TimeseriesQuery.class),
     @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
     @JsonSubTypes.Type(name = Query.WINDOW_OPERATOR, value = WindowOperatorQuery.class),
+    @JsonSubTypes.Type(name = Query.UNION_QUERY, value = UnionQuery.class),
 })
 public interface Query<T>
 {
@@ -82,6 +84,7 @@ public interface Query<T>
   String TIMESERIES = "timeseries";
   String TOPN = "topN";
   String WINDOW_OPERATOR = "windowOperator";
+  String UNION_QUERY = "union";
 
   DataSource getDataSource();
 

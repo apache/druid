@@ -47,7 +47,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
 {
   private final JavaType baseResultType;
   private final JavaType bySegmentResultType;
-  private QueryToolChestWarehouse warehouse;
+  protected QueryToolChestWarehouse warehouse;
 
   protected QueryToolChest()
   {

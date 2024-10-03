@@ -36,4 +36,10 @@ public class RealUnionResult
     this.seq = seq;
   }
 
+  public <T> Sequence<T> getResults()
+  {
+    return (Sequence<T>) seq;
+
+  }
+
 }

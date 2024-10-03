@@ -865,6 +865,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final ArrayList<Object[]> resultList = new ArrayList<>();
 
     final int initialSubqueryRows = limitAccumulator.get();
+    toolChest.setWarehouse(warehouse);
     toolChest.resultsAsArrays(query, results).accumulate(
         resultList,
         (acc, in) -> {

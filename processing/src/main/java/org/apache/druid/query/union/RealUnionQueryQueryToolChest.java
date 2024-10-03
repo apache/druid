@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.Query;
@@ -38,6 +39,8 @@ import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Finalization;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, UnionQuery>
@@ -102,8 +105,31 @@ public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult
       Sequence<RealUnionResult> resultSequence
   )
   {
+    List<RealUnionResult> results = resultSequence.toList();
 
-    return (Sequence) resultSequence;
+    List<Sequence<Object[]>> resultSeqs = new ArrayList<Sequence<Object[]>>();
+
+    for (int i = 0; i < results.size(); i++) {
+      Query<?> q = query.queries.get(i);
+      RealUnionResult realUnionResult = results.get(i);
+
+      resultSeqs.add(resultsAsArrays(q, realUnionResult));
+    }
+
+    return Sequences.concat(resultSeqs);
+  }
+
+  private <T,QueryType extends Query<T>> Sequence<Object[]> resultsAsArrays(QueryType q, RealUnionResult realUnionResult)
+  {
+    QueryToolChest<T, QueryType> toolChest = warehouse.getToolChest(q);
+    return toolChest.resultsAsArrays(q, realUnionResult.getResults());
+  }
+
+  @SuppressWarnings("unused")
+  private  Sequence<Object[]> resultsAsArrays1(Query<?> q, RealUnionResult realUnionResult)
+  {
+    warehouse.getToolChest(q);
+    return null;
   }
 
   @Override
