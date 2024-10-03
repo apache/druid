@@ -49,11 +49,11 @@ The `spec` section contains three parts:
 - [`ioConfig`](#ioconfig): Instructs Druid how to connect to the [source system](./index.md#ingestion-methods) and how to parse data.
 - [`tuningConfig`](#tuningconfig): Controls performance-related settings for the supervisor and indexing tasks.
 
-For configuration properties shared across all ingestion methods supported by Druid, see [native ingestion specs](ingestion-spec.md).
+For configuration properties shared across all ingestion methods supported by Druid, see [Ingestion spec reference](ingestion-spec.md).
 
 ### `ioConfig`
 
-The `ioConfig` defines how Druid reads data from a source system. See native ingestion specification documentation on the [`ioConfig`](ingestion-spec.md#ioconfig) for more information.
+The `ioConfig` object defines how Druid reads data from a source system. See native ingestion specification documentation on the [`ioConfig`](ingestion-spec.md#ioconfig) for more information.
 
 The following table outlines the configuration properties available for all streaming ingestion methods, including Apache Kafka and Amazon Kinesis.
 
@@ -194,13 +194,13 @@ The following example shows a supervisor spec with `lagBased` autoscaler:
 
 ### `tuningConfig`
 
-The `tuningConfig` controls various tuning parameters specific to each ingestion method. See native ingestion specification documentation on the [`tuningConfig`](ingestion-spec.md#tuningconfig) for more information.
+The `tuningConfig` object controls various tuning parameters specific to each ingestion method. See native ingestion specification documentation on [`tuningConfig`](ingestion-spec.md#tuningconfig) for more information.
 
 The `tuningConfig` object is optional. If you don't specify the `tuningConfig` object, Druid uses the default configuration settings.
 
 For configuration properties specific to Kafka and Kinesis, see [Kafka `tuningConfig`](kafka-ingestion.md#tuningconfig) and [Kinesis `tuningConfig`](kinesis-ingestion.md#tuningconfig) respectively.
 
-The following table outlines the tuning properties that apply to all streaming ingestion methods, including Apache Kafka and Amazon Kinesis.
+The following table outlines the tuning properties that apply to all streaming ingestion methods, including Kafka and Kinesis.
 
 
 |Property|Type|Description|Required|Default|
