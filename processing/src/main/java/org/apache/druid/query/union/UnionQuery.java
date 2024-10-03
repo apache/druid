@@ -30,7 +30,6 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -41,7 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-public class UnionQuery implements Query<RowsAndColumns>
+public class UnionQuery implements Query<RealUnionResult>
 {
   RealUnionQueryRunnerFactory a;
   protected final Map<String, Object> context;
@@ -96,7 +95,7 @@ public class UnionQuery implements Query<RowsAndColumns>
   }
 
   @Override
-  public QueryRunner<RowsAndColumns> getRunner(QuerySegmentWalker walker)
+  public QueryRunner<RealUnionResult> getRunner(QuerySegmentWalker walker)
   {
     return new RealUnionQueryRunner(walker);
   }
@@ -132,7 +131,7 @@ public class UnionQuery implements Query<RowsAndColumns>
   }
 
   @Override
-  public Ordering<RowsAndColumns> getResultOrdering()
+  public Ordering<RealUnionResult> getResultOrdering()
   {
     if (true) {
       throw new RuntimeException("FIXME: Unimplemented!");
@@ -141,20 +140,20 @@ public class UnionQuery implements Query<RowsAndColumns>
   }
 
   @Override
-  public Query<RowsAndColumns> withOverriddenContext(Map<String, Object> contextOverrides)
+  public Query<RealUnionResult> withOverriddenContext(Map<String, Object> contextOverrides)
   {
     List<Query<?>> newQueries = mapQueries(q -> q.withOverriddenContext(contextOverrides));
     return new UnionQuery(newQueries, QueryContexts.override(getContext(), contextOverrides));
   }
 
   @Override
-  public Query<RowsAndColumns> withQuerySegmentSpec(QuerySegmentSpec spec)
+  public Query<RealUnionResult> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     throw new RuntimeException("FIXME: Unimplemented!");
   }
 
   @Override
-  public Query<RowsAndColumns> withId(String id)
+  public Query<RealUnionResult> withId(String id)
   {
     return withOverriddenContext(ImmutableMap.of(BaseQuery.QUERY_ID, id));
   }
@@ -166,7 +165,7 @@ public class UnionQuery implements Query<RowsAndColumns>
   }
 
   @Override
-  public Query<RowsAndColumns> withSubQueryId(String subQueryId)
+  public Query<RealUnionResult> withSubQueryId(String subQueryId)
   {
     return withOverriddenContext(ImmutableMap.of(BaseQuery.SUB_QUERY_ID, subQueryId));
   }
@@ -178,13 +177,13 @@ public class UnionQuery implements Query<RowsAndColumns>
   }
 
   @Override
-  public Query<RowsAndColumns> withDataSource(DataSource dataSource)
+  public Query<RealUnionResult> withDataSource(DataSource dataSource)
   {
     throw new RuntimeException("FIXME: Unimplemented!");
   }
 
   @Override
-  public Query<RowsAndColumns> withDataSources(List<DataSource> children)
+  public Query<RealUnionResult> withDataSources(List<DataSource> children)
   {
     Preconditions.checkArgument(queries.size() == children.size(), "Number of children must match number of queries");
     List<Query<?>> newQueries= new ArrayList<>();

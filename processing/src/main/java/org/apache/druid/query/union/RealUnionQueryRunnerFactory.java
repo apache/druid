@@ -23,10 +23,9 @@ import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.Segment;
 
-public class RealUnionQueryRunnerFactory implements QueryRunnerFactory<RowsAndColumns, UnionQuery>
+public class RealUnionQueryRunnerFactory implements QueryRunnerFactory<RealUnionResult, UnionQuery>
 {
 
   public RealUnionQueryRunnerFactory(String string)
@@ -34,7 +33,7 @@ public class RealUnionQueryRunnerFactory implements QueryRunnerFactory<RowsAndCo
   }
 
   @Override
-  public QueryRunner<RowsAndColumns> createRunner(Segment segment)
+  public QueryRunner<RealUnionResult> createRunner(Segment segment)
   {
     if(true)
     {
@@ -45,8 +44,8 @@ public class RealUnionQueryRunnerFactory implements QueryRunnerFactory<RowsAndCo
   }
 
   @Override
-  public QueryRunner<RowsAndColumns> mergeRunners(QueryProcessingPool queryProcessingPool,
-      Iterable<QueryRunner<RowsAndColumns>> queryRunners)
+  public QueryRunner<RealUnionResult> mergeRunners(QueryProcessingPool queryProcessingPool,
+      Iterable<QueryRunner<RealUnionResult>> queryRunners)
   {
     if(true)
     {
@@ -57,7 +56,7 @@ public class RealUnionQueryRunnerFactory implements QueryRunnerFactory<RowsAndCo
   }
 
   @Override
-  public QueryToolChest<RowsAndColumns, UnionQuery> getToolchest()
+  public QueryToolChest<RealUnionResult, UnionQuery> getToolchest()
   {
     return new RealUnionQueryQueryToolChest();
   }

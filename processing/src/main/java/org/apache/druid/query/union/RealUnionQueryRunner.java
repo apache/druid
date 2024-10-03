@@ -21,7 +21,6 @@ package org.apache.druid.query.union;
 
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -34,7 +33,7 @@ import org.apache.druid.query.timeseries.TimeseriesResultValue;
 
 import java.util.List;
 
-public class RealUnionQueryRunner implements QueryRunner<RowsAndColumns>
+public class RealUnionQueryRunner implements QueryRunner<RealUnionResult>
 {
   private QuerySegmentWalker walker;
 
@@ -44,15 +43,15 @@ public class RealUnionQueryRunner implements QueryRunner<RowsAndColumns>
   }
 
   @Override
-  public Sequence<RowsAndColumns> run(QueryPlus<RowsAndColumns> queryPlus, ResponseContext responseContext)
+  public Sequence<RealUnionResult> run(QueryPlus<RealUnionResult> queryPlus, ResponseContext responseContext)
   {
     UnionQuery unionQuery = queryPlus.unwrapQuery(UnionQuery.class);
 
-    for (Query<?> q: unionQuery.queries) {
-      if(q instanceof TimeseriesQuery) {
-        runTsQuery(queryPlus,(TimeseriesQuery)q, responseContext);
-      }
-    }
+//    for (Query<?> q: unionQuery.queries) {
+//      if(q instanceof TimeseriesQuery) {
+//        runTsQuery(queryPlus,(TimeseriesQuery)q, responseContext);
+//      }
+//    }
     return Sequences.empty();
   }
 
