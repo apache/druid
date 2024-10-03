@@ -112,7 +112,6 @@ public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult
     for (int i = 0; i < results.size(); i++) {
       Query<?> q = query.queries.get(i);
       RealUnionResult realUnionResult = results.get(i);
-
       resultSeqs.add(resultsAsArrays(q, realUnionResult));
     }
 
