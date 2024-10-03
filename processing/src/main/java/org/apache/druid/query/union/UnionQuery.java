@@ -32,6 +32,7 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -213,6 +214,16 @@ public class UnionQuery implements Query<RealUnionResult>
   public String toString()
   {
     return "UnionQuery [context=" + context + ", queries=" + queries + "]";
+  }
+
+  public DataSourceAnalysis getDataSourceAnalysis()
+  {
+    if(true)
+    {
+      throw new RuntimeException("FIXME: Unimplemented!");
+    }
+    return null;
+
   }
 
 

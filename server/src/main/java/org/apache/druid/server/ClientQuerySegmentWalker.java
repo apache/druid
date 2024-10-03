@@ -291,20 +291,29 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T> boolean canRunQueryUsingLocalWalker(Query<T> query)
   {
     if(query instanceof UnionQuery) {
+
+      UnionQuery unionQuery = (UnionQuery) query;
+      final DataSourceAnalysis analysis = unionQuery.getDataSourceAnalysis();
+//      return analysis.isConcreteBased() && !analysis.isConcreteAndTableBased() && unionQuery.dataSource_isGlobal()
+//          && (!(dataSourceFromQuery instanceof QueryDataSource)
+//              || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
+
       // FIXME ??
       return false;
-    }
-    final DataSource dataSourceFromQuery = query.getDataSource();
-    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
-    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    } else {
 
-    // 1) Must be based on a concrete datasource that is not a table.
-    // 2) Must be based on globally available data (so we have a copy here on the Broker).
-    // 3) If there is an outer query, it must be handleable by the query toolchest (the local walker does not handle
-    //    subqueries on its own).
-    return analysis.isConcreteBased() && !analysis.isConcreteAndTableBased() && dataSourceFromQuery.isGlobal()
-           && (!(dataSourceFromQuery instanceof QueryDataSource)
-               || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
+      final DataSource dataSourceFromQuery = query.getDataSource();
+      final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
+      final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+
+      // 1) Must be based on a concrete datasource that is not a table.
+      // 2) Must be based on globally available data (so we have a copy here on the Broker).
+      // 3) If there is an outer query, it must be handleable by the query toolchest (the local walker does not handle
+      //    subqueries on its own).
+      return analysis.isConcreteBased() && !analysis.isConcreteAndTableBased() && dataSourceFromQuery.isGlobal()
+             && (!(dataSourceFromQuery instanceof QueryDataSource)
+                 || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
+    }
   }
 
   /**
@@ -314,8 +323,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T> boolean canRunQueryUsingClusterWalker(Query<T> query)
   {
     if(query instanceof UnionQuery) {
-      // FIXME ??
-      return true;
+      UnionQuery unionQuery = (UnionQuery) query;
+      final DataSourceAnalysis analysis = unionQuery.getDataSourceAnalysis();
+
+      return analysis.isConcreteAndTableBased();
     }
 
     final DataSource dataSourceFromQuery = query.getDataSource();
