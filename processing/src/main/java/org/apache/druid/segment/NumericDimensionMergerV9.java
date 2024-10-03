@@ -31,6 +31,7 @@ import java.util.List;
  */
 public abstract class NumericDimensionMergerV9 implements DimensionMergerV9
 {
+  // noinspection unused
   protected final String dimensionName;
   protected final String outputName;
   protected final IndexSpec indexSpec;

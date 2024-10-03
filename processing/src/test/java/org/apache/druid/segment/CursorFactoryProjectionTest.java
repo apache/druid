@@ -21,6 +21,8 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import it.unimi.dsi.fastutil.Hash;
+import it.unimi.dsi.fastutil.objects.ObjectOpenCustomHashSet;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.NonBlockingPool;
@@ -86,6 +88,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @RunWith(Parameterized.class)
 public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
@@ -697,38 +701,16 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     Assert.assertEquals(8, results.size());
 
     if (sortByDim && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(3).getTimestamp().getMillis(), "b", 3L},
-          results.get(0).getArray()
+      // this sorts funny when not time ordered
+      Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet();
+      resultsInNoParticularOrder.addAll(
+          ROWS.stream()
+              .map(x -> new Object[]{x.getTimestamp().getMillis(), x.getRaw("a"), x.getRaw("c")})
+              .collect(Collectors.toList())
       );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(0).getTimestamp().getMillis(), "a", 1L},
-          results.get(1).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(7).getTimestamp().getMillis(), "a", 2L},
-          results.get(2).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(1).getTimestamp().getMillis(), "a", 1L},
-          results.get(3).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(4).getTimestamp().getMillis(), "b", 4L},
-          results.get(4).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(2).getTimestamp().getMillis(), "a", 2L},
-          results.get(5).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(5).getTimestamp().getMillis(), "b", 5L},
-          results.get(6).getArray()
-      );
-      Assert.assertArrayEquals(
-          new Object[]{ROWS.get(6).getTimestamp().getMillis(), "a", 1L},
-          results.get(7).getArray()
-      );
+      for (ResultRow row : results) {
+        Assert.assertTrue(resultsInNoParticularOrder.contains(row.getArray()));
+      }
     } else {
       Assert.assertArrayEquals(
           new Object[]{ROWS.get(0).getTimestamp().getMillis(), "a", 1L},
@@ -763,6 +745,27 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
           results.get(7).getArray()
       );
     }
+  }
+
+  private static Set<Object[]> makeArrayResultSet()
+  {
+    Set<Object[]> resultsInNoParticularOrder = new ObjectOpenCustomHashSet<>(
+        new Hash.Strategy<Object[]>()
+        {
+          @Override
+          public int hashCode(Object[] o)
+          {
+            return Arrays.hashCode(o);
+          }
+
+          @Override
+          public boolean equals(Object[] a, Object[] b)
+          {
+            return Arrays.deepEquals(a, b);
+          }
+        }
+    );
+    return resultsInNoParticularOrder;
   }
 
   @Test
@@ -934,7 +937,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(new Object[]{"b", null, 12L, 13.2}, results.get(1).getArray());
   }
 
-  private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec) throws IOException
+  private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec)
   {
     File tmp = FileUtils.createTempDir();
     CLOSER.register(tmp::delete);

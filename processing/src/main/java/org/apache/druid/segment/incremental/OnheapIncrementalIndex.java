@@ -35,7 +35,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -52,7 +51,6 @@ import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.EncodedKeyComponent;
-import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -61,8 +59,8 @@ import org.apache.druid.segment.column.ColumnFormat;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.projections.Projections;
+import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -79,7 +77,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -1158,27 +1155,20 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   public static class OnHeapAggregateProjection implements IncrementalIndexRowSelector
   {
     private final AggregateProjectionSpec projectionSpec;
-    private final String name;
-    private final Granularity projectionGranularity;
-    private final boolean hasTimeColumn;
-    @Nullable
-    private final String timeColumnName;
-    private final long minTimestamp;
     private final List<DimensionDesc> dimensions;
-    private final AggregatorFactory[] aggregatorFactories;
     private final int[] parentDimensionIndex;
+    private final AggregatorFactory[] aggregatorFactories;
     private final Map<String, DimensionDesc> dimensionsMap;
     private final Map<String, MetricDesc> aggregatorsMap;
-    private final List<OrderBy> ordering;
     private final FactsHolder factsHolder;
     private final InputRowHolder inputRowHolder = new InputRowHolder();
-    private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
     private final ColumnSelectorFactory virtualSelectorFactory;
+    private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
     private final Map<String, ColumnSelectorFactory> aggSelectors;
-    private final AtomicInteger rowCounter = new AtomicInteger(0);
     private final boolean useMaxMemoryEstimates;
     private final long maxBytesPerRowForAggregators;
-    private final int timePosition;
+    private final long minTimestamp;
+    private final AtomicInteger rowCounter = new AtomicInteger(0);
     private final AtomicInteger numEntries = new AtomicInteger(0);
 
     public OnHeapAggregateProjection(
@@ -1192,14 +1182,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     )
     {
       this.projectionSpec = schema;
-      this.name = schema.getName();
       this.dimensions = dimensions;
       this.parentDimensionIndex = parentDimensionIndex;
       this.dimensionsMap = dimensionsMap;
-      this.timeColumnName = projectionSpec.getTimeColumnName();
-      this.projectionGranularity = projectionSpec.getGranularity();
-      this.hasTimeColumn = projectionSpec.getTimeColumnPosition() >= 0;
-      this.timePosition = projectionSpec.getTimeColumnPosition();
       this.minTimestamp = minTimestamp;
       final IncrementalIndexRowComparator rowComparator = new IncrementalIndexRowComparator(
           projectionSpec.getTimeColumnPosition() < 0 ? dimensions.size() : projectionSpec.getTimeColumnPosition(),
@@ -1230,28 +1215,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         aggSelectors.put(agg.getName(), factory);
         aggregatorFactories[i++] = agg;
       }
-      this.ordering = getOrder(dimensions, projectionSpec.getTimeColumnPosition());
-    }
-
-    private List<OrderBy> getOrder(List<DimensionDesc> dimensions, int foundTimePosition)
-    {
-      final ImmutableList.Builder<OrderBy> listBuilder =
-          ImmutableList.builderWithExpectedSize(dimensions.size() + 1);
-      int i = 0;
-      if (i == foundTimePosition) {
-        listBuilder.add(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME));
-      }
-      for (String dimName : dimensionsMap.keySet()) {
-        listBuilder.add(OrderBy.ascending(dimName));
-        i++;
-        if (i == foundTimePosition) {
-          listBuilder.add(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME));
-        }
-      }
-      if (foundTimePosition < 0) {
-        listBuilder.add(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME));
-      }
-      return listBuilder.build();
     }
 
     public void addToFacts(
@@ -1279,8 +1242,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         }
       }
       final IncrementalIndexRow subKey = new IncrementalIndexRow(
-          hasTimeColumn
-          ? projectionGranularity.bucketStart(DateTimes.utc(key.getTimestamp())).getMillis()
+          projectionSpec.getTimeColumnName() != null
+          ? projectionSpec.getGranularity().bucketStart(DateTimes.utc(key.getTimestamp())).getMillis()
           : minTimestamp,
           projectionDims,
           dimensions
@@ -1357,13 +1320,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     @Override
     public List<OrderBy> getOrdering()
     {
-      return ordering;
+      return projectionSpec.getOrdering();
     }
 
     @Override
     public int getTimePosition()
     {
-      return timePosition;
+      return projectionSpec.getTimeColumnPosition();
     }
 
     @Override
@@ -1412,10 +1375,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     @Override
     public ColumnFormat getColumnFormat(String columnName)
     {
-      // todo (clint): hella jank
+      // todo (clint): hella jank, just build this up front
       DimensionDesc dimensionDesc = getDimension(columnName);
       if (dimensionDesc == null) {
-        if (columnName.equals(timeColumnName)) {
+        if (columnName.equals(projectionSpec.getTimeColumnName())) {
           return new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG));
         }
         MetricDesc metricDesc = getMetric(columnName);
@@ -1437,18 +1400,18 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     public List<String> getDimensionNames(boolean includeTime)
     {
       synchronized (dimensionsMap) {
-        if (includeTime) {
+        if (includeTime && projectionSpec.getTimeColumnName() != null) {
           final ImmutableList.Builder<String> listBuilder =
               ImmutableList.builderWithExpectedSize(dimensionsMap.size() + 1);
           int i = 0;
-          if (i == timePosition) {
-            listBuilder.add(timeColumnName);
+          if (i == projectionSpec.getTimeColumnPosition()) {
+            listBuilder.add(projectionSpec.getTimeColumnName());
           }
           for (String dimName : dimensionsMap.keySet()) {
             listBuilder.add(dimName);
             i++;
-            if (i == timePosition) {
-              listBuilder.add(timeColumnName);
+            if (i == projectionSpec.getTimeColumnPosition()) {
+              listBuilder.add(projectionSpec.getTimeColumnName());
             }
           }
           return listBuilder.build();
@@ -1462,7 +1425,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     @Override
     public ColumnCapabilities getColumnCapabilities(String column)
     {
-      if (ColumnHolder.TIME_COLUMN_NAME.equals(column) || Objects.equals(column, timeColumnName)) {
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(column) || Objects.equals(column, projectionSpec.getTimeColumnName())) {
         return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG).setHasNulls(false);
       }
       if (dimensionsMap.containsKey(column)) {

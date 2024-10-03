@@ -102,6 +102,7 @@ public class AggregateProjectionSpec
   private final String timeColumnName;
   private final int timeColumnPosition;
   private final Granularity granularity;
+  private final String countColumnName;
 
   @JsonCreator
   public AggregateProjectionSpec(
@@ -156,29 +157,33 @@ public class AggregateProjectionSpec
         ordering.add(OrderBy.ascending(dimension.getName()));
       }
     }
-
-    boolean hasCount = false;
-
+    
+    // every projection gets a count aggregator so we can still use projections whenever a count(*) is added to a query
+    String countColumnName = null;
     if (aggregators != null) {
       for (AggregatorFactory aggregator : aggregators) {
         if (aggregator instanceof CountAggregatorFactory) {
-          hasCount = true;
+          countColumnName = aggregator.getName();
         }
         columnNames.add(aggregator.getName());
       }
     }
-
-    // every projection gets a count aggregator so we can still use projections whenever a count(*) is added to a query
-    // todo (clint): fix count name to check columnNmaes set for duplicate names and fix
-    final String countName = "__count";
+    boolean hasCount = countColumnName != null;
+    if (countColumnName == null) {
+      countColumnName = "__count";
+      while (columnNames.contains(countColumnName)) {
+        countColumnName = "_" + countColumnName;
+      }
+    }
+    this.countColumnName = countColumnName;
     if (hasCount) {
       this.aggregators = aggregators;
     } else if (aggregators != null) {
       this.aggregators = new AggregatorFactory[aggregators.length + 1];
       System.arraycopy(aggregators, 0, this.aggregators, 0, aggregators.length);
-      this.aggregators[aggregators.length] = new CountAggregatorFactory(countName);
+      this.aggregators[aggregators.length] = new CountAggregatorFactory(countColumnName);
     } else {
-      this.aggregators = new AggregatorFactory[]{new CountAggregatorFactory(countName)};
+      this.aggregators = new AggregatorFactory[]{new CountAggregatorFactory(countColumnName)};
     }
   }
 

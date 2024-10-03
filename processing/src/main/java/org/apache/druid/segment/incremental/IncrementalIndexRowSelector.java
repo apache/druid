@@ -109,6 +109,7 @@ public interface IncrementalIndexRowSelector extends ColumnInspector
    */
   boolean isNull(int rowOffset, int aggOffset);
 
+  @Nullable
   ColumnFormat getColumnFormat(String columnName);
 
   int size();

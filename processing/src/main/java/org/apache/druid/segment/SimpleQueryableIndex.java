@@ -34,8 +34,8 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
-import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.projections.Projections;
+import org.apache.druid.segment.projections.QueryableProjection;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
