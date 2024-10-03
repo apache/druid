@@ -87,6 +87,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -366,7 +367,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
         this.queryGranularity,
         this.rollup,
         getDimensionOrder().stream().map(OrderBy::ascending).collect(Collectors.toList()),
-        incrementalIndexSchema.getProjections()
+        Collections.emptyList()
     );
   }
 

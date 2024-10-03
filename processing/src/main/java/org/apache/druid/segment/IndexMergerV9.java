@@ -28,7 +28,6 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.io.ZeroCopyByteArrayOutputStream;
@@ -157,7 +156,7 @@ public class IndexMergerV9 implements IndexMerger
                                 .filter(dim -> !ColumnHolder.TIME_COLUMN_NAME.equals(dim))
                                 .collect(Collectors.toList());
 
-    final Metadata segmentMetadata;
+    Metadata segmentMetadata;
     if (metricAggs != null) {
       AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
       for (int i = 0; i < metricAggs.length; i++) {
@@ -296,7 +295,7 @@ public class IndexMergerV9 implements IndexMerger
       progress.stopSection(section);
 
       if (segmentMetadata != null && !CollectionUtils.isNullOrEmpty(segmentMetadata.getProjections())) {
-        makeProjections(
+        segmentMetadata = makeProjections(
             v9Smoosher,
             segmentMetadata.getProjections(),
             adapters,
@@ -304,7 +303,8 @@ public class IndexMergerV9 implements IndexMerger
             segmentWriteOutMedium,
             progress,
             closer,
-            mergersMap
+            mergersMap,
+            segmentMetadata
         );
       }
 
@@ -349,27 +349,30 @@ public class IndexMergerV9 implements IndexMerger
     }
   }
 
-  private void makeProjections(
+  private Metadata makeProjections(
       final FileSmoosher smoosher,
-      final List<AggregateProjectionSpec> projections,
+      final List<AggregateProjectionMetadata> projections,
       final List<IndexableAdapter> adapters,
       final IndexSpec indexSpec,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final ProgressIndicator progress,
       final Closer closer,
-      final Map<String, DimensionMergerV9> parentMergers
+      final Map<String, DimensionMergerV9> parentMergers,
+      final Metadata segmentMetadata
   ) throws IOException
   {
-    for (AggregateProjectionSpec spec : projections) {
+    final List<AggregateProjectionMetadata> projectionMetadata = Lists.newArrayListWithCapacity(projections.size());
+    for (AggregateProjectionMetadata spec : projections) {
       final List<IndexableAdapter> projectionAdapters = Lists.newArrayListWithCapacity(adapters.size());
+      final AggregateProjectionMetadata.Schema projectionSchema = spec.getSchema();
       for (IndexableAdapter adapter : adapters) {
-        projectionAdapters.add(adapter.getProjectionAdapter(spec.getName()));
+        projectionAdapters.add(adapter.getProjectionAdapter(projectionSchema.getName()));
       }
       // todo (clint): why not from projection spec grouping columns?
       final List<String> dimensions = projectionAdapters.get(0).getDimensionNames(false);
 
       // todo (clint): add comments for the stuff that is DIFFERENT from calling function
-      final List<String> metrics = Arrays.stream(spec.getAggregators())
+      final List<String> metrics = Arrays.stream(projectionSchema.getAggregators())
                                          .map(AggregatorFactory::getName)
                                          .collect(Collectors.toList());
 
@@ -402,7 +405,7 @@ public class IndexMergerV9 implements IndexMerger
 
 
       final GenericColumnSerializer timeWriter;
-      if (spec.getTimeColumnName() != null) {
+      if (projectionSchema.getTimeColumnName() != null) {
         timeWriter = setupTimeWriter(segmentWriteOutMedium, indexSpec);
       } else {
         timeWriter = null;
@@ -417,7 +420,7 @@ public class IndexMergerV9 implements IndexMerger
           );
 
       Function<List<TransformableRowIterator>, TimeAndDimsIterator> rowMergerFn =
-          rowIterators -> new RowCombiningTimeAndDimsIterator(rowIterators, spec.getAggregators(), metrics);
+          rowIterators -> new RowCombiningTimeAndDimsIterator(rowIterators, projectionSchema.getAggregators(), metrics);
 
       List<TransformableRowIterator> perIndexRowIterators = Lists.newArrayListWithCapacity(projectionAdapters.size());
       for (int i = 0; i < projectionAdapters.size(); ++i) {
@@ -490,13 +493,13 @@ public class IndexMergerV9 implements IndexMerger
 
       final String section2 = "build inverted index and columns";
       progress.startSection(section2);
-      if (spec.getTimeColumnName() != null) {
+      if (projectionSchema.getTimeColumnName() != null) {
         makeTimeColumn(
             smoosher,
             progress,
             timeWriter,
             indexSpec,
-            Projections.getProjectionSmooshV9FileName(spec, spec.getTimeColumnName())
+            Projections.getProjectionSmooshV9FileName(spec, projectionSchema.getTimeColumnName())
         );
       }
       makeMetricsColumns(
@@ -520,7 +523,9 @@ public class IndexMergerV9 implements IndexMerger
       }
 
       progress.stopSection(section2);
+      projectionMetadata.add(new AggregateProjectionMetadata(projectionSchema, rowCount));
     }
+    return segmentMetadata.withProjections(projectionMetadata);
   }
 
   private void makeIndexBinary(

@@ -24,11 +24,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import org.apache.druid.collections.bitmap.BitmapFactory;
-import org.apache.druid.data.input.impl.AggregateProjectionSpec;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -44,21 +44,22 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
-import java.util.stream.Collectors;
 
 /**
  *
  */
 public abstract class SimpleQueryableIndex implements QueryableIndex
 {
+  public static final Interner<List<OrderBy>> ORDERING_INTERNER = Interners.newWeakInterner();
+
   private final Interval dataInterval;
   private final List<String> columnNames;
   private final Indexed<String> availableDimensions;
   private final BitmapFactory bitmapFactory;
   private final Map<String, Supplier<ColumnHolder>> columns;
   private final List<OrderBy> ordering;
-  private final Map<String, AggregateProjectionSpec> projectionsMap;
-  private final SortedSet<AggregateProjectionSpec> projections;
+  private final Map<String, AggregateProjectionMetadata> projectionsMap;
+  private final SortedSet<AggregateProjectionMetadata> projections;
   private final Map<String, Map<String, Supplier<ColumnHolder>>> projectionColumns;
   private final SmooshedFileMapper fileMapper;
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
@@ -72,7 +73,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       boolean lazy
   )
   {
-    this(dataInterval, dimNames, bitmapFactory, columns, fileMapper, lazy, null);
+    this(dataInterval, dimNames, bitmapFactory, columns, fileMapper, lazy, null, null);
   }
 
   // todo (clint): specialize SimpleQueryableIndex with projections into its own class?
@@ -83,6 +84,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       Map<String, Supplier<ColumnHolder>> columns,
       SmooshedFileMapper fileMapper,
       boolean lazy,
+      @Nullable Metadata metadata,
       @Nullable Map<String, Map<String, Supplier<ColumnHolder>>> projectionColumns
   )
   {
@@ -112,19 +114,18 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     } else {
       this.dimensionHandlers = () -> initDimensionHandlers(availableDimensions);
     }
-    final Metadata metadata = getMetadata();
     if (metadata != null) {
       if (metadata.getOrdering() != null) {
-        this.ordering = metadata.getOrdering();
+        this.ordering = ORDERING_INTERNER.intern(metadata.getOrdering());
       } else {
         this.ordering = Cursors.ascendingTimeOrder();
       }
       if (metadata.getProjections() != null) {
         this.projectionsMap = Maps.newHashMapWithExpectedSize(metadata.getProjections().size());
-        this.projections = new ObjectAVLTreeSet<>(AggregateProjectionSpec.COMPARATOR);
-        for (AggregateProjectionSpec projectionSpec : metadata.getProjections()) {
+        this.projections = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
+        for (AggregateProjectionMetadata projectionSpec : metadata.getProjections()) {
           projections.add(projectionSpec);
-          projectionsMap.put(projectionSpec.getName(), projectionSpec);
+          projectionsMap.put(projectionSpec.getSchema().getName(), projectionSpec);
         }
       } else {
         this.projectionsMap = Collections.emptyMap();
@@ -238,23 +239,29 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   @Override
   public QueryableIndex getProjectionQueryableIndex(String name)
   {
-    final AggregateProjectionSpec projectionSpec = projectionsMap.get(name);
+    final AggregateProjectionMetadata projectionSpec = projectionsMap.get(name);
     return new SimpleQueryableIndex(
         dataInterval,
-        new ListIndexed<>(projectionSpec.getGroupingColumns()
-                                        .stream()
-                                        .map(DimensionSchema::getName)
-                                        .collect(Collectors.toList())),
+        new ListIndexed<>(projectionSpec.getSchema().getGroupingColumns()),
         bitmapFactory,
         projectionColumns.get(name),
         fileMapper,
-        true
+        true,
+        null,
+        null
     )
     {
       @Override
       public Metadata getMetadata()
       {
         return null;
+      }
+
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        // return ordering with projection time column substituted with __time so query engines can treat it equivalently
+        return projectionSpec.getSchema().getOrderingWithTimeColumnSubstitution();
       }
     };
   }

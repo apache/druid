@@ -369,26 +369,31 @@ public abstract class AggregatorFactory implements Cacheable
 
   /**
    * Check to see if {@link #getCombiningFactory()} of this aggregator is suitable to use as an input a selector of
-   * values produced by the other {@link AggregatorFactory}. Typically, this means that this and the other aggregator
-   * have the same inputs ({@link #requiredFields()}, and the same options for how the data was constructed into the
-   * intermediary type. If this method returns true, the inverse is not necessarily true.
-   *
+   * values produced by the other {@link AggregatorFactory} representing pre-aggregated data. Typically, this means
+   * that this and the other aggregator have the same inputs ({@link #requiredFields()}, and the same options for how
+   * the data was constructed into the intermediary type. If suitable, this method returns a "combining" aggregator
+   * factory of this aggregator to use to process the pre-aggregated data from the other aggregator.
+   * <p>
    * This method is used by {@link org.apache.druid.segment.CursorFactory#makeCursorHolder(CursorBuildSpec)}, which can
    * check if this aggregator can be substituted for its combining aggregator if and only if there exists a column that
    * a cursor can read which was created by an aggregator that satisfies this method. In other words, this aggregator
    * is the 'query' aggregator defined on the {@link CursorBuildSpec}, the argument to this method is the aggregator
    * which created some column whose selectors are available to the cursor. If all aggregators on the
    * {@link CursorBuildSpec} can be paired with aggregators from the underlying table in the cursor factory, then
-   * {@link CursorHolder#isPreAggregated()} will be set to true indicating that query engines must substitute this
-   * aggregator for its combining aggregator.
+   * {@link CursorHolder#isPreAggregated()} will be set to true indicating that query engines should use this
+   * substituted aggregator instead of
    *
    * @param preAggregated {@link AggregatorFactory} which produced the partially aggregated values which are
    *                      available in a selector
-   * @return true if {@link #getCombiningFactory()} can correctly process inputs from a selector of the other aggregator
+   * @return a "combining" {@link AggregatorFactory} to use with the pre-aggregated selector data
    */
-  public boolean canBindCombiningFactory(AggregatorFactory preAggregated)
+  @Nullable
+  public AggregatorFactory substituteCombiningFactory(AggregatorFactory preAggregated)
   {
-    return equals(preAggregated.withName(getName()));
+    if (equals(preAggregated.withName(getName()))) {
+      return getCombiningFactory();
+    }
+    return null;
   }
 
   /**

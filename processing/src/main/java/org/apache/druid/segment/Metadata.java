@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
@@ -59,7 +58,7 @@ public class Metadata
   @Nullable
   private final List<OrderBy> ordering;
   @Nullable
-  private final List<AggregateProjectionSpec> projections;
+  private final List<AggregateProjectionMetadata> projections;
 
   public Metadata(
       @JsonProperty("container") @Nullable Map<String, Object> container,
@@ -68,7 +67,7 @@ public class Metadata
       @JsonProperty("queryGranularity") @Nullable Granularity queryGranularity,
       @JsonProperty("rollup") @Nullable Boolean rollup,
       @JsonProperty("ordering") @Nullable List<OrderBy> ordering,
-      @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections
+      @JsonProperty("projections") @Nullable List<AggregateProjectionMetadata> projections
   )
   {
     this.container = container == null ? new ConcurrentHashMap<>() : container;
@@ -133,9 +132,22 @@ public class Metadata
   @Nullable
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
-  public List<AggregateProjectionSpec> getProjections()
+  public List<AggregateProjectionMetadata> getProjections()
   {
     return projections;
+  }
+
+  public Metadata withProjections(List<AggregateProjectionMetadata> projections)
+  {
+    return new Metadata(
+        container,
+        aggregators,
+        timestampSpec,
+        queryGranularity,
+        rollup,
+        ordering,
+        projections
+    );
   }
 
   public Metadata putAll(@Nullable Map<String, Object> other)
@@ -169,7 +181,7 @@ public class Metadata
     List<Granularity> gransToMerge = new ArrayList<>();
     List<Boolean> rollupToMerge = new ArrayList<>();
     List<List<OrderBy>> orderingsToMerge = new ArrayList<>();
-    List<List<AggregateProjectionSpec>> projectionsToMerge = new ArrayList<>();
+    List<List<AggregateProjectionMetadata>> projectionsToMerge = new ArrayList<>();
 
     for (Metadata metadata : toBeMerged) {
       if (metadata != null) {
@@ -220,7 +232,7 @@ public class Metadata
                                           Granularity.mergeGranularities(gransToMerge);
 
     final List<OrderBy> mergedOrdering = mergeOrderings(orderingsToMerge);
-    final List<AggregateProjectionSpec> mergedProjections = mergeProjections(projectionsToMerge);
+    validateProjections(projectionsToMerge);
 
     Boolean rollup = null;
     if (rollupToMerge != null && !rollupToMerge.isEmpty()) {
@@ -245,7 +257,7 @@ public class Metadata
         mergedGranularity,
         rollup,
         mergedOrdering,
-        mergedProjections
+        projectionsToMerge.get(0) // we're going to replace this later with updated rowcount
     );
   }
 
@@ -329,14 +341,13 @@ public class Metadata
     }
   }
 
-  @Nullable
-  public static List<AggregateProjectionSpec> mergeProjections(List<List<AggregateProjectionSpec>> projectionsToMerge)
+  public static void validateProjections(List<List<AggregateProjectionMetadata>> projectionsToMerge)
   {
-    final Map<String, AggregateProjectionSpec> projectionsMap = new HashMap<>();
+    final Map<String, AggregateProjectionMetadata> projectionsMap = new HashMap<>();
     // dedupe by name, fail if somehow incompatible projections are defined
     int nullCount = 0;
     int expectedSize = -1;
-    for (List<AggregateProjectionSpec> projections : projectionsToMerge) {
+    for (List<AggregateProjectionMetadata> projections : projectionsToMerge) {
       if (projections == null) {
         nullCount++;
         continue;
@@ -346,9 +357,9 @@ public class Metadata
       } else if (projections.size() != expectedSize) {
         throw DruidException.defensive("Unable to merge projections: mismatched projections count");
       }
-      for (AggregateProjectionSpec projection : projections) {
-        AggregateProjectionSpec prev = projectionsMap.putIfAbsent(projection.getName(), projection);
-        if (prev != null && !prev.equals(projection)) {
+      for (AggregateProjectionMetadata projection : projections) {
+        AggregateProjectionMetadata prev = projectionsMap.putIfAbsent(projection.getSchema().getName(), projection);
+        if (prev != null && !prev.getSchema().equals(projection.getSchema())) {
           throw DruidException.defensive("Unable to merge projections: mismatched projections [%s] and [%s]", prev, projection);
         }
       }
@@ -357,9 +368,6 @@ public class Metadata
       if (nullCount != projectionsToMerge.size()) {
         throw DruidException.defensive("Unable to merge projections: some projections were null");
       }
-
-      return null;
     }
-    return new ArrayList<>(projectionsMap.values());
   }
 }

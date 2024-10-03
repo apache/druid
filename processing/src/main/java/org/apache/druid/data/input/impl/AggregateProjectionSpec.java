@@ -31,22 +31,17 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
-import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
+import java.util.stream.Collectors;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonTypeName(AggregateProjectionSpec.TYPE_NAME)
@@ -54,55 +49,13 @@ public class AggregateProjectionSpec
 {
   public static final String TYPE_NAME = "aggregate";
 
-  /**
-   * It is not likely the best way to find the best matching projections, but it is the one we have for now. This
-   * comparator is used to sort all the projections in a segment "best" first, where best is defined as fewest grouping
-   * columns, most virtual columns and aggregators, as an approximation of likely to have the fewest number of rows to
-   * scan.
-   */
-  public static final Comparator<AggregateProjectionSpec> COMPARATOR = (o1, o2) -> {
-    // coarsest granularity first
-    if (o1.getGranularity().isFinerThan(o2.getGranularity())) {
-      return 1;
-    }
-    if (o2.getGranularity().isFinerThan(o1.getGranularity())) {
-      return -1;
-    }
-    // fewer dimensions first
-    final int dimsCompare = Integer.compare(
-        o1.groupingColumns.size(),
-        o2.groupingColumns.size()
-    );
-    if (dimsCompare != 0) {
-      return dimsCompare;
-    }
-    // more metrics first
-    int metCompare = Integer.compare(o2.aggregators.length, o1.aggregators.length);
-    if (metCompare != 0) {
-      return metCompare;
-    }
-    // more virtual columns first
-    final int virtCompare = Integer.compare(
-        o2.virtualColumns.getVirtualColumns().length,
-        o1.virtualColumns.getVirtualColumns().length
-    );
-    if (virtCompare != 0) {
-      return virtCompare;
-    }
-    return o1.name.compareTo(o2.name);
-  };
-
   private final String name;
   private final List<DimensionSchema> groupingColumns;
   private final VirtualColumns virtualColumns;
   private final AggregatorFactory[] aggregators;
   private final List<OrderBy> ordering;
-
   @Nullable
   private final String timeColumnName;
-  private final int timeColumnPosition;
-  private final Granularity granularity;
-  private final String countColumnName;
 
   @JsonCreator
   public AggregateProjectionSpec(
@@ -118,76 +71,10 @@ public class AggregateProjectionSpec
     }
     this.groupingColumns = groupingColumns;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
-    this.ordering = Lists.newArrayListWithCapacity(this.groupingColumns.size());
-
-    // todo (clint): maybe this initialization should be behind a supplier or something...
-    final Set<String> columnNames = new HashSet<>();
-    int foundTimePosition = -1;
-    String timeColumnName = null;
-    Granularity granularity = null;
-    // try to find the __time column equivalent, which might be a time_floor expression to model granularity
-    // bucketing. The time column is decided as the finest granularity on __time detected. If the projection does
-    // not have a time-like column, the granularity will be handled as ALL for the projection and all projection
-    // rows will use a synthetic timestamp of the minimum timestamp of the incremental index
-    for (int i = 0; i < this.getGroupingColumns().size(); i++) {
-      final DimensionSchema dimension = this.getGroupingColumns().get(i);
-      columnNames.add(dimension.getName());
-      if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
-        timeColumnName = dimension.getName();
-        foundTimePosition = i;
-        granularity = Granularities.NONE;
-      } else {
-        final VirtualColumn vc = this.getVirtualColumns().getVirtualColumn(dimension.getName());
-        final Granularity maybeGranularity = Granularities.fromVirtualColumn(vc);
-        if (granularity == null && maybeGranularity != null) {
-          granularity = maybeGranularity;
-          timeColumnName = dimension.getName();
-          foundTimePosition = i;
-        } else if (granularity != null && maybeGranularity != null && maybeGranularity.isFinerThan(granularity)) {
-          granularity = maybeGranularity;
-          timeColumnName = dimension.getName();
-          foundTimePosition = i;
-        }
-      }
-    }
-    this.timeColumnName = timeColumnName;
-    this.timeColumnPosition = foundTimePosition;
-    this.granularity = granularity == null ? Granularities.ALL : granularity;
-    for (DimensionSchema dimension : this.groupingColumns) {
-      if (dimension.getName().equals(timeColumnName)) {
-        ordering.add(OrderBy.ascending(ColumnHolder.TIME_COLUMN_NAME));
-      } else {
-        ordering.add(OrderBy.ascending(dimension.getName()));
-      }
-    }
-
-    // every projection gets a count aggregator so we can still use projections whenever a count(*) is added to a query
-    String countColumnName = null;
-    if (aggregators != null) {
-      for (AggregatorFactory aggregator : aggregators) {
-        if (aggregator instanceof CountAggregatorFactory) {
-          countColumnName = aggregator.getName();
-        }
-        columnNames.add(aggregator.getName());
-      }
-    }
-    boolean hasCount = countColumnName != null;
-    if (countColumnName == null) {
-      countColumnName = "__count";
-      while (columnNames.contains(countColumnName)) {
-        countColumnName = "_" + countColumnName;
-      }
-    }
-    this.countColumnName = countColumnName;
-    if (hasCount) {
-      this.aggregators = aggregators;
-    } else if (aggregators != null) {
-      this.aggregators = new AggregatorFactory[aggregators.length + 1];
-      System.arraycopy(aggregators, 0, this.aggregators, 0, aggregators.length);
-      this.aggregators[aggregators.length] = new CountAggregatorFactory(countColumnName);
-    } else {
-      this.aggregators = new AggregatorFactory[]{new CountAggregatorFactory(countColumnName)};
-    }
+    final ProjectionOrdering ordering = computeOrdering(this.virtualColumns, this.groupingColumns);
+    this.ordering = ordering.ordering;
+    this.timeColumnName = ordering.timeColumnName;
+    this.aggregators = aggregators == null ? new AggregatorFactory[0] : aggregators;
   }
 
   @JsonProperty
@@ -223,103 +110,24 @@ public class AggregateProjectionSpec
     return ordering;
   }
 
-  @JsonIgnore
   @Nullable
+  @JsonIgnore
   public String getTimeColumnName()
   {
     return timeColumnName;
   }
 
-  @JsonIgnore
-  public int getTimeColumnPosition()
+  public AggregateProjectionMetadata.Schema toMetadataSchema()
   {
-    return timeColumnPosition;
+    return new AggregateProjectionMetadata.Schema(
+        name,
+        virtualColumns,
+        groupingColumns.stream().map(DimensionSchema::getName).collect(Collectors.toList()),
+        aggregators,
+        ordering,
+        timeColumnName
+    );
   }
-
-  @JsonIgnore
-  public Granularity getGranularity()
-  {
-    return granularity;
-  }
-
-  @JsonIgnore
-  public String getCountColumnName()
-  {
-    return countColumnName;
-  }
-
-  /**
-   * Check if this projection "matches" a {@link CursorBuildSpec}.
-   *
-   * @param queryCursorBuildSpec      {@link CursorBuildSpec} the contains the required inputs to build a
-   *                                  {@link org.apache.druid.segment.CursorHolder}
-   * @param referencedVirtualColumns  collection of {@link VirtualColumn} from the queryCursorBuildSpec which are still
-   *                                  required after matching the projection. The projection may contain pre-computed
-   *                                  {@link VirtualColumn} which will not be included in this set since they are
-   *                                  physical columns on the projection
-   * @param remapColumns              Mapping of {@link CursorBuildSpec} column names to projection column names, used
-   *                                  to allow column selector factories to provide projection column selectors as the
-   *                                  names the queryCursorBuildSpec needs
-   * @param physicalColumnChecker     {@link Projections.PhysicalColumnChecker} which can determine if a physical column
-   *                                  required by queryCursorBuildSpec is available on the projection OR does not exist
-   *                                  on the base table either
-   * @return true if the projection can be used to correctly satisfy the queryCursorBuildSpec, populating
-   *         referencedVirtualColumns and remapColumns by side-effect
-   */
-  public boolean matches(
-      CursorBuildSpec queryCursorBuildSpec,
-      Set<VirtualColumn> referencedVirtualColumns,
-      Map<String, String> remapColumns,
-      Projections.PhysicalColumnChecker physicalColumnChecker
-  )
-  {
-    if (!queryCursorBuildSpec.isCompatibleOrdering(ordering)) {
-      return false;
-    }
-    final List<String> queryGrouping = queryCursorBuildSpec.getGroupingColumns();
-    if (queryGrouping != null) {
-      for (String queryColumn : queryGrouping) {
-        if (!hasRequiredColumn(
-            queryColumn,
-            queryCursorBuildSpec.getVirtualColumns(),
-            referencedVirtualColumns,
-            remapColumns,
-            physicalColumnChecker
-        )) {
-          return false;
-        }
-      }
-    }
-    if (queryCursorBuildSpec.getFilter() != null) {
-      for (String queryColumn : queryCursorBuildSpec.getFilter().getRequiredColumns()) {
-        if (!hasRequiredColumn(
-            queryColumn,
-            queryCursorBuildSpec.getVirtualColumns(),
-            referencedVirtualColumns,
-            remapColumns,
-            physicalColumnChecker
-        )) {
-          return false;
-        }
-      }
-    }
-    if (!CollectionUtils.isNullOrEmpty(queryCursorBuildSpec.getAggregators())) {
-      boolean allMatch = true;
-      for (AggregatorFactory queryAgg : queryCursorBuildSpec.getAggregators()) {
-        boolean foundMatch = false;
-        for (AggregatorFactory projectionAgg : aggregators) {
-          if (queryAgg.canBindCombiningFactory(projectionAgg)) {
-            remapColumns.put(queryAgg.getName(), projectionAgg.getName());
-            foundMatch = true;
-          }
-        }
-        allMatch = allMatch && foundMatch;
-      }
-      return allMatch;
-    }
-    return true;
-  }
-
 
   @Override
   public boolean equals(Object o)
@@ -356,75 +164,50 @@ public class AggregateProjectionSpec
            '}';
   }
 
-  /**
-   * Ensure that the projection has the specified column required by a {@link CursorBuildSpec} in one form or another.
-   * If the column is a {@link VirtualColumn} on the build spec, ensure that the projection has an equivalent virtual
-   * column, or has the required inputs to compute the virtual column. If an equivalent virtual column exists, its
-   * name will be added to the 'mapBuildSpecColumnToProjectionColumn' parameter so that the build spec name can be
-   * mapped to the projection name. If no equivalent virtual column exists, but the inputs are available on the
-   * projection to compute it, it will be added to 'requiredBuildSpecVirtualColumns' parameter.
-   * <p>
-   * If the column is not a virtual column, {@link Projections.PhysicalColumnChecker} is a helper method which returns
-   * true if the column is present on the projection OR if the column is NOT present on the base table (meaning missing
-   * columns that do not exist anywhere do not disqualify a projection from being used).
-   */
-  private boolean hasRequiredColumn(
-      String column,
-      VirtualColumns buildSpecVirtualColumns,
-      Set<VirtualColumn> requiredBuildSpecVirtualColumns,
-      Map<String, String> mapBuildSpecColumnToProjectionColumn,
-      Projections.PhysicalColumnChecker physicalColumnChecker
-  )
-  {
-    final VirtualColumn buildSpecVirtualColumn = buildSpecVirtualColumns.getVirtualColumn(column);
-    if (buildSpecVirtualColumn != null) {
-      // check to see if we have an equivalent virtual column defined in the projection, if so we can
-      final VirtualColumn projectionEquivalent = virtualColumns.findEquivalent(buildSpecVirtualColumn);
-      if (projectionEquivalent != null) {
-        if (!buildSpecVirtualColumn.getOutputName().equals(projectionEquivalent.getOutputName())) {
-          mapBuildSpecColumnToProjectionColumn.put(
-              buildSpecVirtualColumn.getOutputName(),
-              projectionEquivalent.getOutputName()
-          );
-        }
-        return true;
-      }
 
-      requiredBuildSpecVirtualColumns.add(buildSpecVirtualColumn);
-      final List<String> requiredInputs = buildSpecVirtualColumn.requiredColumns();
-      if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
-        // todo (clint): wtb some sort of virtual column comparison function that can check if projection granularity
-        //  time column satisifies query granularity virtual column
-        //  can rebind? q.canRebind("__time", p)
-        //  special handle time granularity
-        final Granularity virtualGranularity = Granularities.fromVirtualColumn(buildSpecVirtualColumn);
-        if (virtualGranularity != null) {
-          if (virtualGranularity.isFinerThan(granularity)) {
-            return false;
-          }
-          mapBuildSpecColumnToProjectionColumn.put(column, timeColumnName);
-          return true;
-        } else {
-          // anything else with __time requires none granularity
-          return Granularities.NONE.equals(granularity);
-        }
+  private static ProjectionOrdering computeOrdering(VirtualColumns virtualColumns, List<DimensionSchema> groupingColumns)
+  {
+    final List<OrderBy> ordering = Lists.newArrayListWithCapacity(groupingColumns.size());
+
+    String timeColumnName = null;
+    Granularity granularity = null;
+    // try to find the __time column equivalent, which might be a time_floor expression to model granularity
+    // bucketing. The time column is decided as the finest granularity on __time detected. If the projection does
+    // not have a time-like column, the granularity will be handled as ALL for the projection and all projection
+    // rows will use a synthetic timestamp of the minimum timestamp of the incremental index
+    for (final DimensionSchema dimension : groupingColumns) {
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
+        timeColumnName = dimension.getName();
+        granularity = Granularities.NONE;
       } else {
-        for (String required : requiredInputs) {
-          if (!hasRequiredColumn(
-              required,
-              buildSpecVirtualColumns,
-              requiredBuildSpecVirtualColumns,
-              mapBuildSpecColumnToProjectionColumn,
-              physicalColumnChecker
-          )) {
-            return false;
-          }
+        final VirtualColumn vc = virtualColumns.getVirtualColumn(dimension.getName());
+        final Granularity maybeGranularity = Granularities.fromVirtualColumn(vc);
+        if (granularity == null && maybeGranularity != null) {
+          granularity = maybeGranularity;
+          timeColumnName = dimension.getName();
+        } else if (granularity != null && maybeGranularity != null && maybeGranularity.isFinerThan(granularity)) {
+          granularity = maybeGranularity;
+          timeColumnName = dimension.getName();
         }
       }
-      return true;
-    } else {
-      // a physical column must either be present or also missing from the base table
-      return physicalColumnChecker.check(name, column);
+    }
+    // the time column is added to ordering as THE time column instead of its actual name
+    for (DimensionSchema dimension : groupingColumns) {
+      ordering.add(OrderBy.ascending(dimension.getName()));
+    }
+    return new ProjectionOrdering(ordering, timeColumnName);
+  }
+
+  private static final class ProjectionOrdering
+  {
+    private final List<OrderBy> ordering;
+    @Nullable
+    private final String timeColumnName;
+
+    private ProjectionOrdering(List<OrderBy> ordering, @Nullable String timeColumnName)
+    {
+      this.ordering = ordering;
+      this.timeColumnName = timeColumnName;
     }
   }
 }

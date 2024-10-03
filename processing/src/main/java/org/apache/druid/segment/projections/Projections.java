@@ -26,6 +26,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.ConstantExprEvalSelector;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -70,7 +71,7 @@ public class Projections
   @Nullable
   public static <T> QueryableProjection<T> findMatchingProjection(
       CursorBuildSpec cursorBuildSpec,
-      SortedSet<AggregateProjectionSpec> projections,
+      SortedSet<AggregateProjectionMetadata> projections,
       PhysicalColumnChecker physicalChecker,
       Function<String, T> getRowSelector
   )
@@ -81,25 +82,25 @@ public class Projections
     final String name = cursorBuildSpec.getQueryContext().getString(QueryContexts.CTX_USE_PROJECTION);
 
     if (cursorBuildSpec.isAggregate()) {
-      for (AggregateProjectionSpec spec : projections) {
-        if (name != null && !name.equals(spec.getName())) {
+      for (AggregateProjectionMetadata spec : projections) {
+        if (name != null && !name.equals(spec.getSchema().getName())) {
           continue;
         }
         final Map<String, String> remapColumns = new HashMap<>();
-        if (spec.getTimeColumnName() != null) {
-          remapColumns.put(spec.getTimeColumnName(), ColumnHolder.TIME_COLUMN_NAME);
+        if (spec.getSchema().getTimeColumnName() != null) {
+          remapColumns.put(spec.getSchema().getTimeColumnName(), ColumnHolder.TIME_COLUMN_NAME);
         }
         final Set<VirtualColumn> referenced = new HashSet<>();
-        if (spec.matches(cursorBuildSpec, referenced, remapColumns, physicalChecker)) {
+        if (spec.getSchema().matches(cursorBuildSpec, referenced, remapColumns, physicalChecker)) {
           final CursorBuildSpec rewrittenBuildSpec =
               CursorBuildSpec.builder(cursorBuildSpec)
                              .setVirtualColumns(VirtualColumns.fromIterable(referenced))
                              .build();
 
           if (cursorBuildSpec.getQueryMetrics() != null) {
-            cursorBuildSpec.getQueryMetrics().projection(spec.getName());
+            cursorBuildSpec.getQueryMetrics().projection(spec.getSchema().getName());
           }
-          return new QueryableProjection<>(rewrittenBuildSpec, remapColumns, getRowSelector.apply(spec.getName()));
+          return new QueryableProjection<>(rewrittenBuildSpec, remapColumns, getRowSelector.apply(spec.getSchema().getName()));
         }
       }
     }
@@ -109,21 +110,21 @@ public class Projections
     return null;
   }
 
-  public static String getProjectionSmooshV9FileName(AggregateProjectionSpec projectionSpec, String columnName)
+  public static String getProjectionSmooshV9FileName(AggregateProjectionMetadata projectionSpec, String columnName)
   {
     return getProjectionSmooshV9Prefix(projectionSpec) + columnName;
   }
 
-  public static String getProjectionSmooshV9Prefix(AggregateProjectionSpec projectionSpec)
+  public static String getProjectionSmooshV9Prefix(AggregateProjectionMetadata projectionSpec)
   {
-    return projectionSpec.getName() + "/";
+    return projectionSpec.getSchema().getName() + "/";
   }
 
   /**
    * Returns true if column is defined in {@link AggregateProjectionSpec#getGroupingColumns()} OR if the column does not
    * exist in the base table. Part of determining if a projection can be used for a given {@link CursorBuildSpec},
    * 
-   * @see AggregateProjectionSpec#matches(CursorBuildSpec, Set, Map, PhysicalColumnChecker)
+   * @see AggregateProjectionMetadata.Schema#matches(CursorBuildSpec, Set, Map, PhysicalColumnChecker)
    */
   @FunctionalInterface
   public interface PhysicalColumnChecker

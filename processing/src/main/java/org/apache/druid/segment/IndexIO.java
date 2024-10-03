@@ -39,8 +39,6 @@ import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.common.utils.SerializerUtils;
-import org.apache.druid.data.input.impl.AggregateProjectionSpec;
-import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
@@ -51,14 +49,12 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnDescriptor;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -654,7 +650,7 @@ public class IndexIO
       final Map<String, Map<String, Supplier<ColumnHolder>>> projectionsColumns = new LinkedHashMap<>();
       final Metadata metadata = getMetdata(smooshedFiles, mapper, inDir);
       if (metadata != null && metadata.getProjections() != null) {
-        for (AggregateProjectionSpec projectionSpec : metadata.getProjections()) {
+        for (AggregateProjectionMetadata projectionSpec : metadata.getProjections()) {
           final Map<String, Supplier<ColumnHolder>> projectionColumns = readProjectionColumns(
               mapper,
               loadFailed,
@@ -664,7 +660,7 @@ public class IndexIO
               dataInterval
           );
 
-          projectionsColumns.put(projectionSpec.getName(), projectionColumns);
+          projectionsColumns.put(projectionSpec.getSchema().getName(), projectionColumns);
         }
       }
 
@@ -675,6 +671,7 @@ public class IndexIO
           columns,
           smooshedFiles,
           lazy,
+          metadata,
           projectionsColumns
       )
       {
@@ -693,27 +690,27 @@ public class IndexIO
     private Map<String, Supplier<ColumnHolder>> readProjectionColumns(
         ObjectMapper mapper,
         SegmentLazyLoadFailCallback loadFailed,
-        AggregateProjectionSpec projectionSpec,
+        AggregateProjectionMetadata projectionSpec,
         SmooshedFileMapper smooshedFiles,
         Map<String, Supplier<ColumnHolder>> columns,
         Interval dataInterval
     ) throws IOException
     {
       final Map<String, Supplier<ColumnHolder>> projectionColumns = new LinkedHashMap<>();
-      for (DimensionSchema groupingColumn : projectionSpec.getGroupingColumns()) {
-        final String smooshName = Projections.getProjectionSmooshV9FileName(projectionSpec, groupingColumn.getName());
+      for (String groupingColumn : projectionSpec.getSchema().getGroupingColumns()) {
+        final String smooshName = Projections.getProjectionSmooshV9FileName(projectionSpec, groupingColumn);
         final ByteBuffer colBuffer = smooshedFiles.mapFile(smooshName);
 
         final ColumnHolder parentColumn;
-        if (columns.containsKey(groupingColumn.getName())) {
-          parentColumn = columns.get(groupingColumn.getName()).get();
+        if (columns.containsKey(groupingColumn)) {
+          parentColumn = columns.get(groupingColumn).get();
         } else {
           parentColumn = null;
         }
         registerColumnHolder(
             true,
             projectionColumns,
-            groupingColumn.getName(),
+            groupingColumn,
             mapper,
             colBuffer,
             smooshedFiles,
@@ -721,11 +718,11 @@ public class IndexIO
             loadFailed
         );
 
-        if (groupingColumn.getName().equals(projectionSpec.getTimeColumnName())) {
-          projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(groupingColumn.getName()));
+        if (groupingColumn.equals(projectionSpec.getSchema().getTimeColumnName())) {
+          projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(groupingColumn));
         }
       }
-      for (AggregatorFactory aggregator : projectionSpec.getAggregators()) {
+      for (AggregatorFactory aggregator : projectionSpec.getSchema().getAggregators()) {
         final String smooshName = Projections.getProjectionSmooshV9FileName(projectionSpec, aggregator.getName());
         final ByteBuffer aggBuffer = smooshedFiles.mapFile(smooshName);
         registerColumnHolder(
@@ -739,16 +736,11 @@ public class IndexIO
             loadFailed
         );
       }
-      if (projectionSpec.getTimeColumnName() == null) {
-        // we need some numeric column to get row count, every projection has a count, use it if time is not available
-        try (BaseColumn count = projectionColumns.get(projectionSpec.getCountColumnName()).get().getColumn()) {
-          final int numRows = ((NumericColumn) count).length();
-          // it still has to be stored as the time column because
-          projectionColumns.put(
-              ColumnHolder.TIME_COLUMN_NAME,
-              Projections.makeConstantTimeSupplier(numRows, dataInterval.getStartMillis())
-          );
-        }
+      if (projectionSpec.getSchema().getTimeColumnName() == null) {
+        projectionColumns.put(
+            ColumnHolder.TIME_COLUMN_NAME,
+            Projections.makeConstantTimeSupplier(projectionSpec.getNumRows(), dataInterval.getStartMillis())
+        );
       }
       return projectionColumns;
     }

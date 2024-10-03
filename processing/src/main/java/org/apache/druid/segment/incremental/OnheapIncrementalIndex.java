@@ -44,6 +44,7 @@ import org.apache.druid.query.aggregation.AggregatorAndSize;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -51,6 +52,7 @@ import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.EncodedKeyComponent;
+import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -86,6 +88,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -155,7 +158,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Nullable
   private String outOfRowsReason = null;
 
-  private final SortedSet<AggregateProjectionSpec> aggregateProjections;
+  private final SortedSet<AggregateProjectionMetadata> aggregateProjections;
   private final HashMap<String, OnHeapAggregateProjection> projections;
 
   OnheapIncrementalIndex(
@@ -182,7 +185,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         useMaxMemoryEstimates ? getMaxBytesPerRowForAggregators(incrementalIndexSchema) : 0;
     this.useMaxMemoryEstimates = useMaxMemoryEstimates;
 
-    this.aggregateProjections = new ObjectAVLTreeSet<>(AggregateProjectionSpec.COMPARATOR);
+    this.aggregateProjections = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
     this.projections = new HashMap<>();
     initializeProjections(incrementalIndexSchema, useMaxMemoryEstimates);
   }
@@ -190,7 +193,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   private void initializeProjections(IncrementalIndexSchema incrementalIndexSchema, boolean useMaxMemoryEstimates)
   {
     for (AggregateProjectionSpec projectionSpec : incrementalIndexSchema.getProjections()) {
-      aggregateProjections.add(projectionSpec);
+      // initialize them all with 0 rows
+      AggregateProjectionMetadata.Schema schema = projectionSpec.toMetadataSchema();
+      aggregateProjections.add(new AggregateProjectionMetadata(schema, 0));
       final List<DimensionDesc> descs = new ArrayList<>();
       // mapping of position in descs on the projection to position in the parent incremental index. Like the parent
       // incremental index, the time (or time-like) column does not have a dimension descriptor and is specially
@@ -201,7 +206,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       int i = 0;
       final Map<String, DimensionDesc> dimensionsMap = new HashMap<>();
       for (DimensionSchema dimension : projectionSpec.getGroupingColumns()) {
-        if (dimension.getName().equals(projectionSpec.getTimeColumnName())) {
+        if (dimension.getName().equals(schema.getTimeColumnName())) {
           continue;
         }
         final DimensionDesc parent = getDimension(dimension.getName());
@@ -238,7 +243,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         }
       }
       final OnHeapAggregateProjection projection = new OnHeapAggregateProjection(
-          projectionSpec,
+          projectionSpec.toMetadataSchema(),
           descs,
           dimensionsMap,
           parentDimIndex,
@@ -290,6 +295,19 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   public FactsHolder getFacts()
   {
     return facts;
+  }
+
+  @Override
+  public Metadata getMetadata()
+  {
+    if (aggregateProjections.isEmpty()) {
+      return super.getMetadata();
+    }
+    final List<AggregateProjectionMetadata> projectionMetadata = projections.values()
+                                                                            .stream()
+                                                                            .map(OnHeapAggregateProjection::toMetadata)
+                                                                            .collect(Collectors.toList());
+    return super.getMetadata().withProjections(projectionMetadata);
   }
 
   @Override
@@ -1154,7 +1172,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
 
   public static class OnHeapAggregateProjection implements IncrementalIndexRowSelector
   {
-    private final AggregateProjectionSpec projectionSpec;
+    private final AggregateProjectionMetadata.Schema projectionSchema;
     private final List<DimensionDesc> dimensions;
     private final int[] parentDimensionIndex;
     private final AggregatorFactory[] aggregatorFactories;
@@ -1173,7 +1191,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     private final AtomicInteger numEntries = new AtomicInteger(0);
 
     public OnHeapAggregateProjection(
-        AggregateProjectionSpec schema,
+        AggregateProjectionMetadata.Schema schema,
         List<DimensionDesc> dimensions,
         Map<String, DimensionDesc> dimensionsMap,
         int[] parentDimensionIndex,
@@ -1182,16 +1200,16 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         long maxBytesPerRowForAggregators
     )
     {
-      this.projectionSpec = schema;
+      this.projectionSchema = schema;
       this.dimensions = dimensions;
       this.parentDimensionIndex = parentDimensionIndex;
       this.dimensionsMap = dimensionsMap;
       this.minTimestamp = minTimestamp;
       final IncrementalIndexRowComparator rowComparator = new IncrementalIndexRowComparator(
-          projectionSpec.getTimeColumnPosition() < 0 ? dimensions.size() : projectionSpec.getTimeColumnPosition(),
+          projectionSchema.getTimeColumnPosition() < 0 ? dimensions.size() : projectionSchema.getTimeColumnPosition(),
           dimensions
       );
-      this.factsHolder = new RollupFactsHolder(rowComparator, dimensions, projectionSpec.getTimeColumnPosition() == 0);
+      this.factsHolder = new RollupFactsHolder(rowComparator, dimensions, projectionSchema.getTimeColumnPosition() == 0);
       this.useMaxMemoryEstimates = useMaxMemoryEstimates;
       this.maxBytesPerRowForAggregators = maxBytesPerRowForAggregators;
 
@@ -1203,7 +1221,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
       this.aggregatorFactories = new AggregatorFactory[schema.getAggregators().length];
       this.columnFormats = new LinkedHashMap<>();
       for (DimensionDesc dimension : dimensions) {
-        if (dimension.getName().equals(projectionSpec.getTimeColumnName())) {
+        if (dimension.getName().equals(projectionSchema.getTimeColumnName())) {
           columnFormats.put(
               dimension.getName(),
               new CapabilitiesBasedFormat(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG))
@@ -1255,8 +1273,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         }
       }
       final IncrementalIndexRow subKey = new IncrementalIndexRow(
-          projectionSpec.getTimeColumnName() != null
-          ? projectionSpec.getGranularity().bucketStart(DateTimes.utc(key.getTimestamp())).getMillis()
+          projectionSchema.getTimeColumnName() != null
+          ? projectionSchema.getGranularity().bucketStart(DateTimes.utc(key.getTimestamp())).getMillis()
           : minTimestamp,
           projectionDims,
           dimensions
@@ -1333,13 +1351,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     @Override
     public List<OrderBy> getOrdering()
     {
-      return projectionSpec.getOrdering();
+      // return ordering with projection time column substituted with __time so query engines can treat it equivalently
+      return projectionSchema.getOrderingWithTimeColumnSubstitution();
     }
 
     @Override
     public int getTimePosition()
     {
-      return projectionSpec.getTimeColumnPosition();
+      return projectionSchema.getTimeColumnPosition();
     }
 
     @Override
@@ -1401,18 +1420,18 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     public List<String> getDimensionNames(boolean includeTime)
     {
       synchronized (dimensionsMap) {
-        if (includeTime && projectionSpec.getTimeColumnName() != null) {
+        if (includeTime && projectionSchema.getTimeColumnName() != null) {
           final ImmutableList.Builder<String> listBuilder =
               ImmutableList.builderWithExpectedSize(dimensionsMap.size() + 1);
           int i = 0;
-          if (i == projectionSpec.getTimeColumnPosition()) {
-            listBuilder.add(projectionSpec.getTimeColumnName());
+          if (i == projectionSchema.getTimeColumnPosition()) {
+            listBuilder.add(projectionSchema.getTimeColumnName());
           }
           for (String dimName : dimensionsMap.keySet()) {
             listBuilder.add(dimName);
             i++;
-            if (i == projectionSpec.getTimeColumnPosition()) {
-              listBuilder.add(projectionSpec.getTimeColumnName());
+            if (i == projectionSchema.getTimeColumnPosition()) {
+              listBuilder.add(projectionSchema.getTimeColumnName());
             }
           }
           return listBuilder.build();
@@ -1426,7 +1445,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     @Override
     public ColumnCapabilities getColumnCapabilities(String column)
     {
-      if (ColumnHolder.TIME_COLUMN_NAME.equals(column) || Objects.equals(column, projectionSpec.getTimeColumnName())) {
+      if (ColumnHolder.TIME_COLUMN_NAME.equals(column) || Objects.equals(column, projectionSchema.getTimeColumnName())) {
         return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG).setHasNulls(false);
       }
       if (dimensionsMap.containsKey(column)) {
@@ -1436,6 +1455,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex
         return aggregatorsMap.get(column).getCapabilities();
       }
       return null;
+    }
+
+    public AggregateProjectionMetadata toMetadata()
+    {
+      return new AggregateProjectionMetadata(projectionSchema, numEntries.get());
     }
 
     private long factorizeAggs(AggregatorFactory[] aggregatorFactories, Aggregator[] aggs)

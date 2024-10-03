@@ -278,20 +278,24 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
            && stringEncoding == that.stringEncoding;
   }
 
+  @Nullable
   @Override
-  public boolean canBindCombiningFactory(AggregatorFactory preAggregated)
+  public AggregatorFactory substituteCombiningFactory(AggregatorFactory preAggregated)
   {
     if (this == preAggregated) {
-      return true;
+      return getCombiningFactory();
     }
     if (getClass() != preAggregated.getClass()) {
-      return false;
+      return null;
     }
     HllSketchAggregatorFactory that = (HllSketchAggregatorFactory) preAggregated;
-    return lgK == that.lgK
-           && tgtHllType == that.tgtHllType
-           && stringEncoding == that.stringEncoding
-           && Objects.equals(fieldName, that.fieldName);
+    if (lgK == that.lgK && tgtHllType == that.tgtHllType && stringEncoding == that.stringEncoding && Objects.equals(
+        fieldName,
+        that.fieldName
+    )) {
+      return getCombiningFactory();
+    }
+    return null;
   }
 
   @Override

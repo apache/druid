@@ -450,7 +450,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   @Test
   public void testProjectionSelectionTwoDimsCount()
   {
-    // this query can use the projection with 2 dims, which has 7 rows instead of the total of 8
+    // cannot use a projection since count is not defined
     final GroupByQuery query =
         GroupByQuery.builder()
                     .setDataSource("test")
@@ -470,7 +470,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
         rowCount++;
         cursor.advance();
       }
-      Assert.assertEquals(6, rowCount);
+      Assert.assertEquals(8, rowCount);
     }
 
     final Sequence<ResultRow> resultRows = groupingEngine.process(
@@ -494,9 +494,9 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       Assert.assertArrayEquals(new Object[]{"a", "aa", 2L}, results.get(0).getArray());
       Assert.assertArrayEquals(new Object[]{"a", "bb", 1L}, results.get(1).getArray());
       Assert.assertArrayEquals(new Object[]{"a", "cc", 1L}, results.get(2).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "dd", 1L}, results.get(3).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "aa", 2L}, results.get(4).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "bb", 1L}, results.get(5).getArray());
+      Assert.assertArrayEquals(new Object[]{"b", "aa", 2L}, results.get(3).getArray());
+      Assert.assertArrayEquals(new Object[]{"b", "bb", 1L}, results.get(4).getArray());
+      Assert.assertArrayEquals(new Object[]{"a", "dd", 1L}, results.get(5).getArray());
     }
   }
 
