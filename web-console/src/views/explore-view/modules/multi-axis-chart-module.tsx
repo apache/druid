@@ -21,6 +21,7 @@ import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
 
+import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
 import {
   formatInteger,
@@ -91,16 +92,16 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
           direction: 'ASC',
         })
         .applyForEach(measures, (q, measure) => q.addSelect(measure.expression.as(measure.name)));
-    }, [querySource, where, timeGranularity, measures]);
+    }, [querySource, where, timeColumnName, timeGranularity, measures]);
 
-    const [sourceDataState] = useQueryManager({
+    const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
-      processQuery: async (query: SqlQuery) => {
+      processQuery: async (query: SqlQuery, cancelToken) => {
         if (!timeColumnName) {
           throw new Error(`Must have a column of type TIMESTAMP for the multi-axis chart to work`);
         }
 
-        return (await runSqlQuery(query)).toObjectArray();
+        return (await runSqlQuery(query, cancelToken)).toObjectArray();
       },
     });
 
@@ -327,6 +328,9 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
           }}
         />
         {errorMessage && <Issue issue={errorMessage} />}
+        {sourceDataState.loading && (
+          <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
+        )}
       </div>
     );
   },

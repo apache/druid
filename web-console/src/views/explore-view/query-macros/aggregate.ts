@@ -55,7 +55,7 @@ export function rewriteAggregate(query: SqlQuery, measures: Measure[]): SqlQuery
             filterMap(queryMeasures, queryMeasure =>
               usedMeasures.get(queryMeasure.name) ? queryMeasure.expression : undefined,
             ).flatMap(ex => ex.getUsedColumnNames()),
-          ).filter(columnName => !ex.getSelectIndexForOutputColumn(columnName)),
+          ).filter(columnName => ex.getSelectIndexForOutputColumn(columnName) === -1),
           (q, columnName) => q.addSelect(C(columnName)),
         );
       }
