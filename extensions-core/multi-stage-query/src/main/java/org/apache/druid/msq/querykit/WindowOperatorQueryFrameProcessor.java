@@ -229,8 +229,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     RowsAndColumns rac = new ConcatRowsAndColumns(resultRowAndCols);
     createFrameWriterIfNeeded(rac);
     writeRacToFrame(rac);
-//    resultRowAndCols.clear();
-//    frameRowsAndColsBuilder.clear();
   }
 
   /**
@@ -396,7 +394,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private void clearRACBuffers()
   {
     resultRowAndCols.clear();
-//    frameRowsAndColsBuilder.clear();
     rowId.set(0);
   }
 }
