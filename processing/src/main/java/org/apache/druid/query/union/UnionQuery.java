@@ -200,7 +200,7 @@ public class UnionQuery implements Query<RealUnionResult>
     return new UnionQuery(newQueries, context);
   }
 
-  List<Query<?>> mapQueries(Function<Query, Query> mapFn)
+  List<Query<?>> mapQueries(Function<Query<?>, Query<?>> mapFn)
   {
     List<Query<?>> newQueries = new ArrayList<>();
     for (Query<?> query : queries) {
