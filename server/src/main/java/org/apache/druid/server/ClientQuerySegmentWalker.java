@@ -468,9 +468,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
             maxSubqueryRows,
             maxSubqueryMemory,
             useNestedForUnknownTypeInSubquery,
-            subqueryStatsProvider,
-            !dryRun,
-            emitter
+            !dryRun
         );
       } else {
         // Cannot inline subquery. Attempt to inline one level deeper, and then try again.
@@ -664,6 +662,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                                                            .collect(Collectors.toList()));
   }
 
+
+
   /**
    *
    * Convert the results of a particular query into a materialized (List-based) InlineDataSource.
@@ -676,14 +676,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    *                         If zero, this method will throw an error immediately.
    * @param memoryLimit      User configured byte limit.
    * @param useNestedForUnknownTypeInSubquery Uses nested json for unknown types when materializing subquery results
-   * @param subqueryStatsProvider Statistics about the subquery materialization
    * @param emitMetrics      Flag to control if the metrics need to be emitted while materializing. The metrics are omitted
    *                         when we are performing a dry run of the query to avoid double reporting the same metric incorrectly
-   * @param emitter          Metrics emitter
    * @return                 Inlined datasource represented by the provided results
    * @throws ResourceLimitExceededException if the limit is exceeded
    */
-  private static <T, QueryType extends Query<T>> DataSource toInlineDataSource(
+  private <T, QueryType extends Query<T>> DataSource toInlineDataSource(
       final QueryType query,
       final Sequence<T> queryResults,
       final QueryToolChest<T, QueryType> toolChest,
@@ -693,9 +691,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       final int limit,
       long memoryLimit,
       final boolean useNestedForUnknownTypeInSubquery,
-      final SubqueryCountStatsProvider subqueryStatsProvider,
-      final boolean emitMetrics,
-      final ServiceEmitter emitter
+      final boolean emitMetrics
   )
   {
     final int rowLimitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
