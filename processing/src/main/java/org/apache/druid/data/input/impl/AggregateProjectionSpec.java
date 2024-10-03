@@ -308,7 +308,7 @@ public class AggregateProjectionSpec
       for (AggregatorFactory queryAgg : queryCursorBuildSpec.getAggregators()) {
         boolean foundMatch = false;
         for (AggregatorFactory projectionAgg : aggregators) {
-          if (queryAgg.canCombiningFactoryCombine(projectionAgg)) {
+          if (queryAgg.canBindCombiningFactory(projectionAgg)) {
             remapColumns.put(queryAgg.getName(), projectionAgg.getName());
             foundMatch = true;
           }
@@ -393,10 +393,10 @@ public class AggregateProjectionSpec
       requiredBuildSpecVirtualColumns.add(buildSpecVirtualColumn);
       final List<String> requiredInputs = buildSpecVirtualColumn.requiredColumns();
       if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
-        // wtb some sort of virtual column comparison function that can check if projection granularity time column
-        // satisifies query granularity virtual column
-        // can rebind? q.canRebind("__time", p)
-        // special handle time granularity
+        // todo (clint): wtb some sort of virtual column comparison function that can check if projection granularity
+        //  time column satisifies query granularity virtual column
+        //  can rebind? q.canRebind("__time", p)
+        //  special handle time granularity
         final Granularity virtualGranularity = Granularities.fromVirtualColumn(buildSpecVirtualColumn);
         if (virtualGranularity != null) {
           if (virtualGranularity.isFinerThan(granularity)) {

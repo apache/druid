@@ -27,9 +27,9 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 public class LongDimensionMergerV9 extends NumericDimensionMergerV9
 {
 
-  LongDimensionMergerV9(String dimensionName, String outputName, IndexSpec indexSpec, SegmentWriteOutMedium segmentWriteOutMedium)
+  LongDimensionMergerV9(String outputName, IndexSpec indexSpec, SegmentWriteOutMedium segmentWriteOutMedium)
   {
-    super(dimensionName, outputName, indexSpec, segmentWriteOutMedium);
+    super(outputName, indexSpec, segmentWriteOutMedium);
   }
 
   @Override

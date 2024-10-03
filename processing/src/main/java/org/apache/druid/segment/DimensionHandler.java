@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -107,31 +106,23 @@ public interface DimensionHandler
    *
    * See {@link DimensionMergerV9} interface for more information.
    *
-   * @param indexSpec     Specification object for the index merge
-   * @param segmentWriteOutMedium  this SegmentWriteOutMedium object could be used internally in the created merger, if needed
-   * @param capabilities  The ColumnCapabilities of the dimension represented by this DimensionHandler
-   * @param progress      ProgressIndicator used by the merging process
+   * @param outputName            Output "file" name for the column to use for serializers, to control where it is
+   *                              stored in the segment
+   * @param indexSpec             Specification object for the index merge
+   * @param segmentWriteOutMedium this SegmentWriteOutMedium object could be used internally in the created merger, if
+   *                              needed
+   * @param capabilities          The ColumnCapabilities of the dimension represented by this DimensionHandler
+   * @param progress              ProgressIndicator used by the merging process
    * @return A new DimensionMergerV9 object.
    */
   DimensionMergerV9 makeMerger(
-      IndexSpec indexSpec,
-      SegmentWriteOutMedium segmentWriteOutMedium,
-      ColumnCapabilities capabilities,
-      ProgressIndicator progress,
-      Closer closer
-  );
-
-  default DimensionMergerV9 makeProjectionMerger(
       String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
       Closer closer
-  )
-  {
-    throw DruidException.defensive("projection not supported by [%s]", this.getDimensionName());
-  }
+  );
 
   /**
    * Given an key component representing a single set of row value(s) for this dimension as an Object,

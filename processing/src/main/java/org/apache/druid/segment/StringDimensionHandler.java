@@ -164,18 +164,6 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
 
   @Override
   public DimensionMergerV9 makeMerger(
-      IndexSpec indexSpec,
-      SegmentWriteOutMedium segmentWriteOutMedium,
-      ColumnCapabilities capabilities,
-      ProgressIndicator progress,
-      Closer closer
-  )
-  {
-    return makeProjectionMerger(dimensionName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
-  }
-
-  @Override
-  public DimensionMergerV9 makeProjectionMerger(
       String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,

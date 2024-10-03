@@ -26,6 +26,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ColumnTypeFactory;
 import org.apache.druid.segment.column.ValueType;
@@ -366,14 +368,27 @@ public abstract class AggregatorFactory implements Cacheable
   }
 
   /**
-   * @return true if {@link #getCombiningFactory()} of this aggregator can be used to combine the non-finalized results
-   * of the other aggregator. This does not imply that the opposite is true, the combining factory of the other
-   * aggregator might not necessarily be able to combine the intermediary results of this aggregator.
+   * Check to see if {@link #getCombiningFactory()} of this aggregator is suitable to use as an input a selector of
+   * values produced by the other {@link AggregatorFactory}. Typically, this means that this and the other aggregator
+   * have the same inputs ({@link #requiredFields()}, and the same options for how the data was constructed into the
+   * intermediary type. If this method returns true, the inverse is not necessarily true.
+   *
+   * This method is used by {@link org.apache.druid.segment.CursorFactory#makeCursorHolder(CursorBuildSpec)}, which can
+   * check if this aggregator can be substituted for its combining aggregator if and only if there exists a column that
+   * a cursor can read which was created by an aggregator that satisfies this method. In other words, this aggregator
+   * is the 'query' aggregator defined on the {@link CursorBuildSpec}, the argument to this method is the aggregator
+   * which created some column whose selectors are available to the cursor. If all aggregators on the
+   * {@link CursorBuildSpec} can be paired with aggregators from the underlying table in the cursor factory, then
+   * {@link CursorHolder#isPreAggregated()} will be set to true indicating that query engines must substitute this
+   * aggregator for its combining aggregator.
+   *
+   * @param preAggregated {@link AggregatorFactory} which produced the partially aggregated values which are
+   *                      available in a selector
+   * @return true if {@link #getCombiningFactory()} can correctly process inputs from a selector of the other aggregator
    */
-  // todo (clint): naming things is the hardest, revisit this
-  public boolean canCombiningFactoryCombine(AggregatorFactory toCombine)
+  public boolean canBindCombiningFactory(AggregatorFactory preAggregated)
   {
-    return equals(toCombine.withName(getName()));
+    return equals(preAggregated.withName(getName()));
   }
 
   /**

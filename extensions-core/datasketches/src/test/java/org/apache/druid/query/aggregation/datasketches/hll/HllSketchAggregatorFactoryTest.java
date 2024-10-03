@@ -252,8 +252,8 @@ public class HllSketchAggregatorFactoryTest
         false,
         false
     );
-    Assert.assertTrue(other.canCombiningFactoryCombine(factory));
-    Assert.assertTrue(factory.canCombiningFactoryCombine(other));
+    Assert.assertTrue(other.canBindCombiningFactory(factory));
+    Assert.assertTrue(factory.canBindCombiningFactory(other));
   }
 
   @Test

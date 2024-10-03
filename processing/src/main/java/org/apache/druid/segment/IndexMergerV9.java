@@ -223,6 +223,7 @@ public class IndexMergerV9 implements IndexMerger
       for (int i = 0; i < mergedDimensions.size(); i++) {
         DimensionHandler handler = handlers.get(mergedDimensions.get(i));
         DimensionMergerV9 merger = handler.makeMerger(
+            mergedDimensions.get(i),
             indexSpec,
             segmentWriteOutMedium,
             dimFormats.get(i).toColumnCapabilities(),
@@ -380,7 +381,7 @@ public class IndexMergerV9 implements IndexMerger
         final ColumnFormat dimensionFormat = projectionAdapters.get(0).getFormat(dimension);
         columnFormats.put(dimension, dimensionFormat);
         DimensionHandler handler = dimensionFormat.getColumnHandler(dimension);
-        DimensionMergerV9 merger = handler.makeProjectionMerger(
+        DimensionMergerV9 merger = handler.makeMerger(
             Projections.getProjectionSmooshV9FileName(spec, dimension),
             indexSpec,
             segmentWriteOutMedium,
