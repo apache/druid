@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { IconNames } from '@blueprintjs/icons';
 import { C, SqlQuery } from '@druid-toolkit/query';
 import React, { useMemo } from 'react';
 
@@ -38,6 +39,7 @@ interface RecordTableParameterValues {
 ModuleRepository.registerModule<RecordTableParameterValues>({
   id: 'record-table',
   title: 'Record table',
+  icon: IconNames.TH,
   parameters: {
     maxRows: {
       type: 'number',

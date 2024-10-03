@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { IconNames } from '@blueprintjs/icons';
 import { C, F, L, SqlCase } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
@@ -73,6 +74,7 @@ interface TimeChartParameterValues {
 ModuleRepository.registerModule<TimeChartParameterValues>({
   id: 'time-chart',
   title: 'Time chart',
+  icon: IconNames.TIMELINE_LINE_CHART,
   parameters: {
     timeGranularity: {
       type: 'option',
