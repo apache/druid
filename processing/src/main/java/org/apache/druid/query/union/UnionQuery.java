@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.union;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -43,12 +44,10 @@ import java.util.function.Function;
 
 public class UnionQuery implements Query<RealUnionResult>
 {
-  RealUnionQueryRunnerFactory a;
-
-  @JsonProperty
+  @JsonProperty("context")
   protected final Map<String, Object> context;
 
-  @JsonProperty
+  @JsonProperty("queries")
   protected final List<Query<?>> queries;
 
   public UnionQuery(List<Query<?>> queries2)
@@ -56,7 +55,10 @@ public class UnionQuery implements Query<RealUnionResult>
     this(queries2, queries2.get(0).getContext());
   }
 
-  public UnionQuery(List<Query<?>> queries, Map<String, Object> context)
+  @JsonCreator
+  public UnionQuery(
+      @JsonProperty("queries")      List<Query<?>> queries,
+      @JsonProperty("context") Map<String, Object> context)
   {
     Preconditions.checkArgument(queries.size() > 1, "union with fewer than 2 queries makes no sense");
     this.queries = queries;
@@ -206,5 +208,14 @@ public class UnionQuery implements Query<RealUnionResult>
     }
     return newQueries;
   }
+
+  @Override
+  public String toString()
+  {
+    return "UnionQuery [context=" + context + ", queries=" + queries + "]";
+  }
+
+
+
 
 }
