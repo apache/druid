@@ -1024,7 +1024,8 @@ public class RunWorkOrder
     {
       final StageDefinition stageDefinition = workOrder.getStageDefinition();
       final List<OutputChannel> retVal = new ArrayList<>();
-      final List<KeyStatisticsCollectionProcessor> processors = new ArrayList<>();
+      final int numOutputChannels = channels.getAllChannels().size();
+      final List<KeyStatisticsCollectionProcessor> processors = new ArrayList<>(numOutputChannels);
 
       for (final OutputChannel outputChannel : channels.getAllChannels()) {
         final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
@@ -1037,7 +1038,9 @@ public class RunWorkOrder
                 stageDefinition.getFrameReader(),
                 stageDefinition.getClusterBy(),
                 stageDefinition.createResultKeyStatisticsCollector(
-                    frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+                    // Divide by two: half for the per-processor collectors together, half for the combined collector.
+                    // Then divide by numOutputChannels: one portion per processor.
+                    frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes() / 2 / numOutputChannels
                 )
             )
         );
@@ -1049,7 +1052,9 @@ public class RunWorkOrder
                   ProcessorManagers.of(processors)
                                    .withAccumulation(
                                        stageDefinition.createResultKeyStatisticsCollector(
-                                           frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+                                           // Divide by two: half for the per-processor collectors, half for the
+                                           // combined collector.
+                                           frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes() / 2
                                        ),
                                        ClusterByStatisticsCollector::addAll
                                    ),
