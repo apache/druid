@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -138,13 +139,17 @@ public class MSQCompactionRunner implements CompactionRunner
    */
   @Override
   public CompactionConfigValidationResult validateCompactionTask(
-      CompactionTask compactionTask
+      CompactionTask compactionTask,
+      Map<Interval, DataSchema> intervalToDataSchemaMap
   )
   {
     List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
     if (compactionTask.getTuningConfig() != null) {
-      validationResults.add(ClientCompactionRunnerInfo.validatePartitionsSpecForMSQ(
-          compactionTask.getTuningConfig().getPartitionsSpec())
+      validationResults.add(
+          ClientCompactionRunnerInfo.validatePartitionsSpecForMSQ(
+              compactionTask.getTuningConfig().getPartitionsSpec(),
+              Iterables.getOnlyElement(intervalToDataSchemaMap.values()).getDimensionsSpec().getDimensions()
+          )
       );
     }
     if (compactionTask.getGranularitySpec() != null) {
@@ -310,7 +315,7 @@ public class MSQCompactionRunner implements CompactionRunner
       rowSignatureBuilder.add(TIME_VIRTUAL_COLUMN, ColumnType.LONG);
     }
     for (DimensionSchema dimensionSchema : dataSchema.getDimensionsSpec().getDimensions()) {
-      rowSignatureBuilder.add(dimensionSchema.getName(), ColumnType.fromString(dimensionSchema.getTypeName()));
+      rowSignatureBuilder.add(dimensionSchema.getName(), dimensionSchema.getColumnType());
     }
     // There can be columns that are part of metricsSpec for a datasource.
     for (AggregatorFactory aggregatorFactory : dataSchema.getAggregators()) {
@@ -426,7 +431,9 @@ public class MSQCompactionRunner implements CompactionRunner
   {
     if (dataSchema.getGranularitySpec() != null) {
       // If rollup is true without any metrics, all columns are treated as dimensions and
-      // duplicate rows are removed in line with native compaction.
+      // duplicate rows are removed in line with native compaction. This case can only happen if the rollup is
+      // specified as null in the compaction spec and is then inferred to be true by segment analysis. metrics=null and
+      // rollup=true combination in turn can only have been recorded for natively ingested segments.
       return dataSchema.getGranularitySpec().isRollup();
     }
     // If no rollup specified, decide based on whether metrics are present.

@@ -21,6 +21,8 @@ package org.apache.druid.client.indexing;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
@@ -36,6 +38,7 @@ import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.Duration;
@@ -45,6 +48,7 @@ import org.junit.Test;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class ClientCompactionRunnerInfoTest
@@ -55,6 +59,7 @@ public class ClientCompactionRunnerInfoTest
     DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new HashedPartitionsSpec(100, null, null),
         Collections.emptyMap(),
+        null,
         null,
         null
     );
@@ -76,6 +81,7 @@ public class ClientCompactionRunnerInfoTest
         new DynamicPartitionsSpec(100, 100L),
         Collections.emptyMap(),
         null,
+        null,
         null
     );
     CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
@@ -96,6 +102,7 @@ public class ClientCompactionRunnerInfoTest
         new DynamicPartitionsSpec(100, null),
         Collections.emptyMap(),
         null,
+        null,
         null
     );
     Assert.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
@@ -103,16 +110,38 @@ public class ClientCompactionRunnerInfoTest
   }
 
   @Test
-  public void testMSQEngineWithDimensionRangePartitionsSpecIsValid()
+  public void testMSQEngineWithStringDimensionsInRangePartitionsSpecIsValid()
   {
     DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
         Collections.emptyMap(),
         null,
+        null,
         null
     );
     Assert.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
                                          .isValid());
+  }
+
+  @Test
+  public void testMSQEngineWithLongDimensionsInRangePartitionsSpecIsValid()
+  {
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
+        new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
+        Collections.emptyMap(),
+        null,
+        null,
+        ImmutableList.of(new LongDimensionSchema("partitionDim"))
+    );
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: Non-string dimension[partitionDim] of type[long] not supported in 'range' partition spec",
+        validationResult.getReason()
+    );
   }
 
   @Test
@@ -122,6 +151,7 @@ public class ClientCompactionRunnerInfoTest
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
         new UserCompactionTaskGranularityConfig(Granularities.ALL, Granularities.ALL, false),
+        null,
         null
     );
     Assert.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
@@ -135,7 +165,8 @@ public class ClientCompactionRunnerInfoTest
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
         new UserCompactionTaskGranularityConfig(null, null, false),
-        new AggregatorFactory[]{new LongSumAggregatorFactory("sum", "sum")}
+        new AggregatorFactory[]{new LongSumAggregatorFactory("sum", "sum")},
+        null
     );
     CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
         compactionConfig,
@@ -143,7 +174,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "MSQ: 'granularitySpec.rollup' must be true if 'metricsSpec' is specified",
+        "MSQ: 'granularitySpec.rollup' must be true if and only if 'metricsSpec' is specified",
         validationResult.getReason()
     );
   }
@@ -155,6 +186,7 @@ public class ClientCompactionRunnerInfoTest
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
         new UserCompactionTaskGranularityConfig(null, null, true),
+        null,
         null
     );
     CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
@@ -163,7 +195,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "MSQ: 'granularitySpec.rollup' must be false if 'metricsSpec' is null",
+        "MSQ: 'granularitySpec.rollup' must be true if and only if 'metricsSpec' is specified",
         validationResult.getReason()
     );
   }
@@ -177,8 +209,9 @@ public class ClientCompactionRunnerInfoTest
     DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
-        new UserCompactionTaskGranularityConfig(null, null, null),
-        new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)}
+        new UserCompactionTaskGranularityConfig(null, null, true),
+        new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)},
+        null
     );
     CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
         compactionConfig,
@@ -186,29 +219,38 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "MSQ: Non-idempotent aggregator[sum_added] not supported in 'metricsSpec'.",
+        "MSQ: Non-idempotent aggregator[sum_added] not supported in 'metricsSpec'",
         validationResult.getReason()
     );
   }
 
   @Test
-  public void testMSQEngineWithRollupNullWithMetricsSpecIsValid()
+  public void testMSQEngineWithRollupNullWithMetricsSpecIsInvalid()
   {
     DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DynamicPartitionsSpec(3, null),
         Collections.emptyMap(),
         new UserCompactionTaskGranularityConfig(null, null, null),
-        new AggregatorFactory[]{new LongSumAggregatorFactory("sum", "sum")}
+        new AggregatorFactory[]{new LongSumAggregatorFactory("sum", "sum")},
+        null
     );
-    Assert.assertTrue(ClientCompactionRunnerInfo.validateCompactionConfig(compactionConfig, CompactionEngine.NATIVE)
-                                         .isValid());
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: 'granularitySpec.rollup' must be true if and only if 'metricsSpec' is specified",
+        validationResult.getReason()
+    );
   }
 
   private static DataSourceCompactionConfig createMSQCompactionConfig(
       PartitionsSpec partitionsSpec,
       Map<String, Object> context,
       @Nullable UserCompactionTaskGranularityConfig granularitySpec,
-      @Nullable AggregatorFactory[] metricsSpec
+      @Nullable AggregatorFactory[] metricsSpec,
+      List<DimensionSchema> dimensions
   )
   {
     final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
@@ -219,7 +261,7 @@ public class ClientCompactionRunnerInfoTest
         new Period(3600),
         createTuningConfig(partitionsSpec),
         granularitySpec,
-        null,
+        new UserCompactionTaskDimensionsConfig(dimensions),
         metricsSpec,
         null,
         null,

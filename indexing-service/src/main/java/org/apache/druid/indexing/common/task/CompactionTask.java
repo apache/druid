@@ -469,7 +469,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     );
 
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
-    CompactionConfigValidationResult supportsCompactionConfig = compactionRunner.validateCompactionTask(this);
+    CompactionConfigValidationResult supportsCompactionConfig = compactionRunner.validateCompactionTask(
+        this,
+        intervalDataSchemas
+    );
     if (!supportsCompactionConfig.isValid()) {
       throw InvalidInput.exception("Compaction spec not supported. Reason[%s].", supportsCompactionConfig.getReason());
     }
