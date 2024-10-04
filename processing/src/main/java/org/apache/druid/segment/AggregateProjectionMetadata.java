@@ -44,6 +44,13 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Aggregate projection schema and row count information to store in {@link Metadata} which itself is stored inside a
+ * segment, defining which projections exist for the segment.
+ * <p>
+ * Decorated with {@link JsonTypeInfo} annotations as a future-proofing mechanism in the event we add other types of
+ * projections and need to extract out a base interface from this class.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonTypeName(AggregateProjectionSpec.TYPE_NAME)
 public class AggregateProjectionMetadata

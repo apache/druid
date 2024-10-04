@@ -43,6 +43,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * API type to specify an aggregating projection on {@link org.apache.druid.segment.incremental.IncrementalIndexSchema}
+ *
+ * Decorated with {@link JsonTypeInfo} annotations as a future-proofing mechanism in the event we add other types of
+ * projections and need to extract out a base interface from this class.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonTypeName(AggregateProjectionSpec.TYPE_NAME)
 public class AggregateProjectionSpec
