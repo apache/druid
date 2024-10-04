@@ -165,20 +165,18 @@ public class Projections
       this.combiningFactories = new ArrayList<>();
     }
 
+    /**
+     * Map a query column name to a projection column name
+     */
     public ProjectionMatchBuilder remapColumn(String queryColumn, String projectionColumn)
     {
       remapColumns.put(queryColumn, projectionColumn);
       return this;
     }
 
-    /*
-     * @param referencedVirtualColumns  collection of {@link VirtualColumn} from the queryCursorBuildSpec which are still
-     *                                  required after matching the projection. The projection may contain pre-computed
-     *                                  {@link VirtualColumn} which will not be included in this set since they are
-     *                                  physical columns on the projection
-     * @param remapColumns              Mapping of {@link CursorBuildSpec} column names to projection column names, used
-     *                                  to allow column selector factories to provide projection column selectors as the
-     *                                  names the queryCursorBuildSpec needs
+    /**
+     * Add a query virtual column that can use projection physical columns as inputs to the match builder, which will
+     * later be added to {@link ProjectionMatch#getCursorBuildSpec()} if the projection matches
      */
     public ProjectionMatchBuilder addReferenceedVirtualColumn(VirtualColumn virtualColumn)
     {
@@ -186,6 +184,11 @@ public class Projections
       return this;
     }
 
+    /**
+     * Add a query {@link AggregatorFactory#substituteCombiningFactory(AggregatorFactory)} which can combine the inputs
+     * of a selector created by a projection {@link AggregatorFactory}
+     *
+     */
     public ProjectionMatchBuilder addPreAggregatedAggregator(AggregatorFactory aggregator)
     {
       combiningFactories.add(aggregator);
