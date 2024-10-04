@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.expression.NestedDataExpressions;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
@@ -264,6 +265,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testArrayFns()
   {
+    Assume.assumeTrue(ExpressionProcessing.allowVectorizeFallback());
     testExpression("array(s1, s2)", types);
     testExpression("array(l1, l2)", types);
     testExpression("array(d1, d2)", types);
@@ -284,6 +286,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testJsonFns()
   {
+    Assume.assumeTrue(ExpressionProcessing.allowVectorizeFallback());
     testExpression("json_object('k1', s1, 'k2', l1)", types);
   }
 

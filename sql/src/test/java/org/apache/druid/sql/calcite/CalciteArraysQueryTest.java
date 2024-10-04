@@ -1528,6 +1528,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayLength()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT dim1, ARRAY_LENGTH(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1, 2 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -1740,6 +1741,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayPrependAppend()
   {
+    cannotVectorizeUnlessFallback();
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
@@ -1858,6 +1860,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOffset()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_OFFSET(dim3, 1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2179,6 +2182,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOrdinal()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_ORDINAL(dim3, 2), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2219,6 +2223,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOffsetOf()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_OFFSET_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2265,6 +2270,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOrdinalOf()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_ORDINAL_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2312,6 +2318,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayToString()
   {
+    cannotVectorizeUnlessFallback();
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
