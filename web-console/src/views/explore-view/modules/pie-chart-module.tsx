@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { C, L, SqlQuery } from '@druid-toolkit/query';
+import { C, L } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
@@ -95,12 +95,11 @@ ModuleRepository.registerModule<PieChartParameterValues>({
     const { splitColumn, measure, limit, showOthers } = parameterValues;
 
     const dataQueries = useMemo(() => {
-      const source = querySource.query;
       const splitExpression = splitColumn ? splitColumn.expression : L(OVERALL_LABEL);
 
       return {
-        mainQuery: SqlQuery.from(source)
-          .addWhere(where)
+        mainQuery: querySource
+          .getInitQuery(where)
           .addSelect(splitExpression.as('name'), { addToGroupBy: 'end' })
           .addSelect(measure.expression.as('value'), {
             addToOrderBy: 'end',
@@ -109,7 +108,7 @@ ModuleRepository.registerModule<PieChartParameterValues>({
           .changeLimitValue(limit),
         splitExpression: splitColumn?.expression,
         othersPartialQuery: showOthers
-          ? SqlQuery.from(source).addWhere(where).addSelect(measure.expression.as('value'))
+          ? querySource.getInitQuery(where).addSelect(measure.expression.as('value'))
           : undefined,
       };
     }, [querySource, where, splitColumn, measure, limit, showOthers]);

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { L, SqlQuery } from '@druid-toolkit/query';
+import { L } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
@@ -75,11 +75,10 @@ ModuleRepository.registerModule<BarChartParameterValues>({
     const { splitColumn, measure, measureToSort, limit } = parameterValues;
 
     const dataQuery = useMemo(() => {
-      const source = querySource.query;
       const splitExpression = splitColumn ? splitColumn.expression : L(OVERALL_LABEL);
 
-      return SqlQuery.from(source)
-        .addWhere(where)
+      return querySource
+        .getInitQuery(where)
         .addSelect(splitExpression.as('dim'), { addToGroupBy: 'end' })
         .addSelect(measure.expression.as('met'), {
           addToOrderBy: measureToSort ? undefined : 'end',
