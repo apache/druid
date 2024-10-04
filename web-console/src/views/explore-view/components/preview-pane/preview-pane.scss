@@ -37,6 +37,10 @@
         text-overflow: ellipsis;
         padding: 1px 0;
         opacity: 0.8;
+
+        &.special {
+          font-style: italic;
+        }
       }
     }
   }

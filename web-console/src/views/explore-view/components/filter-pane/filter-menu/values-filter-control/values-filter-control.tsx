@@ -18,8 +18,8 @@
 
 import { FormGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult, ValuesFilterPattern } from '@druid-toolkit/query';
-import { C, F, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import type { QueryResult, SqlQuery, ValuesFilterPattern } from '@druid-toolkit/query';
+import { C, F, SqlExpression } from '@druid-toolkit/query';
 import React, { useMemo, useState } from 'react';
 
 import { ClearableInput } from '../../../../../../components';
@@ -49,14 +49,14 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
 
   const valuesQuery = useMemo(
     () =>
-      SqlQuery.from(querySource.query)
-        .addSelect(C(column).as('c'), { addToGroupBy: 'end' })
-        .changeWhereExpression(
+      querySource
+        .getInitQuery(
           SqlExpression.and(
             filter,
             searchString ? F('ICONTAINS_STRING', C(column), searchString) : undefined,
           ),
         )
+        .addSelect(C(column).as('c'), { addToGroupBy: 'end' })
         .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
         .changeLimitValue(101)
         .toString(),

@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-import { L, SqlQuery } from '@druid-toolkit/query';
+import { IconNames } from '@blueprintjs/icons';
+import { L } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
 
+import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
 import { formatEmpty } from '../../../utils';
 import { Issue } from '../components';
@@ -42,6 +44,7 @@ interface BarChartParameterValues {
 ModuleRepository.registerModule<BarChartParameterValues>({
   id: 'bar-chart',
   title: 'Bar chart',
+  icon: IconNames.VERTICAL_BAR_CHART_DESC,
   parameters: {
     splitColumn: {
       type: 'expression',
@@ -74,11 +77,10 @@ ModuleRepository.registerModule<BarChartParameterValues>({
     const { splitColumn, measure, measureToSort, limit } = parameterValues;
 
     const dataQuery = useMemo(() => {
-      const source = querySource.query;
       const splitExpression = splitColumn ? splitColumn.expression : L(OVERALL_LABEL);
 
-      return SqlQuery.from(source)
-        .addWhere(where)
+      return querySource
+        .getInitQuery(where)
         .addSelect(splitExpression.as('dim'), { addToGroupBy: 'end' })
         .addSelect(measure.expression.as('met'), {
           addToOrderBy: measureToSort ? undefined : 'end',
@@ -90,10 +92,10 @@ ModuleRepository.registerModule<BarChartParameterValues>({
         .changeLimitValue(limit);
     }, [querySource, where, splitColumn, measure, measureToSort, limit]);
 
-    const [sourceDataState] = useQueryManager({
+    const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
-      processQuery: async (query: SqlQuery) => {
-        return (await runSqlQuery(query)).toObjectArray();
+      processQuery: async (query, cancelToken) => {
+        return (await runSqlQuery(query, cancelToken)).toObjectArray();
       },
     });
 
@@ -203,6 +205,9 @@ ModuleRepository.registerModule<BarChartParameterValues>({
           }}
         />
         {errorMessage && <Issue issue={errorMessage} />}
+        {sourceDataState.loading && (
+          <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
+        )}
       </div>
     );
   },

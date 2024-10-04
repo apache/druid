@@ -22,11 +22,13 @@ import { Button, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Column, QueryResult, SqlExpression } from '@druid-toolkit/query';
 import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
+import type { CancelToken } from 'axios';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
+import { Loader } from '../../components';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { useHashAndLocalStorageHybridState, useQueryManager } from '../../hooks';
 import { Api, AppToaster } from '../../singletons';
@@ -79,27 +81,33 @@ const queryRunner = new QueryRunner({
   },
 });
 
-async function runSqlQuery(query: string | SqlQuery): Promise<QueryResult> {
+async function runSqlQuery(
+  query: string | SqlQuery,
+  cancelToken?: CancelToken,
+): Promise<QueryResult> {
   try {
     return await queryRunner.runQuery({
       query,
       defaultQueryContext: {
         sqlStringifyArrays: false,
       },
+      cancelToken,
     });
   } catch (e) {
     throw new DruidError(e);
   }
 }
 
-async function introspectSource(source: string): Promise<QuerySource> {
+async function introspectSource(source: string, cancelToken?: CancelToken): Promise<QuerySource> {
   const query = SqlQuery.parse(source);
   const introspectResult = await runSqlQuery(QuerySource.makeLimitZeroIntrospectionQuery(query));
 
+  cancelToken?.throwIfRequested();
   const baseIntrospectResult = QuerySource.isSingleStarQuery(query)
     ? introspectResult
     : await runSqlQuery(
         QuerySource.makeLimitZeroIntrospectionQuery(QuerySource.stripToBaseSource(query)),
+        cancelToken,
       );
 
   return QuerySource.fromIntrospectResult(
@@ -156,7 +164,7 @@ export const ExploreView = React.memo(function ExploreView() {
   });
 
   // -------------------------------------------------------
-  // If we have a __time::TIMESTAMP column and no filter add a filter
+  // If we have a TIMESTAMP column and no filter add a filter
 
   useEffect(() => {
     const columns = querySourceState.data?.columns;
@@ -238,11 +246,15 @@ export const ExploreView = React.memo(function ExploreView() {
   const querySource = querySourceState.getSomeData();
 
   const runSqlPlusQuery = useMemo(() => {
-    return async (query: string | SqlQuery) => {
+    return async (query: string | SqlQuery, cancelToken?: CancelToken) => {
       if (!querySource) throw new Error('no querySource');
-      return await runSqlQuery(
-        await rewriteMaxDataTime(rewriteAggregate(SqlQuery.parse(query), querySource.measures)),
-      );
+      const parsedQuery = SqlQuery.parse(query);
+      return (
+        await runSqlQuery(
+          await rewriteMaxDataTime(rewriteAggregate(parsedQuery, querySource.measures)),
+          cancelToken,
+        )
+      ).attachQuery({ query: '' }, parsedQuery);
     };
   }, [querySource]);
 
@@ -312,14 +324,6 @@ export const ExploreView = React.memo(function ExploreView() {
             }}
           />
           <ModulePicker
-            modules={[
-              { id: 'grouping-table', icon: IconNames.PANEL_TABLE, label: 'Grouping table' },
-              { id: 'record-table', icon: IconNames.TH, label: 'Record table' },
-              { id: 'time-chart', icon: IconNames.TIMELINE_LINE_CHART, label: 'Time chart' },
-              { id: 'bar-chart', icon: IconNames.VERTICAL_BAR_CHART_DESC, label: 'Bar chart' },
-              { id: 'pie-chart', icon: IconNames.PIE_CHART, label: 'Pie chart' },
-              { id: 'multi-axis-chart', icon: IconNames.SERIES_ADD, label: 'Multi-axis chart' },
-            ]}
             selectedModuleId={moduleId}
             onSelectedModuleIdChange={newModuleId => {
               const newParameterValues = getStickyParameterValuesForModule(newModuleId);
@@ -419,10 +423,9 @@ export const ExploreView = React.memo(function ExploreView() {
             onDropColumn={onShowColumn}
             onDropMeasure={onShowMeasure}
           >
-            {querySourceState.error && (
+            {querySourceState.error ? (
               <div className="error-display">{querySourceState.getErrorMessage()}</div>
-            )}
-            {querySource && (
+            ) : querySource ? (
               <ModulePane
                 moduleId={moduleId}
                 querySource={querySource}
@@ -432,7 +435,9 @@ export const ExploreView = React.memo(function ExploreView() {
                 setParameterValues={updateParameterValues}
                 runSqlQuery={runSqlPlusQuery}
               />
-            )}
+            ) : querySourceState.loading ? (
+              <Loader />
+            ) : undefined}
           </DroppableContainer>
           <div className="control-pane-cnt">
             {module && (

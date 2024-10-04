@@ -76,8 +76,8 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
    * This makes tests deterministic.
    */
   private static final List<DruidServerMetadata> SERVERS = ImmutableList.of(
-      new DruidServerMetadata("no", "localhost:1001", null, 1, ServerType.HISTORICAL, "__default", 2),
-      new DruidServerMetadata("no", "localhost:1002", null, 1, ServerType.HISTORICAL, "__default", 1),
+      new DruidServerMetadata("no", "localhost:1001", null, 1, ServerType.HISTORICAL, "__default", 2), // plaintext
+      new DruidServerMetadata("no", null, "localhost:1002", 1, ServerType.HISTORICAL, "__default", 1), // TLS
       new DruidServerMetadata("no", "localhost:1003", null, 1, ServerType.REALTIME, "__default", 0)
   );
 
@@ -86,7 +86,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
    */
   private static final List<String> WORKER_IDS =
       SERVERS.stream()
-             .map(server -> new WorkerId("http", server.getHostAndPort(), QUERY_ID).toString())
+             .map(server -> new WorkerId("http", server.getHost(), QUERY_ID).toString())
              .collect(Collectors.toList());
 
   /**

@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-import { C, F, L, SqlCase, SqlQuery } from '@druid-toolkit/query';
+import { IconNames } from '@blueprintjs/icons';
+import { C, F, L, SqlCase } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import React, { useEffect, useMemo, useRef } from 'react';
 
+import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
 import {
   formatInteger,
@@ -72,6 +74,7 @@ interface TimeChartParameterValues {
 ModuleRepository.registerModule<TimeChartParameterValues>({
   id: 'time-chart',
   title: 'Time chart',
+  icon: IconNames.TIMELINE_LINE_CHART,
   parameters: {
     timeGranularity: {
       type: 'option',
@@ -133,7 +136,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
 
     const dataQuery = useMemo(() => {
       return {
-        baseQuery: SqlQuery.from(querySource.query).addWhere(where),
+        initQuery: querySource.getInitQuery(where),
         measure,
         splitExpression: splitColumn?.expression,
         numberToStack,
@@ -141,9 +144,12 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       };
     }, [querySource, where, measure, splitColumn, numberToStack, showOthers]);
 
-    const [sourceDataState] = useQueryManager({
+    const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
-      processQuery: async ({ baseQuery, measure, splitExpression, numberToStack, showOthers }) => {
+      processQuery: async (
+        { initQuery, measure, splitExpression, numberToStack, showOthers },
+        cancelToken,
+      ) => {
         if (!timeColumnName) {
           throw new Error(`Must have a column of type TIMESTAMP for the time chart to work`);
         }
@@ -151,17 +157,20 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
         const vs = splitExpression
           ? (
               await runSqlQuery(
-                baseQuery
+                initQuery
                   .addSelect(splitExpression.as('v'), { addToGroupBy: 'end' })
                   .changeOrderByExpression(measure.expression.toOrderByExpression('DESC'))
                   .changeLimitValue(numberToStack),
+                cancelToken,
               )
             ).getColumnByIndex(0)!
           : undefined;
 
+        cancelToken.throwIfRequested();
+
         const dataset = (
           await runSqlQuery(
-            baseQuery
+            initQuery
               .applyIf(splitExpression && vs && !showOthers, q =>
                 q.addWhere(splitExpression!.in(vs!)),
               )
@@ -181,6 +190,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
                 );
               })
               .addSelect(measure.expression.as(METRIC_NAME)),
+            cancelToken,
           )
         ).toObjectArray();
 
@@ -430,6 +440,9 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           }}
         />
         {errorMessage && <Issue issue={errorMessage} />}
+        {sourceDataState.loading && (
+          <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
+        )}
       </div>
     );
   },
