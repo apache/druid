@@ -2270,7 +2270,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeSeriesWithFilteredAggAndExpressionFilteredAgg()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
     TimeseriesQuery query = Druids
         .newTimeseriesQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
