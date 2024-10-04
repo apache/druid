@@ -30,6 +30,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
@@ -226,7 +227,19 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       )
   );
 
-  @Parameterized.Parameters(name = "name: {0}, sortByDim: {3}")
+  private static final List<AggregateProjectionSpec> AUTO_PROJECTIONS = PROJECTIONS.stream().map(projection -> {
+    return new AggregateProjectionSpec(
+        projection.getName(),
+        projection.getVirtualColumns(),
+        projection.getGroupingColumns()
+                  .stream()
+                  .map(x -> new AutoTypeColumnSchema(x.getName(), x.getColumnType()))
+                  .collect(Collectors.toList()),
+        projection.getAggregators()
+    );
+  }).collect(Collectors.toList());
+
+  @Parameterized.Parameters(name = "name: {0}, sortByDim: {3}, autoSchema: {4}")
   public static Collection<?> constructorFeeder()
   {
     final List<Object[]> constructors = new ArrayList<>();
@@ -245,25 +258,48 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     DimensionsSpec dimsOrdered = dimensionsBuilder.setForceSegmentSortByTime(false).build();
 
 
+    List<DimensionSchema> autoDims = dimsOrdered.getDimensions()
+                                                .stream()
+                                                .map(x -> new AutoTypeColumnSchema(x.getName(), x.getColumnType()))
+                                                .collect(Collectors.toList());
     for (boolean incremental : new boolean[]{true, false}) {
       for (boolean sortByDim : new boolean[]{true, false}) {
-        final DimensionsSpec dims = sortByDim ? dimsOrdered : dimsTimeOrdered;
-        if (incremental) {
-          IncrementalIndex index = CLOSER.register(makeBuilder(dims).buildIncrementalIndex());
-          constructors.add(new Object[]{
-              "incrementalIndex",
-              new IncrementalIndexCursorFactory(index),
-              new IncrementalIndexTimeBoundaryInspector(index),
-              sortByDim
-          });
-        } else {
-          QueryableIndex index = CLOSER.register(makeBuilder(dims).buildMMappedIndex());
-          constructors.add(new Object[]{
-              "queryableIndex",
-              new QueryableIndexCursorFactory(index),
-              QueryableIndexTimeBoundaryInspector.create(index),
-              sortByDim
-          });
+        for (boolean autoSchema : new boolean[]{true, false}) {
+
+
+          final DimensionsSpec dims;
+          if (sortByDim) {
+            if (autoSchema) {
+              dims = dimsOrdered.withDimensions(autoDims);
+            } else {
+              dims = dimsOrdered;
+            }
+          } else {
+            if (autoSchema) {
+              dims = dimsTimeOrdered.withDimensions(autoDims);
+            } else {
+              dims = dimsTimeOrdered;
+            }
+          }
+          if (incremental) {
+            IncrementalIndex index = CLOSER.register(makeBuilder(dims, autoSchema).buildIncrementalIndex());
+            constructors.add(new Object[]{
+                "incrementalIndex",
+                new IncrementalIndexCursorFactory(index),
+                new IncrementalIndexTimeBoundaryInspector(index),
+                sortByDim,
+                autoSchema
+            });
+          } else {
+            QueryableIndex index = CLOSER.register(makeBuilder(dims, autoSchema).buildMMappedIndex());
+            constructors.add(new Object[]{
+                "queryableIndex",
+                new QueryableIndexCursorFactory(index),
+                QueryableIndexTimeBoundaryInspector.create(index),
+                sortByDim,
+                autoSchema
+            });
+          }
         }
       }
     }
@@ -285,6 +321,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
   private final NonBlockingPool<ByteBuffer> nonBlockingPool;
   public final boolean sortByDim;
+  public final boolean autoSchema;
 
   @Rule
   public final CloserRule closer = new CloserRule(false);
@@ -293,12 +330,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
       String name,
       CursorFactory projectionsCursorFactory,
       TimeBoundaryInspector projectionsTimeBoundaryInspector,
-      boolean sortByDim
+      boolean sortByDim,
+      boolean autoSchema
   )
   {
     this.projectionsCursorFactory = projectionsCursorFactory;
     this.projectionsTimeBoundaryInspector = projectionsTimeBoundaryInspector;
     this.sortByDim = sortByDim;
+    this.autoSchema = autoSchema;
     this.nonBlockingPool = closer.closeLater(
         new CloseableStupidPool<>(
             "GroupByQueryEngine-bufferPool",
@@ -361,12 +400,21 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(6, results.size());
     if (projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      Assert.assertArrayEquals(new Object[]{"a", "dd"}, results.get(0).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "aa"}, results.get(1).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "aa"}, results.get(2).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "cc"}, results.get(3).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "bb"}, results.get(4).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "bb"}, results.get(5).getArray());
+      if (autoSchema) {
+        Assert.assertArrayEquals(new Object[]{"b", "bb"}, results.get(0).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "dd"}, results.get(1).getArray());
+        Assert.assertArrayEquals(new Object[]{"b", "aa"}, results.get(2).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "cc"}, results.get(3).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "bb"}, results.get(4).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "aa"}, results.get(5).getArray());
+      } else {
+        Assert.assertArrayEquals(new Object[]{"a", "dd"}, results.get(0).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "aa"}, results.get(1).getArray());
+        Assert.assertArrayEquals(new Object[]{"b", "aa"}, results.get(2).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "cc"}, results.get(3).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "bb"}, results.get(4).getArray());
+        Assert.assertArrayEquals(new Object[]{"b", "bb"}, results.get(5).getArray());
+      }
     } else {
       Assert.assertArrayEquals(new Object[]{"a", "aa"}, results.get(0).getArray());
       Assert.assertArrayEquals(new Object[]{"a", "bb"}, results.get(1).getArray());
@@ -431,12 +479,22 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(6, results.size());
     if (projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      Assert.assertArrayEquals(new Object[]{"a", "ddfoo"}, results.get(0).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "aafoo"}, results.get(1).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "aafoo"}, results.get(2).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "ccfoo"}, results.get(3).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "bbfoo"}, results.get(4).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "bbfoo"}, results.get(5).getArray());
+      // testing ordering of stuff is kind of tricky at this level...
+      if (autoSchema) {
+        Assert.assertArrayEquals(new Object[]{"b", "bbfoo"}, results.get(0).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "ddfoo"}, results.get(1).getArray());
+        Assert.assertArrayEquals(new Object[]{"b", "aafoo"}, results.get(2).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "ccfoo"}, results.get(3).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "bbfoo"}, results.get(4).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "aafoo"}, results.get(5).getArray());
+      } else {
+        Assert.assertArrayEquals(new Object[]{"a", "ddfoo"}, results.get(0).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "aafoo"}, results.get(1).getArray());
+        Assert.assertArrayEquals(new Object[]{"b", "aafoo"}, results.get(2).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "ccfoo"}, results.get(3).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "bbfoo"}, results.get(4).getArray());
+        Assert.assertArrayEquals(new Object[]{"b", "bbfoo"}, results.get(5).getArray());
+      }
     } else {
       Assert.assertArrayEquals(new Object[]{"a", "aafoo"}, results.get(0).getArray());
       Assert.assertArrayEquals(new Object[]{"a", "bbfoo"}, results.get(1).getArray());
@@ -484,12 +542,21 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(6, results.size());
     if (projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      Assert.assertArrayEquals(new Object[]{"a", "dd", 1L}, results.get(0).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "aa", 2L}, results.get(1).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "bb", 1L}, results.get(2).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "aa", 2L}, results.get(3).getArray());
-      Assert.assertArrayEquals(new Object[]{"a", "cc", 1L}, results.get(4).getArray());
-      Assert.assertArrayEquals(new Object[]{"b", "bb", 1L}, results.get(5).getArray());
+      if (autoSchema) {
+        Assert.assertArrayEquals(new Object[]{"b", "aa", 2L}, results.get(0).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "cc", 1L}, results.get(1).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "bb", 1L}, results.get(2).getArray());
+        Assert.assertArrayEquals(new Object[]{"b", "bb", 1L}, results.get(3).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "dd", 1L}, results.get(4).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "aa", 2L}, results.get(5).getArray());
+      } else {
+        Assert.assertArrayEquals(new Object[]{"a", "dd", 1L}, results.get(0).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "aa", 2L}, results.get(1).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "bb", 1L}, results.get(2).getArray());
+        Assert.assertArrayEquals(new Object[]{"b", "aa", 2L}, results.get(3).getArray());
+        Assert.assertArrayEquals(new Object[]{"a", "cc", 1L}, results.get(4).getArray());
+        Assert.assertArrayEquals(new Object[]{"b", "bb", 1L}, results.get(5).getArray());
+      }
     } else {
       Assert.assertArrayEquals(new Object[]{"a", "aa", 2L}, results.get(0).getArray());
       Assert.assertArrayEquals(new Object[]{"a", "bb", 1L}, results.get(1).getArray());
@@ -937,7 +1004,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(new Object[]{"b", null, 12L, 13.2}, results.get(1).getArray());
   }
 
-  private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec)
+  private static IndexBuilder makeBuilder(DimensionsSpec dimensionsSpec, boolean autoSchema)
   {
     File tmp = FileUtils.createTempDir();
     CLOSER.register(tmp::delete);
@@ -948,7 +1015,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                                  .withDimensionsSpec(dimensionsSpec)
                                                  .withRollup(false)
                                                  .withMinTimestamp(TIMESTAMP.getMillis())
-                                                 .withProjections(PROJECTIONS)
+                                                 .withProjections(autoSchema ? AUTO_PROJECTIONS : PROJECTIONS)
                                                  .build()
                        )
                        .rows(ROWS);
