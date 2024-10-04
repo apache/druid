@@ -24,7 +24,7 @@ import { KNOWN_AGGREGATIONS } from '../utils';
 
 export function rewriteAggregate(query: SqlQuery, measures: Measure[]): SqlQuery {
   const usedMeasures: Map<string, boolean> = new Map();
-  let queryToRewrite: SqlQuery | undefined;
+  const queriesToRewrite: SqlQuery[] = [];
   const newQuery = query.walk(ex => {
     if (ex instanceof SqlFunction && ex.getEffectiveFunctionName() === Measure.AGGREGATE) {
       if (ex.numArgs() !== 1)
@@ -51,27 +51,27 @@ export function rewriteAggregate(query: SqlQuery, measures: Measure[]): SqlQuery
     if (ex instanceof SqlQuery) {
       const queryMeasures = Measure.extractQueryMeasures(ex);
       if (queryMeasures.length) {
-        queryToRewrite = ex;
+        queriesToRewrite.push(ex);
       }
     }
 
     return ex;
   }) as SqlQuery;
 
-  if (!queryToRewrite) return newQuery;
+  if (!queriesToRewrite.length) return newQuery;
 
-  return newQuery.walk(ex => {
-    if (ex === queryToRewrite) {
-      return queryToRewrite.applyForEach(
+  return newQuery.walk(subQuery => {
+    if (subQuery instanceof SqlQuery && queriesToRewrite.includes(subQuery)) {
+      return subQuery.applyForEach(
         uniq(
           filterMap(measures, queryMeasure =>
             usedMeasures.get(queryMeasure.name) ? queryMeasure.expression : undefined,
           ).flatMap(ex => ex.getUsedColumnNames()),
-        ).filter(columnName => queryToRewrite!.getSelectIndexForOutputColumn(columnName) === -1),
+        ).filter(columnName => subQuery.getSelectIndexForOutputColumn(columnName) === -1),
         (q, columnName) => q.addSelect(C(columnName)),
       );
     }
 
-    return ex;
+    return subQuery;
   }) as SqlQuery;
 }

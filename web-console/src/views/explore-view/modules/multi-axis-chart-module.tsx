@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { IconNames } from '@blueprintjs/icons';
 import type { SqlQuery } from '@druid-toolkit/query';
 import { C, F, L } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
@@ -46,6 +47,7 @@ interface MultiAxisChartParameterValues {
 ModuleRepository.registerModule<MultiAxisChartParameterValues>({
   id: 'multi-axis-chart',
   title: 'Multi-axis chart',
+  icon: IconNames.SERIES_ADD,
   parameters: {
     timeGranularity: {
       type: 'option',

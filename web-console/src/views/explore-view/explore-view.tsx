@@ -323,14 +323,6 @@ export const ExploreView = React.memo(function ExploreView() {
             }}
           />
           <ModulePicker
-            modules={[
-              { id: 'grouping-table', icon: IconNames.PANEL_TABLE, label: 'Grouping table' },
-              { id: 'record-table', icon: IconNames.TH, label: 'Record table' },
-              { id: 'time-chart', icon: IconNames.TIMELINE_LINE_CHART, label: 'Time chart' },
-              { id: 'bar-chart', icon: IconNames.VERTICAL_BAR_CHART_DESC, label: 'Bar chart' },
-              { id: 'pie-chart', icon: IconNames.PIE_CHART, label: 'Pie chart' },
-              { id: 'multi-axis-chart', icon: IconNames.SERIES_ADD, label: 'Multi-axis chart' },
-            ]}
             selectedModuleId={moduleId}
             onSelectedModuleIdChange={newModuleId => {
               const newParameterValues = getStickyParameterValuesForModule(newModuleId);

@@ -22,6 +22,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
+  align-items: flex-start;
+  align-content: flex-start;
 
   .filter-icon-button {
     pointer-events: none;
