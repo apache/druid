@@ -17,6 +17,7 @@
  */
 
 import { Button } from '@blueprintjs/core';
+import { IconNames } from '@blueprintjs/icons';
 import type { SqlExpression, SqlOrderByDirection, SqlQuery } from '@druid-toolkit/query';
 import { C, F } from '@druid-toolkit/query';
 import React, { useMemo } from 'react';
@@ -70,6 +71,7 @@ interface GroupingTableParameterValues {
 ModuleRepository.registerModule<GroupingTableParameterValues>({
   id: 'grouping-table',
   title: 'Grouping table',
+  icon: IconNames.PANEL_TABLE,
   parameters: {
     splitColumns: {
       type: 'expressions',

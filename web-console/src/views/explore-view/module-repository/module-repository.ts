@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import type { IconName } from '@blueprintjs/icons';
 import type { QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
 import type { CancelToken } from 'axios';
 
@@ -23,6 +24,7 @@ import type { ParameterDefinition, QuerySource, Stage } from '../models';
 
 interface ModuleDefinition<P> {
   id: string;
+  icon: IconName;
   title: string;
   parameters: Record<keyof P, ParameterDefinition>;
   component: (props: ModuleComponentProps<P>) => any;
@@ -52,7 +54,7 @@ export class ModuleRepository {
     return ModuleRepository.repo.get(id);
   }
 
-  static getAllModuleIds(): string[] {
-    return [...ModuleRepository.repo.keys()];
+  static getAllModuleEntries(): ModuleDefinition<any>[] {
+    return [...ModuleRepository.repo.values()];
   }
 }
