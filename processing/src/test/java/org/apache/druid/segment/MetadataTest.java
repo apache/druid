@@ -93,6 +93,7 @@ public class MetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
                 "some_projection",
+                "__gran",
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
                 ),
@@ -100,8 +101,7 @@ public class MetadataTest extends InitializedNullHandlingTest
                 new AggregatorFactory[]{
                     new LongLastAggregatorFactory("atLongLast", "d", null)
                 },
-                makeOrderBy("a", "b", "__gran"),
-                "__gran"
+                makeOrderBy("a", "b", "__gran")
             ),
             1234
         )
@@ -271,6 +271,7 @@ public class MetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
                 "some_projection",
+                "__gran",
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
                 ),
@@ -278,8 +279,7 @@ public class MetadataTest extends InitializedNullHandlingTest
                 new AggregatorFactory[]{
                     new LongLastAggregatorFactory("atLongLast", "d", null)
                 },
-                makeOrderBy("a", "b", "__gran"),
-                "__gran"
+                makeOrderBy("a", "b", "__gran")
             ),
             654321
         )
@@ -289,6 +289,7 @@ public class MetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
                 "some_projection",
+                "__gran",
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
                 ),
@@ -296,8 +297,7 @@ public class MetadataTest extends InitializedNullHandlingTest
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("longSum", "d")
                 },
-                makeOrderBy("a", "b", "__gran"),
-                "__gran"
+                makeOrderBy("a", "b", "__gran")
             ),
             1234
         )
@@ -307,6 +307,7 @@ public class MetadataTest extends InitializedNullHandlingTest
         new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
                 "some_projection",
+                "__gran",
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
                 ),
@@ -314,14 +315,14 @@ public class MetadataTest extends InitializedNullHandlingTest
                 new AggregatorFactory[]{
                     new LongLastAggregatorFactory("atLongLast", "d", null)
                 },
-                makeOrderBy("a", "b", "__gran"),
-                "__gran"
+                makeOrderBy("a", "b", "__gran")
             ),
             12121
         ),
         new AggregateProjectionMetadata(
             new AggregateProjectionMetadata.Schema(
                 "some_projection2",
+                "__gran",
                 VirtualColumns.create(
                     Granularities.toVirtualColumn(Granularities.DAY, "__gran")
                 ),
@@ -329,8 +330,7 @@ public class MetadataTest extends InitializedNullHandlingTest
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("longSum", "d")
                 },
-                makeOrderBy("__gran", "a"),
-                "__gran"
+                makeOrderBy("__gran", "a")
             ),
             555
         )

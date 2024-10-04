@@ -25,6 +25,7 @@ import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -44,9 +45,12 @@ import org.apache.druid.segment.vector.ReadableVectorOffset;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.function.Function;
@@ -86,21 +90,16 @@ public class Projections
         if (name != null && !name.equals(spec.getSchema().getName())) {
           continue;
         }
-        final Map<String, String> remapColumns = new HashMap<>();
-        if (spec.getSchema().getTimeColumnName() != null) {
-          remapColumns.put(spec.getSchema().getTimeColumnName(), ColumnHolder.TIME_COLUMN_NAME);
-        }
-        final Set<VirtualColumn> referenced = new HashSet<>();
-        if (spec.getSchema().matches(cursorBuildSpec, referenced, remapColumns, physicalChecker)) {
-          final CursorBuildSpec rewrittenBuildSpec =
-              CursorBuildSpec.builder(cursorBuildSpec)
-                             .setVirtualColumns(VirtualColumns.fromIterable(referenced))
-                             .build();
-
+        Optional<ProjectionMatch> match = spec.getSchema().matches(cursorBuildSpec, physicalChecker);
+        if (match.isPresent()) {
           if (cursorBuildSpec.getQueryMetrics() != null) {
             cursorBuildSpec.getQueryMetrics().projection(spec.getSchema().getName());
           }
-          return new QueryableProjection<>(rewrittenBuildSpec, remapColumns, getRowSelector.apply(spec.getSchema().getName()));
+          return new QueryableProjection<>(
+              match.get().cursorBuildSpec,
+              match.get().remapColumns,
+              getRowSelector.apply(spec.getSchema().getName())
+          );
         }
       }
     }
@@ -124,12 +123,89 @@ public class Projections
    * Returns true if column is defined in {@link AggregateProjectionSpec#getGroupingColumns()} OR if the column does not
    * exist in the base table. Part of determining if a projection can be used for a given {@link CursorBuildSpec},
    * 
-   * @see AggregateProjectionMetadata.Schema#matches(CursorBuildSpec, Set, Map, PhysicalColumnChecker)
+   * @see AggregateProjectionMetadata.Schema#matches(CursorBuildSpec, PhysicalColumnChecker)
    */
   @FunctionalInterface
   public interface PhysicalColumnChecker
   {
     boolean check(String projectionName, String columnName);
+  }
+
+  public static final class ProjectionMatch
+  {
+    private final CursorBuildSpec cursorBuildSpec;
+
+    private final Map<String, String> remapColumns;
+    public ProjectionMatch(CursorBuildSpec cursorBuildSpec, Map<String, String> remapColumns)
+    {
+      this.cursorBuildSpec = cursorBuildSpec;
+      this.remapColumns = remapColumns;
+    }
+
+    /**
+     *
+     */
+    public CursorBuildSpec getCursorBuildSpec()
+    {
+      return cursorBuildSpec;
+    }
+
+    public Map<String, String> getRemapColumns()
+    {
+      return remapColumns;
+    }
+  }
+
+  public static final class ProjectionMatchBuilder
+  {
+    private final Set<VirtualColumn> referencedVirtualColumns;
+    private final Map<String, String> remapColumns;
+    private final List<AggregatorFactory> combiningFactories;
+
+    public ProjectionMatchBuilder()
+    {
+      this.referencedVirtualColumns = new HashSet<>();
+      this.remapColumns = new HashMap<>();
+      this.combiningFactories = new ArrayList<>();
+    }
+
+    public ProjectionMatchBuilder remapColumn(String queryColumn, String projectionColumn)
+    {
+      remapColumns.put(queryColumn, projectionColumn);
+      return this;
+    }
+
+    /*
+     * @param referencedVirtualColumns  collection of {@link VirtualColumn} from the queryCursorBuildSpec which are still
+     *                                  required after matching the projection. The projection may contain pre-computed
+     *                                  {@link VirtualColumn} which will not be included in this set since they are
+     *                                  physical columns on the projection
+     * @param remapColumns              Mapping of {@link CursorBuildSpec} column names to projection column names, used
+     *                                  to allow column selector factories to provide projection column selectors as the
+     *                                  names the queryCursorBuildSpec needs
+     */
+    public ProjectionMatchBuilder addReferenceedVirtualColumn(VirtualColumn virtualColumn)
+    {
+      referencedVirtualColumns.add(virtualColumn);
+      return this;
+    }
+
+    public ProjectionMatchBuilder addPreAggregatedAggregator(AggregatorFactory aggregator)
+    {
+      combiningFactories.add(aggregator);
+      return this;
+    }
+
+    public ProjectionMatch build(CursorBuildSpec queryCursorBuildSpec)
+    {
+      return new ProjectionMatch(
+          CursorBuildSpec.builder(queryCursorBuildSpec)
+                         .setVirtualColumns(VirtualColumns.fromIterable(referencedVirtualColumns))
+                         .setAggregators(combiningFactories)
+                         .build(),
+          remapColumns
+      );
+    }
   }
 
   private static class ConstantTimeColumn implements NumericColumn

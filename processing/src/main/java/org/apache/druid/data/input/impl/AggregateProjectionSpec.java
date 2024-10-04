@@ -121,11 +121,11 @@ public class AggregateProjectionSpec
   {
     return new AggregateProjectionMetadata.Schema(
         name,
+        timeColumnName,
         virtualColumns,
         groupingColumns.stream().map(DimensionSchema::getName).collect(Collectors.toList()),
         aggregators,
-        ordering,
-        timeColumnName
+        ordering
     );
   }
 
