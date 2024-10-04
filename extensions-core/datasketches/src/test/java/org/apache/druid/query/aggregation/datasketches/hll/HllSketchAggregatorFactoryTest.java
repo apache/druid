@@ -232,10 +232,10 @@ public class HllSketchAggregatorFactoryTest
   }
 
   @Test
-  public void testCanCombiningFactorCanCombine()
+  public void testCanSubstitute()
   {
     HllSketchBuildAggregatorFactory factory = new HllSketchBuildAggregatorFactory(
-        "other name",
+        NAME,
         FIELD_NAME,
         LG_K,
         TGT_HLL_TYPE,
@@ -252,8 +252,19 @@ public class HllSketchAggregatorFactoryTest
         false,
         false
     );
-    Assert.assertTrue(other.canBindCombiningFactory(factory));
-    Assert.assertTrue(factory.canBindCombiningFactory(other));
+
+    HllSketchBuildAggregatorFactory incompatible = new HllSketchBuildAggregatorFactory(
+        NAME,
+        "different field",
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        false,
+        false
+    );
+    Assert.assertNotNull(other.substituteCombiningFactory(factory));
+    Assert.assertNotNull(factory.substituteCombiningFactory(other));
+    Assert.assertNull(factory.substituteCombiningFactory(incompatible));
   }
 
   @Test
