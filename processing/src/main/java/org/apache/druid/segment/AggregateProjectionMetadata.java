@@ -37,6 +37,7 @@ import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -417,6 +418,37 @@ public class AggregateProjectionMetadata
         }
         return null;
       }
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      Schema schema = (Schema) o;
+      return Objects.equals(name, schema.name)
+             && Objects.equals(timeColumnName, schema.timeColumnName)
+             && Objects.equals(virtualColumns, schema.virtualColumns)
+             && Objects.equals(groupingColumns, schema.groupingColumns)
+             && Objects.deepEquals(aggregators, schema.aggregators)
+             && Objects.equals(ordering, schema.ordering);
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(
+          name,
+          timeColumnName,
+          virtualColumns,
+          groupingColumns,
+          Arrays.hashCode(aggregators),
+          ordering
+      );
     }
   }
 }
