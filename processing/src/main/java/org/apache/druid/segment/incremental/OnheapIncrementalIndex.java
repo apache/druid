@@ -45,6 +45,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.AggregateProjectionMetadata;
+import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.CursorBuildSpec;
@@ -222,7 +223,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex
           dimensionsMap.put(dimension.getName(), childOnly);
         } else {
           if (!dimension.getColumnType().equals(parent.getCapabilities().toColumnType())) {
-            throw InvalidInput.exception(
+            // special handle auto column schema, who reports type as json in schema, but indexer reports whatever
+            // type it has seen, which is string at this stage
+            boolean allowAuto = ColumnType.NESTED_DATA.equals(dimension.getColumnType()) &&
+                                parent.getIndexer() instanceof AutoTypeColumnIndexer;
+            InvalidInput.conditionalException(
+                allowAuto,
                 "projection[%s] contains dimension[%s] with different type[%s] than type[%s] in base table",
                 projectionSpec.getName(),
                 dimension.getName(),
