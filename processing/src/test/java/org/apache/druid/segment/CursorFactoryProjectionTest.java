@@ -89,6 +89,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -225,6 +226,16 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
               new StringDimensionSchema("bfoo")
           ),
           null
+      ),
+      // cannot really make an 'all' granularity projection, but can do something like floor time to the segment
+      // granularity interval resulting in a single row
+      new AggregateProjectionSpec(
+          "c_sum",
+          VirtualColumns.create(Granularities.toVirtualColumn(Granularities.DAY, "__gran")),
+          Collections.singletonList(new LongDimensionSchema("__gran")),
+          new AggregatorFactory[]{
+              new LongSumAggregatorFactory("_c_sum", "c")
+          }
       )
   );
 
@@ -1095,6 +1106,42 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final RowSignature querySignature = query.getResultSignature(RowSignature.Finalization.YES);
     Assert.assertArrayEquals(new Object[]{TIMESTAMP, 16L}, getResultArray(results.get(0), querySignature));
     Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1), 3L}, getResultArray(results.get(1), querySignature));
+  }
+
+  @Test
+  public void testTimeseriesQueryGranularityAllFitsProjectionGranularity()
+  {
+    Assume.assumeFalse(sortByDim);
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource("test")
+                                        .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                        .granularity(Granularities.ALL)
+                                        .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
+                                        .context(ImmutableMap.of(QueryContexts.CTX_USE_PROJECTION, "c_sum"))
+                                        .build();
+
+    final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, null);
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(1, rowCount);
+    }
+
+    final Sequence<Result<TimeseriesResultValue>> resultRows = timeseriesEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        null
+    );
+
+    final List<Result<TimeseriesResultValue>> results = resultRows.toList();
+    Assert.assertEquals(1, results.size());
+    final RowSignature querySignature = query.getResultSignature(RowSignature.Finalization.YES);
+    Assert.assertArrayEquals(new Object[]{TIMESTAMP, 19L}, getResultArray(results.get(0), querySignature));
   }
 
   @Test
