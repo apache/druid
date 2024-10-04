@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
@@ -32,6 +33,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.SortedSet;
 
 public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
 {
@@ -66,6 +68,68 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
         spec,
         JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(spec), AggregateProjectionMetadata.class)
     );
+  }
+
+
+  @Test
+  public void testComparator()
+  {
+    SortedSet<AggregateProjectionMetadata> metadataBest = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
+    AggregateProjectionMetadata good = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "good",
+            "theTime",
+            VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
+            Arrays.asList("theTime", "a", "b", "c"),
+            new AggregatorFactory[] {
+                new CountAggregatorFactory("chocula")
+            },
+            Arrays.asList(
+                OrderBy.ascending("theTime"),
+                OrderBy.ascending("a"),
+                OrderBy.ascending("b"),
+                OrderBy.ascending("c")
+            )
+        ),
+        123
+    );
+    // same row count, but more aggs more better
+    AggregateProjectionMetadata better = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "better",
+            "theTime",
+            VirtualColumns.create(Granularities.toVirtualColumn(Granularities.HOUR, "theTime")),
+            Arrays.asList("c", "d", "theTime"),
+            new AggregatorFactory[] {
+                new CountAggregatorFactory("chocula"),
+                new LongSumAggregatorFactory("e", "e")
+            },
+            Arrays.asList(
+                OrderBy.ascending("c"),
+                OrderBy.ascending("d"),
+                OrderBy.ascending("theTime")
+            )
+        ),
+        123
+    );
+
+    // small rows is best
+    AggregateProjectionMetadata best = new AggregateProjectionMetadata(
+        new AggregateProjectionMetadata.Schema(
+            "better",
+            null,
+            VirtualColumns.EMPTY,
+            Arrays.asList("f", "g"),
+            new AggregatorFactory[0],
+            Arrays.asList(OrderBy.ascending("f"), OrderBy.ascending("g"))
+        ),
+        10
+    );
+    metadataBest.add(good);
+    metadataBest.add(better);
+    metadataBest.add(best);
+    Assert.assertEquals(best, metadataBest.first());
+    Assert.assertEquals(good, metadataBest.last());
   }
 
   @Test
