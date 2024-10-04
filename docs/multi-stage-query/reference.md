@@ -94,13 +94,13 @@ For more information, see [Read external data with EXTERN](concepts.md#read-exte
 
 #### `EXTERN` to export to a destination
 
-You can use `EXTERN` to specify a destination to export data to.
+You can use `EXTERN` to specify a destination to export data.
 This variation of EXTERN acppets the details of the destination as the only argument.
 This variation additionally requires an `AS` clause to specify the format of the exported rows.
 
 When you export data, Druid creates metadata files in a subdirectory of the destination directory named `_symlink_format_manifest`:
 
-- `_symlink_format_manifest/manifest`: Lists the exported files using the symlink manifest format. It consists of a list of absolute paths to the export files. For example:
+- `_symlink_format_manifest/manifest`: Lists absolute paths to exported files using the symlink manifest format. For example:
 
 ```text
 s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker2-partition2.csv
@@ -129,10 +129,11 @@ SELECT
 FROM <table>
 ```
 
-##### S3
+##### Amazon S3
 
-Export results to S3 by passing the function `s3()` as an argument to the `EXTERN` function. Note that this requires the `druid-s3-extensions`.
-The `s3()` function is a Druid function that configures the connection. Arguments for `s3()` should be passed as named parameters with the value in single quotes like the following example:
+To export results to S3, pass the `s3()` function as an argument to the EXTERN function. S3 export requires the `druid-s3-extensions`.
+The `s3()` function configures the connection to AWS.
+Pass all arguments for `s3()` as named parameters with the value in single quote. For example:
 
 ```sql
 INSERT INTO
@@ -147,9 +148,9 @@ FROM <table>
 
 Supported arguments for the function:
 
-| Parameter   | Required | Description                                                                                                                                                                                                                                                                    | Default |
-|-------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| `bucket`    | Yes      | The S3 bucket to which the files are exported to. The bucket and prefix combination should be whitelisted in `druid.export.storage.s3.allowedExportPaths`.                                                                                                                     | n/a     |
+| Parameter | Required | Description | Default |
+|---|---|---|---|
+| `bucket` | Yes  | The S3 bucket to which the files are exported to. The bucket and prefix combination should be whitelisted in `druid.export.storage.s3.allowedExportPaths`.                                                                                                                     | n/a     |
 | `prefix`    | Yes      | Path where the exported files would be created. The export query expects the destination to be empty. If the location includes other files, then the query will fail. The bucket and prefix combination should be whitelisted in `druid.export.storage.s3.allowedExportPaths`. | n/a     |
 
 The following runtime parameters must be configured to export into an S3 destination:
@@ -162,10 +163,11 @@ The following runtime parameters must be configured to export into an S3 destina
 | `druid.export.storage.s3.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
 
 
-##### GS
+##### Google Cloud Storage
 
-Export results to GCS by passing the function `google()` as an argument to the `EXTERN` function. Note that this requires the `druid-google-extensions`.
-The `google()` function is a Druid function that configures the connection. Arguments for `google()` should be passed as named parameters with the value in single quotes like the following example:
+To export query results to Google Cloud Storage (GCS), passing the `google()` function as an argument to the `EXTERN` function.
+This requires the `druid-google-extensions`.
+The `google()` function configures the connection to Google Cloud Storage. Pass the arguments for `google()` as named parameters with the value in single quotes. For example:
 
 ```sql
 INSERT INTO
@@ -180,29 +182,29 @@ FROM <table>
 
 Supported arguments for the function:
 
-| Parameter   | Required | Description                                                                                                                                                                                                                                                                        | Default |
-|-------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| `bucket`    | Yes      | The GS bucket to which the files are exported to. The bucket and prefix combination should be whitelisted in `druid.export.storage.google.allowedExportPaths`.                                                                                                                     | n/a     |
-| `prefix`    | Yes      | Path where the exported files would be created. The export query expects the destination to be empty. If the location includes other files, then the query will fail. The bucket and prefix combination should be whitelisted in `druid.export.storage.google.allowedExportPaths`. | n/a     |
+| Parameter   | Required | Description | Default |
+|---|---|---|---|
+| `bucket`    | Yes | The GCS bucket destination for exported files. You must add the bucket and prefix combination to the `druid.export.storage.google.allowedExportPaths` allow list. | n/a |
+| `prefix` | Yes  | Destination path in the bucket to create exported files. The export query expects the destination path to be empty. If the location includes other files, the query will fail. You must add the bucket and prefix combination to the `druid.export.storage.google.allowedExportPaths` allow list. | n/a |
 
-The following runtime parameters must be configured to export into a GCS destination:
+Configure the following runtime parameters to export query results to a GCS destination:
 
-| Runtime Parameter                                | Required | Description                                                                                                                                                                                                                       | Default |
-|--------------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| `druid.export.storage.google.tempLocalDir`       | Yes      | Directory used on the local storage of the worker to store temporary files required while uploading the data.                                                                                                                     | n/a     |
-| `druid.export.storage.google.allowedExportPaths` | Yes      | An array of GS prefixes that are allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. Example: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
-| `druid.export.storage.google.maxRetry`           | No       | Defines the max number times to attempt GS API calls to avoid failures due to transient errors.                                                                                                                                   | 10      |
-| `druid.export.storage.google.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. A large chunk size reduces the API calls to GS; however, it requires more disk space to store the temporary chunks.                                              | 4MiB    |
+| Runtime Parameter | Required | Description | Default |
+|---|---|---|---|
+| `druid.export.storage.google.tempLocalDir` | Yes | Directory for local storage where the worker stores temporary files before uploading the data to GCS. | n/a |
+| `druid.export.storage.google.allowedExportPaths` | Yes | An array of GCS prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For eample: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
+| `druid.export.storage.google.maxRetry` | No | The maximum number of  attempts for GCS API calls to avoid failures due to transient errors. | 10 |
+| `druid.export.storage.google.chunkSize` | No | Individual chunk size to  store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks. | 4 MiB |
 
-##### LOCAL
+##### Local file storage
 
-You can export to the local storage, which exports the results to the filesystem of the MSQ worker.
+You can export queryies to local storage, which writes the results to the filesystem on the MSQ worker.
 This is useful in a single node setup or for testing but is not suitable for production use cases.
 
-Export results to local storage by passing the function `LOCAL()` as an argument for the `EXTERN FUNCTION`.
-To use local storage as an export destination, the runtime property `druid.export.storage.baseDir` must be configured on the Indexer/Middle Manager.
-This value must be set to an absolute path on the local machine. Exporting data will be allowed to paths which match the prefix set by this value.
-Arguments to `LOCAL()` should be passed as named parameters with the value in single quotes in the following example:
+To export results to local storage, passing the `LOCAL()` function as an argument to the EXTERN function.
+You must configure the runtime property `druid.export.storage.baseDir` must be configured as an absolute path on the Indexer/Middle Manager to use local storage as an export destination.
+You can exporting data to paths that match this value as a prefix.
+Pass all arguments to `LOCAL()` as named parameters with the value in single quotes. For example:
 
 ```sql
 INSERT INTO
@@ -217,9 +219,9 @@ FROM <table>
 
 Supported arguments to the function:
 
-| Parameter   | Required | Description                                                                                                                                                                                                                                              | Default |
-|-------------|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
-| `exportPath`  | Yes | Absolute path to a subdirectory of `druid.export.storage.baseDir` used as the destination to export the results to. The export query expects the destination to be empty. If the location includes other files or directories, then the query will fail. | n/a |
+| Parameter | Required | Description | Default |
+|---|---|---|---|---|
+| `exportPath`  | Yes | Absolute path to a subdirectory of `druid.export.storage.baseDir` where Druid exports the querey results. The destination must be empty. If the location includes other files or directories, the query will fail. | n/a |
 
 For more information, see [Read external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
 
