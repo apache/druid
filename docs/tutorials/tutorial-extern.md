@@ -34,7 +34,7 @@ Do not start Druid, you'll do that as part of the tutorial.
 You should be familiar with ingesting and querying data in Druid.
 If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
 
-## Export query reaults to the local file system
+## Export query results to the local file system
 
 This example demonstrates how to configure Druid to export to the local file system.
 It is OK to learn about EXTERN syntax for exporting data.
@@ -43,7 +43,10 @@ It is not suitable for production scenarios.
 ### Configure Druid local export directory 
 
 The following commands set the base path for the Druid exports to `/tmp/druid/`.
-If the account running Druid does not have access to `/tmp/druid/`, change the path. For example: `/Users/Example/druid`.
+If the account running Druid does not have access to `/tmp/druid/`, change the path.
+For example: `/Users/Example/druid`.
+If you change the path in this step, use the updated path in all subsequent steps.
+
 From the root of the Druid distribution, run the following:
 
 ```bash
@@ -60,17 +63,15 @@ This adds the following section to the Druid quicstart `common.runtime.propertie
 druid.export.storage.baseDir=/tmp/druid/
 ```
 
-### Start Druid
+### Start Druid and load sample data
 
 From the root of the Druid distribution, launch Druid as follows:
 
 ```bash
-/bin/start-druid
+./bin/start-druid
 ```
 
-## Load data
-
-From the Query view, run the following command to load the Wikipedia example data set:
+From the [Query view](http://localhost:8888/unified-console.html#workbench), run the following command to load the Wikipedia example data set:
 
 ```sql
 REPLACE INTO "wikipedia" OVERWRITE ALL
@@ -114,15 +115,32 @@ PARTITIONED BY DAY
 
 ## Export data
 
+Run the following query to export query results to the path:
+`/tmp/druid/wiki_example`.
+The path must be a subdirectory of the `druid.export.storage.baseDir`.
+
+
 ```sql
 INSERT INTO
   EXTERN(
-    local(exportPath => '/tmp/druid/query1')
+    local(exportPath => '/tmp/druid/wiki_example')
         )
 AS CSV
-SELECT APPROX_COUNT_DISTINCT_DS_THETA(theta_uid) FILTER(WHERE "show" = 'Bridgerton') AS users
-FROM ts_tutorial
+SELECT "channel",
+  SUM("delta") AS "changes"
+FROM "wikipedia"
+GROUP BY 1
+LIMIT 10
 ```
+
+Druid exports the results of the qurey to the `/tmp/druid/wiki_example` dirctory.
+Run the following comannd to list the contents of 
+
+```bash
+ls '/tmp/druid/wiki_example'
+```
+
+The results are a csv file export of the data and a directory 
 
 ## Learn more
 

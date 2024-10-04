@@ -72,9 +72,8 @@ FROM TABLE(
    `name` and a `type`. The type can be `string`, `long`, `double`, or `float`. This row signature is
    used to map the external data into the SQL layer.
 
-Variation 2, with the input schema expressed in SQL using an `EXTEND` clause. (See the next
-section for more detail on `EXTEND`). This format also uses named arguments to make the
-SQL a bit easier to read:
+Variation 2, with the input schema expressed in SQL using an `EXTEND` clause. See the next
+section for more detail on `EXTEND`. This format also uses named arguments to make the SQL easier to read:
 
 ```sql
 SELECT
@@ -95,12 +94,14 @@ For more information, see [Read external data with EXTERN](concepts.md#read-exte
 
 #### `EXTERN` to export to a destination
 
-`EXTERN` can be used to specify a destination where you want to export data to.
-This variation of EXTERN requires one argument, the details of the destination as specified below.
+You can use `EXTERN` to specify a destination to export data to.
+This variation of EXTERN acppets the details of the destination as the only argument.
 This variation additionally requires an `AS` clause to specify the format of the exported rows.
 
-While exporting data, some metadata files will also be created at the destination in addition to the data. These files will be created in a directory `_symlink_format_manifest`.
-- `_symlink_format_manifest/manifest`: Lists the files which were created as part of the export. The file is in the symlink manifest format, and consists of a list of absolute paths to the files created.
+When you export data, Druid creates metadata files in a subdirectory of the destination directory named `_symlink_format_manifest`:
+
+- `_symlink_format_manifest/manifest`: Lists the exported files using the symlink manifest format. It consists of a list of absolute paths to the export files. For example:
+
 ```text
 s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker2-partition2.csv
 s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker1-partition1.csv
@@ -112,8 +113,8 @@ s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker0-par
 Keep the following in mind when using EXTERN to export rows:
 - Only INSERT statements are supported.
 - Only `CSV` format is supported as an export format.
-- Partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) aren't supported with export statements.
-- You can export to Amazon S3 or local storage.
+- Partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) aren't supported with EXTERN statements.
+- You can export to Amazon S3, Google CS, or local storage.
 - The destination provided should contain no other files or directories.
 
 When you export data, use the `rowsPerPage` context parameter to restrict the size of exported files.
