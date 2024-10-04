@@ -64,6 +64,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
     final Sequence<T> baseSequence = delegate.run(queryWithMetrics, responseContext);
 
     cpuTimeAccumulator.addAndGet(JvmUtils.getCurrentThreadCpuTime() - startRun);
+    responseContext.addCpuNanos(JvmUtils.getCurrentThreadCpuTime() - startRun);
 
     return Sequences.wrap(
         baseSequence,
@@ -78,6 +79,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             }
             finally {
               cpuTimeAccumulator.addAndGet(JvmUtils.getCurrentThreadCpuTime() - start);
+              responseContext.addCpuNanos(JvmUtils.getCurrentThreadCpuTime() - start);
             }
           }
 
@@ -87,7 +89,6 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
             if (report) {
               final long cpuTimeNs = cpuTimeAccumulator.get();
               if (cpuTimeNs > 0) {
-                responseContext.addCpuNanos(cpuTimeNs);
                 queryWithMetrics.getQueryMetrics().reportCpuTime(cpuTimeNs).emit(emitter);
               }
             }
