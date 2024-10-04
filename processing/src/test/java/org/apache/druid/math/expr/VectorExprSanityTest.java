@@ -265,12 +265,17 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
   @Test
   public void testArrayFns()
   {
-    Assume.assumeTrue(ExpressionProcessing.allowVectorizeFallback());
-    testExpression("array(s1, s2)", types);
-    testExpression("array(l1, l2)", types);
-    testExpression("array(d1, d2)", types);
-    testExpression("array(l1, d2)", types);
-    testExpression("array(s1, l2)", types);
+    try {
+      ExpressionProcessing.initializeForFallback();
+      testExpression("array(s1, s2)", types);
+      testExpression("array(l1, l2)", types);
+      testExpression("array(d1, d2)", types);
+      testExpression("array(l1, d2)", types);
+      testExpression("array(s1, l2)", types);
+    }
+    finally {
+      ExpressionProcessing.initializeForTests();
+    }
   }
 
   @Test

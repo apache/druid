@@ -60,6 +60,12 @@ public class ExpressionProcessing
     INSTANCE = new ExpressionProcessingConfig(null, null, true, null);
   }
 
+  @VisibleForTesting
+  public static void initializeForFallback()
+  {
+    INSTANCE = new ExpressionProcessingConfig(null, null, null, true);
+  }
+
   /**
    * All boolean expressions are {@link ExpressionType#LONG}
    */
