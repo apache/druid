@@ -19,9 +19,10 @@
 import { Icon, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { fromDate, getLocalTimeZone } from '@internationalized/date';
+import { minute } from 'chronoshift';
 import { useMemo } from 'react';
 
-import { minute, tickIcon, timezoneOffsetInMinutesToString } from '../../../utils';
+import { tickIcon, timezoneOffsetInMinutesToString } from '../../../utils';
 
 const NAMED_TIMEZONES: string[] = [
   'America/Juneau', // -9:00

@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
+import { Duration } from 'chronoshift';
 import type { SqlExpression } from 'druid-query-toolkit';
 import { fitFilterPatterns } from 'druid-query-toolkit';
 
-import { Duration } from '../../../utils';
-
-function getTimeSpanInExpression(
+export function getTimeSpanInExpression(
   expression: SqlExpression,
   timeColumnName: string,
 ): number | undefined {
@@ -37,27 +36,52 @@ function getTimeSpanInExpression(
   return;
 }
 
-export function getAutoGranularity(where: SqlExpression, timeColumnName: string): string {
+export const FINE_GRANULARITY_OPTIONS = [
+  'PT1S',
+  'PT2S',
+  'PT5S',
+  'PT15S',
+  'PT30S',
+  'PT1M',
+  'PT2M',
+  'PT5M',
+  'PT15M',
+  'PT30M',
+  'PT1H',
+  'PT3H',
+  'PT6H',
+  'P1D',
+  'P1W',
+  'P1M',
+  'P3M',
+  'P1Y',
+];
+
+const AUTO_GRANULARITY_OPTIONS = FINE_GRANULARITY_OPTIONS.map(s => new Duration(s));
+
+export function getAutoGranularity(
+  where: SqlExpression,
+  timeColumnName: string,
+  maxEntries: number,
+): string {
   const timeSpan = getTimeSpanInExpression(where, timeColumnName);
   if (!timeSpan) return 'P1D';
-  return Duration.pickSmallestGranularityThatFits(
-    [
-      'PT1S',
-      'PT5S',
-      'PT20S',
-      'PT1M',
-      'PT5M',
-      'PT20M',
-      'PT1H',
-      'PT3H',
-      'PT6H',
-      'P1D',
-      'P1W',
-      'P1M',
-      'P3M',
-      'P1Y',
-    ].map(s => new Duration(s)),
-    timeSpan,
-    200,
-  ).toString();
+  return pickSmallestGranularityThatFits(AUTO_GRANULARITY_OPTIONS, timeSpan, maxEntries).toString();
+}
+
+/**
+ * Picks the first granularity that will produce no more than maxEntities to fill the given span
+ * @param granularities - granularities to try in sorted from small to large
+ * @param span - the span to fit in ms
+ * @param maxEntities - the number of entities not to exceed
+ */
+export function pickSmallestGranularityThatFits(
+  granularities: Duration[],
+  span: number,
+  maxEntities: number,
+): Duration {
+  for (const granularity of granularities) {
+    if (span / granularity.getCanonicalLength() < maxEntities) return granularity;
+  }
+  return granularities[granularities.length - 1];
 }

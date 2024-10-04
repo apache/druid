@@ -1529,7 +1529,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <div className="table-control">
             <ClearableInput
               value={columnFilter}
-              onChange={columnFilter => this.setState({ columnFilter })}
+              onValueChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
             {canHaveNestedData && (
@@ -1844,7 +1844,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <div className="table-control">
             <ClearableInput
               value={columnFilter}
-              onChange={columnFilter => this.setState({ columnFilter })}
+              onValueChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
             <Switch
@@ -2027,7 +2027,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <div className="table-control">
             <ClearableInput
               value={columnFilter}
-              onChange={columnFilter => this.setState({ columnFilter })}
+              onValueChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
             <Switch
@@ -2231,7 +2231,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <div className="table-control">
             <ClearableInput
               value={columnFilter}
-              onChange={columnFilter => this.setState({ columnFilter })}
+              onValueChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
           </div>
@@ -2399,7 +2399,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <div className="table-control">
             <ClearableInput
               value={columnFilter}
-              onChange={columnFilter => this.setState({ columnFilter })}
+              onValueChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
           </div>

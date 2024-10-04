@@ -16,32 +16,22 @@
  * limitations under the License.
  */
 
-.highlight-bubble {
-  position: absolute;
-  transform: translate(-50%, -100%);
-  z-index: 10;
-  min-width: 200px;
-  max-width: 500px;
+import { useRef } from 'react';
 
-  // shpitz
-  &:after {
-    content: ' ';
-    position: absolute;
-    left: 50%;
-    transform: translate(-50%, 0);
-    bottom: -15px;
-    border-top: 15px solid #2f344e;
-    border-right: 15px solid transparent;
-    border-left: 15px solid transparent;
-    border-bottom: none;
+import { arraysEqualByElement } from '../utils';
+
+/**
+ * Custom hook similar to `useMemo`, but it provides the previous value as an argument.
+ * @param computeFn - Function to compute the new value. It receives the previous value as an argument.
+ * @param deps - Dependency array to determine when to recompute the value.
+ * @returns The memoized value.
+ */
+export function useMemoWithPrevious<T>(computeFn: (prev: T | undefined) => T, deps: any[]): T {
+  const value = useRef(computeFn(undefined));
+  const prevDependencies = useRef(deps);
+  if (!arraysEqualByElement(deps, prevDependencies.current)) {
+    value.current = computeFn(value.current);
+    prevDependencies.current = deps;
   }
-
-  .button-group {
-    margin-top: 20px;
-    text-align: right;
-
-    > *:not(:last-child) {
-      margin-right: 10px;
-    }
-  }
+  return value.current;
 }

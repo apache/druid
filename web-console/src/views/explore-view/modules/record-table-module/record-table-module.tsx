@@ -20,12 +20,12 @@ import { IconNames } from '@blueprintjs/icons';
 import { C, SqlQuery } from 'druid-query-toolkit';
 import { useMemo } from 'react';
 
-import { Loader } from '../../../components';
-import { useQueryManager } from '../../../hooks';
-import type { ColumnHint } from '../../../utils';
-import { filterMap } from '../../../utils';
-import { calculateInitPageSize, GenericOutputTable } from '../components';
-import { ModuleRepository } from '../module-repository/module-repository';
+import { Loader } from '../../../../components';
+import { useQueryManager } from '../../../../hooks';
+import type { ColumnHint } from '../../../../utils';
+import { filterMap } from '../../../../utils';
+import { calculateInitPageSize, GenericOutputTable } from '../../components';
+import { ModuleRepository } from '../../module-repository/module-repository';
 
 import './record-table-module.scss';
 
