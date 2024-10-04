@@ -120,7 +120,6 @@ public class MultiStageQueryContext
   public static final SegmentSource DEFAULT_INCLUDE_SEGMENT_SOURCE = SegmentSource.NONE;
 
   public static final String CTX_MAX_CONCURRENT_STAGES = "maxConcurrentStages";
-  public static final int DEFAULT_MAX_CONCURRENT_STAGES = 1;
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
   public static final String CTX_SELECT_DESTINATION = "selectDestination";
@@ -194,6 +193,12 @@ public class MultiStageQueryContext
 
   public static final String CTX_SKIP_TYPE_VERIFICATION = "skipTypeVerification";
 
+  /**
+   * Number of partitions to target per worker when creating shuffle specs that involve specific numbers of
+   * partitions. This helps us utilize more parallelism when workers are multi-threaded.
+   */
+  public static final String CTX_TARGET_PARTITIONS_PER_WORKER = "targetPartitionsPerWorker";
+
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
   public static String getMSQMode(final QueryContext queryContext)
@@ -204,11 +209,14 @@ public class MultiStageQueryContext
     );
   }
 
-  public static int getMaxConcurrentStages(final QueryContext queryContext)
+  public static int getMaxConcurrentStagesWithDefault(
+      final QueryContext queryContext,
+      final int defaultMaxConcurrentStages
+  )
   {
     return queryContext.getInt(
         CTX_MAX_CONCURRENT_STAGES,
-        DEFAULT_MAX_CONCURRENT_STAGES
+        defaultMaxConcurrentStages
     );
   }
 
@@ -343,16 +351,6 @@ public class MultiStageQueryContext
     );
   }
 
-  @Nullable
-  public static MSQSelectDestination getSelectDestinationOrNull(final QueryContext queryContext)
-  {
-    return QueryContexts.getAsEnum(
-        CTX_SELECT_DESTINATION,
-        queryContext.getString(CTX_SELECT_DESTINATION),
-        MSQSelectDestination.class
-    );
-  }
-
   public static int getRowsInMemory(final QueryContext queryContext)
   {
     return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
@@ -391,6 +389,14 @@ public class MultiStageQueryContext
   public static ArrayIngestMode getArrayIngestMode(final QueryContext queryContext)
   {
     return queryContext.getEnum(CTX_ARRAY_INGEST_MODE, ArrayIngestMode.class, DEFAULT_ARRAY_INGEST_MODE);
+  }
+
+  public static int getTargetPartitionsPerWorkerWithDefault(
+      final QueryContext queryContext,
+      final int defaultValue
+  )
+  {
+    return queryContext.getInt(CTX_TARGET_PARTITIONS_PER_WORKER, defaultValue);
   }
 
   /**

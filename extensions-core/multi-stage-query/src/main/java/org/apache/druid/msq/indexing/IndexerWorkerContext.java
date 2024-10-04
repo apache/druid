@@ -116,7 +116,10 @@ public class IndexerWorkerContext implements WorkerContext
     this.dataServerQueryHandlerFactory = dataServerQueryHandlerFactory;
 
     final QueryContext queryContext = QueryContext.of(task.getContext());
-    this.maxConcurrentStages = MultiStageQueryContext.getMaxConcurrentStages(queryContext);
+    this.maxConcurrentStages = MultiStageQueryContext.getMaxConcurrentStagesWithDefault(
+        queryContext,
+        IndexerControllerContext.DEFAULT_MAX_CONCURRENT_STAGES
+    );
     this.includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);
   }
 
@@ -344,6 +347,12 @@ public class IndexerWorkerContext implements WorkerContext
   public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
   {
     return dataServerQueryHandlerFactory;
+  }
+
+  @Override
+  public boolean includeAllCounters()
+  {
+    return includeAllCounters;
   }
 
   private synchronized ServiceLocator makeControllerLocator(final String controllerId)
