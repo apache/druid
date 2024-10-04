@@ -19,11 +19,11 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'dev/**'
+      - 'distribution/bin/**'
       - 'docs/**'
       - 'examples/**/jupyter-notebooks/**'
       - 'web-console/**'
       - 'website/**'
-      - 'distribution/bin/**'
     branches:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
@@ -32,11 +32,11 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'dev/**'
+      - 'distribution/bin/**'
       - 'docs/**'
       - 'examples/**/jupyter-notebooks/**'
       - 'web-console/**'
       - 'website/**'
-      - 'distribution/bin/**'
     branches:
       - master
       - '[0-9]+.[0-9]+.[0-9]+' # release branches
