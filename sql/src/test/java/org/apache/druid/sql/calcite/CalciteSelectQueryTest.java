@@ -650,7 +650,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectDistinctWithCascadeExtractionFilter()
   {
-    cannotVectorizeUnlessFallback();
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorizeUnlessFallback();
+    }
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE substring(substring(dim1, 2), 1, 1) = 'e' OR dim2 = 'a'",
         ImmutableList.of(

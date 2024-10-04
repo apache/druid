@@ -2772,7 +2772,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testExactCountDistinctWithFilter2()
   {
-    cannotVectorizeUnlessFallback();
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorizeUnlessFallback();
+    }
     final String sqlQuery = "SELECT COUNT(DISTINCT foo.dim1) FILTER(WHERE foo.cnt = 1), SUM(foo.cnt) FROM druid.foo";
 
     testQuery(
@@ -4498,7 +4500,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountStarOnCommonTableExpression()
   {
-    cannotVectorizeUnlessFallback();
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorizeUnlessFallback();
+    }
     Druids.TimeseriesQueryBuilder builder =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE1)
@@ -4536,7 +4540,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountStarOnView()
   {
-    cannotVectorizeUnlessFallback();
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorizeUnlessFallback();
+    }
     Druids.TimeseriesQueryBuilder builder =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE1)
@@ -4581,6 +4587,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .aggregators(aggregators(new CountAggregatorFactory("a0")))
               .context(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
+      cannotVectorizeUnlessFallback();
       builder = builder.virtualColumns(
                            expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
                        )
@@ -4598,7 +4605,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
           )
       );
     }
-    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT COUNT(*) FROM view.dview as druid WHERE druid.numfoo <> 'z'",
         ImmutableList.of(builder.build()),
@@ -15149,7 +15155,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGreatestFunctionForNumberWithIsNull()
   {
-    cannotVectorizeUnlessFallback();
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorizeUnlessFallback();
+    }
     String query = "SELECT dim1, MAX(GREATEST(l1, l2)) IS NULL FROM druid.numfoo GROUP BY dim1";
 
     List<Object[]> expectedResult;
