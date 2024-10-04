@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.error.InvalidInput;
@@ -46,6 +48,8 @@ import java.util.Objects;
 @JsonTypeName(AggregateProjectionSpec.TYPE_NAME)
 public class AggregateProjectionMetadata
 {
+  private static final Interner<Schema> SCHEMA_INTERNER = Interners.newWeakInterner();
+
   public static final Comparator<AggregateProjectionMetadata> COMPARATOR = (o1, o2) -> {
     int rowCompare = Integer.compare(o1.numRows, o2.numRows);
     if (rowCompare != 0) {
@@ -63,7 +67,7 @@ public class AggregateProjectionMetadata
       @JsonProperty("numRows") int numRows
   )
   {
-    this.schema = schema;
+    this.schema = SCHEMA_INTERNER.intern(schema);
     this.numRows = numRows;
   }
 

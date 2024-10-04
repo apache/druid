@@ -123,9 +123,9 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       if (metadata.getProjections() != null) {
         this.projectionsMap = Maps.newHashMapWithExpectedSize(metadata.getProjections().size());
         this.projections = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
-        for (AggregateProjectionMetadata projectionSpec : metadata.getProjections()) {
-          projections.add(projectionSpec);
-          projectionsMap.put(projectionSpec.getSchema().getName(), projectionSpec);
+        for (AggregateProjectionMetadata projection : metadata.getProjections()) {
+          projections.add(projection);
+          projectionsMap.put(projection.getSchema().getName(), projection);
         }
       } else {
         this.projectionsMap = Collections.emptyMap();
