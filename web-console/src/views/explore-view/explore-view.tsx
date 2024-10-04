@@ -186,7 +186,7 @@ export const ExploreView = React.memo(function ExploreView() {
     }
   }, [module, parameterValues, querySourceState.data]);
 
-  function setModuleId(moduleId: string, parameterValues: Record<string, any>) {
+  function setModuleId(moduleId: string, parameterValues: ParameterValues) {
     if (exploreState.moduleId === moduleId) return;
     setExploreState(exploreState.change({ moduleId, parameterValues }));
   }
@@ -326,7 +326,7 @@ export const ExploreView = React.memo(function ExploreView() {
           <ModulePicker
             selectedModuleId={moduleId}
             onSelectedModuleIdChange={newModuleId => {
-              const newParameterValues = getStickyParameterValuesForModule(newModuleId);
+              let newParameterValues = getStickyParameterValuesForModule(newModuleId);
 
               const oldModule = ModuleRepository.getModule(moduleId);
               const newModule = ModuleRepository.getModule(newModuleId);
@@ -349,11 +349,14 @@ export const ExploreView = React.memo(function ExploreView() {
                   );
                   if (!target) continue;
 
-                  newParameterValues[target[0]] = adjustTransferValue(
-                    parameterValue,
-                    oldParameterDefinition.type,
-                    target[1].type,
-                  );
+                  newParameterValues = {
+                    ...newParameterValues,
+                    [target[0]]: adjustTransferValue(
+                      parameterValue,
+                      oldParameterDefinition.type,
+                      target[1].type,
+                    ),
+                  };
                 }
               }
 
