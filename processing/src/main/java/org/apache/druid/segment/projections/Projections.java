@@ -95,8 +95,8 @@ public class Projections
             cursorBuildSpec.getQueryMetrics().projection(spec.getSchema().getName());
           }
           return new QueryableProjection<>(
-              match.cursorBuildSpec,
-              match.remapColumns,
+              match.getCursorBuildSpec(),
+              match.getRemapColumns(),
               getRowSelector.apply(spec.getSchema().getName())
           );
         }
@@ -133,17 +133,14 @@ public class Projections
   public static final class ProjectionMatch
   {
     private final CursorBuildSpec cursorBuildSpec;
-
     private final Map<String, String> remapColumns;
+
     public ProjectionMatch(CursorBuildSpec cursorBuildSpec, Map<String, String> remapColumns)
     {
       this.cursorBuildSpec = cursorBuildSpec;
       this.remapColumns = remapColumns;
     }
 
-    /**
-     *
-     */
     public CursorBuildSpec getCursorBuildSpec()
     {
       return cursorBuildSpec;
@@ -243,23 +240,15 @@ public class Projections
     }
 
     @Override
-    public ColumnValueSelector<?> makeColumnValueSelector(
-        ReadableOffset offset
-    )
+    public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
     {
-      // todo (clint): i guess this is fine, kind of weird have to make an expreval tho
       return new ConstantExprEvalSelector(ExprEval.ofLong(constant));
     }
 
     @Override
-    public VectorValueSelector makeVectorValueSelector(
-        ReadableVectorOffset offset
-    )
+    public VectorValueSelector makeVectorValueSelector(ReadableVectorOffset offset)
     {
-      return ConstantVectorSelectors.vectorValueSelector(
-          offset,
-          constant
-      );
+      return ConstantVectorSelectors.vectorValueSelector(offset, constant);
     }
   }
 }

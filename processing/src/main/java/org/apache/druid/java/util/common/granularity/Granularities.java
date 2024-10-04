@@ -27,6 +27,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
+import org.apache.druid.segment.AggregateProjectionMetadata;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
@@ -162,6 +163,17 @@ public class Granularities
     );
   }
 
+  /**
+   * Converts a virtual column with a single input time column into a {@link Granularity} if it is a
+   * {@link TimestampFloorExprMacro.TimestampFloorExpr}.
+   * <p>
+   * IMPORTANT - this method DOES NOT VERIFY that the virtual column has a single input that is a time column
+   * ({@link ColumnHolder#TIME_COLUMN_NAME} or equivalent projection time column as defined by
+   * {@link AggregateProjectionMetadata.Schema#getTimeColumnName()}). Callers must verify this externally before
+   * calling this method by examining {@link VirtualColumn#requiredColumns()}.
+   * <p>
+   * This method also does not handle other time expressions, or if the virtual column is just an identifier for a
+   */
   @Nullable
   public static Granularity fromVirtualColumn(VirtualColumn virtualColumn)
   {

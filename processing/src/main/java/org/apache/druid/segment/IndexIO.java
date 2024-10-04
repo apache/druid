@@ -646,7 +646,6 @@ public class IndexIO
           smooshedFiles,
           loadFailed
       );
-      // todo (clint): just pass in the metadata to SimpleQueryableIndex so it doesnt need to read it again...
       final Map<String, Map<String, Supplier<ColumnHolder>>> projectionsColumns = new LinkedHashMap<>();
       final Metadata metadata = getMetdata(smooshedFiles, mapper, inDir);
       if (metadata != null && metadata.getProjections() != null) {

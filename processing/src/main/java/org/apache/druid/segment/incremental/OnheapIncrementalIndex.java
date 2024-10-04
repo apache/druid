@@ -362,6 +362,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     final List<String> parseExceptionMessages = new ArrayList<>();
     final AtomicLong totalSizeInBytes = getBytesInMemory();
 
+    // add to projections first so if one is chosen by queries the data will always be ahead of the base table since
+    // rows are not added atomically to all facts holders at once
+    for (OnHeapAggregateProjection projection : projections.values()) {
+      projection.addToFacts(key, inputRowHolder.getRow(), parseExceptionMessages, totalSizeInBytes);
+    }
+
     final int priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
@@ -407,11 +413,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex
                            + estimatedSizeOfAggregators
                            + ROUGH_OVERHEAD_PER_MAP_ENTRY;
       totalSizeInBytes.addAndGet(rowSize);
-    }
-
-    // todo (clint): can this be atomic? should this be first? document non-atomic?
-    for (OnHeapAggregateProjection projection : projections.values()) {
-      projection.addToFacts(key, inputRowHolder.getRow(), parseExceptionMessages, totalSizeInBytes);
     }
 
     return new AddToFactsResult(numEntries.get(), totalSizeInBytes.get(), parseExceptionMessages);

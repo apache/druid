@@ -77,6 +77,8 @@ public class AggregateProjectionSpec
     }
     this.groupingColumns = groupingColumns;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
+    // in the future this should be expanded to support user specified ordering, but for now we compute it based on
+    // the grouping columns, which is consistent with how rollup ordering works for incremental index base table
     final ProjectionOrdering ordering = computeOrdering(this.virtualColumns, this.groupingColumns);
     this.ordering = ordering.ordering;
     this.timeColumnName = ordering.timeColumnName;
@@ -116,13 +118,7 @@ public class AggregateProjectionSpec
     return ordering;
   }
 
-  @Nullable
   @JsonIgnore
-  public String getTimeColumnName()
-  {
-    return timeColumnName;
-  }
-
   public AggregateProjectionMetadata.Schema toMetadataSchema()
   {
     return new AggregateProjectionMetadata.Schema(

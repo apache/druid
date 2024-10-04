@@ -76,7 +76,6 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     this(dataInterval, dimNames, bitmapFactory, columns, fileMapper, lazy, null, null);
   }
 
-  // todo (clint): specialize SimpleQueryableIndex with projections into its own class?
   public SimpleQueryableIndex(
       Interval dataInterval,
       Indexed<String> dimNames,

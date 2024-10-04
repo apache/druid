@@ -368,10 +368,9 @@ public class IndexMergerV9 implements IndexMerger
       for (IndexableAdapter adapter : adapters) {
         projectionAdapters.add(adapter.getProjectionAdapter(projectionSchema.getName()));
       }
-      // todo (clint): why not from projection spec grouping columns?
+      // we can use the first adapter to get the dimensions and metrics because the projection schema should be
+      // identical across all segments. This is validated by segment metadata merging
       final List<String> dimensions = projectionAdapters.get(0).getDimensionNames(false);
-
-      // todo (clint): add comments for the stuff that is DIFFERENT from calling function
       final List<String> metrics = Arrays.stream(projectionSchema.getAggregators())
                                          .map(AggregatorFactory::getName)
                                          .collect(Collectors.toList());
@@ -402,7 +401,6 @@ public class IndexMergerV9 implements IndexMerger
       for (String metric : metrics) {
         columnFormats.put(metric, projectionAdapters.get(0).getFormat(metric));
       }
-
 
       final GenericColumnSerializer timeWriter;
       if (projectionSchema.getTimeColumnName() != null) {
@@ -439,7 +437,7 @@ public class IndexMergerV9 implements IndexMerger
         rowNumConversions.add(IntBuffer.wrap(arr));
       }
 
-      final String section = "walk through and merge rows";
+      final String section = "walk through and merge projection[" + projectionSchema.getName() + "] rows";
       progress.startSection(section);
       long startTime = System.currentTimeMillis();
       long time = startTime;
@@ -481,17 +479,27 @@ public class IndexMergerV9 implements IndexMerger
           }
         }
         if ((++rowCount % 500000) == 0) {
-          log.debug("walked 500,000/%d rows in %,d millis.", rowCount, System.currentTimeMillis() - time);
+          log.debug(
+              "walked 500,000/%d rows of projection[%s] in %,d millis.",
+              rowCount,
+              projectionSchema.getName(),
+              System.currentTimeMillis() - time
+          );
           time = System.currentTimeMillis();
         }
       }
       for (IntBuffer rowNumConversion : rowNumConversions) {
         rowNumConversion.rewind();
       }
-      log.debug("completed walk through of %,d rows in %,d millis.", rowCount, System.currentTimeMillis() - startTime);
+      log.debug(
+          "completed walk through of %,d rows of projection[%s] in %,d millis.",
+          rowCount,
+          projectionSchema.getName(),
+          System.currentTimeMillis() - startTime
+      );
       progress.stopSection(section);
 
-      final String section2 = "build inverted index and columns";
+      final String section2 = "build projection[" + projectionSchema.getName() + "] inverted index and columns";
       progress.startSection(section2);
       if (projectionSchema.getTimeColumnName() != null) {
         makeTimeColumn(
@@ -544,7 +552,7 @@ public class IndexMergerV9 implements IndexMerger
     columnSet.addAll(mergedMetrics);
     Preconditions.checkState(
         columnSet.size() == mergedDimensions.size() + mergedMetrics.size(),
-        "column names are not unique in dims%s and mets%s",
+        "column names are not unique in dims[%s] and mets[%s]",
         mergedDimensions,
         mergedMetrics
     );
