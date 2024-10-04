@@ -398,7 +398,9 @@ public class CompactionStatus
         return COMPLETE;
       } else {
         List<DimensionSchema> existingDimensions = getNonPartitioningDimensions(
-            lastCompactionState.getDimensionsSpec().getDimensions(),
+            lastCompactionState.getDimensionsSpec() == null
+            ? null
+            : lastCompactionState.getDimensionsSpec().getDimensions(),
             lastCompactionState.getPartitionsSpec()
         );
         List<DimensionSchema> expectedDimensions = getNonPartitioningDimensions(

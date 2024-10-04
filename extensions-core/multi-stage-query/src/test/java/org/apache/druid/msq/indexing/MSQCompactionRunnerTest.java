@@ -105,7 +105,7 @@ public class MSQCompactionRunnerTest
       LONG_DIMENSION,
       MV_STRING_DIMENSION
   );
-  private static final Map<Interval, DataSchema> intervalDataSchemas = ImmutableMap.of(
+  private static final Map<Interval, DataSchema> INTERVAL_DATASCHEMAS = ImmutableMap.of(
       COMPACTION_INTERVAL,
       new DataSchema(DATA_SOURCE,
                      new TimestampSpec(TIMESTAMP_COLUMN, null, null),
@@ -141,7 +141,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, intervalDataSchemas).isValid());
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -154,7 +154,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, intervalDataSchemas).isValid());
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -169,7 +169,9 @@ public class MSQCompactionRunnerTest
         null
     );
 
-    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, intervalDataSchemas);
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask,
+                                                                                                     INTERVAL_DATASCHEMAS
+    );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
         "MSQ: Non-string dimension[long_dim] of type[long] not supported in 'range' partition spec",
@@ -187,7 +189,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, intervalDataSchemas).isValid());
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -200,7 +202,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, intervalDataSchemas).isValid());
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -213,7 +215,7 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, Granularities.ALL, null),
         null
     );
-    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, intervalDataSchemas).isValid());
+    Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -226,7 +228,7 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, null, false),
         AGGREGATORS.toArray(new AggregatorFactory[0])
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, intervalDataSchemas).isValid());
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -239,7 +241,7 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, null, true),
         null
     );
-    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, intervalDataSchemas).isValid());
+    Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
@@ -255,7 +257,9 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, null, true),
         new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)}
     );
-    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, intervalDataSchemas);
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask,
+                                                                                                     INTERVAL_DATASCHEMAS
+    );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
         "MSQ: Non-idempotent aggregator[sum_added] not supported in 'metricsSpec'",
