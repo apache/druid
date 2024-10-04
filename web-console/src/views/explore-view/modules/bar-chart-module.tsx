@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { IconNames } from '@blueprintjs/icons';
 import { L } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
@@ -43,6 +44,7 @@ interface BarChartParameterValues {
 ModuleRepository.registerModule<BarChartParameterValues>({
   id: 'bar-chart',
   title: 'Bar chart',
+  icon: IconNames.VERTICAL_BAR_CHART_DESC,
   parameters: {
     splitColumn: {
       type: 'expression',

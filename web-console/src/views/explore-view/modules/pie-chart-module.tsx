@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { IconNames } from '@blueprintjs/icons';
 import { C, L } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
@@ -63,6 +64,7 @@ interface PieChartParameterValues {
 ModuleRepository.registerModule<PieChartParameterValues>({
   id: 'pie-chart',
   title: 'Pie chart',
+  icon: IconNames.PIE_CHART,
   parameters: {
     splitColumn: {
       type: 'expression',
