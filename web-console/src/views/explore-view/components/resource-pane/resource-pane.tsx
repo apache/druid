@@ -44,6 +44,19 @@ import { NestedColumnDialog } from './nested-column-dialog/nested-column-dialog'
 
 import './resource-pane.scss';
 
+function makeNiceTitle(name: string): string {
+  return name
+    .replace(/^[ _-]+|[ _-]+$/g, '')
+    .replace(/(^|[_-]+)\w/g, s => {
+      // 'hello_world-love' -> 'Hello World Love'
+      return s.replace(/[_-]+/, ' ').toUpperCase();
+    })
+    .replace(/[a-z0-9][A-Z]/g, s => {
+      // 'HelloWorld' -> 'Hello World'
+      return s[0] + ' ' + s[1];
+    });
+}
+
 interface ColumnEditorOpenOn {
   expression?: SqlExpression;
   columnToDuplicate?: string;
@@ -99,11 +112,15 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
             content={
               <Menu>
                 <MenuItem
-                  text="Uppercase columns"
+                  text="Make nice columns titles"
+                  onClick={() => applyUtil(makeNiceTitle)}
+                />
+                <MenuItem
+                  text="Uppercase column names"
                   onClick={() => applyUtil(x => x.toUpperCase())}
                 />
                 <MenuItem
-                  text="Lowercase columns"
+                  text="Lowercase column names"
                   onClick={() => applyUtil(x => x.toLowerCase())}
                 />
               </Menu>
