@@ -55,6 +55,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
@@ -650,6 +651,45 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(
         new Object[]{"b", 12L, Pair.of(TIMESTAMP.plusMinutes(10).getMillis(), 5L)},
         results.get(1).getArray()
+    );
+  }
+
+  @Test
+  public void testProjectionSingleDimFilter()
+  {
+    // test can use the single dimension projection
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .addDimension("a")
+                    .setDimFilter(new EqualityFilter("a", ColumnType.STRING, "a", null))
+                    .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
+                    .addAggregator(new LongLastAggregatorFactory("c_last", "c", null))
+                    .build();
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+    try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(2, rowCount);
+    }
+    final Sequence<ResultRow> resultRows = groupingEngine.process(
+        query,
+        projectionsCursorFactory,
+        projectionsTimeBoundaryInspector,
+        nonBlockingPool,
+        null
+    );
+    final List<ResultRow> results = resultRows.toList();
+    Assert.assertEquals(1, results.size());
+    Assert.assertArrayEquals(
+        new Object[]{"a", 7L, Pair.of(TIMESTAMP.plusHours(1).plusMinutes(1).getMillis(), 2L)},
+        results.get(0).getArray()
     );
   }
 

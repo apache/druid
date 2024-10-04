@@ -161,9 +161,10 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
         "Projection parent column must be same type, got [%s]",
         parent.getClass()
     );
-    dictionaryWriter = ((StringDimensionMergerV9) parent).dictionaryWriter;
-    dimConversions = ((StringDimensionMergerV9) parent).dimConversions;
-    adapters = ((StringDimensionMergerV9) parent).adapters;
+    StringDimensionMergerV9 stringParent = (StringDimensionMergerV9) parent;
+    dictionarySize = stringParent.dictionarySize;
+    dimConversions = stringParent.dimConversions;
+    dictionaryWriter = stringParent.dictionaryWriter;
     cardinality = dictionaryWriter.getCardinality();
     adapters = projectionAdapters;
     setupEncodedValueWriter();
