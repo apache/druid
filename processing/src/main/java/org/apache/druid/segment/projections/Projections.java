@@ -50,7 +50,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.function.Function;
@@ -90,14 +89,14 @@ public class Projections
         if (name != null && !name.equals(spec.getSchema().getName())) {
           continue;
         }
-        Optional<ProjectionMatch> match = spec.getSchema().matches(cursorBuildSpec, physicalChecker);
-        if (match.isPresent()) {
+        ProjectionMatch match = spec.getSchema().matches(cursorBuildSpec, physicalChecker);
+        if (match != null) {
           if (cursorBuildSpec.getQueryMetrics() != null) {
             cursorBuildSpec.getQueryMetrics().projection(spec.getSchema().getName());
           }
           return new QueryableProjection<>(
-              match.get().cursorBuildSpec,
-              match.get().remapColumns,
+              match.cursorBuildSpec,
+              match.remapColumns,
               getRowSelector.apply(spec.getSchema().getName())
           );
         }

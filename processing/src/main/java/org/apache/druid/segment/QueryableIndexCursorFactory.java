@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
@@ -31,6 +32,7 @@ import org.apache.druid.segment.vector.VectorOffset;
 
 import javax.annotation.Nullable;
 import java.util.LinkedHashSet;
+import java.util.List;
 
 public class QueryableIndexCursorFactory implements CursorFactory
 {
@@ -74,6 +76,13 @@ public class QueryableIndexCursorFactory implements CursorFactory
         public boolean isPreAggregated()
         {
           return true;
+        }
+
+        @Nullable
+        @Override
+        public List<AggregatorFactory> getAggregatorsForPreAggregated()
+        {
+          return projection.getCursorBuildSpec().getAggregators();
         }
       };
     }

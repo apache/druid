@@ -20,6 +20,7 @@
 package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
@@ -32,6 +33,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.projections.QueryableProjection;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public class IncrementalIndexCursorFactory implements CursorFactory
 {
@@ -99,6 +101,12 @@ public class IncrementalIndexCursorFactory implements CursorFactory
         public boolean isPreAggregated()
         {
           return true;
+        }
+
+        @Override
+        public List<AggregatorFactory> getAggregatorsForPreAggregated()
+        {
+          return projection.getCursorBuildSpec().getAggregators();
         }
       };
     }
