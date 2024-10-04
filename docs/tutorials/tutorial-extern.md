@@ -26,20 +26,32 @@ description: How to use EXTERN to export query results.
 
 This tutorial demonstrates how to use the [EXTERN](..multi-stage-query/reference#extern-function) function Apache Druid&circledR; to export data.
 
-
 ## Prerequisites
 
-Before you follow the steps in this tutorial, download Druid as described in the [Local quickstart](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
+Before you follow the steps in this tutorial, download Druid as described in the [Local quickstart](index.md).
+Do not start Druid, you'll do that as part of the tutorial.
 
-You should be familiar with data querying in Druid. If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
+You should be familiar with ingesting and querying data in Druid.
+If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
 
-## Configure Druid local export directory 
+## Export query reaults to the local file system
 
+This example demonstrates how to configure Druid to export to the local file system.
+It is OK to learn about EXTERN syntax for exporting data.
+It is not suitable for production scenarios.
+
+### Configure Druid local export directory 
+
+The following commands set the base path for the Druid exports to `/tmp/druid/`.
+If the account running Druid does not have access to `/tmp/druid/`, change the path. For example: `/Users/Example/druid`.
+From the root of the Druid distribution, run the following:
+
+```bash
+export export_path="/tmp/druid"
+sed -i -e $'$a\\\n\\\n\\\n#\\\n###Local export\\\n#\\\ndruid.export.storage.baseDir='$export_path conf/druid/auto/_common/common.runtime.properties
 ```
-sed -i -e $'$a\\\n\\\n\\\n#\\\n###Local export\\\n#\\\ndruid.export.storage.baseDir=/tmp/druid/' conf/druid/auto/_common/common.runtime.properties
-```
 
-This adds the following to the Druid configuration:
+This adds the following section to the Druid quicstart `common.runtime.properties`:
 
 ```
 #
@@ -48,9 +60,57 @@ This adds the following to the Druid configuration:
 druid.export.storage.baseDir=/tmp/druid/
 ```
 
-## Start Druid
+### Start Druid
+
+From the root of the Druid distribution, launch Druid as follows:
+
+```bash
+/bin/start-druid
+```
 
 ## Load data
+
+From the Query view, run the following command to load the Wikipedia example data set:
+
+```sql
+REPLACE INTO "wikipedia" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+      '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+      '{"type":"json"}'
+    )
+  ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR, "flags" VARCHAR, "isUnpatrolled" VARCHAR, "page" VARCHAR, "diffUrl" VARCHAR, "added" BIGINT, "comment" VARCHAR, "commentLength" BIGINT, "isNew" VARCHAR, "isMinor" VARCHAR, "delta" BIGINT, "isAnonymous" VARCHAR, "user" VARCHAR, "deltaBucket" BIGINT, "deleted" BIGINT, "namespace" VARCHAR, "cityName" VARCHAR, "countryName" VARCHAR, "regionIsoCode" VARCHAR, "metroCode" BIGINT, "countryIsoCode" VARCHAR, "regionName" VARCHAR)
+)
+SELECT
+  TIME_PARSE("timestamp") AS "__time",
+  "isRobot",
+  "channel",
+  "flags",
+  "isUnpatrolled",
+  "page",
+  "diffUrl",
+  "added",
+  "comment",
+  "commentLength",
+  "isNew",
+  "isMinor",
+  "delta",
+  "isAnonymous",
+  "user",
+  "deltaBucket",
+  "deleted",
+  "namespace",
+  "cityName",
+  "countryName",
+  "regionIsoCode",
+  "metroCode",
+  "countryIsoCode",
+  "regionName"
+FROM "ext"
+PARTITIONED BY DAY
+```
 
 ## Export data
 
