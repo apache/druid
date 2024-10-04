@@ -85,6 +85,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   @Nullable
   private final ColumnType castToType;
   private boolean isVariantType = false;
+  private byte variantTypeByte = 0x00;
 
   public AutoTypeColumnMerger(
       String name,
@@ -225,6 +226,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         // mixed type column, but only root path, we can use VariantArrayColumnSerializer
         // pick the least restrictive type for the logical type
         isVariantType = true;
+        variantTypeByte = rootTypes.getByteValue();
         for (ColumnType type : FieldTypeInfo.convertToSet(rootTypes.getByteValue())) {
           logicalType = ColumnType.leastRestrictiveType(logicalType, type);
         }
@@ -235,7 +237,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         serializer = new VariantColumnSerializer(
             outputName,
             null,
-            rootTypes.getByteValue(),
+            variantTypeByte,
             indexSpec,
             segmentWriteOutMedium,
             closer
@@ -376,14 +378,68 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   }
 
   @Override
-  public void attachParent(DimensionMergerV9 parent, List<IndexableAdapter> projectionAdapters)
+  public void attachParent(DimensionMergerV9 parent, List<IndexableAdapter> projectionAdapters) throws IOException
   {
     DruidException.conditionalDefensive(
         parent instanceof AutoTypeColumnMerger,
         "Projection parent dimension must be same type, got [%s]",
         parent.getClass()
     );
-    serializer.setDictionaryIdLookup(((AutoTypeColumnMerger) parent).getIdLookup());
+    AutoTypeColumnMerger autoParent = (AutoTypeColumnMerger) parent;
+    logicalType = autoParent.logicalType;
+    isVariantType = autoParent.isVariantType;
+    if (autoParent.serializer instanceof ScalarStringColumnSerializer) {
+      serializer = new ScalarStringColumnSerializer(
+          outputName,
+          indexSpec,
+          segmentWriteOutMedium,
+          closer
+      );
+    } else if (autoParent.serializer instanceof ScalarLongColumnSerializer) {
+      serializer = new ScalarLongColumnSerializer(
+          outputName,
+          indexSpec,
+          segmentWriteOutMedium,
+          closer
+      );
+    } else if (autoParent.serializer instanceof ScalarDoubleColumnSerializer) {
+      serializer = new ScalarDoubleColumnSerializer(
+          outputName,
+          indexSpec,
+          segmentWriteOutMedium,
+          closer
+      );
+    } else if (autoParent.serializer instanceof VariantColumnSerializer) {
+      if (autoParent.isVariantType) {
+        serializer = new VariantColumnSerializer(
+            outputName,
+            null,
+            variantTypeByte,
+            indexSpec,
+            segmentWriteOutMedium,
+            closer
+        );
+      } else {
+        serializer = new VariantColumnSerializer(
+            outputName,
+            logicalType,
+            null,
+            indexSpec,
+            segmentWriteOutMedium,
+            closer
+        );
+      }
+    } else {
+      serializer = new NestedDataColumnSerializer(
+          outputName,
+          indexSpec,
+          segmentWriteOutMedium,
+          closer
+      );
+    }
+
+    serializer.setDictionaryIdLookup(autoParent.getIdLookup());
+    serializer.open();
   }
 
   public static class ArrayDictionaryMergingIterator implements Iterator<int[]>

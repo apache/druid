@@ -118,6 +118,7 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   {
     this.dictionaryIdLookup = dictionaryIdLookup;
     this.writeDictionary = false;
+    this.dictionarySerialized = true;
   }
 
   @Override

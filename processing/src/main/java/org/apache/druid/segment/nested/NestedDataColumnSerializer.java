@@ -191,6 +191,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   {
     this.globalDictionaryIdLookup = dictionaryIdLookup;
     this.writeDictionary = false;
+    this.dictionarySerialized = true;
   }
 
   @Override

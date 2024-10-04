@@ -123,6 +123,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
   {
     this.dictionaryIdLookup = dictionaryIdLookup;
     this.writeDictionary = false;
+    this.dictionarySerialized = true;
   }
 
   @Override
