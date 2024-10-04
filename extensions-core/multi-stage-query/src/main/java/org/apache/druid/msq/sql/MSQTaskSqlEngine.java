@@ -42,7 +42,7 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.msq.guice.MSQTerminalStageSpecFactory;
+import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.util.ArrayIngestMode;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
@@ -387,7 +387,7 @@ public class MSQTaskSqlEngine implements SqlEngine
         final ColumnType oldDruidType = Calcites.getColumnTypeForRelDataType(oldSqlTypeField.getType());
         final RelDataType newSqlType = rootRel.getRowType().getFieldList().get(columnIndex).getType();
         final ColumnType newDruidType =
-            DimensionSchemaUtils.getDimensionType(Calcites.getColumnTypeForRelDataType(newSqlType), arrayIngestMode);
+            DimensionSchemaUtils.getDimensionType(columnName, Calcites.getColumnTypeForRelDataType(newSqlType), arrayIngestMode);
 
         if (newDruidType.isArray() && oldDruidType.is(ValueType.STRING)
             || (newDruidType.is(ValueType.STRING) && oldDruidType.isArray())) {
