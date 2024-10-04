@@ -78,7 +78,7 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
   public void testEqualsAndHashcodeSchema()
   {
     EqualsVerifier.forClass(AggregateProjectionMetadata.Schema.class)
-                  .withIgnoredFields("orderingWithTimeSubstitution", "timePosition", "graularity")
+                  .withIgnoredFields("orderingWithTimeSubstitution", "timeColumnPosition", "granularity")
                   .usingGetClass()
                   .verify();
   }
