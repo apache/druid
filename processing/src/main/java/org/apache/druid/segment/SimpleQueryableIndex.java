@@ -257,6 +257,12 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       }
 
       @Override
+      public int getNumRows()
+      {
+        return projectionSpec.getNumRows();
+      }
+
+      @Override
       public List<OrderBy> getOrdering()
       {
         // return ordering with projection time column substituted with __time so query engines can treat it equivalently
