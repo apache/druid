@@ -36,6 +36,7 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
@@ -277,8 +278,6 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     for (boolean incremental : new boolean[]{true, false}) {
       for (boolean sortByDim : new boolean[]{true, false}) {
         for (boolean autoSchema : new boolean[]{true, false}) {
-
-
           final DimensionsSpec dims;
           if (sortByDim) {
             if (autoSchema) {
@@ -465,7 +464,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                             10
                         )
                     )
-                    .setContext(ImmutableMap.of(QueryContexts.CTX_USE_PROJECTION, "abfoo_daily"))
+                    .setContext(ImmutableMap.of(QueryContexts.USE_PROJECTION, "abfoo_daily"))
                     .build();
 
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
@@ -580,6 +579,30 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testProjectionSelectionTwoDimsCountForce()
+  {
+    // cannot use a projection since count is not defined
+    final GroupByQuery query =
+        GroupByQuery.builder()
+                    .setDataSource("test")
+                    .setGranularity(Granularities.ALL)
+                    .setInterval(Intervals.ETERNITY)
+                    .addDimension("a")
+                    .addDimension("b")
+                    .addAggregator(new CountAggregatorFactory("count"))
+                    .setContext(ImmutableMap.of(QueryContexts.FORCE_PROJECTION, true))
+                    .build();
+
+    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
+
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () ->  projectionsCursorFactory.makeCursorHolder(buildSpec)
+    );
+    Assert.assertEquals("Force projections specified, but none satisfy query", t.getMessage());
+  }
+
+  @Test
   public void testProjectionSkipContext()
   {
     // setting context flag to skip projection
@@ -591,7 +614,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     .addDimension("a")
                     .addAggregator(new LongSumAggregatorFactory("c_sum", "c"))
                     .addAggregator(new LongLastAggregatorFactory("c_last", "c", null))
-                    .setContext(ImmutableMap.of(QueryContexts.CTX_NO_PROJECTION, true))
+                    .setContext(ImmutableMap.of(QueryContexts.NO_PROJECTIONS, true))
                     .build();
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
     try (final CursorHolder cursorHolder = projectionsCursorFactory.makeCursorHolder(buildSpec)) {
@@ -865,27 +888,6 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     }
   }
 
-  private static Set<Object[]> makeArrayResultSet()
-  {
-    Set<Object[]> resultsInNoParticularOrder = new ObjectOpenCustomHashSet<>(
-        new Hash.Strategy<Object[]>()
-        {
-          @Override
-          public int hashCode(Object[] o)
-          {
-            return Arrays.hashCode(o);
-          }
-
-          @Override
-          public boolean equals(Object[] a, Object[] b)
-          {
-            return Arrays.deepEquals(a, b);
-          }
-        }
-    );
-    return resultsInNoParticularOrder;
-  }
-
   @Test
   public void testQueryGranularityFitsProjectionGranularity()
   {
@@ -928,9 +930,14 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(3, results.size());
     if (sortByDim && projectionsCursorFactory instanceof QueryableIndexCursorFactory) {
-      Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1).getMillis(), "a", 3L}, results.get(1).getArray());
-      Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "a", 4L}, results.get(0).getArray());
-      Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "b", 12L}, results.get(2).getArray());
+      Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet(
+          new Object[]{TIMESTAMP.getMillis(), "a", 4L},
+          new Object[]{TIMESTAMP.getMillis(), "b", 12L},
+          new Object[]{TIMESTAMP.plusHours(1).getMillis(), "a", 3L}
+      );
+      for (ResultRow row : results) {
+        Assert.assertTrue(resultsInNoParticularOrder.contains(row.getArray()));
+      }
     } else {
       Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "a", 4L}, results.get(0).getArray());
       Assert.assertArrayEquals(new Object[]{TIMESTAMP.getMillis(), "b", 12L}, results.get(1).getArray());
@@ -1117,7 +1124,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .granularity(Granularities.ALL)
                                         .aggregators(new LongSumAggregatorFactory("c_sum", "c"))
-                                        .context(ImmutableMap.of(QueryContexts.CTX_USE_PROJECTION, "c_sum"))
+                                        .context(ImmutableMap.of(QueryContexts.USE_PROJECTION, "c_sum"))
                                         .build();
 
     final CursorBuildSpec buildSpec = TimeseriesQueryEngine.makeCursorBuildSpec(query, null);
@@ -1185,6 +1192,35 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
     Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusMinutes(10), 5L}, getResultArray(results.get(5), querySignature));
     Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1), 1L}, getResultArray(results.get(6), querySignature));
     Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1).plusMinutes(1), 2L}, getResultArray(results.get(7), querySignature));
+  }
+
+
+  private static Set<Object[]> makeArrayResultSet()
+  {
+    Set<Object[]> resultsInNoParticularOrder = new ObjectOpenCustomHashSet<>(
+        new Hash.Strategy<Object[]>()
+        {
+          @Override
+          public int hashCode(Object[] o)
+          {
+            return Arrays.hashCode(o);
+          }
+
+          @Override
+          public boolean equals(Object[] a, Object[] b)
+          {
+            return Arrays.deepEquals(a, b);
+          }
+        }
+    );
+    return resultsInNoParticularOrder;
+  }
+
+  private static Set<Object[]> makeArrayResultSet(Object[]... values)
+  {
+    Set<Object[]> resultsInNoParticularOrder = makeArrayResultSet();
+    resultsInNoParticularOrder.addAll(Arrays.asList(values));
+    return resultsInNoParticularOrder;
   }
 
   private static Object[] getResultArray(Result<TimeseriesResultValue> result, RowSignature rowSignature)

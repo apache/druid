@@ -88,6 +88,12 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
+
+  // projection context keys
+  public static final String NO_PROJECTIONS = "noProjections";
+  public static final String FORCE_PROJECTION = "forceProjections";
+  public static final String USE_PROJECTION = "useProjection";
+
   // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
   // query's runtime
   public static final String QUERY_RESOURCE_ID = "queryResourceId";
@@ -97,9 +103,7 @@ public class QueryContexts
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // SQL statement resource specific keys
-  public static final String CTX_EXECUTION_MODE = "executionMode";
-  public static final String CTX_NO_PROJECTION = "noProject";
-  public static final String CTX_USE_PROJECTION = "useProjection";
+  public static final String CTX_EXECUTION_MODE = "executionMode";;
 
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;

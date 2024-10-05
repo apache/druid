@@ -79,10 +79,10 @@ public class Projections
       Function<String, T> getRowSelector
   )
   {
-    if (cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CTX_NO_PROJECTION, false)) {
+    if (cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.NO_PROJECTIONS, false)) {
       return null;
     }
-    final String name = cursorBuildSpec.getQueryContext().getString(QueryContexts.CTX_USE_PROJECTION);
+    final String name = cursorBuildSpec.getQueryContext().getString(QueryContexts.USE_PROJECTION);
 
     if (cursorBuildSpec.isAggregate()) {
       for (AggregateProjectionMetadata spec : projections) {
@@ -104,6 +104,9 @@ public class Projections
     }
     if (name != null) {
       throw InvalidInput.exception("Projection[%s] specified, but does not satisfy query", name);
+    }
+    if (cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.FORCE_PROJECTION, false)) {
+      throw InvalidInput.exception("Force projections specified, but none satisfy query");
     }
     return null;
   }

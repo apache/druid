@@ -681,7 +681,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   }
 
   @Override
-  public int size()
+  public int numRows()
   {
     return numEntries.get();
   }
@@ -880,7 +880,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   )
   {
     synchronized (dimensionDescs) {
-      if (size() != 0) {
+      if (numRows() != 0) {
         throw new ISE("Cannot load dimension order[%s] when existing index is not empty.", dimensionDescs.keySet());
       }
       for (String dim : oldDimensionOrder) {

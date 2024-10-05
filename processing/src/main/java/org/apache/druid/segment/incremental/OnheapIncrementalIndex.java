@@ -572,7 +572,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
   @Override
   public boolean canAppendRow()
   {
-    final boolean countCheck = size() < maxRowCount;
+    final boolean countCheck = numRows() < maxRowCount;
     // if maxBytesInMemory = -1, then ignore sizeCheck
     final boolean sizeCheck = maxBytesInMemory <= 0 || getBytesInMemory().get() < maxBytesInMemory;
     final boolean canAdd = countCheck && sizeCheck;
@@ -1418,7 +1418,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex
     }
 
     @Override
-    public int size()
+    public int numRows()
     {
       return numEntries.get();
     }

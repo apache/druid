@@ -332,7 +332,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     index.add(row);
     index.add(row);
 
-    Assert.assertEquals("rollup".equals(mode) ? 1 : 3, index.size());
+    Assert.assertEquals("rollup".equals(mode) ? 1 : 3, index.numRows());
   }
 
   @Test

@@ -1121,7 +1121,7 @@ public class IndexMergerV9 implements IndexMerger
 
     FileUtils.mkdirp(outDir);
 
-    log.debug("Starting persist for interval[%s], rows[%,d]", dataInterval, index.size());
+    log.debug("Starting persist for interval[%s], rows[%,d]", dataInterval, index.numRows());
     return multiphaseMerge(
         Collections.singletonList(
             new IncrementalIndexAdapter(

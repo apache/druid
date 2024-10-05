@@ -243,6 +243,9 @@ public interface QueryMetrics<QueryType extends Query<?>>
 
   void segment(String segmentIdentifier);
 
+  /**
+   * If a projection was used during segment processing, set its name as the projection dimension
+   */
   void projection(String projection);
 
   /**

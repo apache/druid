@@ -115,7 +115,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public int getNumRows()
   {
-    return index.size();
+    return index.numRows();
   }
 
   @Override
