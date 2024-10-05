@@ -180,9 +180,9 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
   public void setError(final Throwable t)
   {
     synchronized (lock) {
-      if (noMoreWrites) {
-        log.noStackTrace().warn(t, "Channel is no longer accepting writes, cannot propagate exception");
-      } else {
+      // Write error to the channel, unless "noMoreWrites" is set. If that's set, suppress errors, so regular channel
+      // shutdown doesn't trigger warnings in the log.
+      if (!noMoreWrites) {
         chunks.clear();
         chunks.add(Either.error(t));
         nextCompressedFrameLength = UNKNOWN_LENGTH;
