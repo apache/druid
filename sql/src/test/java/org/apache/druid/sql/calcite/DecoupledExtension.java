@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.quidem.ProjectPathUtils;
@@ -52,10 +53,16 @@ public class DecoupledExtension implements BeforeEachCallback
   }
 
   private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.<String, Object>builder()
-      .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
-      .put(PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
-      .put(QueryContexts.ENABLE_DEBUG, true)
-      .build();
+                                                                                    .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                                                                                    .put(
+                                                                                        PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+                                                                                        PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+                                                                                    )
+                                                                                    .put(
+                                                                                        QueryContexts.ENABLE_DEBUG,
+                                                                                        true
+                                                                                    )
+                                                                                    .build();
 
   public QueryTestBuilder testBuilder()
   {
@@ -93,7 +100,7 @@ public class DecoupledExtension implements BeforeEachCallback
               qCaseDir,
               testName,
               "quidem testcase reason: " + decTestConfig.quidemReason()
-              );
+          );
         } else {
           return null;
         }
@@ -104,6 +111,10 @@ public class DecoupledExtension implements BeforeEachCallback
         .cannotVectorize(baseTest.cannotVectorize)
         .skipVectorize(baseTest.skipVectorize);
 
-    return builder;
+    return builder.cannotVectorize(
+                      baseTest.cannotVectorize ||
+                      (!ExpressionProcessing.allowVectorizeFallback() && baseTest.cannotVectorizeUnlessFallback)
+                  )
+                  .skipVectorize(baseTest.skipVectorize);
   }
 }

@@ -45,19 +45,25 @@ public class ExpressionProcessing
   @VisibleForTesting
   public static void initializeForTests()
   {
-    INSTANCE = new ExpressionProcessingConfig(null, null, null);
+    INSTANCE = new ExpressionProcessingConfig(null, null, null, null);
   }
 
   @VisibleForTesting
   public static void initializeForStrictBooleansTests(boolean useStrict)
   {
-    INSTANCE = new ExpressionProcessingConfig(useStrict, null, null);
+    INSTANCE = new ExpressionProcessingConfig(useStrict, null, null, null);
   }
 
   @VisibleForTesting
   public static void initializeForHomogenizeNullMultiValueStrings()
   {
-    INSTANCE = new ExpressionProcessingConfig(null, null, true);
+    INSTANCE = new ExpressionProcessingConfig(null, null, true, null);
+  }
+
+  @VisibleForTesting
+  public static void initializeForFallback()
+  {
+    INSTANCE = new ExpressionProcessingConfig(null, null, null, true);
   }
 
   /**
@@ -88,6 +94,12 @@ public class ExpressionProcessing
   {
     checkInitialized();
     return INSTANCE.isHomogenizeNullMultiValueStringArrays();
+  }
+
+  public static boolean allowVectorizeFallback()
+  {
+    checkInitialized();
+    return INSTANCE.allowVectorizeFallback();
   }
 
   private static void checkInitialized()
