@@ -178,6 +178,7 @@ public class AggregateProjectionSpec
     // not have a time-like column, the granularity will be handled as ALL for the projection and all projection
     // rows will use a synthetic timestamp of the minimum timestamp of the incremental index
     for (final DimensionSchema dimension : groupingColumns) {
+      ordering.add(OrderBy.ascending(dimension.getName()));
       if (ColumnHolder.TIME_COLUMN_NAME.equals(dimension.getName())) {
         timeColumnName = dimension.getName();
         granularity = Granularities.NONE;
@@ -192,10 +193,6 @@ public class AggregateProjectionSpec
           timeColumnName = dimension.getName();
         }
       }
-    }
-    // the time column is added to ordering as THE time column instead of its actual name
-    for (DimensionSchema dimension : groupingColumns) {
-      ordering.add(OrderBy.ascending(dimension.getName()));
     }
     return new ProjectionOrdering(ordering, timeColumnName);
   }
