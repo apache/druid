@@ -137,7 +137,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   {
     final Iterable<SegmentDescriptor> specs = FunctionalIterable
         .create(intervals)
-        .transformCat(sinkTimeline::lookup)
+        .transformCat(upgradeDescriptorTimeline::lookup)
         .transformCat(
             holder -> FunctionalIterable
                 .create(holder.getObject())

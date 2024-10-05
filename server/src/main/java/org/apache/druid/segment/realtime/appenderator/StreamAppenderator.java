@@ -1439,6 +1439,7 @@ public class StreamAppenderator implements Appenderator
         sink.getVersion(),
         identifier.getShardSpec().createChunk(sink)
     );
+    ((SinkQuerySegmentWalker) texasRanger).registerUpgradedPendingSegment(identifier, identifier);
   }
 
   private ListenableFuture<?> abandonSegment(
