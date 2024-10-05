@@ -59,8 +59,11 @@ import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.timeline.SegmentId;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -177,7 +180,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
       }
     }
 
-    // put funny intervals on query to ensure it is adjusted to the segment interval before building cursor
+    // put funny intervals on query to ensure it is validated before building cursor
     final ScanQuery query =
         Druids.newScanQueryBuilder()
               .dataSource("test")
@@ -240,11 +243,16 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         FrameReader.create(signature)
     );
 
-    FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromCursorFactory(cursorFactory, signature, false),
-        rowsFromProcessor
+    final RuntimeException e = Assert.assertThrows(
+        RuntimeException.class,
+        rowsFromProcessor::toList
     );
 
-    Assert.assertEquals(Unit.instance(), retVal.get());
+    MatcherAssert.assertThat(
+        e,
+        ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
+            "Expected eternity intervals, but got[[2001-01-01T00:00:00.000Z/2011-01-01T00:00:00.000Z, "
+            + "2011-01-02T00:00:00.000Z/2021-01-01T00:00:00.000Z]]"))
+    );
   }
 }

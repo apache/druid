@@ -168,7 +168,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
       return UNKNOWN;
     }
 
-    final String serverHostAndPort = server.getServer().getHostAndPort();
+    final String serverHostAndPort = server.getServer().getHost();
     final int workerNumber = workerIdToNumber.getInt(serverHostAndPort);
 
     // The worker number may be UNKNOWN in a race condition, such as the set of Historicals changing while
