@@ -1,0 +1,570 @@
+#The queries in this file were generated; see README.generated
+#started Wed Jul 10 19:21:24 IST 2024
+!use druidtest:///?componentSupplier=KttmNestedComponentSupplier
+!set outputformat mysql
+# Wed Jul 10 19:23:06 IST 2024
+SELECT
+MAX(CAST(t."__time" AS TIMESTAMP)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+GROUP BY ();
++-------------------------+
+| __VALUE__               |
++-------------------------+
+| 2019-08-25 23:59:59.686 |
++-------------------------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:26:00 IST 2024
+SELECT
+MAX(CAST(t."__time" AS TIMESTAMP)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+GROUP BY ();
++-------------------------+
+| __VALUE__               |
++-------------------------+
+| 2019-08-25 23:59:59.686 |
++-------------------------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:26:00 IST 2024
+SELECT
+MAX(CAST(t."__time" AS TIMESTAMP)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+GROUP BY ();
++-------------------------+
+| __VALUE__               |
++-------------------------+
+| 2019-08-25 23:59:59.686 |
++-------------------------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:26:01 IST 2024
+SELECT
+(COUNT(*)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY ();
++-----------+
+| __VALUE__ |
++-----------+
+|    465346 |
++-----------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:26:07 IST 2024
+SELECT
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++----------------------------+--------+
+| adblock_list               | count  |
++----------------------------+--------+
+| NoAdblock                  | 424282 |
+| EasyList                   |  40579 |
+| EasyList,AntiAdblockKiller |    401 |
+| AntiAdblockKiller          |     84 |
++----------------------------+--------+
+(4 rows)
+
+!ok
+# Wed Jul 10 19:26:07 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++-----------------------+--------+
+| Browser               | count  |
++-----------------------+--------+
+| Chrome                | 232603 |
+| Mobile Safari         | 113617 |
+| Chrome Mobile         |  60173 |
+| Safari                |  38323 |
+| Firefox               |   8307 |
+| Yandex.Browser        |   4258 |
+| Opera                 |   2819 |
+| IE                    |   1238 |
+| Mozilla               |   1224 |
+| Silk                  |   1050 |
+| Yandex.Browser mobile |    583 |
+| Mobile Firefox        |    253 |
+| Puffin                |    240 |
+| Chromium              |    149 |
+| Waterfox              |    129 |
+| Opera Mobile          |     78 |
+| PS4 Web browser       |     77 |
+| Android browser       |     52 |
+| Sogou Explorer        |     51 |
+| IE Mobile             |     35 |
+| Maxthon               |     34 |
+| PS Vita browser       |     19 |
+| unknown               |     17 |
+|                       |     10 |
+| Apple Mail            |      7 |
++-----------------------+--------+
+(25 rows)
+
+!ok
+# Wed Jul 10 19:26:07 IST 2024
+SELECT
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(t."adblock_list" AS VARCHAR) IN ('NoAdblock','EasyList','EasyList,AntiAdblockKiller','AntiAdblockKiller'))
+GROUP BY 1;
++----------------------------+--------+
+| adblock_list               | count  |
++----------------------------+--------+
+| AntiAdblockKiller          |     84 |
+| EasyList                   |  40579 |
+| EasyList,AntiAdblockKiller |    401 |
+| NoAdblock                  | 424282 |
++----------------------------+--------+
+(4 rows)
+
+!ok
+# Wed Jul 10 19:26:07 IST 2024
+SELECT
+CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) AS "Browser",
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(t."adblock_list" AS VARCHAR) IN ('NoAdblock','EasyList','EasyList,AntiAdblockKiller','AntiAdblockKiller')) AND CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR) IN ('Chrome','Mobile Safari','Chrome Mobile','Safari','Firefox','Yandex.Browser','Opera','IE','Mozilla','Silk','Yandex.Browser mobile','Mobile Firefox','Puffin'))
+GROUP BY 1,2;
++-----------------------+----------------------------+--------+
+| Browser               | adblock_list               | count  |
++-----------------------+----------------------------+--------+
+| Chrome                | AntiAdblockKiller          |     23 |
+| Chrome                | EasyList                   |  34745 |
+| Chrome                | EasyList,AntiAdblockKiller |    258 |
+| Chrome                | NoAdblock                  | 197577 |
+| Chrome Mobile         | AntiAdblockKiller          |      3 |
+| Chrome Mobile         | EasyList                   |    146 |
+| Chrome Mobile         | EasyList,AntiAdblockKiller |     11 |
+| Chrome Mobile         | NoAdblock                  |  60013 |
+| Firefox               | EasyList                   |   3014 |
+| Firefox               | EasyList,AntiAdblockKiller |     39 |
+| Firefox               | NoAdblock                  |   5254 |
+| IE                    | AntiAdblockKiller          |     28 |
+| IE                    | NoAdblock                  |   1210 |
+| Mobile Firefox        | EasyList                   |      4 |
+| Mobile Firefox        | NoAdblock                  |    249 |
+| Mobile Safari         | AntiAdblockKiller          |     15 |
+| Mobile Safari         | EasyList                   |    131 |
+| Mobile Safari         | EasyList,AntiAdblockKiller |     40 |
+| Mobile Safari         | NoAdblock                  | 113431 |
+| Mozilla               | AntiAdblockKiller          |     15 |
+| Mozilla               | NoAdblock                  |   1209 |
+| Opera                 | EasyList                   |   1581 |
+| Opera                 | NoAdblock                  |   1238 |
+| Puffin                | NoAdblock                  |    240 |
+| Safari                | EasyList                   |    348 |
+| Safari                | NoAdblock                  |  37975 |
+| Silk                  | NoAdblock                  |   1050 |
+| Yandex.Browser        | EasyList                   |    502 |
+| Yandex.Browser        | NoAdblock                  |   3756 |
+| Yandex.Browser mobile | NoAdblock                  |    583 |
++-----------------------+----------------------------+--------+
+(30 rows)
+
+!ok
+# Wed Jul 10 19:26:09 IST 2024
+SELECT
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(t."adblock_list" AS VARCHAR) IN ('NoAdblock','EasyList','EasyList,AntiAdblockKiller','AntiAdblockKiller')) AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Chromium'))
+GROUP BY 1;
++----------------------------+-------+
+| adblock_list               | count |
++----------------------------+-------+
+| EasyList                   |    78 |
+| EasyList,AntiAdblockKiller |    35 |
+| NoAdblock                  |    36 |
++----------------------------+-------+
+(3 rows)
+
+!ok
+# Wed Jul 10 19:26:10 IST 2024
+SELECT
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(t."adblock_list" AS VARCHAR) IN ('NoAdblock','EasyList','EasyList,AntiAdblockKiller','AntiAdblockKiller')) AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Waterfox'))
+GROUP BY 1;
++----------------------------+-------+
+| adblock_list               | count |
++----------------------------+-------+
+| EasyList,AntiAdblockKiller |    17 |
+| NoAdblock                  |   112 |
++----------------------------+-------+
+(2 rows)
+
+!ok
+# Wed Jul 10 19:26:10 IST 2024
+SELECT
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(t."adblock_list" AS VARCHAR) IN ('NoAdblock','EasyList','EasyList,AntiAdblockKiller','AntiAdblockKiller')) AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Opera Mobile'))
+GROUP BY 1;
++--------------+-------+
+| adblock_list | count |
++--------------+-------+
+| NoAdblock    |    78 |
++--------------+-------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:26:10 IST 2024
+SELECT
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(t."adblock_list" AS VARCHAR) IN ('NoAdblock','EasyList','EasyList,AntiAdblockKiller','AntiAdblockKiller')) AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='PS4 Web browser'))
+GROUP BY 1;
++--------------+-------+
+| adblock_list | count |
++--------------+-------+
+| NoAdblock    |    77 |
++--------------+-------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:26:10 IST 2024
+SELECT
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00') AND CAST(t."adblock_list" AS VARCHAR) IN ('NoAdblock','EasyList','EasyList,AntiAdblockKiller','AntiAdblockKiller')) AND (CAST(JSON_VALUE("t"."agent",'$.browser') AS VARCHAR)='Android browser'))
+GROUP BY 1;
++--------------+-------+
+| adblock_list | count |
++--------------+-------+
+| NoAdblock    |    52 |
++--------------+-------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:26:14 IST 2024
+SELECT
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 01:00:00'))) AS "v0",
+(COUNT(*) FILTER (WHERE (TIMESTAMP '2019-08-25 01:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 02:00:00'))) AS "v1"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 02:00:00')
+GROUP BY ();
++-------+-------+
+| v0    | v1    |
++-------+-------+
+| 13587 | 13441 |
++-------+-------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:26:14 IST 2024
+SELECT
+TIME_FLOOR(CAST(t."__time" AS TIMESTAMP), 'PT1H', NULL, 'Etc/UTC') AS "__time",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 02:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-26 00:00:00')
+GROUP BY 1;
++-------------------------+-------+
+| __time                  | count |
++-------------------------+-------+
+| 2019-08-25 02:00:00.000 | 15005 |
+| 2019-08-25 03:00:00.000 | 12878 |
+| 2019-08-25 04:00:00.000 |  9083 |
+| 2019-08-25 05:00:00.000 |  8056 |
+| 2019-08-25 06:00:00.000 |  6147 |
+| 2019-08-25 07:00:00.000 |  5557 |
+| 2019-08-25 08:00:00.000 |  5742 |
+| 2019-08-25 09:00:00.000 |  6104 |
+| 2019-08-25 10:00:00.000 |  6456 |
+| 2019-08-25 11:00:00.000 |  6716 |
+| 2019-08-25 12:00:00.000 |  9166 |
+| 2019-08-25 13:00:00.000 | 13302 |
+| 2019-08-25 14:00:00.000 | 17930 |
+| 2019-08-25 15:00:00.000 | 12697 |
+| 2019-08-25 16:00:00.000 | 35474 |
+| 2019-08-25 17:00:00.000 | 57697 |
+| 2019-08-25 18:00:00.000 | 47674 |
+| 2019-08-25 19:00:00.000 | 45152 |
+| 2019-08-25 20:00:00.000 | 43502 |
+| 2019-08-25 21:00:00.000 | 29818 |
+| 2019-08-25 22:00:00.000 | 23681 |
+| 2019-08-25 23:00:00.000 | 20481 |
++-------------------------+-------+
+(22 rows)
+
+!ok
+# Wed Jul 10 19:26:23 IST 2024
+SELECT
+TIME_FLOOR(CAST(t."__time" AS TIMESTAMP), 'PT1H', NULL, 'Etc/UTC') AS "__time",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 19:00:00')
+GROUP BY 1;
++-------------------------+-------+
+| __time                  | count |
++-------------------------+-------+
+| 2019-08-25 00:00:00.000 | 13587 |
+| 2019-08-25 01:00:00.000 | 13441 |
+| 2019-08-25 02:00:00.000 | 15005 |
+| 2019-08-25 03:00:00.000 | 12878 |
+| 2019-08-25 04:00:00.000 |  9083 |
+| 2019-08-25 05:00:00.000 |  8056 |
+| 2019-08-25 06:00:00.000 |  6147 |
+| 2019-08-25 07:00:00.000 |  5557 |
+| 2019-08-25 08:00:00.000 |  5742 |
+| 2019-08-25 09:00:00.000 |  6104 |
+| 2019-08-25 10:00:00.000 |  6456 |
+| 2019-08-25 11:00:00.000 |  6716 |
+| 2019-08-25 12:00:00.000 |  9166 |
+| 2019-08-25 13:00:00.000 | 13302 |
+| 2019-08-25 14:00:00.000 | 17930 |
+| 2019-08-25 15:00:00.000 | 12697 |
+| 2019-08-25 16:00:00.000 | 35474 |
+| 2019-08-25 17:00:00.000 | 57697 |
+| 2019-08-25 18:00:00.000 | 47674 |
++-------------------------+-------+
+(19 rows)
+
+!ok
+# Wed Jul 10 19:26:30 IST 2024
+SELECT
+TIME_FLOOR(CAST(t."__time" AS TIMESTAMP), 'PT1H', NULL, 'Etc/UTC') AS "__time",
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-25 00:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 17:00:00') AND CAST(t."adblock_list" AS VARCHAR) IN ('NoAdblock','EasyList','EasyList,AntiAdblockKiller','AntiAdblockKiller'))
+GROUP BY 1,2;
++-------------------------+----------------------------+-------+
+| __time                  | adblock_list               | count |
++-------------------------+----------------------------+-------+
+| 2019-08-25 00:00:00.000 | AntiAdblockKiller          |     1 |
+| 2019-08-25 00:00:00.000 | EasyList                   |  1620 |
+| 2019-08-25 00:00:00.000 | NoAdblock                  | 11966 |
+| 2019-08-25 01:00:00.000 | AntiAdblockKiller          |    15 |
+| 2019-08-25 01:00:00.000 | EasyList                   |  1511 |
+| 2019-08-25 01:00:00.000 | EasyList,AntiAdblockKiller |    27 |
+| 2019-08-25 01:00:00.000 | NoAdblock                  | 11888 |
+| 2019-08-25 02:00:00.000 | EasyList                   |  1551 |
+| 2019-08-25 02:00:00.000 | EasyList,AntiAdblockKiller |    25 |
+| 2019-08-25 02:00:00.000 | NoAdblock                  | 13429 |
+| 2019-08-25 03:00:00.000 | EasyList                   |  1104 |
+| 2019-08-25 03:00:00.000 | EasyList,AntiAdblockKiller |     7 |
+| 2019-08-25 03:00:00.000 | NoAdblock                  | 11767 |
+| 2019-08-25 04:00:00.000 | AntiAdblockKiller          |     3 |
+| 2019-08-25 04:00:00.000 | EasyList                   |   804 |
+| 2019-08-25 04:00:00.000 | NoAdblock                  |  8276 |
+| 2019-08-25 05:00:00.000 | EasyList                   |  1034 |
+| 2019-08-25 05:00:00.000 | EasyList,AntiAdblockKiller |     1 |
+| 2019-08-25 05:00:00.000 | NoAdblock                  |  7021 |
+| 2019-08-25 06:00:00.000 | EasyList                   |   679 |
+| 2019-08-25 06:00:00.000 | EasyList,AntiAdblockKiller |    22 |
+| 2019-08-25 06:00:00.000 | NoAdblock                  |  5446 |
+| 2019-08-25 07:00:00.000 | EasyList                   |   488 |
+| 2019-08-25 07:00:00.000 | EasyList,AntiAdblockKiller |     1 |
+| 2019-08-25 07:00:00.000 | NoAdblock                  |  5068 |
+| 2019-08-25 08:00:00.000 | EasyList                   |   711 |
+| 2019-08-25 08:00:00.000 | EasyList,AntiAdblockKiller |    29 |
+| 2019-08-25 08:00:00.000 | NoAdblock                  |  5002 |
+| 2019-08-25 09:00:00.000 | AntiAdblockKiller          |     2 |
+| 2019-08-25 09:00:00.000 | EasyList                   |   879 |
+| 2019-08-25 09:00:00.000 | EasyList,AntiAdblockKiller |     4 |
+| 2019-08-25 09:00:00.000 | NoAdblock                  |  5219 |
+| 2019-08-25 10:00:00.000 | EasyList                   |   713 |
+| 2019-08-25 10:00:00.000 | EasyList,AntiAdblockKiller |     1 |
+| 2019-08-25 10:00:00.000 | NoAdblock                  |  5742 |
+| 2019-08-25 11:00:00.000 | EasyList                   |   733 |
+| 2019-08-25 11:00:00.000 | EasyList,AntiAdblockKiller |     1 |
+| 2019-08-25 11:00:00.000 | NoAdblock                  |  5982 |
+| 2019-08-25 12:00:00.000 | EasyList                   |  1361 |
+| 2019-08-25 12:00:00.000 | NoAdblock                  |  7805 |
+| 2019-08-25 13:00:00.000 | EasyList                   |  1095 |
+| 2019-08-25 13:00:00.000 | NoAdblock                  | 12207 |
+| 2019-08-25 14:00:00.000 | EasyList                   |  1655 |
+| 2019-08-25 14:00:00.000 | EasyList,AntiAdblockKiller |     4 |
+| 2019-08-25 14:00:00.000 | NoAdblock                  | 16271 |
+| 2019-08-25 15:00:00.000 | EasyList                   |  1470 |
+| 2019-08-25 15:00:00.000 | EasyList,AntiAdblockKiller |    70 |
+| 2019-08-25 15:00:00.000 | NoAdblock                  | 11157 |
+| 2019-08-25 16:00:00.000 | AntiAdblockKiller          |    22 |
+| 2019-08-25 16:00:00.000 | EasyList                   |  2016 |
+| 2019-08-25 16:00:00.000 | EasyList,AntiAdblockKiller |    44 |
+| 2019-08-25 16:00:00.000 | NoAdblock                  | 33392 |
++-------------------------+----------------------------+-------+
+(52 rows)
+
+!ok
+# Wed Jul 10 19:26:36 IST 2024
+SELECT
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-25 02:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 03:00:00') AND (CAST(t."adblock_list" AS VARCHAR)='AntiAdblockKiller'))
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++--------------+-------+
+| adblock_list | count |
++--------------+-------+
++--------------+-------+
+(0 rows)
+
+!ok
+# Wed Jul 10 19:26:36 IST 2024
+SELECT
+(COUNT(*)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-25 02:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 03:00:00') AND (CAST(t."adblock_list" AS VARCHAR)='AntiAdblockKiller'))
+GROUP BY ();
++-----------+
+| __VALUE__ |
++-----------+
+|         0 |
++-----------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:26:36 IST 2024
+SELECT
+TIME_FLOOR(CAST(t."__time" AS TIMESTAMP), 'PT1M', NULL, 'Etc/UTC') AS "__time",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-25 02:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 02:17:00') AND (CAST(t."adblock_list" AS VARCHAR)='AntiAdblockKiller'))
+GROUP BY 1;
++--------+-------+
+| __time | count |
++--------+-------+
++--------+-------+
+(0 rows)
+
+!ok
+# Wed Jul 10 19:26:38 IST 2024
+SELECT
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 02:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 03:00:00')
+GROUP BY 1
+ORDER BY "count" DESC
+LIMIT 1000;
++----------------------------+-------+
+| adblock_list               | count |
++----------------------------+-------+
+| NoAdblock                  | 13429 |
+| EasyList                   |  1551 |
+| EasyList,AntiAdblockKiller |    25 |
++----------------------------+-------+
+(3 rows)
+
+!ok
+# Wed Jul 10 19:26:38 IST 2024
+SELECT
+(COUNT(*)) AS "__VALUE__"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 02:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 03:00:00')
+GROUP BY ();
++-----------+
+| __VALUE__ |
++-----------+
+|     15005 |
++-----------+
+(1 row)
+
+!ok
+# Wed Jul 10 19:26:38 IST 2024
+SELECT
+TIME_FLOOR(CAST(t."__time" AS TIMESTAMP), 'PT1M', NULL, 'Etc/UTC') AS "__time",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE (TIMESTAMP '2019-08-25 02:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 02:17:00')
+GROUP BY 1;
++-------------------------+-------+
+| __time                  | count |
++-------------------------+-------+
+| 2019-08-25 02:00:00.000 |   203 |
+| 2019-08-25 02:01:00.000 |   170 |
+| 2019-08-25 02:02:00.000 |   116 |
+| 2019-08-25 02:03:00.000 |   150 |
+| 2019-08-25 02:04:00.000 |   174 |
+| 2019-08-25 02:05:00.000 |   187 |
+| 2019-08-25 02:06:00.000 |   216 |
+| 2019-08-25 02:07:00.000 |   240 |
+| 2019-08-25 02:08:00.000 |   256 |
+| 2019-08-25 02:09:00.000 |   267 |
+| 2019-08-25 02:10:00.000 |   252 |
+| 2019-08-25 02:11:00.000 |   228 |
+| 2019-08-25 02:12:00.000 |   238 |
+| 2019-08-25 02:13:00.000 |   315 |
+| 2019-08-25 02:14:00.000 |   282 |
+| 2019-08-25 02:15:00.000 |   224 |
+| 2019-08-25 02:16:00.000 |   213 |
++-------------------------+-------+
+(17 rows)
+
+!ok
+# Wed Jul 10 19:26:38 IST 2024
+SELECT
+TIME_FLOOR(CAST(t."__time" AS TIMESTAMP), 'PT1M', NULL, 'Etc/UTC') AS "__time",
+CAST(t."adblock_list" AS VARCHAR) AS "adblock_list",
+(COUNT(*)) AS "count"
+FROM "kttm_nested" AS t
+WHERE ((TIMESTAMP '2019-08-25 02:00:00'<=CAST(t."__time" AS TIMESTAMP) AND CAST(t."__time" AS TIMESTAMP)<TIMESTAMP '2019-08-25 02:17:00') AND CAST(t."adblock_list" AS VARCHAR) IN ('NoAdblock','EasyList','EasyList,AntiAdblockKiller'))
+GROUP BY 1,2;
++-------------------------+----------------------------+-------+
+| __time                  | adblock_list               | count |
++-------------------------+----------------------------+-------+
+| 2019-08-25 02:00:00.000 | EasyList                   |    15 |
+| 2019-08-25 02:00:00.000 | NoAdblock                  |   188 |
+| 2019-08-25 02:01:00.000 | EasyList                   |    11 |
+| 2019-08-25 02:01:00.000 | NoAdblock                  |   159 |
+| 2019-08-25 02:02:00.000 | EasyList                   |    17 |
+| 2019-08-25 02:02:00.000 | NoAdblock                  |    99 |
+| 2019-08-25 02:03:00.000 | EasyList                   |    17 |
+| 2019-08-25 02:03:00.000 | NoAdblock                  |   133 |
+| 2019-08-25 02:04:00.000 | EasyList                   |    22 |
+| 2019-08-25 02:04:00.000 | NoAdblock                  |   152 |
+| 2019-08-25 02:05:00.000 | EasyList                   |    29 |
+| 2019-08-25 02:05:00.000 | NoAdblock                  |   158 |
+| 2019-08-25 02:06:00.000 | EasyList                   |    15 |
+| 2019-08-25 02:06:00.000 | NoAdblock                  |   201 |
+| 2019-08-25 02:07:00.000 | EasyList                   |    28 |
+| 2019-08-25 02:07:00.000 | NoAdblock                  |   212 |
+| 2019-08-25 02:08:00.000 | EasyList                   |    39 |
+| 2019-08-25 02:08:00.000 | NoAdblock                  |   217 |
+| 2019-08-25 02:09:00.000 | EasyList                   |    47 |
+| 2019-08-25 02:09:00.000 | NoAdblock                  |   220 |
+| 2019-08-25 02:10:00.000 | EasyList                   |    67 |
+| 2019-08-25 02:10:00.000 | NoAdblock                  |   185 |
+| 2019-08-25 02:11:00.000 | EasyList                   |    28 |
+| 2019-08-25 02:11:00.000 | NoAdblock                  |   200 |
+| 2019-08-25 02:12:00.000 | EasyList                   |    39 |
+| 2019-08-25 02:12:00.000 | EasyList,AntiAdblockKiller |     4 |
+| 2019-08-25 02:12:00.000 | NoAdblock                  |   195 |
+| 2019-08-25 02:13:00.000 | EasyList                   |    45 |
+| 2019-08-25 02:13:00.000 | EasyList,AntiAdblockKiller |     4 |
+| 2019-08-25 02:13:00.000 | NoAdblock                  |   266 |
+| 2019-08-25 02:14:00.000 | EasyList                   |    46 |
+| 2019-08-25 02:14:00.000 | EasyList,AntiAdblockKiller |     1 |
+| 2019-08-25 02:14:00.000 | NoAdblock                  |   235 |
+| 2019-08-25 02:15:00.000 | EasyList                   |    25 |
+| 2019-08-25 02:15:00.000 | NoAdblock                  |   199 |
+| 2019-08-25 02:16:00.000 | EasyList                   |    18 |
+| 2019-08-25 02:16:00.000 | NoAdblock                  |   195 |
++-------------------------+----------------------------+-------+
+(37 rows)
+
+!ok

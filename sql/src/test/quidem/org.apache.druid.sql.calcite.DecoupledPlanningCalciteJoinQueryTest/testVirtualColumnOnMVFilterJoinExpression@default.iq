@@ -1,5 +1,5 @@
-# testVirtualColumnOnMVFilterJoinExpression@default case-crc:d6301c80
-# quidem testcase reason: SLIGHTLY_WORSE_PLAN
+# testVirtualColumnOnMVFilterJoinExpression@default case-crc:9cb8f271
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807

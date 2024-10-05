@@ -1,0 +1,109 @@
+# testLeftJoinSubqueryWithSelectorFilter@default@NullHandling=sql case-crc:8c5a723c
+# quidem testcase reason: IMPROVED_PLAN
+!set computeInnerJoinCostAsFilter false
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT dim1, l1.k
+FROM foo
+LEFT JOIN (select k || '' as k from lookup.lookyloo group by 1) l1 ON foo.dim1 = l1.k
+WHERE l1.k = 'abc'
+;
++------+-----+
+| dim1 | k   |
++------+-----+
+| abc  | abc |
++------+-----+
+(1 row)
+
+!ok
+LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+  LogicalProject(dim1=[$1])
+    LogicalTableScan(table=[[druid, foo]])
+  LogicalFilter(condition=[=($0, 'abc')])
+    LogicalAggregate(group=[{0}])
+      LogicalProject(k=[||($0, '')])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+
+!logicalPlan
+DruidJoin(condition=[=($0, $1)], joinType=[inner])
+  DruidProject(dim1=[$1], druid=[logical])
+    DruidTableScan(table=[[druid, foo]], druid=[logical])
+  DruidFilter(condition=[=($0, 'abc')])
+    DruidAggregate(group=[{0}], druid=[logical])
+      DruidProject(k=[||($0, '')], druid=[logical])
+        DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "table",
+      "name" : "foo"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "concat(\"k\",'')",
+          "outputType" : "STRING"
+        } ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "v0",
+          "outputName" : "d0",
+          "outputType" : "STRING"
+        } ],
+        "having" : {
+          "type" : "filter",
+          "filter" : {
+            "type" : "equals",
+            "column" : "d0",
+            "matchValueType" : "STRING",
+            "matchValue" : "abc"
+          },
+          "finalize" : true
+        },
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"dim1\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim1", "j0.d0" ],
+  "columnTypes" : [ "STRING", "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

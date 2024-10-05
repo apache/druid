@@ -363,6 +363,11 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
       final FrontCodedIntArrayIndexed dictionary = arrayDictionarySupplier.get();
       return new SimpleBitmapColumnIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -428,6 +433,11 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
 
       return new SimpleBitmapColumnIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)

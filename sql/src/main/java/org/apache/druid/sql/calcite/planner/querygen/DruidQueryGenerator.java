@@ -28,7 +28,11 @@ import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer.SourceDesc;
@@ -232,6 +236,11 @@ public class DruidQueryGenerator
       }
       return this == RIGHT;
     }
+
+    boolean filteredDatasourceAllowed()
+    {
+      return this == NONE;
+    }
   }
 
   /**
@@ -259,6 +268,7 @@ public class DruidQueryGenerator
       final PartialDruidQuery partialDruidQuery;
       final List<Vertex> inputs;
       final JoinSupportTweaks jst;
+      private SourceDesc source;
 
       public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, JoinSupportTweaks jst)
       {
@@ -280,10 +290,18 @@ public class DruidQueryGenerator
         );
       }
 
+      private SourceDesc getSource()
+      {
+        if (source == null) {
+          source = realGetSource();
+        }
+        return source;
+      }
+
       /**
        * Creates the {@link SourceDesc} for the current {@link Vertex}.
        */
-      private SourceDesc getSource()
+      private SourceDesc realGetSource()
       {
         List<SourceDesc> sourceDescs = new ArrayList<>();
         for (Vertex inputVertex : inputs) {
@@ -392,7 +410,13 @@ public class DruidQueryGenerator
         if (canUnwrapSourceDesc()) {
           DruidQuery q = buildQuery(false);
           SourceDesc origInput = getSource();
-          return new SourceDesc(origInput.dataSource, q.getOutputRowSignature());
+          DataSource dataSource;
+          if (q.getFilter() == null) {
+            dataSource = origInput.dataSource;
+          } else {
+            dataSource = makeFilteredDataSource(origInput, q.getFilter());
+          }
+          return new SourceDesc(dataSource, q.getOutputRowSignature());
         }
         throw DruidException.defensive("Can't unwrap source of vertex[%s]", partialDruidQuery);
       }
@@ -406,14 +430,29 @@ public class DruidQueryGenerator
         if (partialDruidQuery.stage() == Stage.SCAN) {
           return true;
         }
+        if (jst.filteredDatasourceAllowed() && partialDruidQuery.stage() == PartialDruidQuery.Stage.WHERE_FILTER) {
+          return true;
+        }
         if (partialDruidQuery.stage() == PartialDruidQuery.Stage.SELECT_PROJECT &&
-            partialDruidQuery.getWhereFilter() == null &&
+            (jst.filteredDatasourceAllowed() || partialDruidQuery.getWhereFilter() == null) &&
             partialDruidQuery.getSelectProject().isMapping()) {
           return true;
         }
         return false;
       }
     }
+  }
 
+  /**
+   * This method should not live here.
+   *
+   * The fact that {@link Filtration} have to be run on the filter is out-of scope here.
+   */
+  public static FilteredDataSource makeFilteredDataSource(SourceDesc sd, DimFilter filter)
+  {
+
+    Filtration filtration = Filtration.create(filter).optimizeFilterOnly(sd.rowSignature);
+    DimFilter newFilter = filtration.getDimFilter();
+    return FilteredDataSource.create(sd.dataSource, newFilter);
   }
 }

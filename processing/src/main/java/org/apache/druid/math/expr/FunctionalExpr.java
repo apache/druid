@@ -100,8 +100,7 @@ class FunctionExpr implements Expr
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return function.canVectorize(inspector, args)
-           || (getOutputType(inspector) != null && inspector.canVectorize(args));
+    return function.canVectorize(inspector, args) || canFallbackVectorize(inspector, args);
   }
 
   @Override
@@ -226,7 +225,8 @@ class ApplyFunctionExpr implements Expr
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return canVectorizeNative(inspector) || (getOutputType(inspector) != null && inspector.canVectorize(argsExpr));
+    return canVectorizeNative(inspector) ||
+           (canFallbackVectorize(inspector, argsExpr) && lambdaExpr.canVectorize(inspector));
   }
 
   @Override
