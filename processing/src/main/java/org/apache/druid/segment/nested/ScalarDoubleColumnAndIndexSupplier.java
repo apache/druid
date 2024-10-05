@@ -91,7 +91,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
-      ColumnConfig columnConfig
+      ColumnConfig columnConfig,
+      @Nullable ScalarDoubleColumnAndIndexSupplier parent
   )
   {
     final byte version = bb.get();
@@ -103,23 +104,29 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
 
-        final ByteBuffer doubleDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
-        );
         final ByteBuffer doublesValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
             ColumnSerializerUtils.DOUBLE_VALUE_COLUMN_FILE_NAME
         );
 
-        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier = FixedIndexed.read(
-            doubleDictionaryBuffer,
-            ColumnType.DOUBLE.getStrategy(),
-            byteOrder,
-            Double.BYTES
-        );
+        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
+        if (parent != null) {
+          doubleDictionarySupplier = parent.doubleDictionarySupplier;
+        } else {
+          final ByteBuffer doubleDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
+          );
+
+          doubleDictionarySupplier = FixedIndexed.read(
+              doubleDictionaryBuffer,
+              ColumnType.DOUBLE.getStrategy(),
+              byteOrder,
+              Double.BYTES
+          );
+        }
 
         final Supplier<ColumnarDoubles> doubles = CompressedColumnarDoublesSuppliers.fromByteBuffer(
             doublesValueColumn,

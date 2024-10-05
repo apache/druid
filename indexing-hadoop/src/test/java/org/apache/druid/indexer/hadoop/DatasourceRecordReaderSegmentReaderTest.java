@@ -165,7 +165,7 @@ public class DatasourceRecordReaderSegmentReaderTest
       Assert.assertEquals(18, count);
 
       // Check the index
-      Assert.assertEquals(9, index.size());
+      Assert.assertEquals(9, index.numRows());
       final IncrementalIndexSegment queryable = new IncrementalIndexSegment(index, SegmentId.dummy("test"));
       final List<String> dimensions = index.getDimensionNames(false);
       Assert.assertEquals(2, dimensions.size());

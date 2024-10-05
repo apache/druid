@@ -1647,7 +1647,7 @@ public class StreamAppenderator implements Appenderator
 
       try {
         final long startTime = System.nanoTime();
-        int numRows = indexToPersist.getIndex().size();
+        int numRows = indexToPersist.getIndex().numRows();
 
         final File persistedFile;
         final File persistDir = createPersistDirIfNeeded(identifier);
