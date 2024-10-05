@@ -18,7 +18,7 @@
 
 import { ResizeSensor } from '@blueprintjs/core';
 import type { QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import type { ParameterDefinition, QuerySource } from '../../models';
 import { effectiveParameterDefault, Stage } from '../../models';
@@ -65,6 +65,11 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
 
   const module = ModuleRepository.getModule(moduleId);
 
+  const parameterValuesWithDefaults = useMemo(() => {
+    if (!module) return {};
+    return fillInDefaults(parameterValues, module.parameters, querySource);
+  }, [parameterValues, module, querySource]);
+
   let content: React.ReactNode;
   if (module) {
     const modelIssue = undefined; // AutoForm.issueWithModel(moduleTileConfig.config, module.configFields);
@@ -76,7 +81,7 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
         querySource,
         where,
         setWhere,
-        parameterValues: fillInDefaults(parameterValues, module.parameters, querySource),
+        parameterValues: parameterValuesWithDefaults,
         setParameterValues,
         runSqlQuery,
       });
