@@ -22,13 +22,10 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.segment.IndexIO;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.CompressedColumnarFloatsSupplier;
 
 import javax.annotation.Nullable;
-import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
@@ -99,23 +96,18 @@ public class FloatNumericColumnPartSerde implements ColumnPartSerde
   @Override
   public Deserializer getDeserializer()
   {
-    return new Deserializer()
-    {
-      @Override
-      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
-      {
-        final CompressedColumnarFloatsSupplier column = CompressedColumnarFloatsSupplier.fromByteBuffer(
-            buffer,
-            byteOrder
-        );
-        FloatNumericColumnSupplier columnSupplier = new FloatNumericColumnSupplier(
-            column,
-            IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
-        );
-        builder.setType(ValueType.FLOAT)
-               .setHasMultipleValues(false)
-               .setNumericColumnSupplier(columnSupplier);
-      }
+    return (buffer, builder, columnConfig, parent) -> {
+      final CompressedColumnarFloatsSupplier column = CompressedColumnarFloatsSupplier.fromByteBuffer(
+          buffer,
+          byteOrder
+      );
+      FloatNumericColumnSupplier columnSupplier = new FloatNumericColumnSupplier(
+          column,
+          IndexIO.LEGACY_FACTORY.getBitmapFactory().makeEmptyImmutableBitmap()
+      );
+      builder.setType(ValueType.FLOAT)
+             .setHasMultipleValues(false)
+             .setNumericColumnSupplier(columnSupplier);
     };
   }
 }

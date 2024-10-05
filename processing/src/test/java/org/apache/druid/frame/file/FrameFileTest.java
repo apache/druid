@@ -90,7 +90,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
       @Override
       int getRowCount()
       {
-        return TestIndex.getNoRollupIncrementalTestIndex().size();
+        return TestIndex.getNoRollupIncrementalTestIndex().numRows();
       }
     },
     MMAP {

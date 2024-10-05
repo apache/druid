@@ -24,8 +24,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
-import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -54,9 +55,9 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.epinephelinae.GroupByQueryEngine;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
@@ -70,6 +71,7 @@ import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IncrementalIndexTimeBoundaryInspector;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.filter.SelectorFilter;
@@ -96,11 +98,18 @@ import java.util.List;
 import java.util.Set;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
-public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingTest
+public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTest
 {
   public final IncrementalIndexCreator indexCreator;
+
+  private final GroupingEngine groupingEngine;
+  private final TopNQueryEngine topnQueryEngine;
+
+  private final NonBlockingPool<ByteBuffer> nonBlockingPool;
+
 
   /**
    * If true, sort by [billy, __time]. If false, sort by [__time].
@@ -110,7 +119,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
   @Rule
   public final CloserRule closer = new CloserRule(false);
 
-  public IncrementalIndexStorageAdapterTest(String indexType, boolean sortByDim) throws JsonProcessingException
+  public IncrementalIndexCursorFactoryTest(String indexType, boolean sortByDim)
+      throws JsonProcessingException
   {
     BuiltInTypesModule.registerHandlersAndSerde();
     this.sortByDim = sortByDim;
@@ -144,6 +154,31 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
             }
         )
     );
+
+    nonBlockingPool = closer.closeLater(
+        new CloseableStupidPool<>(
+            "GroupByQueryEngine-bufferPool",
+            () -> ByteBuffer.allocate(50000)
+        )
+    );
+    groupingEngine = new GroupingEngine(
+        new DruidProcessingConfig(),
+        GroupByQueryConfig::new,
+        new GroupByResourcesReservationPool(
+            closer.closeLater(
+                new CloseableDefaultBlockingPool<>(
+                    () -> ByteBuffer.allocate(50000),
+                    5
+                )
+            ),
+            new GroupByQueryConfig()
+        ),
+        TestHelper.makeJsonMapper(),
+        TestHelper.makeSmileMapper(),
+        (query, future) -> {
+        }
+    );
+    topnQueryEngine = new TopNQueryEngine(nonBlockingPool);
   }
 
   @Parameterized.Parameters(name = "{index}: {0}, sortByDim: {1}")
@@ -183,37 +218,24 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                            .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                                            .addOrderByColumn("billy")
                                            .build();
-    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
     final IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
-    try (
-        CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
-            "GroupByQueryEngine-bufferPool",
-            () -> ByteBuffer.allocate(50000)
-        );
-        ResourceHolder<ByteBuffer> processingBuffer = pool.take();
-        final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)
-    ) {
-      final Sequence<ResultRow> rows = GroupByQueryEngine.process(
-          query,
-          new IncrementalIndexTimeBoundaryInspector(index),
-          cursorHolder,
-          buildSpec,
-          processingBuffer.get(),
-          null,
-          new GroupByQueryConfig(),
-          new DruidProcessingConfig()
-      );
+    final Sequence<ResultRow> rows = groupingEngine.process(
+        query,
+        cursorFactory,
+        new IncrementalIndexTimeBoundaryInspector(index),
+        nonBlockingPool,
+        null
+    );
 
-      final List<ResultRow> results = rows.toList();
+    final List<ResultRow> results = rows.toList();
 
-      Assert.assertEquals(2, results.size());
+    Assert.assertEquals(2, results.size());
 
-      ResultRow row = results.get(0);
-      Assert.assertArrayEquals(new Object[]{NullHandling.defaultStringValue(), "bo", 1L}, row.getArray());
+    ResultRow row = results.get(0);
+    Assert.assertArrayEquals(new Object[]{NullHandling.defaultStringValue(), "bo", 1L}, row.getArray());
 
-      row = results.get(1);
-      Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
-    }
+    row = results.get(1);
+    Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
   }
 
   @Test
@@ -260,39 +282,26 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                            .addOrderByColumn("billy")
                                            .build();
     final IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
-    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
-    try (
-        CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
-            "GroupByQueryEngine-bufferPool",
-            () -> ByteBuffer.allocate(50000)
-        );
-        ResourceHolder<ByteBuffer> processingBuffer = pool.take();
-        final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)
-    ) {
-      final Sequence<ResultRow> rows = GroupByQueryEngine.process(
-          query,
-          new IncrementalIndexTimeBoundaryInspector(index),
-          cursorHolder,
-          buildSpec,
-          processingBuffer.get(),
-          null,
-          new GroupByQueryConfig(),
-          new DruidProcessingConfig()
-      );
+    final Sequence<ResultRow> rows = groupingEngine.process(
+        query,
+        cursorFactory,
+        new IncrementalIndexTimeBoundaryInspector(index),
+        nonBlockingPool,
+        null
+    );
 
-      final List<ResultRow> results = rows.toList();
+    final List<ResultRow> results = rows.toList();
 
-      Assert.assertEquals(2, results.size());
+    Assert.assertEquals(2, results.size());
 
-      ResultRow row = results.get(0);
-      Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L, 2.0}, row.getArray());
+    ResultRow row = results.get(0);
+    Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L, 2.0}, row.getArray());
 
-      row = results.get(1);
-      Assert.assertArrayEquals(
-          new Object[]{"hip", "hop", 1L, 6.0},
-          row.getArray()
-      );
-    }
+    row = results.get(1);
+    Assert.assertArrayEquals(
+        new Object[]{"hip", "hop", 1L, 6.0},
+        row.getArray()
+    );
   }
 
   @Test
@@ -371,33 +380,24 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
         )
     );
 
-    try (
-        CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
-            "TopNQueryEngine-bufferPool",
-            () -> ByteBuffer.allocate(50000)
+    final Iterable<Result<TopNResultValue>> results = topnQueryEngine
+        .query(
+            new TopNQueryBuilder()
+                .dataSource("test")
+                .granularity(Granularities.ALL)
+                .intervals(Collections.singletonList(new Interval(DateTimes.EPOCH, DateTimes.nowUtc())))
+                .dimension("sally")
+                .metric("cnt")
+                .threshold(10)
+                .aggregators(new LongSumAggregatorFactory("cnt", "cnt"))
+                .build(),
+            new IncrementalIndexSegment(index, SegmentId.dummy("test")),
+            null
         )
-    ) {
-      TopNQueryEngine engine = new TopNQueryEngine(pool);
+        .toList();
 
-      final Iterable<Result<TopNResultValue>> results = engine
-          .query(
-              new TopNQueryBuilder()
-                  .dataSource("test")
-                  .granularity(Granularities.ALL)
-                  .intervals(Collections.singletonList(new Interval(DateTimes.EPOCH, DateTimes.nowUtc())))
-                  .dimension("sally")
-                  .metric("cnt")
-                  .threshold(10)
-                  .aggregators(new LongSumAggregatorFactory("cnt", "cnt"))
-                  .build(),
-              new IncrementalIndexSegment(index, SegmentId.dummy("test")),
-              null
-          )
-          .toList();
-
-      Assert.assertEquals(1, Iterables.size(results));
-      Assert.assertEquals(1, results.iterator().next().getValue().getValue().size());
-    }
+    Assert.assertEquals(1, Iterables.size(results));
+    Assert.assertEquals(1, results.iterator().next().getValue().getValue().size());
   }
 
   @Test
@@ -430,34 +430,21 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                            .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                                            .build();
     final IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
-    final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
 
-    try (
-        CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
-            "GroupByQueryEngine-bufferPool",
-            () -> ByteBuffer.allocate(50000)
-        );
-        ResourceHolder<ByteBuffer> processingBuffer = pool.take();
-        final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)
-    ) {
-      final Sequence<ResultRow> rows = GroupByQueryEngine.process(
-          query,
-          new IncrementalIndexTimeBoundaryInspector(index),
-          cursorHolder,
-          buildSpec,
-          processingBuffer.get(),
-          null,
-          new GroupByQueryConfig(),
-          new DruidProcessingConfig()
-      );
+    final Sequence<ResultRow> rows = groupingEngine.process(
+        query,
+        cursorFactory,
+        new IncrementalIndexTimeBoundaryInspector(index),
+        nonBlockingPool,
+        null
+    );
 
-      final List<ResultRow> results = rows.toList();
+    final List<ResultRow> results = rows.toList();
 
-      Assert.assertEquals(1, results.size());
+    Assert.assertEquals(1, results.size());
 
-      ResultRow row = results.get(0);
-      Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
-    }
+    ResultRow row = results.get(0);
+    Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
   }
 
   @Test
@@ -699,6 +686,13 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
     {
       // Test code, hashcode and equals isn't important
       return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      // Test code, hashcode and equals isn't important
+      return super.equals(obj);
     }
 
     private class DictionaryRaceTestFilterDruidPredicateFactory implements DruidPredicateFactory
