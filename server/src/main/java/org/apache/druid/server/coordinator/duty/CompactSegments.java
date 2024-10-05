@@ -548,7 +548,7 @@ public class CompactSegments implements CoordinatorCustomDuty
         slotsRequiredForCurrentTask = findMaxNumTaskSlotsUsedByOneNativeCompactionTask(config.getTuningConfig());
       }
 
-      if(entry.getCurrentStatus() != null){
+      if (entry.getCurrentStatus() != null) {
         autoCompactionContext.put(COMPACTION_REASON_KEY, entry.getCurrentStatus().getReason());
       }
 
