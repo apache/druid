@@ -103,7 +103,7 @@ public class QueryContexts
   public static final String CTX_SQL_STRINGIFY_ARRAYS = "sqlStringifyArrays";
 
   // SQL statement resource specific keys
-  public static final String CTX_EXECUTION_MODE = "executionMode";;
+  public static final String CTX_EXECUTION_MODE = "executionMode";
 
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;
