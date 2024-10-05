@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.QueryContext;
@@ -1189,6 +1190,19 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     // test double inverted
     if (!StringUtils.toLowerCase(testName).contains("concise")) {
       assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, false);
+    }
+  }
+
+  protected void assertFilterMatchesSkipVectorizeUnlessFallback(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    final boolean vectorize = ExpressionProcessing.allowVectorizeFallback();
+    assertFilterMatches(filter, expectedRows, vectorize);
+    // test double inverted
+    if (!StringUtils.toLowerCase(testName).contains("concise")) {
+      assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, vectorize);
     }
   }
 
