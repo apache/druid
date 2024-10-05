@@ -20,7 +20,7 @@ import { ResizeSensor } from '@blueprintjs/core';
 import type { QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
 import React, { useMemo, useState } from 'react';
 
-import type { ParameterDefinition, QuerySource } from '../../models';
+import type { ParameterDefinition, ParameterValues, QuerySource } from '../../models';
 import { effectiveParameterDefault, Stage } from '../../models';
 import { ModuleRepository } from '../../module-repository/module-repository';
 import { Issue } from '../issue/issue';
@@ -28,7 +28,7 @@ import { Issue } from '../issue/issue';
 import './module-pane.scss';
 
 function fillInDefaults(
-  parameterValues: Record<string, any>,
+  parameterValues: ParameterValues,
   parameters: Record<string, ParameterDefinition>,
   querySource: QuerySource,
 ): Record<string, any> {
@@ -46,8 +46,8 @@ export interface ModulePaneProps {
   where: SqlExpression;
   setWhere(where: SqlExpression): void;
 
-  parameterValues: Record<string, any>;
-  setParameterValues(parameters: Record<string, any>): void;
+  parameterValues: ParameterValues;
+  setParameterValues(parameters: ParameterValues): void;
   runSqlQuery(query: string | SqlQuery): Promise<QueryResult>;
 }
 

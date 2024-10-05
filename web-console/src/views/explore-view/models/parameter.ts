@@ -26,9 +26,9 @@ import type { QuerySource } from './query-source';
 
 export type OptionValue = string | number;
 
-export type ModuleFunctor<T> = T | ((options: { parameterValues: Record<string, any> }) => T);
+export type ModuleFunctor<T> = T | ((options: { parameterValues: ParameterValues }) => T);
 
-export function evaluateFunctor<T>(fn: ModuleFunctor<T>, parameterValues: Record<string, any>): T {
+export function evaluateFunctor<T>(fn: ModuleFunctor<T>, parameterValues: ParameterValues): T {
   if (typeof fn === 'function') {
     return (fn as any)({ parameterValues });
   } else {
@@ -144,7 +144,7 @@ export function getModuleOptionLabel(
   );
 }
 
-export type ParameterValues = Record<string, any>;
+export type ParameterValues = Readonly<Record<string, any>>;
 export type Parameters = Record<string, ParameterDefinition>;
 
 // -----------------------------------------------------
