@@ -99,6 +99,12 @@ class SimpleColumnHolder implements ColumnHolder
     return columnSupplier == null ? UnknownTypeComplexColumn.instance() : columnSupplier.get();
   }
 
+  @Override
+  public Supplier<? extends BaseColumn> getColumnSupplier()
+  {
+    return columnSupplier;
+  }
+
   @Nullable
   @Override
   public ColumnIndexSupplier getIndexSupplier()
