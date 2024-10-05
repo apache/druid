@@ -107,10 +107,10 @@ public class ClientCompactionRunnerInfo
    * Checks if the provided compaction config is supported by MSQ. The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
-   * <li>`range` partitionsSpec with non-string partition dimensions.</li>
+   * <li>'range' partitionsSpec with non-string partition dimensions.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>violation of 'rollup in granularitySpec is set to true iff metricsSpec is specified'.</li>
-   * <li>any non-idempotent metric, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
+   * <li>Rollup without metricsSpec being specified or vice-versa.</li>
+   * <li>any non-idempotent metric, i.e. an aggregatorFactory {@code A} s.t. {@code A != A.combiningFactory()}.</li>
    * </ul>
    */
   private static CompactionConfigValidationResult compactionConfigSupportedByMSQEngine(DataSourceCompactionConfig newConfig)
@@ -166,11 +166,11 @@ public class ClientCompactionRunnerInfo
       Optional<String> nonStringDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
           .getPartitionDimensions()
           .stream()
-          .filter(dim -> !Objects.equals(dimensionSchemaMap.get(dim).getColumnType(), ColumnType.STRING))
+          .filter(dim -> !ColumnType.STRING.equals(dimensionSchemaMap.get(dim).getColumnType()))
           .findAny();
       if (nonStringDimension.isPresent()) {
         return CompactionConfigValidationResult.failure(
-            "MSQ: Non-string dimension[%s] of type[%s] not supported in 'range' partition spec",
+            "MSQ: Non-string partition dimension[%s] of type[%s] not supported with 'range' partition spec",
             nonStringDimension.get(),
             dimensionSchemaMap.get(nonStringDimension.get()).getTypeName()
         );
@@ -189,8 +189,7 @@ public class ClientCompactionRunnerInfo
       @Nullable Boolean isRollup
   )
   {
-    if (metricsSpec != null && metricsSpec.length != 0 && (isRollup == null || !isRollup) ||
-        ((metricsSpec == null || metricsSpec.length == 0) && isRollup != null && isRollup)) {
+    if ((metricsSpec != null && metricsSpec.length > 0) != Boolean.TRUE.equals(isRollup)) {
       return CompactionConfigValidationResult.failure(
           "MSQ: 'granularitySpec.rollup' must be true if and only if 'metricsSpec' is specified"
       );

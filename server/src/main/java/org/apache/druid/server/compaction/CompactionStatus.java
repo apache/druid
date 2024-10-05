@@ -229,21 +229,19 @@ public class CompactionStatus
     }
   }
 
-  static List<DimensionSchema> getNonPartitioningDimensions(
+  private static List<DimensionSchema> getNonPartitioningDimensions(
       @Nullable final List<DimensionSchema> dimensionSchemas,
       @Nullable final PartitionsSpec partitionsSpec
   )
   {
-    List<DimensionSchema> dimensions = dimensionSchemas;
-
-    if (dimensions != null && partitionsSpec instanceof DimensionRangePartitionsSpec) {
-      List<String> partitionsDimensions = ((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions();
-      dimensions = dimensions.stream()
-                             .filter(dim -> !partitionsDimensions.contains(dim.getName()))
-                             .collect(Collectors.toList());
-
+    if (dimensionSchemas == null || !(partitionsSpec instanceof DimensionRangePartitionsSpec)) {
+      return dimensionSchemas;
     }
-    return dimensions;
+
+    final List<String> partitionsDimensions = ((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions();
+    return dimensionSchemas.stream()
+                     .filter(dim -> !partitionsDimensions.contains(dim.getName()))
+                     .collect(Collectors.toList());
   }
 
   /**
@@ -403,14 +401,14 @@ public class CompactionStatus
             : lastCompactionState.getDimensionsSpec().getDimensions(),
             lastCompactionState.getPartitionsSpec()
         );
-        List<DimensionSchema> expectedDimensions = getNonPartitioningDimensions(
+        List<DimensionSchema> configuredDimensions = getNonPartitioningDimensions(
             compactionConfig.getDimensionsSpec().getDimensions(),
             compactionConfig.getTuningConfig() == null ? null : compactionConfig.getTuningConfig().getPartitionsSpec()
         );
         {
           return CompactionStatus.completeIfEqual(
               "dimensionsSpec",
-              expectedDimensions,
+              configuredDimensions,
               existingDimensions,
               String::valueOf
           );

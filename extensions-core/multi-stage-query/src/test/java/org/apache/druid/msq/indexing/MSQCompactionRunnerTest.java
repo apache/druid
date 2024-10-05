@@ -42,6 +42,7 @@ import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
@@ -132,6 +133,29 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
+  public void testMultipleDisjointCompactionIntervalsAreInvalid()
+  {
+    Map<Interval, DataSchema> intervalDataschemas = new HashMap<>(INTERVAL_DATASCHEMAS);
+    intervalDataschemas.put(Intervals.of("2017-07-01/2018-01-01"), null);
+    CompactionTask compactionTask = createCompactionTask(
+        new HashedPartitionsSpec(3, null, ImmutableList.of("dummy")),
+        null,
+        Collections.emptyMap(),
+        null,
+        null
+    );
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(
+        compactionTask,
+        intervalDataschemas
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        StringUtils.format("MSQ: Disjoint compaction intervals[%s] not supported", intervalDataschemas.keySet()),
+        validationResult.getReason()
+    );
+  }
+
+  @Test
   public void testHashedPartitionsSpecIsInvalid()
   {
     CompactionTask compactionTask = createCompactionTask(
@@ -174,7 +198,7 @@ public class MSQCompactionRunnerTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "MSQ: Non-string dimension[long_dim] of type[long] not supported in 'range' partition spec",
+        "MSQ: Non-string partition dimension[long_dim] of type[long] not supported with 'range' partition spec",
         validationResult.getReason()
     );
   }

@@ -143,6 +143,12 @@ public class MSQCompactionRunner implements CompactionRunner
       Map<Interval, DataSchema> intervalToDataSchemaMap
   )
   {
+    if (intervalToDataSchemaMap.size() > 1) {
+      return CompactionConfigValidationResult.failure(
+          "MSQ: Disjoint compaction intervals[%s] not supported",
+          intervalToDataSchemaMap.keySet()
+      );
+    }
     List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
     if (compactionTask.getTuningConfig() != null) {
       validationResults.add(
