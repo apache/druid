@@ -63,7 +63,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.IntStream;
 
 /**
  * Controller-side state machine for each stage. Used by {@link ControllerQueryKernel} to form the overall state
@@ -137,7 +136,7 @@ class ControllerStageTracker
     this.workerInputs = workerInputs;
     this.maxRetainedPartitionSketchBytes = maxRetainedPartitionSketchBytes;
 
-    initializeWorkerState(workerCount);
+    initializeWorkerState(workerInputs.workers());
 
     if (stageDef.mustGatherResultKeyStatistics()) {
       this.completeKeyStatisticsInformation =
@@ -149,14 +148,13 @@ class ControllerStageTracker
   }
 
   /**
-   * Initialize stage for each worker to {@link ControllerWorkerStagePhase#NEW}
-   *
-   * @param workerCount
+   * Initialize stage for each worker to {@link ControllerWorkerStagePhase#NEW}.
    */
-  private void initializeWorkerState(int workerCount)
+  private void initializeWorkerState(IntSet workers)
   {
-    IntStream.range(0, workerCount)
-             .forEach(wokerNumber -> workerToPhase.put(wokerNumber, ControllerWorkerStagePhase.NEW));
+    for (int workerNumber : workers) {
+      workerToPhase.put(workerNumber, ControllerWorkerStagePhase.NEW);
+    }
   }
 
   /**
