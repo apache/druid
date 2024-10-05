@@ -597,7 +597,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     Throwable t = Assert.assertThrows(
         DruidException.class,
-        () ->  projectionsCursorFactory.makeCursorHolder(buildSpec)
+        () -> projectionsCursorFactory.makeCursorHolder(buildSpec)
     );
     Assert.assertEquals("Force projections specified, but none satisfy query", t.getMessage());
   }
