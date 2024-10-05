@@ -131,7 +131,7 @@ public class Metadata
 
   @Nullable
   @JsonProperty
-  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @JsonInclude(JsonInclude.Include.NON_EMPTY)
   public List<AggregateProjectionMetadata> getProjections()
   {
     return projections;

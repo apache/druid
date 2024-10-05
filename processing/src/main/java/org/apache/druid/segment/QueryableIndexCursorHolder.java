@@ -325,7 +325,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
   }
 
 
-  public ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
+  protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
       ColumnCache columnCache,
       Offset baseOffset
   )
@@ -338,7 +338,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
     );
   }
 
-  public VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
+  protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
       ColumnCache columnCache,
       VectorOffset baseOffset
   )

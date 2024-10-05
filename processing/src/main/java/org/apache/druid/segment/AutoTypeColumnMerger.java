@@ -87,6 +87,18 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   private boolean isVariantType = false;
   private byte variantTypeByte = 0x00;
 
+  /**
+   * @param name                  column name
+   * @param outputName            output smoosh file name. if this is a base table column, it will be the equivalent to
+   *                              name, however if this merger is for a projection, this will be prefixed with the
+   *                              projection name so that multiple projections can store the same column name at
+   *                              different smoosh file "paths"
+   * @param castToType            optional mechanism to enforce that all values are a specific type
+   * @param indexSpec             segment level storage options such as compression format and bitmap type
+   * @param segmentWriteOutMedium temporary storage location to stage segment outputs before finalizing into the segment
+   * @param closer                resource closer if this merger needs to attach any closables that should be cleaned up
+   *                              when the segment is finished writing
+   */
   public AutoTypeColumnMerger(
       String name,
       String outputName,

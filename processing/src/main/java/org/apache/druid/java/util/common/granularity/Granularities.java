@@ -173,6 +173,7 @@ public class Granularities
    * calling this method by examining {@link VirtualColumn#requiredColumns()}.
    * <p>
    * This method also does not handle other time expressions, or if the virtual column is just an identifier for a
+   * time column
    */
   @Nullable
   public static Granularity fromVirtualColumn(VirtualColumn virtualColumn)

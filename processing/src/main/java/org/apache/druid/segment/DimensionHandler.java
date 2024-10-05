@@ -107,7 +107,7 @@ public interface DimensionHandler
    * See {@link DimensionMergerV9} interface for more information.
    *
    * @param outputName            Output "file" name for the column to use for serializers, to control where it is
-   *                              stored in the segment
+   *                              stored in the segments internal files
    * @param indexSpec             Specification object for the index merge
    * @param segmentWriteOutMedium this SegmentWriteOutMedium object could be used internally in the created merger, if
    *                              needed

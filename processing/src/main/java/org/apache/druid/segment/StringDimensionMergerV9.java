@@ -64,6 +64,19 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   @Nullable
   private ByteBufferWriter<ImmutableRTree> spatialWriter;
 
+  /**
+   * @param dimensionName         column name
+   * @param outputName            output smoosh file name. if this is a base table column, it will be the equivalent to
+   *                              name, however if this merger is for a projection, this will be prefixed with the
+   *                              projection name so that multiple projections can store the same column name at
+   *                              different smoosh file "paths"
+   * @param indexSpec             segment level storage options such as compression format and bitmap type
+   * @param segmentWriteOutMedium temporary storage location to stage segment outputs before finalizing into the segment
+   * @param capabilities          options for writing the column such as if we should write bitmap or spatial indexes
+   * @param progress              hook to update status of what this merger is doing during segment persist and merging
+   * @param closer                resource closer if this merger needs to attach any closables that should be cleaned up
+   *                              when the segment is finished writing
+   */
   public StringDimensionMergerV9(
       String dimensionName,
       String outputName,

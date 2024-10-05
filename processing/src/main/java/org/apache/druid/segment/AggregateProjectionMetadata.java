@@ -392,10 +392,8 @@ public class AggregateProjectionMetadata
         matchBuilder.addReferenceedVirtualColumn(buildSpecVirtualColumn);
         final List<String> requiredInputs = buildSpecVirtualColumn.requiredColumns();
         if (requiredInputs.size() == 1 && ColumnHolder.TIME_COLUMN_NAME.equals(requiredInputs.get(0))) {
-          // wtb some sort of virtual column comparison function that can check if projection granularity time column
-          // satisifies query granularity virtual column
-          // can rebind? q.canRebind("__time", p)
-          // special handle time granularity
+          // special handle time granularity. in the future this should be reworked to push this concept into the
+          // virtual column and underlying expression itself, but this will do for now
           final Granularity virtualGranularity = Granularities.fromVirtualColumn(buildSpecVirtualColumn);
           if (virtualGranularity != null) {
             if (virtualGranularity.isFinerThan(granularity)) {
