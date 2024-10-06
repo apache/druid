@@ -281,12 +281,13 @@ public class MSQCompactionRunnerTest
         new ClientCompactionTaskGranularitySpec(null, null, true),
         new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)}
     );
-    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask,
-                                                                                                     INTERVAL_DATASCHEMAS
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(
+        compactionTask,
+        INTERVAL_DATASCHEMAS
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "MSQ: Non-idempotent aggregator[sum_added] not supported in 'metricsSpec'",
+        "MSQ: Aggregator[sum_added] not supported in 'metricsSpec'",
         validationResult.getReason()
     );
   }

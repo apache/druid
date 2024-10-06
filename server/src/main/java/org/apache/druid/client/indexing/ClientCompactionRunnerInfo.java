@@ -110,7 +110,7 @@ public class ClientCompactionRunnerInfo
    * <li>'range' partitionsSpec with non-string partition dimensions.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
    * <li>Rollup without metricsSpec being specified or vice-versa.</li>
-   * <li>any non-idempotent metric, i.e. an aggregatorFactory {@code A} s.t. {@code A != A.combiningFactory()}.</li>
+   * <li>Any aggregatorFactory {@code A} s.t. {@code A != A.combiningFactory()}.</li>
    * </ul>
    */
   private static CompactionConfigValidationResult compactionConfigSupportedByMSQEngine(DataSourceCompactionConfig newConfig)
@@ -216,7 +216,7 @@ public class ClientCompactionRunnerInfo
   }
 
   /**
-   * Validate each metric is idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A = A.combiningFactory()'.
+   * Validate each metric defines some aggregatorFactory 'A' s.t. 'A = A.combiningFactory()'.
    */
   public static CompactionConfigValidationResult validateMetricsSpecForMSQ(AggregatorFactory[] metricsSpec)
   {
@@ -228,7 +228,7 @@ public class ClientCompactionRunnerInfo
                  .findFirst()
                  .map(aggregatorFactory ->
                           CompactionConfigValidationResult.failure(
-                              "MSQ: Non-idempotent aggregator[%s] not supported in 'metricsSpec'",
+                              "MSQ: Aggregator[%s] not supported in 'metricsSpec'",
                               aggregatorFactory.getName()
                           )
                  ).orElse(CompactionConfigValidationResult.success());

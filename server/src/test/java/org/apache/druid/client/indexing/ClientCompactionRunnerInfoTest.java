@@ -219,7 +219,7 @@ public class ClientCompactionRunnerInfoTest
     );
     Assert.assertFalse(validationResult.isValid());
     Assert.assertEquals(
-        "MSQ: Non-idempotent aggregator[sum_added] not supported in 'metricsSpec'",
+        "MSQ: Aggregator[sum_added] not supported in 'metricsSpec'",
         validationResult.getReason()
     );
   }

@@ -131,10 +131,11 @@ public class MSQCompactionRunner implements CompactionRunner
    * The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
+   * <li>'range' partitionsSpec with non-string partition dimensions.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's null.
-   * Null is treated as true if metricsSpec exist and false if empty.</li>
-   * <li>any metric is non-idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
+   * <li>Rollup without metricsSpec being specified or vice-versa.</li>
+   * <li>Any aggregatorFactory {@code A} s.t. {@code A != A.combiningFactory()}.</li>
+   * <li>Multiple disjoint intervals in compaction task</li>
    * </ul>
    */
   @Override
@@ -144,6 +145,9 @@ public class MSQCompactionRunner implements CompactionRunner
   )
   {
     if (intervalToDataSchemaMap.size() > 1) {
+      // We are currently not able to handle multiple intervals in the map for multiple reasons, one of them being that
+      // the subsequent worker ids clash -- since they are derived from MSQControllerTask ID which in turn is equal to
+      // CompactionTask ID for each sequentially launched MSQControllerTask.
       return CompactionConfigValidationResult.failure(
           "MSQ: Disjoint compaction intervals[%s] not supported",
           intervalToDataSchemaMap.keySet()
