@@ -86,6 +86,7 @@ public class CompactSegments implements CoordinatorCustomDuty
    * Must be the same as org.apache.druid.indexing.common.task.Tasks.STORE_COMPACTION_STATE_KEY
    */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
+  private static final String COMPACTION_REASON_KEY = "compactionReason";
 
   private static final Logger LOG = new Logger(CompactSegments.class);
 
@@ -565,6 +566,10 @@ public class CompactSegments implements CoordinatorCustomDuty
         }
       } else {
         slotsRequiredForCurrentTask = findMaxNumTaskSlotsUsedByOneNativeCompactionTask(config.getTuningConfig());
+      }
+
+      if (entry.getCurrentStatus() != null) {
+        autoCompactionContext.put(COMPACTION_REASON_KEY, entry.getCurrentStatus().getReason());
       }
 
       final String taskId = compactSegments(
