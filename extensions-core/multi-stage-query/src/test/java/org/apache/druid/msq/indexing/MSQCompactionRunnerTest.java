@@ -109,15 +109,11 @@ public class MSQCompactionRunnerTest
   );
   private static final Map<Interval, DataSchema> INTERVAL_DATASCHEMAS = ImmutableMap.of(
       COMPACTION_INTERVAL,
-      new DataSchema(DATA_SOURCE,
-                     new TimestampSpec(TIMESTAMP_COLUMN, null, null),
-                     new DimensionsSpec(DIMENSIONS),
-                     null,
-                     null,
-                     null,
-                     null,
-                     null
-      )
+      new DataSchema.Builder()
+          .withDataSource(DATA_SOURCE)
+          .withTimestamp(new TimestampSpec(TIMESTAMP_COLUMN, null, null))
+          .withDimensions(new DimensionsSpec(DIMENSIONS))
+          .build()
   );
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
