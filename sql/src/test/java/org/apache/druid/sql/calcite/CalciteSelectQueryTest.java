@@ -650,6 +650,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectDistinctWithCascadeExtractionFilter()
   {
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorizeUnlessFallback();
+    }
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE substring(substring(dim1, 2), 1, 1) = 'e' OR dim2 = 'a'",
         ImmutableList.of(
@@ -694,6 +697,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectDistinctWithStrlenFilter()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT distinct dim1 FROM druid.foo "
             + "WHERE CHARACTER_LENGTH(dim1) = 3 OR CAST(CHARACTER_LENGTH(dim1) AS varchar) = 3",
@@ -2016,6 +2020,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateWithFilter()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
@@ -2054,6 +2059,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateWithFilterHaving()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
@@ -2194,7 +2200,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
 
     testQueryThrows(
         "SELECT cityName,sum(1) OVER () as w FROM wikipedia group by cityName HAVING w > 10",
-        ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true),
         DruidException.class,
         invalidSqlContains("Window functions are not allowed in HAVING")
     );

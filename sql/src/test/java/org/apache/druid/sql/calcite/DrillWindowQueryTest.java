@@ -43,7 +43,6 @@ import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.joda.time.DateTime;
@@ -413,7 +412,6 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   protected Map<String, Object> getQueryContext()
   {
     return ImmutableMap.of(
-        PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
         PlannerCaptureHook.NEED_CAPTURE_HOOK, true,
         QueryContexts.ENABLE_DEBUG, true
     );
@@ -7731,13 +7729,10 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     windowQueryTest();
   }
 
-  // This test gives the following error on sql-native engine:
-  // Column[w0] of type[class org.apache.druid.query.rowsandcols.column.ColumnAccessorBasedColumn] cannot be sorted.
   @DrillTest("druid_queries/empty_and_non_empty_over/wikipedia_query_1")
   @Test
   public void test_empty_and_non_empty_over_wikipedia_query_1()
   {
-    sqlNativeIncompatible();
     windowQueryTest();
   }
 
@@ -7800,6 +7795,20 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @DrillTest("druid_queries/array_concat_agg/multiple_partition_columns_1")
   @Test
   public void test_array_concat_agg_with_multiple_partition_columns_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/only_sorting_column_1")
+  @Test
+  public void test_array_concat_agg_with_only_sorting_column_1()
+  {
+    windowQueryTest();
+  }
+
+  @DrillTest("druid_queries/array_concat_agg/empty_over_1")
+  @Test
+  public void test_array_concat_agg_with_empty_over_1()
   {
     windowQueryTest();
   }

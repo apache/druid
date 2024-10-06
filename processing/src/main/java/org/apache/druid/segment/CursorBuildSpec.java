@@ -26,6 +26,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -54,9 +55,11 @@ public class CursorBuildSpec
   private final VirtualColumns virtualColumns;
   @Nullable
   private final List<AggregatorFactory> aggregators;
-  private final List<OrderBy> orderByColumns;
+  private final List<OrderBy> preferredOrdering;
 
   private final QueryContext queryContext;
+
+  private final boolean isAggregate;
 
   @Nullable
   private final QueryMetrics<?> queryMetrics;
@@ -77,9 +80,10 @@ public class CursorBuildSpec
     this.groupingColumns = groupingColumns;
     this.virtualColumns = Preconditions.checkNotNull(virtualColumns, "virtualColumns");
     this.aggregators = aggregators;
-    this.orderByColumns = Preconditions.checkNotNull(preferredOrdering, "preferredOrdering");
+    this.preferredOrdering = Preconditions.checkNotNull(preferredOrdering, "preferredOrdering");
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
     this.queryMetrics = queryMetrics;
+    this.isAggregate = !CollectionUtils.isNullOrEmpty(groupingColumns) || !CollectionUtils.isNullOrEmpty(aggregators);
   }
 
   /**
@@ -142,7 +146,7 @@ public class CursorBuildSpec
    */
   public List<OrderBy> getPreferredOrdering()
   {
-    return orderByColumns;
+    return preferredOrdering;
   }
 
   /**
@@ -164,6 +168,39 @@ public class CursorBuildSpec
   public QueryMetrics<?> getQueryMetrics()
   {
     return queryMetrics;
+  }
+
+  /**
+   * Returns true if {@link #getGroupingColumns()} is not null or empty and/or {@link #getAggregators()} is not null or
+   * empty. This method is useful for quickly checking if it is worth considering if a {@link CursorFactory} should
+   * attempt to produce a {@link CursorHolder} that is {@link CursorHolder#isPreAggregated()} to satisfy the build spec.
+   */
+  public boolean isAggregate()
+  {
+    return isAggregate;
+  }
+
+  /**
+   * Returns true if the supplied ordering matches {@link #getPreferredOrdering()}, meaning that the supplied ordering
+   * has everything which is in the preferred ordering in the same direction and order. The supplied ordering may have
+   * additional columns beyond the preferred ordering and still satisify this method.
+   */
+  public boolean isCompatibleOrdering(List<OrderBy> ordering)
+  {
+    // if the build spec doesn't prefer an ordering, any order is ok
+    if (preferredOrdering.isEmpty()) {
+      return true;
+    }
+    // all columns must be present in ordering if the build spec specifies them
+    if (ordering.size() < preferredOrdering.size()) {
+      return false;
+    }
+    for (int i = 0; i < preferredOrdering.size(); i++) {
+      if (!ordering.get(i).equals(preferredOrdering.get(i))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public static class CursorBuildSpecBuilder
@@ -195,7 +232,7 @@ public class CursorBuildSpec
       this.groupingColumns = buildSpec.groupingColumns;
       this.virtualColumns = buildSpec.virtualColumns;
       this.aggregators = buildSpec.aggregators;
-      this.preferredOrdering = buildSpec.orderByColumns;
+      this.preferredOrdering = buildSpec.preferredOrdering;
       this.queryContext = buildSpec.queryContext;
       this.queryMetrics = buildSpec.queryMetrics;
     }

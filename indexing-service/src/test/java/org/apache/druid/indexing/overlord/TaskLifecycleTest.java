@@ -109,7 +109,6 @@ import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
@@ -447,7 +446,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     return new SegmentHandoffNotifierFactory()
     {
       @Override
-      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId)
       {
         return new SegmentHandoffNotifier()
         {
@@ -672,18 +671,19 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         new IndexIngestionSpec(
-            new DataSchema(
-                "foo",
-                new TimestampSpec(null, null, null),
-                DimensionsSpec.EMPTY,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    null,
-                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
-                ),
-                null
-            ),
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withDimensions(DimensionsSpec.EMPTY)
+                      .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              null,
+                              ImmutableList.of(Intervals.of("2010-01-01/P2D"))
+                          )
+                      )
+                      .build(),
             new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
                                .withMaxRowsPerSegment(10000)
@@ -735,18 +735,18 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         new IndexIngestionSpec(
-            new DataSchema(
-                "foo",
-                null,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    null,
-                    ImmutableList.of(Intervals.of("2010-01-01/P1D"))
-                ),
-                null,
-                mapper
-            ),
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              null,
+                              ImmutableList.of(Intervals.of("2010-01-01/P1D"))
+                          )
+                      )
+                      .withObjectMapper(mapper)
+                      .build(),
             new IndexIOConfig(new MockExceptionInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
                                .withMaxRowsPerSegment(10000)
@@ -1165,18 +1165,19 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         new IndexIngestionSpec(
-            new DataSchema(
-                "foo",
-                new TimestampSpec(null, null, null),
-                DimensionsSpec.EMPTY,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    null,
-                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
-                ),
-                null
-            ),
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withDimensions(DimensionsSpec.EMPTY)
+                      .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              null,
+                              ImmutableList.of(Intervals.of("2010-01-01/P2D"))
+                          )
+                      )
+                      .build(),
             new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
                                .withMaxRowsPerSegment(10000)
@@ -1253,18 +1254,19 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         null,
         null,
         new IndexIngestionSpec(
-            new DataSchema(
-                "foo",
-                new TimestampSpec(null, null, null),
-                DimensionsSpec.EMPTY,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    null,
-                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
-                ),
-                null
-            ),
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withDimensions(DimensionsSpec.EMPTY)
+                      .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              null,
+                              ImmutableList.of(Intervals.of("2010-01-01/P2D"))
+                          )
+                      )
+                      .build(),
             new IndexIOConfig(new MockInputSource(), new NoopInputFormat(), false, false),
             TuningConfigBuilder.forIndexTask()
                                .withMaxRowsPerSegment(10000)

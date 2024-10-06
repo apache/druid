@@ -2,7 +2,7 @@ type: "operatorValidation"
 
 sql: |
     SELECT
-      countryIsoCode, 
+      countryIsoCode,
       CAST (FLOOR(__time TO HOUR) AS BIGINT) t,
       SUM(delta) delta, 
       SUM(SUM(delta)) OVER (PARTITION BY countryIsoCode ORDER BY CAST (FLOOR(__time TO HOUR) AS BIGINT) ROWS BETWEEN 3 PRECEDING AND 2 FOLLOWING) windowedDelta

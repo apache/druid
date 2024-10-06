@@ -102,6 +102,13 @@ import java.util.stream.StreamSupport;
  * <p>
  * This class has an abstract method {@link #refresh(Set, Set)} which the child class must override
  * with the logic to build and cache table schema.
+ * <p>
+ * Note on handling tombstone segments:
+ * These segments lack data or column information.
+ * Additionally, segment metadata queries, which are not yet implemented for tombstone segments
+ * (see: https://github.com/apache/druid/pull/12137) do not provide metadata for tombstones,
+ * leading to indefinite refresh attempts for these segments.
+ * Therefore, these segments are never added to the set of segments being refreshed.
  *
  * @param <T> The type of information associated with the data source, which must extend {@link DataSourceInformation}.
  */
@@ -478,13 +485,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @VisibleForTesting
   public void addSegment(final DruidServerMetadata server, final DataSegment segment)
   {
-    // Skip adding tombstone segment to the cache. These segments lack data or column information.
-    // Additionally, segment metadata queries, which are not yet implemented for tombstone segments
-    // (see: https://github.com/apache/druid/pull/12137) do not provide metadata for tombstones,
-    // leading to indefinite refresh attempts for these segments.
-    if (segment.isTombstone()) {
-      return;
-    }
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
       // someday we could hypothetically remove broker special casing, whenever BrokerServerView supports tracking
@@ -511,7 +511,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                       segmentMetadata = AvailableSegmentMetadata
                           .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS) // Added without needing a refresh
                           .build();
-                      markSegmentAsNeedRefresh(segment.getId());
+                      if (segment.isTombstone()) {
+                        log.debug("Skipping refresh for tombstone segment.");
+                      } else {
+                        markSegmentAsNeedRefresh(segment.getId());
+                      }
                       if (!server.isSegmentReplicationTarget()) {
                         log.debug("Added new mutable segment [%s].", segment.getId());
                         markSegmentAsMutable(segment.getId());
@@ -557,10 +561,6 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @VisibleForTesting
   public void removeSegment(final DataSegment segment)
   {
-    // tombstone segments are not present in the cache
-    if (segment.isTombstone()) {
-      return;
-    }
     // Get lock first so that we won't wait in ConcurrentMap.compute().
     synchronized (lock) {
       log.debug("Segment [%s] is gone.", segment.getId());

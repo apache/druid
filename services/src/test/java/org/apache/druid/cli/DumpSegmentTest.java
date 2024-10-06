@@ -133,7 +133,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
 
@@ -147,11 +147,11 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     );
     final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
     final String output = StringUtils.fromUtf8(fileBytes);
-    final String expected = "{\"__time\":1609459200000,\"count\":1,\"nest\":{\"x\":200,\"y\":2.2}}\n"
-                            + "{\"__time\":1609459200000,\"count\":1,\"nest\":{\"x\":400,\"y\":1.1,\"z\":\"a\"}}\n"
-                            + "{\"__time\":1609459200000,\"count\":1,\"nest\":{\"x\":200,\"z\":\"b\"}}\n"
-                            + "{\"__time\":1609459200000,\"count\":1,\"nest\":{\"x\":100,\"y\":1.1,\"z\":\"a\"}}\n"
-                            + "{\"__time\":1609459200000,\"count\":1,\"nest\":{\"y\":3.3,\"z\":\"b\"}}\n";
+    final String expected = "{\"__time\":1609459200000,\"nest\":{\"x\":200,\"y\":2.2},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":400,\"y\":1.1,\"z\":\"a\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":200,\"z\":\"b\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"y\":3.3,\"z\":\"b\"},\"count\":1}\n";
     Assert.assertEquals(expected, output);
   }
 
@@ -207,7 +207,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
     DumpSegment.runDumpNestedColumn(
@@ -247,7 +247,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
     DumpSegment.runDumpNestedColumnPath(

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { QueryManagerOptions } from '../utils';
 import { QueryManager, QueryState } from '../utils';
@@ -39,7 +39,8 @@ export function useQueryManager<Q, R, I = never, E extends Error = Error>(
     backgroundStatusCheck || ((() => {}) as any),
   );
 
-  const [resultState, setResultState] = useState<QueryState<R, E, I>>(initState || QueryState.INIT);
+  const resultStateRef = useRef<QueryState<R, E, I>>(initState || QueryState.INIT);
+  const [_, setResultState] = useState<QueryState<R, E, I>>(initState || QueryState.INIT);
 
   function makeQueryManager() {
     return new QueryManager<Q, R, I, E>({
@@ -47,7 +48,10 @@ export function useQueryManager<Q, R, I = never, E extends Error = Error>(
       initState,
       processQuery: concreteProcessQuery,
       backgroundStatusCheck: backgroundStatusCheck ? concreteBackgroundStatusCheck : undefined,
-      onStateChange: setResultState,
+      onStateChange: s => {
+        resultStateRef.current = s;
+        setResultState(s);
+      },
     });
   }
 
@@ -75,12 +79,11 @@ export function useQueryManager<Q, R, I = never, E extends Error = Error>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (typeof query !== 'undefined') {
-      queryManager.runQuery(query);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  const prevQuery = useRef<Q | undefined>(initQuery);
+  if (typeof query !== 'undefined' && query !== prevQuery.current) {
+    prevQuery.current = query;
+    queryManager.runQuery(query);
+  }
 
-  return [resultState, queryManager];
+  return [resultStateRef.current, queryManager];
 }

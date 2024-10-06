@@ -21,16 +21,32 @@ package org.apache.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import io.tesla.aether.internal.DefaultTeslaAether;
 import org.apache.druid.guice.ExtensionsConfig;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.maven.repository.internal.MavenRepositorySystemUtils;
+import org.eclipse.aether.DefaultRepositorySystemSession;
+import org.eclipse.aether.RepositorySystem;
+import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.artifact.DefaultArtifact;
+import org.eclipse.aether.connector.basic.BasicRepositoryConnectorFactory;
 import org.eclipse.aether.graph.DefaultDependencyNode;
 import org.eclipse.aether.graph.Dependency;
-import org.eclipse.aether.graph.DependencyFilter;
 import org.eclipse.aether.graph.DependencyNode;
+import org.eclipse.aether.impl.DefaultServiceLocator;
+import org.eclipse.aether.repository.Authentication;
+import org.eclipse.aether.repository.LocalRepository;
+import org.eclipse.aether.repository.Proxy;
+import org.eclipse.aether.repository.RemoteRepository;
+import org.eclipse.aether.resolution.ArtifactRequest;
+import org.eclipse.aether.resolution.ArtifactResult;
 import org.eclipse.aether.resolution.DependencyRequest;
+import org.eclipse.aether.resolution.DependencyResult;
+import org.eclipse.aether.spi.connector.RepositoryConnectorFactory;
+import org.eclipse.aether.spi.connector.transport.TransporterFactory;
+import org.eclipse.aether.transport.http.HttpTransporterFactory;
+import org.eclipse.aether.util.artifact.JavaScopes;
+import org.eclipse.aether.util.repository.AuthenticationBuilder;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Before;
@@ -49,6 +65,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
 
 public class PullDependenciesTest
 {
@@ -71,22 +92,17 @@ public class PullDependenciesTest
                                    .put(DEPENDENCY_GROUPID, HADOOP_CLIENT_VULNERABLE_ARTIFACTID1)
                                    .put(DEPENDENCY_GROUPID, HADOOP_CLIENT_VULNERABLE_ARTIFACTID2)
                                    .build();
-
+  private static File localRepo; // a mock local repository that stores jars
+  private static Map<Artifact, List<String>> extensionToDependency;
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  private File localRepo; // a mock local repository that stores jars
-
   private final Artifact extension_A = new DefaultArtifact(EXTENSION_A_COORDINATE);
   private final Artifact extension_B = new DefaultArtifact(EXTENSION_B_COORDINATE);
   private final Artifact hadoop_client_2_3_0 = new DefaultArtifact(HADOOP_CLIENT_2_3_0_COORDINATE);
   private final Artifact hadoop_client_2_4_0 = new DefaultArtifact(HADOOP_CLIENT_2_4_0_COORDINATE);
-
   private PullDependencies pullDependencies;
   private File rootExtensionsDir;
   private File rootHadoopDependenciesDir;
-
-  private Map<Artifact, List<String>> extensionToDependency;
 
   @Before
   public void setUp() throws Exception
@@ -105,18 +121,22 @@ public class PullDependenciesTest
     rootExtensionsDir = temporaryFolder.newFolder("extensions");
     rootHadoopDependenciesDir = temporaryFolder.newFolder("druid_hadoop_dependencies");
 
+    RepositorySystem realRepositorySystem = RealRepositorySystemUtil.newRepositorySystem();
+    RepositorySystem spyMockRepositorySystem = spy(realRepositorySystem);
+    RepositorySystemSession repositorySystemSession = RealRepositorySystemUtil.newRepositorySystemSession(
+        spyMockRepositorySystem,
+        localRepo.getPath()
+    );
+
+    doAnswer(invocation -> {
+      DependencyRequest request = invocation.getArgument(1);
+      return mockDependencyResult(request.getCollectRequest().getRoot().getArtifact());
+    }).when(spyMockRepositorySystem).resolveDependencies(eq(repositorySystemSession), any(DependencyRequest.class));
+
+
     pullDependencies = new PullDependencies(
-        new DefaultTeslaAether()
-        {
-          @Override
-          public List<Artifact> resolveArtifacts(DependencyRequest request)
-          {
-            return getArtifactsForExtension(
-                request.getCollectRequest().getRoot().getArtifact(),
-                request.getFilter()
-            );
-          }
-        },
+        spyMockRepositorySystem,
+        repositorySystemSession,
         new ExtensionsConfig()
         {
           @Override
@@ -140,14 +160,15 @@ public class PullDependenciesTest
         HADOOP_CLIENT_2_4_0_COORDINATE
     );
 
-    // Because --clean is specified, pull-deps will first remove existing root extensions and hadoop dependencies
     pullDependencies.clean = true;
   }
 
-  private List<Artifact> getArtifactsForExtension(Artifact artifact, DependencyFilter filter)
+  private DependencyResult mockDependencyResult(Artifact artifact)
   {
-    final List<String> names = extensionToDependency.get(artifact);
-    final List<Artifact> artifacts = new ArrayList<>();
+    final List<String> names = extensionToDependency.getOrDefault(artifact, Collections.emptyList());
+    final List<ArtifactResult> artifacts = new ArrayList<>();
+    List<DependencyNode> children = new ArrayList<>();
+
     for (String name : names) {
       final File jarFile = new File(localRepo, name + ".jar");
       try {
@@ -156,18 +177,23 @@ public class PullDependenciesTest
       catch (IOException e) {
         throw new RuntimeException(e);
       }
-
-      DependencyNode node = new DefaultDependencyNode(
-          new Dependency(
-              new DefaultArtifact(DEPENDENCY_GROUPID, name, null, "jar", "1.0", null, jarFile),
-              "compile"
-          )
+      Artifact depArtifact = new DefaultArtifact("groupid", name, null, "jar", "1.0",
+                                                 null, jarFile
       );
-      if (filter.accept(node, Collections.emptyList())) {
-        artifacts.add(node.getArtifact());
-      }
+      DependencyNode depNode = new DefaultDependencyNode(new Dependency(depArtifact, JavaScopes.COMPILE));
+      children.add(depNode);
+      ArtifactResult artifactResult = new ArtifactResult(new ArtifactRequest(depNode));
+      artifactResult.setArtifact(depArtifact);
+      artifacts.add(artifactResult);
     }
-    return artifacts;
+
+    DependencyNode rootNode = new DefaultDependencyNode(new Dependency(artifact, JavaScopes.COMPILE));
+    rootNode.setChildren(children);
+
+    DependencyResult result = new DependencyResult(new DependencyRequest());
+    result.setRoot(rootNode);
+    result.setArtifactResults(artifacts);
+    return result;
   }
 
   private List<File> getExpectedJarFiles(Artifact artifact)
@@ -299,4 +325,157 @@ public class PullDependenciesTest
     Assert.assertThat(dependencies, CoreMatchers.not(CoreMatchers.hasItem(HADOOP_CLIENT_VULNERABLE_JAR1)));
     Assert.assertThat(dependencies, CoreMatchers.not(CoreMatchers.hasItem(HADOOP_CLIENT_VULNERABLE_JAR2)));
   }
+
+  @Test
+  public void testPullDependenciesCleanFlag() throws IOException
+  {
+    File dummyFile1 = new File(rootExtensionsDir, "dummy.txt");
+    File dummyFile2 = new File(rootHadoopDependenciesDir, "dummy.txt");
+    Assert.assertTrue(dummyFile1.createNewFile());
+    Assert.assertTrue(dummyFile2.createNewFile());
+
+    pullDependencies.clean = true;
+    pullDependencies.run();
+
+    Assert.assertFalse(dummyFile1.exists());
+    Assert.assertFalse(dummyFile2.exists());
+  }
+
+  @Test
+  public void testPullDependenciesNoDefaultRemoteRepositories()
+  {
+    pullDependencies.noDefaultRemoteRepositories = true;
+    pullDependencies.remoteRepositories = ImmutableList.of("https://custom.repo");
+
+    pullDependencies.run();
+
+    List<RemoteRepository> repositories = pullDependencies.getRemoteRepositories();
+    Assert.assertEquals(1, repositories.size());
+    Assert.assertEquals("https://custom.repo", repositories.get(0).getUrl());
+  }
+
+  @Test
+  public void testPullDependenciesDirectoryCreationFailure() throws IOException
+  {
+    if (rootExtensionsDir.exists()) {
+      rootExtensionsDir.delete();
+    }
+    Assert.assertTrue(rootExtensionsDir.createNewFile());
+
+    Assert.assertThrows(IllegalArgumentException.class, () -> pullDependencies.run());
+  }
+
+  @Test
+  public void testGetArtifactWithValidCoordinate()
+  {
+    String coordinate = "groupX:artifactX:1.0.0";
+    DefaultArtifact artifact = (DefaultArtifact) pullDependencies.getArtifact(coordinate);
+    Assert.assertEquals("groupX", artifact.getGroupId());
+    Assert.assertEquals("artifactX", artifact.getArtifactId());
+    Assert.assertEquals("1.0.0", artifact.getVersion());
+  }
+
+  @Test
+  public void testGetArtifactwithCoordinateWithoutDefaultVersion()
+  {
+    String coordinate = "groupY:artifactY";
+    Assert.assertThrows(
+        "Bad artifact coordinates groupY:artifactY, expected format is <groupId>:<artifactId>[:<extension>[:<classifier>]]:<version>",
+        IllegalArgumentException.class,
+        () -> pullDependencies.getArtifact(coordinate)
+    );
+
+  }
+
+  @Test
+  public void testGetArtifactWithCoordinateWithoutVersion()
+  {
+    pullDependencies.defaultVersion = "2.0.0";
+    String coordinate = "groupY:artifactY";
+    DefaultArtifact artifact = (DefaultArtifact) pullDependencies.getArtifact(coordinate);
+    Assert.assertEquals("groupY", artifact.getGroupId());
+    Assert.assertEquals("artifactY", artifact.getArtifactId());
+    Assert.assertEquals("2.0.0", artifact.getVersion());
+  }
+
+  @Test
+  public void testGetRemoteRepositoriesWithDefaultRepositories()
+  {
+    pullDependencies.noDefaultRemoteRepositories = false; // Use default remote repositories
+    pullDependencies.remoteRepositories = ImmutableList.of("https://custom.repo");
+
+    List<RemoteRepository> repositories = pullDependencies.getRemoteRepositories();
+    Assert.assertEquals(2, repositories.size());
+    Assert.assertEquals("https://repo1.maven.org/maven2/", repositories.get(0).getUrl());
+    Assert.assertEquals("https://custom.repo", repositories.get(1).getUrl());
+  }
+
+  @Test
+  public void testGetRepositorySystemSessionWithProxyConfiguration()
+  {
+    pullDependencies.useProxy = true;
+    pullDependencies.proxyType = "http";
+    pullDependencies.proxyHost = "localhost";
+    pullDependencies.proxyPort = 8080;
+    pullDependencies.proxyUsername = "user";
+    pullDependencies.proxyPassword = "password";
+
+    DefaultRepositorySystemSession session = (DefaultRepositorySystemSession) pullDependencies.getRepositorySystemSession();
+
+    LocalRepository localRepo = session.getLocalRepositoryManager().getRepository();
+    Assert.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
+
+    Proxy proxy = session.getProxySelector().getProxy(
+        new RemoteRepository.Builder("test", "default", "http://example.com").build()
+    );
+    RemoteRepository testRepository = new RemoteRepository.Builder("test", "default", "http://example.com")
+        .setProxy(proxy)
+        .build();
+
+    Assert.assertNotNull(proxy);
+    Assert.assertEquals("localhost", proxy.getHost());
+    Assert.assertEquals(8080, proxy.getPort());
+    Assert.assertEquals("http", proxy.getType());
+
+    Authentication auth = new AuthenticationBuilder().addUsername("user").addPassword("password").build();
+    Assert.assertEquals(auth, proxy.getAuthentication());
+  }
+
+  @Test
+  public void testGetRepositorySystemSessionWithoutProxyConfiguration()
+  {
+    pullDependencies.useProxy = false;
+    DefaultRepositorySystemSession session = (DefaultRepositorySystemSession) pullDependencies.getRepositorySystemSession();
+    LocalRepository localRepo = session.getLocalRepositoryManager().getRepository();
+    Assert.assertEquals(pullDependencies.localRepository, localRepo.getBasedir().getAbsolutePath());
+    Proxy proxy = session.getProxySelector().getProxy(
+        new RemoteRepository.Builder("test", "default", "http://example.com").build()
+    );
+    Assert.assertNull(proxy);
+  }
+
+  private static class RealRepositorySystemUtil
+  {
+    public static RepositorySystem newRepositorySystem()
+    {
+      DefaultServiceLocator locator = MavenRepositorySystemUtils.newServiceLocator();
+      locator.addService(RepositoryConnectorFactory.class, BasicRepositoryConnectorFactory.class);
+      locator.addService(TransporterFactory.class, HttpTransporterFactory.class);
+      return locator.getService(RepositorySystem.class);
+    }
+
+    public static DefaultRepositorySystemSession newRepositorySystemSession(
+        RepositorySystem system,
+        String localRepoPath
+    )
+    {
+      DefaultRepositorySystemSession session = MavenRepositorySystemUtils.newSession();
+
+      LocalRepository localRepo = new LocalRepository(localRepoPath);
+      session.setLocalRepositoryManager(system.newLocalRepositoryManager(session, localRepo));
+
+      return session;
+    }
+  }
+
 }

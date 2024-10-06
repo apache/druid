@@ -244,6 +244,11 @@ public interface QueryMetrics<QueryType extends Query<?>>
   void segment(String segmentIdentifier);
 
   /**
+   * If a projection was used during segment processing, set its name as the projection dimension
+   */
+  void projection(String projection);
+
+  /**
    * @deprecated use {@link #filterBundle(FilterBundle.BundleInfo)} instead to collect details about filters which were
    * used to construct {@link org.apache.druid.segment.BitmapOffset} or
    * {@link org.apache.druid.segment.vector.BitmapVectorOffset}.

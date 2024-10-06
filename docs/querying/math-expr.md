@@ -246,6 +246,7 @@ JSON functions provide facilities to extract, transform, and create `COMPLEX<jso
 | to_json_string(expr) | Convert `expr` into a JSON `STRING` value |
 | json_keys(expr, path) | Get array of field names from `expr` at the specified JSONPath `path`, or null if the data does not exist or have any fields |
 | json_paths(expr) | Get array of all JSONPath paths available from `expr` |
+| json_merge(expr1, expr2[, expr3 ...]) | Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. |
 
 ### JSONPath syntax
 

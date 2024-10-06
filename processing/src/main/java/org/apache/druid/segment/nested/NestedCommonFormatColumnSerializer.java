@@ -69,7 +69,9 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
 
   public abstract String getColumnName();
 
-  public abstract DictionaryIdLookup getGlobalLookup();
+  public abstract DictionaryIdLookup getDictionaryIdLookup();
+
+  public abstract void setDictionaryIdLookup(DictionaryIdLookup dictionaryIdLookup);
 
   public abstract boolean hasNulls();
 

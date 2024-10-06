@@ -153,7 +153,7 @@ export class WorkbenchQuery {
 
   static fromTaskQueryAndContext(queryString: string, context: QueryContext): WorkbenchQuery {
     const noSqlOuterLimit = typeof context['sqlOuterLimit'] === 'undefined';
-    const cleanContext = deleteKeys(context, ['sqlOuterLimit']);
+    const cleanContext = deleteKeys(context, ['sqlOuterLimit', '__resultFormat']);
 
     let retQuery = WorkbenchQuery.blank()
       .changeEngine('sql-msq-task')
@@ -528,7 +528,7 @@ export class WorkbenchQuery {
     };
 
     let cancelQueryId: string | undefined;
-    if (engine === 'sql-native') {
+    if (engine === 'sql-native' || engine === 'sql-msq-dart') {
       cancelQueryId = apiQuery.context.sqlQueryId;
       if (!cancelQueryId) {
         // If the sqlQueryId is not explicitly set on the context generate one, so it is possible to cancel the query.
@@ -548,6 +548,10 @@ export class WorkbenchQuery {
 
     if (engine === 'sql-native' || engine === 'sql-msq-task') {
       apiQuery.context.sqlStringifyArrays ??= false;
+    }
+
+    if (engine === 'sql-msq-dart') {
+      apiQuery.context.fullReport ??= true;
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {

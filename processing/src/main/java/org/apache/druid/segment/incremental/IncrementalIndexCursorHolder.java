@@ -23,55 +23,48 @@ import com.google.common.collect.Iterators;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
-import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.ValueMatchers;
-import org.joda.time.Interval;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-import javax.annotation.Nullable;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 public class IncrementalIndexCursorHolder implements CursorHolder
 {
-  private final IncrementalIndexStorageAdapter storageAdapter;
-  private final IncrementalIndex index;
+  private final IncrementalIndexRowSelector rowSelector;
   private final CursorBuildSpec spec;
   private final List<OrderBy> ordering;
 
   public IncrementalIndexCursorHolder(
-      IncrementalIndexStorageAdapter storageAdapter,
-      IncrementalIndex index,
+      IncrementalIndexRowSelector rowSelector,
       CursorBuildSpec spec
   )
   {
-    this.storageAdapter = storageAdapter;
-    this.index = index;
+    this.rowSelector = rowSelector;
     this.spec = spec;
-    if (index.timePosition == 0) {
+    List<OrderBy> ordering = rowSelector.getOrdering();
+    if (Cursors.getTimeOrdering(ordering) != Order.NONE) {
       if (Cursors.preferDescendingTimeOrdering(spec)) {
         this.ordering = Cursors.descendingTimeOrder();
       } else {
         this.ordering = Cursors.ascendingTimeOrder();
       }
     } else {
-      // In principle, we could report a sort order here for certain types of fact holders; for example the
-      // RollupFactsHolder would be sorted by dimensions. However, this is left for future work.
-      this.ordering = Collections.emptyList();
+      this.ordering = ordering;
     }
   }
 
   @Override
   public Cursor asCursor()
   {
-    if (index.isEmpty()) {
+    if (rowSelector.isEmpty()) {
       return null;
     }
 
@@ -79,14 +72,13 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       spec.getQueryMetrics().vectorized(false);
     }
 
-
+    IncrementalIndexRowHolder currentRow = new IncrementalIndexRowHolder();
     return new IncrementalIndexCursor(
-        storageAdapter,
-        index,
-        spec.getVirtualColumns(),
-        Cursors.getTimeOrdering(ordering),
-        spec.getFilter(),
-        spec.getInterval()
+        rowSelector,
+        currentRow,
+        makeSelectorFactory(spec, currentRow),
+        spec,
+        getTimeOrder(ordering)
     );
   }
 
@@ -96,47 +88,50 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     return ordering;
   }
 
+  public ColumnSelectorFactory makeSelectorFactory(CursorBuildSpec buildSpec, IncrementalIndexRowHolder currEntry)
+  {
+    return new IncrementalIndexColumnSelectorFactory(
+        rowSelector,
+        currEntry,
+        buildSpec.getVirtualColumns(),
+        getTimeOrder()
+    );
+  }
+
   static class IncrementalIndexCursor implements Cursor
   {
-    private IncrementalIndexRowHolder currEntry;
+    private final Iterable<IncrementalIndexRow> cursorIterable;
+    private final IncrementalIndexRowHolder currEntry;
     private final ColumnSelectorFactory columnSelectorFactory;
     private final ValueMatcher filterMatcher;
     private final int maxRowIndex;
-    private final IncrementalIndex.FactsHolder facts;
+    @MonotonicNonNull
     private Iterator<IncrementalIndexRow> baseIter;
-    private Iterable<IncrementalIndexRow> cursorIterable;
-    private boolean emptyRange;
     private int numAdvanced;
     private boolean done;
 
     IncrementalIndexCursor(
-        IncrementalIndexStorageAdapter storageAdapter,
-        IncrementalIndex index,
-        VirtualColumns virtualColumns,
-        Order timeOrder,
-        @Nullable Filter filter,
-        Interval actualInterval
+        IncrementalIndexRowSelector rowSelector,
+        IncrementalIndexRowHolder currentRow,
+        ColumnSelectorFactory selectorFactory,
+        CursorBuildSpec buildSpec,
+        Order timeOrder
     )
     {
-      currEntry = new IncrementalIndexRowHolder();
-      columnSelectorFactory = new IncrementalIndexColumnSelectorFactory(
-          storageAdapter,
-          virtualColumns,
-          timeOrder,
-          currEntry
-      );
+      currEntry = currentRow;
+      columnSelectorFactory = selectorFactory;
       // Set maxRowIndex before creating the filterMatcher. See https://github.com/apache/druid/pull/6340
-      maxRowIndex = index.getLastRowIndex();
-      filterMatcher = filter == null ? ValueMatchers.allTrue() : filter.makeMatcher(columnSelectorFactory);
+      maxRowIndex = rowSelector.getLastRowIndex();
       numAdvanced = -1;
-      facts = index.getFacts();
-      cursorIterable = facts.timeRangeIterable(
-          timeOrder == Order.DESCENDING,
-          actualInterval.getStartMillis(),
-          actualInterval.getEndMillis()
-      );
-      emptyRange = !cursorIterable.iterator().hasNext();
 
+      cursorIterable = rowSelector.getFacts().timeRangeIterable(
+          timeOrder == Order.DESCENDING,
+          buildSpec.getInterval().getStartMillis(),
+          buildSpec.getInterval().getEndMillis()
+      );
+      filterMatcher = buildSpec.getFilter() == null
+                      ? ValueMatchers.allTrue()
+                      : buildSpec.getFilter().makeMatcher(columnSelectorFactory);
       reset();
     }
 
@@ -157,7 +152,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       while (baseIter.hasNext()) {
         BaseQuery.checkInterrupted();
 
-        IncrementalIndexRow entry = baseIter.next();
+        final IncrementalIndexRow entry = baseIter.next();
         if (beyondMaxRowIndex(entry.getRowIndex())) {
           continue;
         }
@@ -241,7 +236,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
         numAdvanced++;
       }
 
-      done = !foundMatched && (emptyRange || !baseIter.hasNext());
+      done = !foundMatched;
     }
 
     private boolean beyondMaxRowIndex(int rowIndex)
@@ -250,6 +245,15 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       // rows are order by timestamp, not rowIndex,
       // so we still need to go through all rows to skip rows added after cursor created
       return rowIndex > maxRowIndex;
+    }
+  }
+
+  private static Order getTimeOrder(List<OrderBy> ordering)
+  {
+    if (!ordering.isEmpty() && ColumnHolder.TIME_COLUMN_NAME.equals(ordering.get(0).getColumnName())) {
+      return ordering.get(0).getOrder();
+    } else {
+      return Order.NONE;
     }
   }
 }

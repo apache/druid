@@ -44,6 +44,7 @@ import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -396,6 +397,19 @@ public class BrokerServerView implements TimelineServerView
           }
       );
     }
+  }
+
+  @Override
+  public List<DruidServerMetadata> getDruidServerMetadatas()
+  {
+    // Override default implementation for better performance.
+    final List<DruidServerMetadata> retVal = new ArrayList<>(clients.size());
+
+    for (final QueryableDruidServer<?> server : clients.values()) {
+      retVal.add(server.getServer().getMetadata());
+    }
+
+    return retVal;
   }
 
   @Override

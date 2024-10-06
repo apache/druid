@@ -34,6 +34,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
@@ -80,7 +81,7 @@ import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -99,7 +100,7 @@ import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -227,7 +228,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         segmentGranularity,
         queryGranularity,
         intervals,
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+            )
+        ),
         expectedLongSumMetric
     );
   }
@@ -386,7 +392,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
         expectedLongSumMetric.put("fieldName", "val");
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+            new DimensionsSpec(
+                ImmutableList.of(
+                    new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                    new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                )
+            ),
             ImmutableList.of(expectedLongSumMetric),
             null,
             compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
@@ -801,7 +812,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedLongSumMetric.put("fieldName", "val");
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+            )
+        ),
         ImmutableList.of(expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         IndexSpec.DEFAULT.asMap(mapper),
@@ -866,7 +882,12 @@ public class CompactionTaskRunTest extends IngestionTestBase
     expectedLongSumMetric.put("fieldName", "val");
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+            )
+        ),
         ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
         getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
         IndexSpec.DEFAULT.asMap(mapper),
@@ -1676,8 +1697,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
               ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1)),
               DimensionsSpec.builder()
                             .setDimensions(Arrays.asList(
-                                new StringDimensionSchema("ts"),
-                                new StringDimensionSchema("dim"),
+                                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null),
                                 new NewSpatialDimensionSchema("spatial", Collections.singletonList("spatial"))
                             ))
                             .build(),
@@ -1702,11 +1723,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (DataSegment segment : segments) {
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+      final WindowedCursorFactory windowed = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();
@@ -1830,11 +1851,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (DataSegment segment : segments) {
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+      final WindowedCursorFactory windowed = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();
@@ -1964,8 +1985,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
     final File segmentFile = segmentCacheManager.getSegmentFiles(compactSegment);
 
     final QueryableIndex queryableIndex = testUtils.getTestIndexIO().loadIndex(segmentFile);
-    final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-        new QueryableIndexStorageAdapter(queryableIndex),
+    final WindowedCursorFactory windowed = new WindowedCursorFactory(
+        new QueryableIndexCursorFactory(queryableIndex),
         compactSegment.getInterval()
     );
     Assert.assertEquals(
@@ -1980,7 +2001,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     try (final CursorHolder cursorHolder =
-             adapter.getAdapter()
+             windowed.getCursorFactory()
                     .makeCursorHolder(CursorBuildSpec.builder().setInterval(compactSegment.getInterval()).build())) {
       final Cursor cursor = cursorHolder.asCursor();
       cursor.reset();
@@ -2210,11 +2231,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (DataSegment segment : segments) {
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+      final WindowedCursorFactory windowed = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      try (final CursorHolder cursorHolder = adapter.getAdapter().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         final Cursor cursor = cursorHolder.asCursor();
         Assert.assertNotNull(cursor);
         cursor.reset();

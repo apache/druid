@@ -20,6 +20,7 @@
 package org.apache.druid.query.timeseries;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.collections.NonBlockingPool;
@@ -42,10 +43,10 @@ import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.SegmentMissingException;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TimeBoundaryInspector;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -86,22 +87,25 @@ public class TimeseriesQueryEngine
    * scoped down to a single interval before calling this method.
    */
   public Sequence<Result<TimeseriesResultValue>> process(
-      final TimeseriesQuery query,
-      final StorageAdapter adapter,
+      TimeseriesQuery query,
+      final CursorFactory cursorFactory,
       @Nullable TimeBoundaryInspector timeBoundaryInspector,
       @Nullable final TimeseriesQueryMetrics timeseriesQueryMetrics
   )
   {
-    if (adapter == null) {
+    if (cursorFactory == null) {
       throw new SegmentMissingException(
-          "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
+          "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
 
     final Interval interval = Iterables.getOnlyElement(query.getIntervals());
     final Granularity gran = query.getGranularity();
 
-    final CursorHolder cursorHolder = adapter.makeCursorHolder(makeCursorBuildSpec(query, timeseriesQueryMetrics));
+    final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(query, timeseriesQueryMetrics));
+    if (cursorHolder.isPreAggregated()) {
+      query = query.withAggregatorSpecs(Preconditions.checkNotNull(cursorHolder.getAggregatorsForPreAggregated()));
+    }
     try {
       final Sequence<Result<TimeseriesResultValue>> result;
 
