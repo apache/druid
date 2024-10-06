@@ -4218,6 +4218,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @NotYetSupported(Modes.JOIN_CONDITION_NOT_PUSHED_CONDITION)
   public void testSemiJoinWithOuterTimeExtractAggregateWithOrderBy()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT COUNT(DISTINCT dim1), EXTRACT(MONTH FROM __time) FROM druid.foo\n"
         + " WHERE dim2 IN (\n"

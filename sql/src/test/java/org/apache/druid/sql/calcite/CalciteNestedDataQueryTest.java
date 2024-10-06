@@ -2681,6 +2681,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByPathSelectorFilterCoalesce()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT "
         + "JSON_VALUE(nest, '$.x'), "
@@ -7577,6 +7578,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testToJsonString()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT TO_JSON_STRING(nester) FROM druid.nested GROUP BY 1",
         ImmutableList.of(
