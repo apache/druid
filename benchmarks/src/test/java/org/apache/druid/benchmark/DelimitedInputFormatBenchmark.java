@@ -132,7 +132,7 @@ public class DelimitedInputFormatBenchmark
   @Setup(Level.Trial)
   public void prepareFormat()
   {
-    format = new DelimitedInputFormat(fromHeader ? null : COLUMNS, null, "\t", null, fromHeader, fromHeader ? 0 : 1);
+    format = new DelimitedInputFormat(fromHeader ? null : COLUMNS, null, "\t", null, fromHeader, fromHeader ? 0 : 1, null);
   }
 
   @Benchmark

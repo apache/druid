@@ -296,7 +296,7 @@ public class ChannelStageOutputReaderTest extends InitializedNullHandlingTest
       frameReader = FrameReader.create(adapter.getRowSignature());
       frameList = FrameSequenceBuilder.fromCursorFactory(adapter)
                                       .frameType(FrameType.ROW_BASED)
-                                      .maxRowsPerFrame(IntMath.divide(index.size(), MAX_FRAMES, RoundingMode.CEILING))
+                                      .maxRowsPerFrame(IntMath.divide(index.numRows(), MAX_FRAMES, RoundingMode.CEILING))
                                       .frames()
                                       .toList();
     }

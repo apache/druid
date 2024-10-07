@@ -282,7 +282,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
           globalDictionarySortedCollector.getSortedDoubles(),
           () -> new AutoTypeColumnMerger.ArrayDictionaryMergingIterator(
               new Iterable[]{globalDictionarySortedCollector.getSortedArrays()},
-              serializer.getGlobalLookup()
+              serializer.getDictionaryIdLookup()
           )
       );
       serializer.open();
@@ -317,7 +317,8 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob.getFileMapper()
+        bob.getFileMapper(),
+        null
     );
     try (VariantColumn<?> column = (VariantColumn<?>) supplier.get()) {
       smokeTest(supplier, column, data, expectedTypes);
@@ -335,7 +336,8 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob.getFileMapper()
+        bob.getFileMapper(),
+        null
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

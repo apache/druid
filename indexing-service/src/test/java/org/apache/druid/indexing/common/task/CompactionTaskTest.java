@@ -1619,10 +1619,10 @@ public class CompactionTaskTest
   private static List<DimensionsSpec> getExpectedDimensionsSpecForAutoGeneration()
   {
     return ImmutableList.of(
-        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double"))),
-        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double"))),
-        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double"))),
-        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double"))),
+        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
+        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
+        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
+        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double"))),
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
     );
@@ -1632,27 +1632,27 @@ public class CompactionTaskTest
   {
     return Lists.newArrayList(
         new LongDimensionSchema("timestamp"),
-        new StringDimensionSchema("string_dim_4"),
+        new StringDimensionSchema("string_dim_4", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_4"),
         new FloatDimensionSchema("float_dim_4"),
         new DoubleDimensionSchema("double_dim_4"),
-        new StringDimensionSchema("string_dim_0"),
+        new StringDimensionSchema("string_dim_0", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_0"),
         new FloatDimensionSchema("float_dim_0"),
         new DoubleDimensionSchema("double_dim_0"),
-        new StringDimensionSchema("string_dim_1"),
+        new StringDimensionSchema("string_dim_1", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_1"),
         new FloatDimensionSchema("float_dim_1"),
         new DoubleDimensionSchema("double_dim_1"),
-        new StringDimensionSchema("string_dim_2"),
+        new StringDimensionSchema("string_dim_2", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_2"),
         new FloatDimensionSchema("float_dim_2"),
         new DoubleDimensionSchema("double_dim_2"),
-        new StringDimensionSchema("string_dim_3"),
+        new StringDimensionSchema("string_dim_3", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_3"),
         new FloatDimensionSchema("float_dim_3"),
         new DoubleDimensionSchema("double_dim_3"),
-        new StringDimensionSchema("string_dim_5"),
+        new StringDimensionSchema("string_dim_5", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_5"),
         new FloatDimensionSchema("float_dim_5"),
         new DoubleDimensionSchema("double_dim_5"),
@@ -1910,6 +1910,7 @@ public class CompactionTaskTest
                 return new Metadata(
                     null,
                     aggregatorFactories.toArray(new AggregatorFactory[0]),
+                    null,
                     null,
                     null,
                     null,

@@ -336,4 +336,10 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
         }
     );
   }
+
+  @Override
+  public Boolean isExplainSupported()
+  {
+    return delegate.isExplainSupported();
+  }
 }

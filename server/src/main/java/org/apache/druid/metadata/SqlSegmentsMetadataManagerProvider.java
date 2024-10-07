@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 
@@ -33,6 +34,7 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
   private final Supplier<MetadataStorageTablesConfig> storageConfig;
   private final SQLMetadataConnector connector;
   private final Lifecycle lifecycle;
+  private final ServiceEmitter serviceEmitter;
   private final SegmentSchemaCache segmentSchemaCache;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
@@ -44,7 +46,8 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
       SQLMetadataConnector connector,
       Lifecycle lifecycle,
       SegmentSchemaCache segmentSchemaCache,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      ServiceEmitter serviceEmitter
   )
   {
     this.jsonMapper = jsonMapper;
@@ -52,6 +55,7 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
     this.storageConfig = storageConfig;
     this.connector = connector;
     this.lifecycle = lifecycle;
+    this.serviceEmitter = serviceEmitter;
     this.segmentSchemaCache = segmentSchemaCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
@@ -84,7 +88,8 @@ public class SqlSegmentsMetadataManagerProvider implements SegmentsMetadataManag
         storageConfig,
         connector,
         segmentSchemaCache,
-        centralizedDatasourceSchemaConfig
+        centralizedDatasourceSchemaConfig,
+        serviceEmitter
     );
   }
 }

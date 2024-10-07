@@ -564,6 +564,10 @@ Returns the rank for a row within a window without gaps. For example, if two row
 
 Returns the result of integer division of `x` by `y`.
 
+:::info
+The `DIV` function is not implemented in Druid versions 30.0.0 or earlier. Consider using [`SAFE_DIVIDE`](./sql-functions.md#safe_divide) instead. 
+:::
+
 ## DS_CDF
 
 `DS_CDF(expr, splitPoint0, splitPoint1, ...)`
@@ -854,6 +858,13 @@ Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
 `JSON_KEYS(expr, path)`
 
 Returns an array of field names from `expr` at the specified `path`.
+
+## JSON_MERGE
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_MERGE(expr1, expr2[, expr3 ...])`
+Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. Returning always a `COMPLEX<json>` type.
 
 ## JSON_OBJECT
 

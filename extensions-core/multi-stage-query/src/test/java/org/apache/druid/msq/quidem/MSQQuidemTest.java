@@ -25,7 +25,6 @@ import java.io.File;
 
 public class MSQQuidemTest extends DruidQuidemTestBase
 {
-
   public MSQQuidemTest()
   {
     super();

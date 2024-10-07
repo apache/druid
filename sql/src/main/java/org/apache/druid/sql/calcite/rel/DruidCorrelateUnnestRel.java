@@ -577,7 +577,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
   /**
    * Shuttle that replaces correlating variables with regular field accesses to the left-hand side.
    */
-  private static class CorrelatedFieldAccessToInputRef extends RexShuttle
+  public static class CorrelatedFieldAccessToInputRef extends RexShuttle
   {
     private final CorrelationId correlationId;
 
@@ -595,7 +595,6 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
           return new RexInputRef(fieldAccess.getField().getIndex(), fieldAccess.getType());
         }
       }
-
       return super.visitFieldAccess(fieldAccess);
     }
   }

@@ -1620,21 +1620,12 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
         onClick={[Function]}
         text="History"
       />
-      <Blueprint5.Tooltip
-        compact={false}
-        content="There is no compaction config currently set for this datasource"
-        hoverCloseDelay={0}
-        hoverOpenDelay={100}
-        interactionKind="hover-target"
-        minimal={false}
-        transitionDuration={100}
-      >
-        <Blueprint5.Button
-          disabled={true}
-          intent="danger"
-          text="Delete"
-        />
-      </Blueprint5.Tooltip>
+      <Blueprint5.Button
+        data-tooltip="There is no compaction config currently set for this datasource"
+        disabled={true}
+        intent="danger"
+        text="Delete"
+      />
       <Blueprint5.Button
         onClick={[Function]}
         text="Close"

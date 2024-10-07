@@ -155,14 +155,15 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
-    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
         SegmentsMetadataManagerConfig::new,
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnectorRule.getConnector(),
         segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        NoopServiceEmitter.instance()
     );
     lockbox = new TaskLockbox(taskStorage, storageCoordinator);
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
@@ -313,7 +314,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
           csvParseSpec.getListDelimiter(),
           getColumnsFromHeader ? null : true,
           getColumnsFromHeader ? true : null,
-          csvParseSpec.getSkipHeaderRows()
+          csvParseSpec.getSkipHeaderRows(),
+          null
       );
     } else if (parseSpec instanceof DelimitedParseSpec) {
       DelimitedParseSpec delimitedParseSpec = (DelimitedParseSpec) parseSpec;
@@ -324,7 +326,8 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
           delimitedParseSpec.getDelimiter(),
           getColumnsFromHeader ? null : true,
           getColumnsFromHeader ? true : null,
-          delimitedParseSpec.getSkipHeaderRows()
+          delimitedParseSpec.getSkipHeaderRows(),
+          null
       );
     } else if (parseSpec instanceof RegexParseSpec) {
       RegexParseSpec regexParseSpec = (RegexParseSpec) parseSpec;

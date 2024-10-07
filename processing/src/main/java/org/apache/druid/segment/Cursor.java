@@ -69,7 +69,8 @@ public interface Cursor
 
   /**
    * Advance to the cursor to the next position. Callers should check {@link #isDone()} or
-   * {@link #isDoneOrInterrupted()} before getting the next value from a selector.
+   * {@link #isDoneOrInterrupted()} before getting the next value from a selector. However, underlying
+   * implementation may still check for thread interruption if advancing the cursor is a long-running operation.
    */
   void advanceUninterruptibly();
 
