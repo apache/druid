@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.base.Throwables;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.ISE;
 import org.junit.AssumptionViolatedException;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
@@ -93,10 +92,8 @@ public @interface NotYetSupported
     UNION_MORE_STRICT_ROWTYPE_CHECK(DruidException.class, "Row signature mismatch in Union inputs"),
     JOIN_CONDITION_NOT_PUSHED_CONDITION(DruidException.class, "SQL requires a join with '.*' condition"),
     JOIN_CONDITION_UNSUPORTED_OPERAND(DruidException.class, "SQL .* unsupported operand type"),
-    JOIN_TABLE_TABLE(ISE.class, "Cannot handle subquery structure for dataSource: JoinDataSource"),
     CORRELATE_CONVERSION(DruidException.class, "Missing conversion( is|s are) LogicalCorrelate"),
     SORT_REMOVE_TROUBLE(DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
-    STACK_OVERFLOW(StackOverflowError.class, ""),
     CANNOT_JOIN_LOOKUP_NON_KEY(RuntimeException.class, "Cannot join lookup with condition referring to non-key"),
     SORT_REMOVE_CONSTANT_KEYS_CONFLICT(DruidException.class, "not enough rules");
     // @formatter:on

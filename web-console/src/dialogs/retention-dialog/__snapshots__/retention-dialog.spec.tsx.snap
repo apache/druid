@@ -516,9 +516,9 @@ exports[`RetentionDialog matches snapshot 1`] = `
                             >
                               <button
                                 class="bp5-button bp5-disabled bp5-minimal"
+                                data-tooltip="There are no tiers left to assign"
                                 disabled=""
                                 tabindex="-1"
-                                title="There are no tiers left to assign"
                                 type="button"
                               >
                                 <span

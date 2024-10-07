@@ -57,6 +57,8 @@ import java.io.IOException;
  */
 public abstract class BaseWorkerClientImpl implements WorkerClient
 {
+  private static final Logger log = new Logger(BaseWorkerClientImpl.class);
+
   private final ObjectMapper objectMapper;
   private final String contentType;
 
@@ -90,14 +92,15 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerId,
-      StageId stageId
+      StageId stageId,
+      SketchEncoding sketchEncoding
   )
   {
     String path = StringUtils.format(
         "/keyStatistics/%s/%d?sketchEncoding=%s",
         StringUtils.urlEncode(stageId.getQueryId()),
         stageId.getStageNumber(),
-        WorkerResource.SketchEncoding.OCTET_STREAM
+        sketchEncoding
     );
 
     return getClient(workerId).asyncRequest(
@@ -110,7 +113,8 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerId,
       StageId stageId,
-      long timeChunk
+      long timeChunk,
+      SketchEncoding sketchEncoding
   )
   {
     String path = StringUtils.format(
@@ -118,7 +122,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
         StringUtils.urlEncode(stageId.getQueryId()),
         stageId.getStageNumber(),
         timeChunk,
-        WorkerResource.SketchEncoding.OCTET_STREAM
+        sketchEncoding
     );
 
     return getClient(workerId).asyncRequest(
@@ -188,8 +192,6 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
         holder -> deserialize(holder, new TypeReference<CounterSnapshotsTree>() {})
     );
   }
-
-  private static final Logger log = new Logger(BaseWorkerClientImpl.class);
 
   @Override
   public ListenableFuture<Boolean> fetchChannelData(

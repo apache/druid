@@ -1525,9 +1525,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayLength()
   {
-    // Cannot vectorize due to array expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT dim1, ARRAY_LENGTH(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1, 2 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -1740,9 +1738,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayPrependAppend()
   {
-    // Cannot vectorize due to array expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
@@ -1861,9 +1857,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOffset()
   {
-    // Cannot vectorize due to array expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_OFFSET(dim3, 1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2185,9 +2179,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOrdinal()
   {
-    // Cannot vectorize due to array expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_ORDINAL(dim3, 2), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2228,9 +2220,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOffsetOf()
   {
-    // Cannot vectorize due to array expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_OFFSET_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2277,9 +2267,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOrdinalOf()
   {
-    // Cannot vectorize due to array expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_ORDINAL_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2327,9 +2315,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayToString()
   {
-    // Cannot vectorize due to array expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(

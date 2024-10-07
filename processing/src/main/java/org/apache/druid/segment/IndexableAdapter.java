@@ -64,6 +64,8 @@ public interface IndexableAdapter
 
   TransformableRowIterator getRows();
 
+  IndexableAdapter getProjectionAdapter(String projection);
+
   BitmapValues getBitmapValues(String dimension, int dictId);
 
   ColumnCapabilities getCapabilities(String column);

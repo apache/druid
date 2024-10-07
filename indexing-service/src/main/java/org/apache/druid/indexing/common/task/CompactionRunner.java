@@ -57,6 +57,9 @@ public interface CompactionRunner
    * Checks if the provided compaction config is supported by the runner.
    * The same validation is done at {@link org.apache.druid.msq.indexing.MSQCompactionRunner#validateCompactionTask}
    */
-  CompactionConfigValidationResult validateCompactionTask(CompactionTask compactionTask);
+  CompactionConfigValidationResult validateCompactionTask(
+      CompactionTask compactionTask,
+      Map<Interval, DataSchema> intervalToDataSchemaMap
+  );
 
 }

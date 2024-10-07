@@ -243,6 +243,11 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return Druids.TimeseriesQueryBuilder.copy(this).filters(dimFilter).build();
   }
 
+  public TimeseriesQuery withAggregatorSpecs(List<AggregatorFactory> aggregatorSpecs)
+  {
+    return Druids.TimeseriesQueryBuilder.copy(this).aggregators(aggregatorSpecs).build();
+  }
+
   public TimeseriesQuery withPostAggregatorSpecs(final List<PostAggregator> postAggregatorSpecs)
   {
     return Druids.TimeseriesQueryBuilder.copy(this).postAggregators(postAggregatorSpecs).build();

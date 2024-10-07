@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.Objects;
@@ -49,6 +50,14 @@ public class ColumnNameRestrictedFault extends BaseMSQFault
   public String getColumnName()
   {
     return columnName;
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.INVALID_INPUT)
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @Override

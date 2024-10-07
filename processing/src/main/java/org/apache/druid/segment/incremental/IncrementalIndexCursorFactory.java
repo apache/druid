@@ -20,6 +20,8 @@
 package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
@@ -28,8 +30,10 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.projections.QueryableProjection;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public class IncrementalIndexCursorFactory implements CursorFactory
 {
@@ -77,7 +81,35 @@ public class IncrementalIndexCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return new IncrementalIndexCursorHolder(index, spec);
+    final QueryableProjection<IncrementalIndexRowSelector> projection = index.getProjection(spec);
+    if (projection == null) {
+      return new IncrementalIndexCursorHolder(index, spec);
+    } else {
+      // currently we only have aggregated projections, so isPreAggregated is always true
+      return new IncrementalIndexCursorHolder(
+          projection.getRowSelector(),
+          projection.getCursorBuildSpec()
+      )
+      {
+        @Override
+        public ColumnSelectorFactory makeSelectorFactory(CursorBuildSpec buildSpec, IncrementalIndexRowHolder currEntry)
+        {
+          return projection.wrapColumnSelectorFactory(super.makeSelectorFactory(buildSpec, currEntry));
+        }
+
+        @Override
+        public boolean isPreAggregated()
+        {
+          return true;
+        }
+
+        @Override
+        public List<AggregatorFactory> getAggregatorsForPreAggregated()
+        {
+          return projection.getCursorBuildSpec().getAggregators();
+        }
+      };
+    }
   }
 
   @Override
@@ -99,9 +131,9 @@ public class IncrementalIndexCursorFactory implements CursorFactory
     return snapshotColumnCapabilities(index, column);
   }
 
-  static ColumnCapabilities snapshotColumnCapabilities(IncrementalIndex index, String column)
+  static ColumnCapabilities snapshotColumnCapabilities(IncrementalIndexRowSelector selector, String column)
   {
-    IncrementalIndex.DimensionDesc desc = index.getDimension(column);
+    IncrementalIndex.DimensionDesc desc = selector.getDimension(column);
     // nested column indexer is a liar, and behaves like any type if it only processes unnested literals of a single
     // type, so force it to use nested column type
     if (desc != null && desc.getIndexer() instanceof NestedDataColumnIndexerV4) {
@@ -122,7 +154,7 @@ public class IncrementalIndexCursorFactory implements CursorFactory
     // multi-valuedness at cursor creation time, instead of the latest state, and getSnapshotColumnCapabilities could
     // be removed.
     return ColumnCapabilitiesImpl.snapshot(
-        index.getColumnCapabilities(column),
+        selector.getColumnCapabilities(column),
         COERCE_LOGIC
     );
   }

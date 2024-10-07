@@ -77,8 +77,10 @@ public class HeapMemoryAllocator implements MemoryAllocator
             @Override
             public void close()
             {
-              memory = null;
-              bytesAllocated -= size;
+              if (memory != null) {
+                memory = null;
+                bytesAllocated -= size;
+              }
             }
           }
       );

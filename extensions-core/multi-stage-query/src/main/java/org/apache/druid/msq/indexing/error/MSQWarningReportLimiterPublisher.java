@@ -97,7 +97,7 @@ public class MSQWarningReportLimiterPublisher implements MSQWarningReportPublish
       // Send the warning as an error if it is disallowed altogether
       if (criticalWarningCodes.contains(errorCode)) {
         try {
-          controllerClient.postWorkerError(workerId, MSQErrorReport.fromException(workerId, host, stageNumber, e));
+          controllerClient.postWorkerError(MSQErrorReport.fromException(workerId, host, stageNumber, e));
         }
         catch (IOException postException) {
           throw new RE(postException, "Failed to post the worker error [%s] to the controller", errorCode);

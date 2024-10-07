@@ -54,7 +54,8 @@ public class SqlSegmentsMetadataManagerProviderTest
         connector,
         lifecycle,
         segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        NoopServiceEmitter.instance()
     );
     SegmentsMetadataManager manager = provider.get();
     Assert.assertTrue(manager instanceof SqlSegmentsMetadataManager);

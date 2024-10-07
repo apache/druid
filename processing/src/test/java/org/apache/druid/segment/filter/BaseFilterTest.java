@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.QueryContext;
@@ -163,7 +164,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           new NestedFieldVirtualColumn("nested", "$.l0", "nested.l0", ColumnType.LONG),
           new NestedFieldVirtualColumn("nested", "$.arrayLong", "nested.arrayLong", ColumnType.LONG_ARRAY),
           new NestedFieldVirtualColumn("nested", "$.arrayDouble", "nested.arrayDouble", ColumnType.DOUBLE_ARRAY),
-          new NestedFieldVirtualColumn("nested", "$.arrayString", "nested.arrayString", ColumnType.STRING_ARRAY)
+          new NestedFieldVirtualColumn("nested", "$.arrayString", "nested.arrayString", ColumnType.STRING_ARRAY),
+          new ExpressionVirtualColumn("arrayLongAsMvd", "array_to_mv(arrayLong)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("arrayDoubleAsMvd", "array_to_mv(arrayDouble)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("arrayStringAsMvd", "array_to_mv(arrayString)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("arrayConstantAsMvd", "array_to_mv(array(1,2,3))", ColumnType.STRING, TestExprMacroTable.INSTANCE)
       )
   );
 
@@ -538,7 +543,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .collect(Collectors.toList())
                                       ),
                                       schema.getMetrics(),
-                                      schema.isRollup()
+                                      schema.isRollup(),
+                                      schema.getProjections()
                                   )
                           );
                           final IncrementalIndex index = input.buildIncrementalIndex();
@@ -566,7 +572,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .collect(Collectors.toList())
                                       ),
                                       schema.getMetrics(),
-                                      schema.isRollup()
+                                      schema.isRollup(),
+                                      schema.getProjections()
                                   )
                           );
                           final QueryableIndex index = input.buildMMappedIndex();
@@ -595,7 +602,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                         .collect(Collectors.toList())
                                               ),
                                               schema.getMetrics(),
-                                              schema.isRollup()
+                                              schema.isRollup(),
+                                              schema.getProjections()
                                           )
                                   )
                                   // if 1 row per segment some of the columns have null values for the row which causes 'auto'
@@ -672,7 +680,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                             .collect(Collectors.toList())
                                   ),
                                   schema.getMetrics(),
-                                  schema.isRollup()
+                                  schema.isRollup(),
+                                  schema.getProjections()
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
@@ -695,7 +704,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                             .collect(Collectors.toList())
                                   ),
                                   schema.getMetrics(),
-                                  schema.isRollup()
+                                  schema.isRollup(),
+                                  schema.getProjections()
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
@@ -1185,6 +1195,19 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     // test double inverted
     if (!StringUtils.toLowerCase(testName).contains("concise")) {
       assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, false);
+    }
+  }
+
+  protected void assertFilterMatchesSkipVectorizeUnlessFallback(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    final boolean vectorize = ExpressionProcessing.allowVectorizeFallback();
+    assertFilterMatches(filter, expectedRows, vectorize);
+    // test double inverted
+    if (!StringUtils.toLowerCase(testName).contains("concise")) {
+      assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, vectorize);
     }
   }
 

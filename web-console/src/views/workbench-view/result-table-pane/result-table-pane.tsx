@@ -610,7 +610,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                 return (
                   <Popover content={<Deferred content={() => getHeaderMenu(column, i)} />}>
                     <div className="clickable-cell">
-                      <div className="output-name" title={columnToSummary(column)}>
+                      <div className="output-name" data-tooltip={columnToSummary(column)}>
                         {icon && <Icon className="type-icon" icon={icon} size={12} />}
                         {h}
                         {hasFilterOnHeader(h, i) && (

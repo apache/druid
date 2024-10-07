@@ -2953,7 +2953,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.11.3
+version: 1.11.4
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
@@ -5089,24 +5089,6 @@ version: 0.22.22
 
 ---
 
-name: "@druid-toolkit/visuals-core"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Imply Data
-version: 0.3.3
-
----
-
-name: "@druid-toolkit/visuals-react"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Imply Data
-version: 0.3.3
-
----
-
 name: "@emotion/cache"
 license_category: binary
 module: web-console
@@ -5204,15 +5186,6 @@ license_name: SIL Open Font License 1.1
 copyright: Google Inc.
 version: 5.0.28
 license_file_path: licenses/bin/@fontsource-open-sans.OFL
-
----
-
-name: "@juggle/resize-observer"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Juggle
-version: 3.4.0
 
 ---
 
@@ -5572,6 +5545,16 @@ license_name: BSD-3-Clause License
 copyright: Mike Bostock
 version: 2.0.1
 license_file_path: licenses/bin/d3-interpolate.BSD3
+
+---
+
+name: "d3-scale-chromatic"
+license_category: binary
+module: web-console
+license_name: ISC License
+copyright: Mike Bostock
+version: 3.1.0
+license_file_path: licenses/bin/d3-scale-chromatic.ISC
 
 ---
 
@@ -6558,16 +6541,6 @@ license_name: MIT License
 copyright: Blake Embrey
 version: 2.0.2
 license_file_path: licenses/bin/upper-case.MIT
-
----
-
-name: "use-resize-observer"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Viktor Hubert
-version: 9.1.0
-license_file_path: licenses/bin/use-resize-observer.MIT
 
 ---
 

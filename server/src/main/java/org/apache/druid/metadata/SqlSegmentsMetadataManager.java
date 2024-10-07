@@ -50,6 +50,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -164,6 +166,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
   private final SegmentSchemaCache segmentSchemaCache;
+  private final ServiceEmitter serviceEmitter;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   /**
@@ -251,7 +254,8 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       Supplier<MetadataStorageTablesConfig> dbTables,
       SQLMetadataConnector connector,
       SegmentSchemaCache segmentSchemaCache,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      ServiceEmitter serviceEmitter
   )
   {
     this.jsonMapper = jsonMapper;
@@ -260,6 +264,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     this.connector = connector;
     this.segmentSchemaCache = segmentSchemaCache;
     this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
+    this.serviceEmitter = serviceEmitter;
   }
 
   /**
@@ -639,7 +644,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     try {
       int numUpdatedDatabaseEntries = connector.getDBI().withHandle(
-          (Handle handle) -> handle
+          handle -> handle
               .createStatement(StringUtils.format("UPDATE %s SET used=true, used_status_last_updated = :used_status_last_updated WHERE id = :id", getSegmentsTable()))
               .bind("id", segmentId)
               .bind("used_status_last_updated", DateTimes.nowUtc().toString())
@@ -650,7 +655,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       // segment into the respective data source, because we don't have it fetched from the database. It's probably not
       // worth complicating the implementation and making two database queries just to add the segment because it will
       // be anyway fetched during the next poll(). Segment putting that is done in the bulk markAsUsed methods is a nice
-      // to have thing, but doesn't formally affects the external guarantees of SegmentsMetadataManager class.
+      // to have thing, but doesn't formally affect the external guarantees of SegmentsMetadataManager class.
       return numUpdatedDatabaseEntries > 0;
     }
     catch (RuntimeException e) {
@@ -1031,7 +1036,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private void doPollSegments()
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
-    log.info("Starting polling of segment table.");
 
     // Some databases such as PostgreSQL require auto-commit turned off
     // to stream results back, enabling transactions disables auto-commit
@@ -1060,14 +1064,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         "Unexpected 'null' when polling segments from the db, aborting snapshot update."
     );
 
-    if (segments.isEmpty()) {
-      log.info("No segments found in the database!");
-    } else {
-      log.info(
-          "Polled and found [%,d] segments in the database in [%,d] ms.",
-          segments.size(), stopwatch.millisElapsed()
-      );
-    }
+    stopwatch.stop();
+    emitMetric("segment/poll/time", stopwatch.millisElapsed());
+    log.info(
+        "Polled and found [%,d] segments in the database in [%,d]ms.",
+        segments.size(), stopwatch.millisElapsed()
+    );
 
     createDatasourcesSnapshot(segments);
   }
@@ -1075,7 +1077,6 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private void doPollSegmentAndSchema()
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
-    log.info("Starting polling of segment and schema table.");
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataBuilder = new ImmutableMap.Builder<>();
 
@@ -1166,16 +1167,19 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         "Unexpected 'null' when polling segments from the db, aborting snapshot update."
     );
 
-    if (segments.isEmpty() && schemaMap.isEmpty()) {
-      log.info("No segments found in the database!");
-    } else {
-      log.info(
-          "Polled and found [%,d] segments and [%,d] schemas in the database in [%,d] ms.",
-          segments.size(), schemaMap.size(), stopwatch.millisElapsed()
-      );
-    }
+    stopwatch.stop();
+    emitMetric("segment/pollWithSchema/time", stopwatch.millisElapsed());
+    log.info(
+        "Polled and found [%,d] segments and [%,d] schemas in the database in [%,d]ms.",
+        segments.size(), schemaMap.size(), stopwatch.millisElapsed()
+    );
 
     createDatasourcesSnapshot(segments);
+  }
+
+  private void emitMetric(String metricName, long value)
+  {
+    serviceEmitter.emit(new ServiceMetricEvent.Builder().setMetric(metricName, value));
   }
 
   private void createDatasourcesSnapshot(List<DataSegment> segments)
@@ -1195,8 +1199,9 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
         dataSourceProperties
     );
-    log.info(
-        "Successfully created snapshot from polled segments in [%d] ms. Found [%d] overshadowed segments.",
+    emitMetric("segment/buildSnapshot/time", stopwatch.millisElapsed());
+    log.debug(
+        "Created snapshot from polled segments in [%d]ms. Found [%d] overshadowed segments.",
         stopwatch.millisElapsed(), dataSourcesSnapshot.getOvershadowedSegments().size()
     );
   }

@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -28,6 +29,8 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.VirtualColumns;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
 
 /**
  */
@@ -46,6 +49,8 @@ public class IncrementalIndexSchema
   private final AggregatorFactory[] metrics;
   private final boolean rollup;
 
+  private final List<AggregateProjectionSpec> projections;
+
   public IncrementalIndexSchema(
       long minTimestamp,
       TimestampSpec timestampSpec,
@@ -53,7 +58,8 @@ public class IncrementalIndexSchema
       VirtualColumns virtualColumns,
       DimensionsSpec dimensionsSpec,
       AggregatorFactory[] metrics,
-      boolean rollup
+      boolean rollup,
+      List<AggregateProjectionSpec> projections
   )
   {
     this.minTimestamp = minTimestamp;
@@ -63,6 +69,7 @@ public class IncrementalIndexSchema
     this.dimensionsSpec = dimensionsSpec;
     this.metrics = metrics;
     this.rollup = rollup;
+    this.projections = projections;
   }
 
   public long getMinTimestamp()
@@ -100,6 +107,11 @@ public class IncrementalIndexSchema
     return rollup;
   }
 
+  public List<AggregateProjectionSpec> getProjections()
+  {
+    return projections;
+  }
+
   public static class Builder
   {
     private long minTimestamp;
@@ -109,6 +121,7 @@ public class IncrementalIndexSchema
     private DimensionsSpec dimensionsSpec;
     private AggregatorFactory[] metrics;
     private boolean rollup;
+    private List<AggregateProjectionSpec> projections;
 
     public Builder()
     {
@@ -118,6 +131,7 @@ public class IncrementalIndexSchema
       this.dimensionsSpec = DimensionsSpec.EMPTY;
       this.metrics = new AggregatorFactory[]{};
       this.rollup = true;
+      this.projections = Collections.emptyList();
     }
 
     public Builder withMinTimestamp(long minTimestamp)
@@ -176,6 +190,12 @@ public class IncrementalIndexSchema
       return this;
     }
 
+    public Builder withProjections(@Nullable List<AggregateProjectionSpec> projections)
+    {
+      this.projections = projections == null ? Collections.emptyList() : projections;
+      return this;
+    }
+
     public IncrementalIndexSchema build()
     {
       return new IncrementalIndexSchema(
@@ -185,7 +205,8 @@ public class IncrementalIndexSchema
           virtualColumns,
           dimensionsSpec,
           metrics,
-          rollup
+          rollup,
+          projections
       );
     }
   }
