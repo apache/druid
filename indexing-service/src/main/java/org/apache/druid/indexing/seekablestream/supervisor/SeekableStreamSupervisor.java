@@ -4484,7 +4484,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                                                                       getIoConfig().getStream()
                                                                   );
       emitter.emit(eventBuilder.setMetric("task/supervisor/active/count", activelyReadingTaskGroups.size()));
-      emitter.emit(eventBuilder.setMetric("task/supervisor/publishing/count", pendingCompletionTaskGroups.size()));
+      emitter.emit(eventBuilder.setMetric("task/supervisor/publishing/count",
+                                          pendingCompletionTaskGroups.values()
+                                                                     .stream()
+                                                                     .filter(list -> !list.isEmpty())
+                                                                     .count()
+      ));
     }
     catch (Exception e) {
       log.warn(e, "Unable to active/publisihing task count");
