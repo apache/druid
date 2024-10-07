@@ -900,7 +900,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     } else if (pendingSegment.getId().getVersion().compareTo(replaceVersion) >= 0) {
       return false;
     } else if (!replaceInterval.contains(pendingSegment.getId().getInterval())) {
-      return false;
+      throw new ISE(
+          "Incompatible interval[%s] for committing pending segment[%s].",
+          replaceInterval, pendingSegment.getId().asSegmentId()
+      );
     } else {
       // Do not upgrade already upgraded pending segment
       return pendingSegment.getSequenceName() == null
