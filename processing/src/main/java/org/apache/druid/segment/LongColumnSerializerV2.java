@@ -127,6 +127,9 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
     }
   }
 
+  /**
+   * Serializes a null value at the rowCount position, and increments the current rowCount.
+   */
   public void serializeNull() throws IOException
   {
     nullRowsBitmap.add(rowCount);
@@ -134,6 +137,9 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
     ++rowCount;
   }
 
+  /**
+   * Serializes a value of val at the rowCount position, and increments the current rowCount.
+   */
   public void serializeValue(long val) throws IOException
   {
     writer.add(val);
