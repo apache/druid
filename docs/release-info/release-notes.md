@@ -173,8 +173,8 @@ The web console now supports the Kinesis input format.
 
 - You can now search for datasources in the **Datasource** view - previously you had to find them manually [#16371](https://github.com/apache/druid/pull/16371)
 - You can now display both raw and formatted JSON in tables, making the data easier to read and troubleshoot [#16632](https://github.com/apache/druid/pull/16632)
-* You can now configure the maximum number of tasks through a menu [#16991](https://github.com/apache/druid/pull/16991)
-* You can now specify the Delta snapshot version in the web console [#17023](https://github.com/apache/druid/pull/17023)
+- You can now configure the maximum number of tasks through a menu [#16991](https://github.com/apache/druid/pull/16991)
+- You can now specify the Delta snapshot version in the web console [#17023](https://github.com/apache/druid/pull/17023)
 - Added hooks to customize the workbench view [#16749](https://github.com/apache/druid/pull/16749)
 - Added the ability to hide workbench view toolbar in the **Query** view [#16785](https://github.com/apache/druid/pull/16785)
 - Added the ability to submit a suspended supervisor using the SQL data loader [#16696](https://github.com/apache/druid/pull/16696)
@@ -183,6 +183,7 @@ The web console now supports the Kinesis input format.
 - Added the ability to initiate handoff for a supervisor [#16586](https://github.com/apache/druid/pull/16586)
 - Added an option to `Use concurrent locks` and moved all insert and replace options to a separate submenu [#16899](https://github.com/apache/druid/pull/16899)
 - Added Delta snapshot version [#17023](https://github.com/apache/druid/pull/17023)
+- Added the Delta tile to the data loader for SQL-based batch and classic batch ingestion methods [#17160](https://github.com/apache/druid/pull/17160)
 - Improved how the web console detects durable storage [#16493](https://github.com/apache/druid/pull/16493)
 - Made the following web console improvements:
   - Added titles to action menus
@@ -194,15 +195,14 @@ The web console now supports the Kinesis input format.
 
 ### Ingestion
 
-####  Optimized the loading of broadcast data sources 
+#### Optimized the loading of broadcast data sources
 
 Previously all services and tasks downloaded all broadcast data sources.
-To save task storage space and reduce task statup time, this modification prevents kill tasks and MSQ controller tasks from downloading unneeded broadcast data sources. All other tasks still load all broadcast data sources.
+To save task storage space and reduce task startup time, this modification prevents kill tasks and MSQ controller tasks from downloading unneeded broadcast data sources. All other tasks still load all broadcast data sources.
 
 The `CLIPeon` command line option `--loadBroadcastSegments` is deprecated in favor of `--loadBroadcastDatasourceMode`.
 
 [#17027](https://github.com/apache/druid/pull/17027)
-
 
 #### General ingestion improvements
 
@@ -216,8 +216,13 @@ The `CLIPeon` command line option `--loadBroadcastSegments` is deprecated in fav
 - Renamed `TaskStorageQueryAdapter` to `TaskQueryTool` and removed the `isAudited` method [#16750](https://github.com/apache/druid/pull/16750)
 - Improved Overlord performance by reducing redundant calls in SQL statements [#16839](https://github.com/apache/druid/pull/16839)
 - Improved `CustomExceptionMapper` so that it returns a correct failure message [#17016](https://github.com/apache/druid/pull/17016)
+- Improved time filtering in subqueries and non-table data sources [#17173](https://github.com/apache/druid/pull/17173)
+- Improved `WindowOperatorQueryFrameProcessor` to avoid unnecessary re-runs [#17211](https://github.com/apache/druid/pull/17211)
+- Improved memory management by dividing the amount of `partitionStatsMemory` by two to account for two simultaneous statistics collectors [#17216](https://github.com/apache/druid/pull/17216)
 - Fixed NPE in `CompactSegments` [#16713](https://github.com/apache/druid/pull/16713)
 - Fixed Parquet reader to ensure that Druid reads the required columns for a filter from the Parquet data files [#16874](https://github.com/apache/druid/pull/16874)
+- Fixed a distinct sketches issue where Druid called `retainedKeys.firstKey()` twice when adding another sketch [#17184](https://github.com/apache/druid/pull/17184)
+- Fixed a `WindowOperatorQueryFrameProcessor` issue where larger queries could reach the frame writer's capacity preventing it from outputting all of the result rows [#17209](https://github.com/apache/druid/pull/17209)
 - Fixed native ingestion task failures during rolling upgrades from a version before Druid 30 [#17219](https://github.com/apache/druid/pull/17219)
 
 ### SQL-based ingestion
@@ -236,15 +241,21 @@ Improved lookup performance for queries that use the MSQ task engine by only loa
 
 #### Other SQL-based ingestion improvements
 
-* Improved worker cancellation for the MSQ task engine to prevent race conditions [#17046](https://github.com/apache/druid/pull/17046)
-* Improved memory management to better support multi-threaded workers [#17057](https://github.com/apache/druid/pull/17057)
+- Added the ability to use `useConcurrentLocks` in task context to determine task lock type [#17193](https://github.com/apache/druid/pull/17193)
+- Reduced memory usage when transferring sketches between the MSQ task engine controller and worker [#16269](https://github.com/apache/druid/pull/16269)
+- Improved error handling when retrieving Avro schemas from registry [#16684](https://github.com/apache/druid/pull/16684)
+- Fixed issues related to partitioning boundaries in the MSQ task engine's window functions [#16729](https://github.com/apache/druid/pull/16729)
+- Fixed a boost column issue causing quantile sketches to incorrectly estimate the number of output partitions to create [#17141](https://github.com/apache/druid/pull/17141)
+- Fixed an issue with `ScanQueryFrameProcessor` cursor build not adjusting intervals [#17168](https://github.com/apache/druid/pull/17168)
+- Improved worker cancellation for the MSQ task engine to prevent race conditions [#17046](https://github.com/apache/druid/pull/17046)
+- Improved memory management to better support multi-threaded workers [#17057](https://github.com/apache/druid/pull/17057)
 - Reduced memory usage when transferring sketches between the MSQ task engine controller and worker [#16269](https://github.com/apache/druid/pull/16269)
 - Improved error handling when retrieving Avro schemas from registry [#16684](https://github.com/apache/druid/pull/16684)
 - Fixed issues related to partitioning boundaries in the MSQ task engine's window functions [#16729](https://github.com/apache/druid/pull/16729)
 - Fixed handling of null bytes that led to a runtime exception for "Invalid value start byte" [#17232](https://github.com/apache/druid/pull/17232)
 - Updated logic to fix incorrect query results for comparisons involving arrays [#16780](https://github.com/apache/druid/pull/16780)
 - You can now pass a custom `DimensionSchema` map to MSQ query destination of type `DataSourceMSQDestination` instead of using the default values [#16864](https://github.com/apache/druid/pull/16864)
--  Fixed the calculation of suggested memory in `WorkerMemoryParameters` to account for `maxConcurrentStages` which improves the accuracy of error messages [#17108](https://github.com/apache/druid/pull/17108)
+- Fixed the calculation of suggested memory in `WorkerMemoryParameters` to account for `maxConcurrentStages` which improves the accuracy of error messages [#17108](https://github.com/apache/druid/pull/17108)
 - Optimized the row-based frame writer to reduce failures when writing larger single rows to frames [#17094](https://github.com/apache/druid/pull/17094)
 
 ### Streaming ingestion
@@ -300,9 +311,9 @@ Added the following fields from the query-based ingestion task report to the res
 
 #### Other querying improvements
 
-* Improved window queries so that window queries without group by using the native engine don't return an empty response [#16658](https://github.com/apache/druid/pull/16658)
-* Window queries now support the guardrail `maxSubqueryBytes`  [#16800](https://github.com/apache/druid/pull/16800)
-* Window functions that use the MSQ task engine now reject MVDs when they're used as the PARTITION BY column. Previously, an exception occurred [#17036](https://github.com/apache/druid/pull/17036)
+- Improved window queries so that window queries without group by using the native engine don't return an empty response [#16658](https://github.com/apache/druid/pull/16658)
+- Window queries now support the guardrail `maxSubqueryBytes`  [#16800](https://github.com/apache/druid/pull/16800)
+- Window functions that use the MSQ task engine now reject MVDs when they're used as the PARTITION BY column. Previously, an exception occurred [#17036](https://github.com/apache/druid/pull/17036)
 - A query that references aggregators called with unsupported distinct values now fails [#16770](https://github.com/apache/druid/pull/16770)
 - Druid now validates that a complex type aligns with the supported types when used with an aggregator [#16682](https://github.com/apache/druid/pull/16682)
 - Druid prevents you from using DISTINCT or unsupported aggregations with window functions [#16738](https://github.com/apache/druid/pull/16738)
@@ -310,6 +321,7 @@ Added the following fields from the query-based ingestion task report to the res
 - Added the ability to define the segment granularity of a table in the catalog [#16680](https://github.com/apache/druid/pull/16680)
 - Added a way for columns to provide `GroupByVectorColumnSelectors`, which controls how the groupBy engine operates on them [#16338](https://github.com/apache/druid/pull/16338)
 - Added `sqlPlannerBloat` query context parameter to control whether two project operators get merged when inlining expressions [#16248](https://github.com/apache/druid/pull/16248)
+- Added `enableRACOverWire` query context parameter to enable transfer of RACs over wire [#17150](https://github.com/apache/druid/pull/17150)
 - Improved window function offsets for `ArrayListRowsAndColumns` [#16718](https://github.com/apache/druid/pull/16718)
 - Improved the fallback strategy when the Broker is unable to materialize the subquery's results as frames for estimating the bytes [#16679](https://github.com/apache/druid/pull/16679)
 - Improved how Druid executes queries that contain a LIMIT clause [#16643](https://github.com/apache/druid/pull/16643)
@@ -320,6 +332,7 @@ Added the following fields from the query-based ingestion task report to the res
 - Improved numeric aggregations so that Druid now coerces complex types to number when possible, such as for `SpectatorHistogram` [#16564](https://github.com/apache/druid/pull/16564)
 - Improved query filtering to correctly process cases where both an IN expression and an equality (`=`) filter are applied to the same string value [#16597](https://github.com/apache/druid/pull/16597)
 - Improved the speed of SQL IN queries that use the SCALAR_IN_ARRAY function [#16388](https://github.com/apache/druid/pull/16388)
+- Improved the ARRAY_TO_MV function to handle cases where an object selector encounters a multi-value string [#17162](https://github.com/apache/druid/pull/17162)
 - Updated the deserialization of dimensions in GROUP BY queries to operate on all dimensions at once rather than deserializing individual dimensions [#16740](https://github.com/apache/druid/pull/16740)
 - Fixed an issue that caused `maxSubqueryBytes` to fail when segments had missing columns [#16619](https://github.com/apache/druid/pull/16619)
 - Fixed an issue with the array type selector that caused the array aggregation over window frame to fail [#16653](https://github.com/apache/druid/pull/16653)
@@ -330,7 +343,7 @@ Added the following fields from the query-based ingestion task report to the res
 - Updated window functions to disallow multi-value dimensions for partitioning [#17036](https://github.com/apache/druid/pull/17036)
 - Fixed an issue with casting objects to vector expressions [#17148](https://github.com/apache/druid/pull/17148)
 - Added several fixes and improvements to vectorization fallback [#17098](https://github.com/apache/druid/pull/17098), [#17162](https://github.com/apache/druid/pull/17162)
-- You can now configure encoding method for sketches at query time [#17050]([)https://github.com/apache/druid/pull/17050)
+- You can now configure encoding method for sketches at query time [#17050](https://github.com/apache/druid/pull/17050)
 - Fixed an issue with joins failing to time out on Historicals [#17099](https://github.com/apache/druid/pull/17099)
 
 ### Cluster management
@@ -360,6 +373,7 @@ Example payload:
      "engine": "msq"
 }
 ```
+
 This API deprecates the older API `/druid/coordinator/v1/config/compaction/taskslots`.
 
 [#16803](https://github.com/apache/druid/pull/16803)
@@ -391,7 +405,6 @@ Improve the user experience around Coordinator management as follows:
 
 [TBC]
 
-
 #### Optimized query for unused segments
 
 Improved the performance of the metadata query to fetch unused segments for a datasource returns results, which could cause issues with Overlord stability. Test queries that used to take over 30 seconds now complete in less than a second.
@@ -400,16 +413,15 @@ Improved the performance of the metadata query to fetch unused segments for a da
 
 #### Kill tasks
 
-* The `KillUnusedSegments` coordinator duty now selects datasources in a round-robin manner during each run, ensuring varied selection instead of repeatedly choosing the same set of datasources [#16719](https://github.com/apache/druid/pull/16719)
-* Kill tasks can now use different types of locks, such as APPEND or REPLACE. This change is experimental and not recommended for production use [#16362](https://github.com/apache/druid/pull/16362)
+- The `KillUnusedSegments` coordinator duty now selects datasources in a round-robin manner during each run, ensuring varied selection instead of repeatedly choosing the same set of datasources [#16719](https://github.com/apache/druid/pull/16719)
+- Kill tasks can now use different types of locks, such as APPEND or REPLACE. This change is experimental and not recommended for production use [#16362](https://github.com/apache/druid/pull/16362)
 
 #### Other data management improvements
 
 - Fixed an issue in task bootstrapping that prevented tasks from accepting any segment assignments, including broadcast segments [#16475](https://github.com/apache/druid/pull/16475)
-* Improved the performance for writing segments [#16698](https://github.com/apache/druid/pull/16698)
-* Improved the logic so that unused segments and tombstones in the metadata cache don't get needlessly refreshed [#16990](https://github.com/apache/druid/pull/16990) [17025](https://github.com/apache/druid/pull/17025)
-* Improved how segments are fetched so that they can be reused [#17021](https://github.com/apache/druid/pull/17021)
-
+- Improved the performance for writing segments [#16698](https://github.com/apache/druid/pull/16698)
+- Improved the logic so that unused segments and tombstones in the metadata cache don't get needlessly refreshed [#16990](https://github.com/apache/druid/pull/16990) [17025](https://github.com/apache/druid/pull/17025)
+- Improved how segments are fetched so that they can be reused [#17021](https://github.com/apache/druid/pull/17021)
 
 ### Storage  improvements
 
@@ -432,7 +444,7 @@ Added the ability to sort segments by dimensions other than `__time` - this prov
 
 #### New API for exiting streaming task groups early
 
-This new API does a best effort attempt to triggerthe handoff for specified task groups of a supervisor early:
+This new API does a best effort attempt to trigger the handoff for specified task groups of a supervisor early:
 
 `POST` `/druid/indexer/v1/supervisor/{supervisorId}/taskGroups/handoff`
 
@@ -526,12 +538,13 @@ In MiddleManager-less ingestion, Druid adds the pod template name as an annotati
 
 #### Improved Iceberg input source support
 
-* You can now optionally use the `caseSensitive` Boolean config to configure how Druid reads column names from Iceberg. Iceberg table scans are case sensitive by default [#16496](https://github.com/apache/druid/pull/16496)
-* Added support to the `iceberg` input source to read from Iceberg REST catalogs [#17124](https://github.com/apache/druid/pull/17124)
+- You can now optionally use the `caseSensitive` Boolean config to configure how Druid reads column names from Iceberg. Iceberg table scans are case sensitive by default [#16496](https://github.com/apache/druid/pull/16496)
+- Added support to the `iceberg` input source to read from Iceberg REST catalogs [#17124](https://github.com/apache/druid/pull/17124)
 
 #### Improved Delta Lake input source support
-* Added support for delta structs, arrays, and maps to the `delta` input source [#16884](https://github.com/apache/druid/pull/16884)
-* Added the ability to optionally specify a `snapshotVersion` in the delta input source payload to ingest versioned snapshots from a Delta Lake table. When not specified, Druid ingests the latest snapshot from the table [#17004](https://github.com/apache/druid/pull/17004)
+
+- Added support for delta structs, arrays, and maps to the `delta` input source [#16884](https://github.com/apache/druid/pull/16884)
+- Added the ability to optionally specify a `snapshotVersion` in the delta input source payload to ingest versioned snapshots from a Delta Lake table. When not specified, Druid ingests the latest snapshot from the table [#17004](https://github.com/apache/druid/pull/17004)
 
 #### Other extensions improvements
 
@@ -624,10 +637,9 @@ If you write custom extensions, specifically query engines or anything else invo
 
 Prepare for these changes before upgrading to 31.0.0 or later. For more information, see the following pull requests:
 
-* [#16985](https://github.com/apache/druid/pull/16985)
-* [#16849](https://github.com/apache/druid/pull/16849)
-* [#16533](https://github.com/apache/druid/pull/16533)
-
+- [#16985](https://github.com/apache/druid/pull/16985)
+- [#16849](https://github.com/apache/druid/pull/16849)
+- [#16533](https://github.com/apache/druid/pull/16533)
 
 #### Dependency updates
 
@@ -644,5 +656,3 @@ Bumped the versions of the following dependencies:
 - `io.grpc:grpc-netty-shaded` from 1.57.2 to 1.65.1 [#16731](https://github.com/apache/druid/pull/16731)
 - `jclouds.version` from 2.5.0 to 2.6.0 [#16796](https://github.com/apache/druid/pull/16796)
 - Axios to 1.7.4 [#16898](https://github.com/apache/druid/pull/16898)
-
-
