@@ -169,6 +169,8 @@ The web console now supports the Kinesis input format.
 
 - You can now search for datasources in the **Datasource** view - previously you had to find them manually [#16371](https://github.com/apache/druid/pull/16371)
 - You can now display both raw and formatted JSON in tables, making the data easier to read and troubleshoot [#16632](https://github.com/apache/druid/pull/16632)
+* You can now configure the maximum number of tasks through a menu [#16991](https://github.com/apache/druid/pull/16991)
+* You can now specify the Delta snapshot version in the web console [#17023](https://github.com/apache/druid/pull/17023)
 - Added hooks to customize the workbench view [#16749](https://github.com/apache/druid/pull/16749)
 - Added the ability to hide workbench view toolbar in the **Query** view [#16785](https://github.com/apache/druid/pull/16785)
 - Added the ability to submit a suspended supervisor using the SQL data loader [#16696](https://github.com/apache/druid/pull/16696)
@@ -194,6 +196,9 @@ Previously all services and tasks downloaded all broadcast data sources.
 To save task storage space and reduce task statup time, this modification prevents kill tasks and MSQ controller tasks from downloading unneeded broadcast data sources. All other tasks still load all broadcast data sources.
 
 The `CLIPeon` command line option `--loadBroadcastSegments` is deprecated in favor of `--loadBroadcastDatasourceMode`.
+
+[#17027](https://github.com/apache/druid/pull/17027)
+
 
 #### General ingestion improvements
 
@@ -227,6 +232,8 @@ Improved lookup performance for queries that use the MSQ task engine by only loa
 
 #### Other SQL-based ingestion improvements
 
+* Improved worker cancellation for the MSQ task engine to prevent race conditions [#17046](https://github.com/apache/druid/pull/17046)
+* Improved memory management to better support multi-threaded workers [#17057](https://github.com/apache/druid/pull/17057)
 - Reduced memory usage when transferring sketches between the MSQ task engine controller and worker [#16269](https://github.com/apache/druid/pull/16269)
 - Improved error handling when retrieving Avro schemas from registry [#16684](https://github.com/apache/druid/pull/16684)
 - Fixed issues related to partitioning boundaries in the MSQ task engine's window functions [#16729](https://github.com/apache/druid/pull/16729)
@@ -255,9 +262,7 @@ The reader relies on a `ByteEntity` type of `KinesisRecordEntity` which includes
 
 #### Enabled querying cold datasources
 
-<!-- Need more information on CentralizedDatasourceSchema. Where and how do you enable this feature. -->
-
-You can now query entirely cold datasources after you enable the `CentralizedDatasourceSchema` feature.
+You can now query entirely cold datasources after you enable the `CentralizedDatasourceSchema` feature. For information about how to use a centralized datasource schema, see [Centralized datasource schema](https://druid.apache.org/docs/latest/configuration/#centralized-datasource-schema).
 
 [#16676](https://github.com/apache/druid/pull/16676)
 
@@ -273,9 +278,9 @@ Modified the behavior of using `EqualityFilter` and `TypedInFilter` to match num
 
 [#16593](https://github.com/apache/druid/pull/16593)
 
-#### Query guardrails
+#### Window query guardrails
 
-Druid blocks window queries that involve aggregation functions inside the window clause, when the window is included in SELECT.
+Druid blocks window queries that involve aggregation functions inside the window clause when the window is included in SELECT.
 The error message provides details on updating your query syntax.
 
 [#16801](https://github.com/apache/druid/pull/16801)
@@ -291,6 +296,9 @@ Added the following fields from the query-based ingestion task report to the res
 
 #### Other querying improvements
 
+* Improved window queries so that window queries without group by using the native engine don't return an empty response [#16658](https://github.com/apache/druid/pull/16658)
+* Window queries now support the guardrail `maxSubqueryBytes`  [#16800](https://github.com/apache/druid/pull/16800)
+* Window functions that use the MSQ task engine now reject MVDs when they're used as the PARTITION BY column. Previously, an exception occurred [#17036](https://github.com/apache/druid/pull/17036)
 - A query that references aggregators called with unsupported distinct values now fails [#16770](https://github.com/apache/druid/pull/16770)
 - Druid now validates that a complex type aligns with the supported types when used with an aggregator [#16682](https://github.com/apache/druid/pull/16682)
 - Druid prevents you from using DISTINCT or unsupported aggregations with window functions [#16738](https://github.com/apache/druid/pull/16738)
@@ -394,6 +402,10 @@ Improved the performance of the metadata query to fetch unused segments for a da
 #### Other data management improvements
 
 - Fixed an issue in task bootstrapping that prevented tasks from accepting any segment assignments, including broadcast segments [#16475](https://github.com/apache/druid/pull/16475)
+* Improved the performance for writing segments [#16698](https://github.com/apache/druid/pull/16698)
+* Improved the logic so that unused segments and tombstones in the metadata cache don't get needlessly refreshed [#16990](https://github.com/apache/druid/pull/16990) [17025](https://github.com/apache/druid/pull/17025)
+* Improved how segments are fetched so that they can be reused [#17021](https://github.com/apache/druid/pull/17021)
+
 
 ### Storage  improvements
 
@@ -601,6 +613,17 @@ Segment-serving processes such as Peons, Historicals and Indexers no longer crea
 
 - Fixed the `hibernate-validator` warning displayed during maven build [#16746](https://github.com/apache/druid/pull/16746)
 - Replaced the `StorageAdapter` interface with the `CursorHolder` interface [#17024](https://github.com/apache/druid/pull/17024)
+
+### `StorageAdapter` changes
+
+If you write custom extensions, specifically query engines or anything else involving the `StorageAdapter` interface, 31.0.0 includes changes to low-level APIs that may impact you. All methods on `StorageAdapter` now throw a Druid exception.
+
+Prepare for these changes before upgrading to 31.0.0 or later. For more information, see the following pull requests:
+
+* [#16985](https://github.com/apache/druid/pull/16985)
+* [#16849](https://github.com/apache/druid/pull/16849)
+* [#16533](https://github.com/apache/druid/pull/16533)
+
 
 #### Dependency updates
 
