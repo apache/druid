@@ -34,7 +34,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.data.IndexedInts;
 
-import javax.annotation.CheckReturnValue;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -217,7 +216,6 @@ public class FrameWriterUtils
    * can be less than "len" if the null bytes are dropped, and the callers must evaluate the return value to see the actual
    * length of the buffer that is copied
    */
-  @CheckReturnValue
   public static int copyByteBufferToMemoryDisallowingNullBytes(
       final ByteBuffer src,
       final WritableMemory dst,
