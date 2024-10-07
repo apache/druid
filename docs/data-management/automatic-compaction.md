@@ -312,15 +312,15 @@ To submit an automatic compaction task, you submit a supervisor spec through the
 
 When using the MSQ task engine for auto-compaction, keep the following limitations in mind:
 
-- The `metricSpec` field is only supported for idempotent aggregators. For more information, see [Idempotent aggregators](#idempotent-aggregators).
+- The `metricSpec` field is only supported for certain aggregators. For more information, see [Supported aggregators](#supported-aggregators).
 - Only dynamic and range-based partitioning are supported
 - Set `rollup`  to `true` if and only if `metricSpec` is not empty or null.
 - You can only partition on string dimensions. However, multi-valued string dimensions are not supported.
 - The `maxTotalRows` config is not supported in `DynamicPartitionsSpec`. Use `maxRowsPerSegment` instead.
 
-##### Idempotent aggregators
+##### Supported aggregators
 
-Idempotent aggregators are aggregators that can be applied repeatedly on a column and each run produces the same results, such as the following `longSum` aggregator:
+Auto-compaction using the MSQ task engine only supports aggregators. Only aggregators where repeated runs of the aggregator on a column produce the same results each time, such as the following `longSum` aggregator:
 
 ```
 {"name": "added", "type": "longSum", "fieldName": "added"}
@@ -328,7 +328,7 @@ Idempotent aggregators are aggregators that can be applied repeatedly on a colum
 
 where the input and output column are both `added`.
 
-The following are some examples of non-idempotent aggregators where each run of the aggregator produces different results:
+The following are some examples of aggregators that aren't supported, where each run of the aggregator produces different results:
 
 *  `longSum` aggregator where the `added` column rolls up into the `sum_added` column:
     ```
