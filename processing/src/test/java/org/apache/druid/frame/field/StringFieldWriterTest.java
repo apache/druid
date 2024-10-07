@@ -21,6 +21,7 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -40,9 +41,11 @@ import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class StringFieldWriterTest extends InitializedNullHandlingTest
 {
@@ -57,9 +60,12 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
   @Mock
   public DimensionSelector selectorUtf8;
 
-  protected WritableMemory memory;
-  protected FieldWriter fieldWriter;
-  protected FieldWriter fieldWriterUtf8;
+
+  private WritableMemory memory;
+  private FieldWriter fieldWriter;
+  private FieldWriter fieldWriterUtf8;
+  private FieldWriter fieldWriterRemoveNull;
+  private FieldWriter fieldWriterUtf8RemoveNull;
 
   @Before
   public void setUp()
@@ -67,13 +73,32 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
     memory = WritableMemory.allocate(1000);
     fieldWriter = new StringFieldWriter(selector, false);
     fieldWriterUtf8 = new StringFieldWriter(selectorUtf8, false);
+    fieldWriterRemoveNull = new StringFieldWriter(selector, true);
+    fieldWriterUtf8RemoveNull = new StringFieldWriter(selectorUtf8, true);
   }
 
   @After
   public void tearDown()
   {
-    fieldWriter.close();
-    fieldWriterUtf8.close();
+    for (FieldWriter fw : getFieldWriter(FieldWritersType.ALL)) {
+      try {
+        fw.close();
+      }
+      catch (Exception ignore) {
+      }
+    }
+  }
+
+
+  private List<FieldWriter> getFieldWriter(FieldWritersType fieldWritersType)
+  {
+    if (fieldWritersType == FieldWritersType.NULL_REPLACING) {
+      return Arrays.asList(fieldWriterRemoveNull, fieldWriterUtf8RemoveNull);
+    } else if (fieldWritersType == FieldWritersType.ALL) {
+      return Arrays.asList(fieldWriter, fieldWriterUtf8, fieldWriterRemoveNull, fieldWriterUtf8RemoveNull);
+    } else {
+      throw new ISE("Handler missing for type:[%s]", fieldWritersType);
+    }
   }
 
   @Test
@@ -100,6 +125,7 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
     doTest(Arrays.asList("foo", "bar"));
   }
 
+
   @Test
   public void testMultiValueStringContainingNulls()
   {
@@ -107,29 +133,52 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testNullBytes()
+  public void testNullByteReplacement()
   {
-    doTest(Arrays.asList("abc", "foo" + NullHandling.emptyToNullIfNeeded("") + "bar", "def"));
+    doTest(
+        Arrays.asList("abc\u0000", "foo" + NullHandling.emptyToNullIfNeeded("") + "bar", "def"),
+        FieldWritersType.NULL_REPLACING
+    );
+  }
+
+  @Test
+  public void testNullByteNotReplaced()
+  {
+    mockSelectors(Arrays.asList("abc\u0000", "foo" + NullHandling.emptyToNullIfNeeded("") + "bar", "def"));
+    Assert.assertThrows(InvalidNullByteException.class, () -> {
+      doTestWithSpecificFieldWriter(fieldWriter);
+    });
+    Assert.assertThrows(InvalidNullByteException.class, () -> {
+      doTestWithSpecificFieldWriter(fieldWriterUtf8);
+    });
   }
 
   private void doTest(final List<String> values)
   {
+    doTest(values, FieldWritersType.ALL);
+  }
+
+  private void doTest(final List<String> values, FieldWritersType fieldWritersType)
+  {
     mockSelectors(values);
 
-    // Non-UTF8 test
-    {
-      final long written = writeToMemory(fieldWriter);
-      final Object[] valuesRead = readFromMemory(written);
-      Assert.assertEquals("values read (non-UTF8)", values, Arrays.asList(valuesRead));
-    }
-
-    // UTF8 test
-    {
-      final long writtenUtf8 = writeToMemory(fieldWriterUtf8);
-      final Object[] valuesReadUtf8 = readFromMemory(writtenUtf8);
-      Assert.assertEquals("values read (UTF8)", values, Arrays.asList(valuesReadUtf8));
+    List<FieldWriter> fieldWriters = getFieldWriter(fieldWritersType);
+    for (FieldWriter fw : fieldWriters) {
+      final Object[] valuesRead = doTestWithSpecificFieldWriter(fw);
+      List<String> expectedResults = new ArrayList<>(values);
+      if (fieldWritersType == FieldWritersType.NULL_REPLACING) {
+        expectedResults = expectedResults.stream().map(val -> val.replace("\u0000", "")).collect(Collectors.toList());
+      }
+      Assert.assertEquals("values read", expectedResults, Arrays.asList(valuesRead));
     }
   }
+
+  private Object[] doTestWithSpecificFieldWriter(FieldWriter fieldWriter)
+  {
+    final long written = writeToMemory(fieldWriter);
+    return readFromMemory(written);
+  }
+
 
   private void mockSelectors(final List<String> values)
   {
@@ -189,9 +238,20 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
     memory.getByteArray(MEMORY_POSITION, bytes, 0, (int) written);
 
     final FieldReader fieldReader = FieldReaders.create("columnNameDoesntMatterHere", ColumnType.STRING_ARRAY);
-    final ColumnValueSelector<?> selector =
-        fieldReader.makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
+    final ColumnValueSelector<?> selector = fieldReader.makeColumnValueSelector(
+        memory,
+        new ConstantFieldPointer(
+            MEMORY_POSITION,
+            -1
+        )
+    );
 
     return (Object[]) selector.getObject();
+  }
+
+  private enum FieldWritersType
+  {
+    NULL_REPLACING, // include null replacing writers only
+    ALL // include all writers
   }
 }
