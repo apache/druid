@@ -137,6 +137,28 @@ FROM (
 
 [#16458](https://github.com/apache/druid/pull/16458)
 
+#### Explore view improvements
+
+You can now configure the Explore view on top of a source query instead of only existing tables.
+You can also point and click to edit the source query, store measures in the source query,
+and return to the state of your view using stateful URLs.
+
+[#17180](https://github.com/apache/druid/pull/17180)
+
+Other changes to the Explore view include the following:
+
+- Added the ability to hide all null columns in the record table
+- Added the ability to declare certain parameter values as sticky
+- Added the ability to expand a nested column into is constituent paths
+- Fixed dragging of a VARCHAR column to a measure control
+- Fixed filtering on a predefined measure
+- Fixed drag over indicator not clearing
+- Fixed applying WHERE filter in the grouping table
+- Fixed AS "t" was not always added in the grouping table query
+- Fixed AGGREGATE function not being evaluated if it was in an ORDER BY
+
+[#17213](https://github.com/apache/druid/pull/17213) [#17225](https://github.com/apache/druid/pull/17225) [#17234](https://github.com/apache/druid/pull/17234)
+
 #### Support Kinesis input format
 
 The web console now supports the Kinesis input format.
@@ -188,6 +210,7 @@ The `CLIPeon` command line option `--loadBroadcastSegments` is deprecated in fav
 - Improved `CustomExceptionMapper` so that it returns a correct failure message [#17016](https://github.com/apache/druid/pull/17016)
 - Fixed NPE in `CompactSegments` [#16713](https://github.com/apache/druid/pull/16713)
 - Fixed Parquet reader to ensure that Druid reads the required columns for a filter from the Parquet data files [#16874](https://github.com/apache/druid/pull/16874)
+- Fixed native ingestion task failures during rolling upgrades from a version before Druid 30 [#17219](https://github.com/apache/druid/pull/17219)
 
 ### SQL-based ingestion
 
@@ -208,6 +231,7 @@ Improved lookup performance for queries that use the MSQ task engine by only loa
 - Reduced memory usage when transferring sketches between the MSQ task engine controller and worker [#16269](https://github.com/apache/druid/pull/16269)
 - Improved error handling when retrieving Avro schemas from registry [#16684](https://github.com/apache/druid/pull/16684)
 - Fixed issues related to partitioning boundaries in the MSQ task engine's window functions [#16729](https://github.com/apache/druid/pull/16729)
+- Fixed handling of null bytes that led to a runtime exception for "Invalid value start byte" [#17232](https://github.com/apache/druid/pull/17232)
 - Updated logic to fix incorrect query results for comparisons involving arrays [#16780](https://github.com/apache/druid/pull/16780)
 - You can now pass a custom `DimensionSchema` map to MSQ query destination of type `DataSourceMSQDestination` instead of using the default values [#16864](https://github.com/apache/druid/pull/16864)
 -  Fixed the calculation of suggested memory in `WorkerMemoryParameters` to account for `maxConcurrentStages` which improves the accuracy of error messages [#17108](https://github.com/apache/druid/pull/17108)
@@ -586,6 +610,7 @@ Move to HTTP-based segment loading first and then perform the version upgrade.
 
 Bumped the versions of the following dependencies:
 
+- Apache Avro to 1.11.4 [#17230](https://github.com/apache/druid/pull/17230)
 - Apache Calcite to 1.37.0 [#16621](https://github.com/apache/druid/pull/16621)
 - Delta Kernel from 3.1.0 to 3.2.1 [#16513](https://github.com/apache/druid/pull/16513) [#17179](https://github.com/apache/druid/pull/17179)
 - MySQL Java connector to 8.2.0 [#16024](https://github.com/apache/druid/pull/16024)
@@ -596,4 +621,5 @@ Bumped the versions of the following dependencies:
 - `io.grpc:grpc-netty-shaded` from 1.57.2 to 1.65.1 [#16731](https://github.com/apache/druid/pull/16731)
 - `jclouds.version` from 2.5.0 to 2.6.0 [#16796](https://github.com/apache/druid/pull/16796)
 - Axios to 1.7.4 [#16898](https://github.com/apache/druid/pull/16898)
+
 
