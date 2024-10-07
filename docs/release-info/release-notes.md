@@ -203,7 +203,6 @@ The `CLIPeon` command line option `--loadBroadcastSegments` is deprecated in fav
 - Added `druid-parquet-extensions` to all example quickstart configurations [#16664](https://github.com/apache/druid/pull/16664)
 - Added support for ingesting CSV format data into Kafka records when Kafka ingestion is enabled with `ioConfig.type = kafka` [#16630](https://github.com/apache/druid/pull/16630)
 - Added logging for sketches on workers [#16697](https://github.com/apache/druid/pull/16697)
-- Added the ability to optionally specify a `snapshotVersion` in the delta input source payload to ingest versioned snapshots from a Delta Lake table. When not specified, Druid ingests the latest snapshot from the table [#17004](https://github.com/apache/druid/pull/17004)
 - Removed obsolete tasks `index_realtime` and `index_realtime_appenderator` tasks&mdash;you can no longer use these tasks to ingest data [#16602](https://github.com/apache/druid/pull/16602)
 - Renamed `TaskStorageQueryAdapter` to `TaskQueryTool` and removed the `isAudited` method [#16750](https://github.com/apache/druid/pull/16750)
 - Improved Overlord performance by reducing redundant calls in SQL statements [#16839](https://github.com/apache/druid/pull/16839)
@@ -509,17 +508,14 @@ In MiddleManager-less ingestion, Druid adds the pod template name as an annotati
 
 [#16772](https://github.com/apache/druid/pull/16772)
 
-#### Configure case sensitivity for Iceberg
+#### Improved Iceberg input source support
 
-You can now optionally use the `caseSensitive` Boolean config to configure how Druid reads column names from Iceberg. Iceberg table scans are case sensitive by default.
+* You can now optionally use the `caseSensitive` Boolean config to configure how Druid reads column names from Iceberg. Iceberg table scans are case sensitive by default [#16496](https://github.com/apache/druid/pull/16496)
+* Added support to the `iceberg` input source to read from Iceberg REST catalogs [#17124](https://github.com/apache/druid/pull/17124)
 
-[#16496](https://github.com/apache/druid/pull/16496)
-
-#### Improved Deltalake input source support
-
-Added support for delta structs, arrays, and maps to the `delta` input source. 
-
-[#16884](https://github.com/apache/druid/pull/16884)
+#### Improved Delta Lake input source support
+* Added support for delta structs, arrays, and maps to the `delta` input source [#16884](https://github.com/apache/druid/pull/16884)
+* Added the ability to optionally specify a `snapshotVersion` in the delta input source payload to ingest versioned snapshots from a Delta Lake table. When not specified, Druid ingests the latest snapshot from the table [#17004](https://github.com/apache/druid/pull/17004)
 
 #### Other extensions improvements
 
@@ -599,7 +595,7 @@ ZK-based segment loading is now disabled. ZK `servedSegmentsPath` was deprecated
 
 Segment-serving processes such as Peons, Historicals and Indexers no longer create ZK `loadQueuePath` entries. The `druid.zk.paths.loadQueuePath` and `druid.zk.paths.servedSegmentsPath` properties are no longer used.
 
-Move to HTTP-based segment loading first and then perform the version upgrade.
+**Move to HTTP-based segment loading first and then perform the version upgrade.**
 
 ### Developer notes
 
