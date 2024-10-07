@@ -318,7 +318,8 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         null,
         OffsetLimit.limit(Integer.MAX_VALUE),
         null,
-        null
+        null,
+        (int) frameWriterFactory.allocatorCapacity()
     );
     // check if existing + newly added rows exceed guardrails
     ensureMaxRowsInAWindowConstraint(frameRowsAndColsBuilder.getNumRows() + ldrc.numRows());

@@ -22,8 +22,7 @@ package org.apache.druid.msq.querykit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.frame.allocation.HeapMemoryAllocator;
-import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
+import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.FrameReader;
@@ -116,7 +115,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
 
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
         FrameWriters.makeRowBasedFrameWriterFactory(
-            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            new ArenaMemoryAllocatorFactory(1 << 20),
             outputSignature,
             Collections.emptyList(),
             false
@@ -224,7 +223,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
     // Limit output frames to 1 row to ensure we test edge cases
     final FrameWriterFactory frameWriterFactory = new LimitedFrameWriterFactory(
         FrameWriters.makeRowBasedFrameWriterFactory(
-            new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+            new ArenaMemoryAllocatorFactory(1 << 20),
             outputSignature,
             Collections.emptyList(),
             false
