@@ -64,7 +64,7 @@ Druid now supports the following features:
 - Compaction scheduler with greater flexibility and control over when and what to compact.
 - MSQ task engine-based compaction for more performant compaction jobs.
 
-See [Automatic compaction](../data-management/automatic-compaction.md) for details.
+See [Automatic compaction]([../data-management/automatic-compaction.md](https://druid.apache.org/docs/latest/data-management/automatic-compaction/)) for details.
 
 Compaction tasks that take advantage of concurrent append and replace is now generally available.
 
@@ -72,13 +72,17 @@ Compaction tasks that take advantage of concurrent append and replace is now gen
 
 ### Window functions are GA
 
-[Window functions](../querying/sql-window-functions.md) are now generally available in Druid's native engine and in the MSQ task engine.
+[Window functions](https://druid.apache.org/docs/latest//querying/sql-window-functions.md) are now generally available in Druid's native engine and in the MSQ task engine.
 
 - You no longer need to use the query context `enableWindowing` to use window functions. [#17087](https://github.com/apache/druid/pull/17087)
 
+### Concurrent append and replace GA
+
+Concurrent append and replace is now GA. The feature safely replaces the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this feature is appending new data (such as with streaming ingestion) to an interval while compaction of that interval is already in progress. 
+
 ### Projections (TBC)
 
-### High complexity queries (TBC)
+### Low latency high complexity queries using DART
 
 Distributed Asynchronous Runtime Topology (DART) supports high complexity queries, such as large joins, high cardinality group by, subqueries, and CTEs, commonly found in ad-hoc data warehouse workloads. DART uses multi-threaded workers, in-memory shuffles, and locally cached data to run these high complexity queries with low latency.
 
