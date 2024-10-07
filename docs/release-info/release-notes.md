@@ -74,6 +74,8 @@ Compaction tasks that take advantage of concurrent append and replace is now gen
 
 [Window functions](../querying/sql-window-functions.md) are now generally available in Druid's native engine and in the MSQ task engine.
 
+- You no longer need to use the query context `enableWindowing` to use window functions. [#17087](https://github.com/apache/druid/pull/17087)
+
 ### Projections (TBC)
 
 ### High complexity queries (TBC)
@@ -164,6 +166,13 @@ The web console now supports the Kinesis input format.
 
 ### Ingestion
 
+####  Optimized the loading of broadcast data sources 
+
+Previously all services and tasks downloaded all broadcast data sources.
+To save task storage space and reduce task statup time, this modification prevents kill tasks and MSQ controller tasks from downloading unneeded broadcast data sources. All other tasks still load all broadcast data sources.
+
+The `CLIPeon` command line option `--loadBroadcastSegments` is deprecated in favor of `--loadBroadcastDatasourceMode`.
+
 #### General ingestion improvements
 
 - The default value for `druid.indexer.tasklock.batchAllocationWaitTime` is now 0 [#16578](https://github.com/apache/druid/pull/16578)
@@ -201,6 +210,8 @@ Improved lookup performance for queries that use the MSQ task engine by only loa
 - Fixed issues related to partitioning boundaries in the MSQ task engine's window functions [#16729](https://github.com/apache/druid/pull/16729)
 - Updated logic to fix incorrect query results for comparisons involving arrays [#16780](https://github.com/apache/druid/pull/16780)
 - You can now pass a custom `DimensionSchema` map to MSQ query destination of type `DataSourceMSQDestination` instead of using the default values [#16864](https://github.com/apache/druid/pull/16864)
+-  Fixed the calculation of suggested memory in `WorkerMemoryParameters` to account for `maxConcurrentStages` which improves the accuracy of error messages [#17108](https://github.com/apache/druid/pull/17108)
+- Optimized the row-based frame writer to reduce failures when writing larger single rows to frames [#17094](https://github.com/apache/druid/pull/17094)
 
 ### Streaming ingestion
 
@@ -278,6 +289,14 @@ Added the following fields from the query-based ingestion task report to the res
 - Fixed an issue that caused `maxSubqueryBytes` to fail when segments had missing columns [#16619](https://github.com/apache/druid/pull/16619)
 - Fixed an issue with the array type selector that caused the array aggregation over window frame to fail [#16653](https://github.com/apache/druid/pull/16653)
 - Fixed support for native window queries without a group by clause [#16753](https://github.com/apache/druid/pull/16753)
+- Added a query context parameter to enable trasfers of RAC over wire [17150](https://github.com/apache/druid/pull/17150)
+- Window functions now support `maxSubqueryBytes` [#16800](https://github.com/apache/druid/pull/16800)
+- Fixed an issue with window functions and partitioning [#17141](https://github.com/apache/druid/pull/17141)
+- Updated window functions to disallow multi-value dimensions for partitioning [#17036](https://github.com/apache/druid/pull/17036)
+- Fixed an issue with casting objects to vector expressions [#17148](https://github.com/apache/druid/pull/17148)
+- Added several fixes and improvements to vectorization fallback [#17098](https://github.com/apache/druid/pull/17098), [#17162](https://github.com/apache/druid/pull/17162)
+- You can now configure encoding method for sketches at query time [#17050]([)https://github.com/apache/druid/pull/17050)
+- Fixed an issue with joins failing to time out on Historicals [#17099](https://github.com/apache/druid/pull/17099)
 
 ### Cluster management
 
@@ -316,10 +335,20 @@ The `druid.indexer.queue.maxTaskPayloadSize` config defines the maximum size in 
 
 [#16512](https://github.com/apache/druid/pull/16512)
 
+#### Improved UX for Coordinator management
+
+Improve the user experience around Coordinator management as follows:
+- Added an API `GET /druid/coordinator/v1/duties` that returns a status list of all duty groups currently running on the Coordinator
+- The Coordinator now emits the following metrics: `segment/poll/time`, `segment/pollWithSchema/time`, and `segment/buildSnapshot/time`
+- Remove redundant logs that indicate normal operation of well-tested aspects of the Coordinator
+
+[#16959](https://github.com/apache/druid/pull/16959)
+
 #### Other cluster management improvements
 
 - The startup script for Docker-based deployments now specifies the node type [#16282](https://github.com/apache/druid/pull/16282)
 - The `druid.sh` script now uses the canonical hostname for `druid.host` by default. You can now set the following environment variable to use IP instead: `DRUID_SET_HOST_IP=1` [#16386](https://github.com/apache/druid/pull/16386)
+- Fixed an issue with tombstone segments incorrectly appearing unavailable in the Web Console [#17025](https://github.com/apache/druid/pull/17025)
 
 ### Data management
 
