@@ -4470,7 +4470,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  protected void emitTaskCount()
+  public void emitTaskCount()
   {
     try {
       ServiceMetricEvent.Builder eventBuilder = ServiceMetricEvent.builder()
@@ -4492,7 +4492,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       ));
     }
     catch (Exception e) {
-      log.warn(e, "Unable to active/publisihing task count");
+      log.warn(e, "Unable to publish active/publisihing task count");
     }
   }
 
