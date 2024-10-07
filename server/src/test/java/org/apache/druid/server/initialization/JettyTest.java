@@ -36,6 +36,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
 import org.apache.druid.java.util.http.client.HttpClientInit;
@@ -503,7 +504,7 @@ public class JettyTest extends BaseJettyTest
       client = HttpClientInit.createClient(
           sslConfig,
           lifecycle,
-          new NoopEmitter()
+          new ServiceEmitter("", "", new NoopEmitter())
       );
     }
     catch (Exception e) {

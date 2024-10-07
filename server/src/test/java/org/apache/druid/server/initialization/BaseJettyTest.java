@@ -26,6 +26,7 @@ import com.google.inject.servlet.GuiceFilter;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
 import org.apache.druid.java.util.http.client.HttpClientInit;
@@ -130,7 +131,7 @@ public abstract class BaseJettyTest
                             .withEagerInitialization(true)
                             .build(),
             druidLifecycle,
-            new NoopEmitter()
+            new ServiceEmitter("", "", new NoopEmitter())
         );
       }
       catch (Exception e) {

@@ -23,6 +23,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
 import org.jboss.netty.channel.ChannelException;
@@ -156,7 +157,7 @@ public class JankyServersTest
     final Lifecycle lifecycle = new Lifecycle();
     try {
       final HttpClientConfig config = HttpClientConfig.builder().withReadTimeout(new Duration(100)).build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new NoopEmitter());
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
       final ListenableFuture<StatusResponseHolder> future = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", silentServerSocket.getLocalPort()))),
@@ -184,7 +185,7 @@ public class JankyServersTest
     final Lifecycle lifecycle = new Lifecycle();
     try {
       final HttpClientConfig config = HttpClientConfig.builder().withReadTimeout(new Duration(86400L * 365)).build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new NoopEmitter());
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
       final ListenableFuture<StatusResponseHolder> future = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", silentServerSocket.getLocalPort()))),
@@ -216,8 +217,7 @@ public class JankyServersTest
                                                       .withSslContext(SSLContext.getDefault())
                                                       .withSslHandshakeTimeout(new Duration(100))
                                                       .build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new NoopEmitter());
-
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
       final ListenableFuture<StatusResponseHolder> response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", silentServerSocket.getLocalPort()))),
@@ -245,7 +245,7 @@ public class JankyServersTest
     final Lifecycle lifecycle = new Lifecycle();
     try {
       final HttpClientConfig config = HttpClientConfig.builder().build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new NoopEmitter());
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
       final ListenableFuture<StatusResponseHolder> response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", closingServerSocket.getLocalPort()))),
@@ -273,8 +273,7 @@ public class JankyServersTest
     final Lifecycle lifecycle = new Lifecycle();
     try {
       final HttpClientConfig config = HttpClientConfig.builder().withSslContext(SSLContext.getDefault()).build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new NoopEmitter());
-
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
       final ListenableFuture<StatusResponseHolder> response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", closingServerSocket.getLocalPort()))),
@@ -382,7 +381,7 @@ public class JankyServersTest
     final Lifecycle lifecycle = new Lifecycle();
     try {
       final HttpClientConfig config = HttpClientConfig.builder().build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new NoopEmitter());
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
       final ListenableFuture<StatusResponseHolder> response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("http://localhost:%d/", echoServerSocket.getLocalPort()))),
@@ -405,8 +404,7 @@ public class JankyServersTest
     final Lifecycle lifecycle = new Lifecycle();
     try {
       final HttpClientConfig config = HttpClientConfig.builder().withSslContext(SSLContext.getDefault()).build();
-      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new NoopEmitter());
-
+      final HttpClient client = HttpClientInit.createClient(config, lifecycle, new ServiceEmitter("", "", new NoopEmitter()));
       final ListenableFuture<StatusResponseHolder> response = client
           .go(
               new Request(HttpMethod.GET, new URL(StringUtils.format("https://localhost:%d/", echoServerSocket.getLocalPort()))),

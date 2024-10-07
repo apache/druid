@@ -25,7 +25,8 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.netty.HttpClientPipelineFactory;
 import org.apache.druid.java.util.http.client.pool.ChannelResourceFactory;
-import org.apache.druid.java.util.http.client.pool.MetricsEmittingResourcePool;
+import org.apache.druid.java.util.http.client.pool.DefaultResourcePoolImpl;
+import org.apache.druid.java.util.http.client.pool.MetricsEmittingResourcePoolImpl;
 import org.apache.druid.java.util.http.client.pool.ResourcePoolConfig;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.socket.nio.NioClientBossPool;
@@ -81,19 +82,21 @@ public class HttpClientInit
       );
       return lifecycle.addMaybeStartManagedInstance(
           new NettyHttpClient(
-              new MetricsEmittingResourcePool<>(
-                  new ChannelResourceFactory(
-                      createBootstrap(lifecycle, timer, config.getBossPoolSize(), config.getWorkerPoolSize()),
+            new MetricsEmittingResourcePoolImpl<>(
+                  new DefaultResourcePoolImpl<>(
+                    new ChannelResourceFactory(
+                     createBootstrap(lifecycle, timer, config.getBossPoolSize(), config.getWorkerPoolSize()),
                       config.getSslContext(),
                       config.getProxyConfig(),
                       timer,
                       config.getSslHandshakeTimeout() == null ? -1 : config.getSslHandshakeTimeout().getMillis()
-                  ),
-                  new ResourcePoolConfig(
+                    ),
+                    new ResourcePoolConfig(
                       config.getNumConnections(),
                       config.getUnusedConnectionTimeoutDuration().getMillis()
+                    ),
+                    config.isEagerInitialization()
                   ),
-                  config.isEagerInitialization(),
                   emitter
               ),
               config.getReadTimeout(),
