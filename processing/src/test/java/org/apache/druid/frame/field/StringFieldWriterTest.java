@@ -167,7 +167,9 @@ public class StringFieldWriterTest extends InitializedNullHandlingTest
       final Object[] valuesRead = doTestWithSpecificFieldWriter(fw);
       List<String> expectedResults = new ArrayList<>(values);
       if (fieldWritersType == FieldWritersType.NULL_REPLACING) {
-        expectedResults = expectedResults.stream().map(val -> val.replace("\u0000", "")).collect(Collectors.toList());
+        expectedResults = expectedResults.stream()
+                                         .map(val -> StringUtils.replace(val, "\u0000", ""))
+                                         .collect(Collectors.toList());
       }
       Assert.assertEquals("values read", expectedResults, Arrays.asList(valuesRead));
     }
