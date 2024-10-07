@@ -21,14 +21,20 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.common.semantic.SemanticUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.LongBuffer;
+import java.util.Map;
+import java.util.function.Function;
 
 public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
 {
+  private static final Map<Class<?>, Function<BlockLayoutColumnarLongs, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(BlockLayoutColumnarLongs.class);
+
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseLongBuffers;
 
   // The number of rows in this column.
@@ -220,6 +226,15 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
         buffer = null;
         longBuffer = null;
       }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Nullable
+    @Override
+    public <T> T as(Class<? extends T> clazz)
+    {
+      //noinspection ReturnOfNull
+      return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
     }
 
     @Override

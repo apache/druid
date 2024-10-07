@@ -317,7 +317,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob,
+        bob.getFileMapper(),
         null
     );
     try (VariantColumn<?> column = (VariantColumn<?>) supplier.get()) {
@@ -336,7 +336,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob,
+        bob.getFileMapper(),
         null
     );
     final String expectedReason = "none";

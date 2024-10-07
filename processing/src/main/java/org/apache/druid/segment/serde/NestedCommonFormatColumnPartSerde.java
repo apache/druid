@@ -281,7 +281,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           byteOrder,
           bitmapSerdeFactory,
           buffer,
-          builder,
+          builder.getFileMapper(),
           parent == null ? null : (VariantColumnAndIndexSupplier) parent.getColumnSupplier()
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
