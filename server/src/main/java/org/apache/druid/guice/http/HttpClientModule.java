@@ -31,6 +31,7 @@ import org.apache.druid.guice.annotations.EscalatedClient;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.HttpClientConfig;
 import org.apache.druid.java.util.http.client.HttpClientInit;
@@ -84,6 +85,8 @@ public class HttpClientModule implements Module
   {
     private final boolean isEscalated;
     private Escalator escalator;
+    private ServiceEmitter emitter;
+
 
     public HttpClientProvider(Class<? extends Annotation> annotationClazz, boolean isEscalated)
     {
@@ -92,9 +95,10 @@ public class HttpClientModule implements Module
     }
 
     @Inject
-    public void inject(Escalator escalator)
+    public void inject(Escalator escalator, ServiceEmitter emitter)
     {
       this.escalator = escalator;
+      this.emitter = emitter;
     }
 
     @Override
@@ -121,7 +125,8 @@ public class HttpClientModule implements Module
 
       HttpClient client = HttpClientInit.createClient(
           builder.build(),
-          getLifecycleProvider().get()
+          getLifecycleProvider().get(),
+          emitter
       );
 
       if (isEscalated) {

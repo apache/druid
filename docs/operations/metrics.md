@@ -67,6 +67,7 @@ Metrics may have additional dimensions beyond those listed above.
 |`sqlQuery/time`|Milliseconds taken to complete a SQL query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`|< 1s|
 |`sqlQuery/planningTimeMs`|Milliseconds taken to plan a SQL to native query.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`| |
 |`sqlQuery/bytes`|Number of bytes returned in the SQL query response.|`id`, `nativeQueryIds`, `dataSource`, `remoteAddress`, `success`| |
+|`httpClient/channelAcquire/timeNs`|Time in nanoseconds spent by the httpclient to acquire the channel.| |
 
 ### Historical
 
