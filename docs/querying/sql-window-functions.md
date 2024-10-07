@@ -427,6 +427,4 @@ The number of rows considered for the `moving5` window for the `count5` column:
 
 The following are known issues with window functions:
 
-- Full range queries: RANGE x PRECEDING y FOLLOWING
-- GROUP BY queries
-- SELECT *
+- SELECT * queries without a WHERE clause are not supported. If you want to retrieve all columns in this case, specify the column names.
