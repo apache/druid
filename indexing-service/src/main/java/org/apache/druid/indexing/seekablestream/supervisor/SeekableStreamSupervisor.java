@@ -4362,12 +4362,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
         TimeUnit.MILLISECONDS
     );
-    reportingExec.scheduleAtFixedRate(
-        this::emitTaskCount,
-        ioConfig.getStartDelay().getMillis(),
-        spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
-        TimeUnit.MILLISECONDS
-    );
   }
 
   /**
@@ -4467,32 +4461,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (Exception e) {
       log.warn(e, "Unable to emit notices queue size");
-    }
-  }
-
-  public void emitTaskCount()
-  {
-    try {
-      ServiceMetricEvent.Builder eventBuilder = ServiceMetricEvent.builder()
-                                                                  .setDimension(DruidMetrics.DATASOURCE, dataSource)
-                                                                  .setDimensionIfNotNull(
-                                                                      DruidMetrics.TAGS,
-                                                                      spec.getContextValue(DruidMetrics.TAGS)
-                                                                  )
-                                                                  .setDimension(
-                                                                      DruidMetrics.STREAM,
-                                                                      getIoConfig().getStream()
-                                                                  );
-      emitter.emit(eventBuilder.setMetric("task/supervisor/active/count", activelyReadingTaskGroups.size()));
-      emitter.emit(eventBuilder.setMetric("task/supervisor/publishing/count",
-                                          pendingCompletionTaskGroups.values()
-                                                                     .stream()
-                                                                     .filter(list -> !list.isEmpty())
-                                                                     .count()
-      ));
-    }
-    catch (Exception e) {
-      log.warn(e, "Unable to publish active/publisihing task count");
     }
   }
 

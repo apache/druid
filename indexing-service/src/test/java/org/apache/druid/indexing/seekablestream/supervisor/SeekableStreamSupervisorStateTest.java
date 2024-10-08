@@ -1801,32 +1801,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testEmitTaskCounts() throws Exception
-  {
-    expectEmitterSupervisor(false);
-
-    CountDownLatch latch = new CountDownLatch(1);
-    TestEmittingTestSeekableStreamSupervisor supervisor = new TestEmittingTestSeekableStreamSupervisor(
-        latch,
-        TestEmittingTestSeekableStreamSupervisor.TASK_COUNTS,
-        ImmutableMap.of("1", 100L, "2", 250L, "3", 500L),
-        ImmutableMap.of("1", 10000L, "2", 15000L, "3", 20000L)
-    );
-    supervisor.start();
-
-    Assert.assertTrue(supervisor.stateManager.isHealthy());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState());
-    Assert.assertEquals(BasicState.PENDING, supervisor.stateManager.getSupervisorState().getBasicState());
-    Assert.assertTrue(supervisor.stateManager.getExceptionEvents().isEmpty());
-    Assert.assertFalse(supervisor.stateManager.isAtLeastOneSuccessfulRun());
-
-    latch.await();
-    emitter.verifyEmitted("task/supervisor/active/count", 1);
-    emitter.verifyEmitted("task/supervisor/active/count", 1);
-    verifyAll();
-  }
-
-  @Test
   public void testGetStats()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false);
@@ -2518,16 +2492,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
     DruidMonitorSchedulerConfig config = new DruidMonitorSchedulerConfig();
-    EasyMock.expect(spec.getMonitorSchedulerConfig()).andReturn(config).times(3);
     ScheduledExecutorService executorService = EasyMock.createMock(ScheduledExecutorService.class);
     EasyMock.expect(executorService.scheduleWithFixedDelay(EasyMock.anyObject(), EasyMock.eq(86415000L), EasyMock.eq(300000L), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).once();
     EasyMock.expect(executorService.scheduleAtFixedRate(EasyMock.anyObject(), EasyMock.eq(86425000L), EasyMock.eq(config.getEmissionDuration().getMillis()), EasyMock.eq(TimeUnit.MILLISECONDS))).andReturn(EasyMock.createMock(ScheduledFuture.class)).times(2);
-    EasyMock.expect(executorService.scheduleAtFixedRate(
-        EasyMock.anyObject(),
-        EasyMock.eq(86400000L),
-        EasyMock.eq(config.getEmissionDuration().getMillis()),
-        EasyMock.eq(TimeUnit.MILLISECONDS)
-    )).andReturn(EasyMock.createMock(ScheduledFuture.class)).times(1);
 
     EasyMock.replay(executorService, spec);
     final BaseTestSeekableStreamSupervisor supervisor = new BaseTestSeekableStreamSupervisor()
@@ -3027,7 +2994,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     private static final byte LAG = 0x01;
     private static final byte NOTICE_QUEUE = 0x02;
     private static final byte NOTICE_PROCESS = 0x04;
-    private static final byte TASK_COUNTS = 0x08;
 
 
     TestEmittingTestSeekableStreamSupervisor(
@@ -3090,16 +3056,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     }
 
     @Override
-    public void emitTaskCount()
-    {
-      if ((metricFlag & TASK_COUNTS) == 0) {
-        return;
-      }
-      super.emitTaskCount();
-      latch.countDown();
-    }
-
-    @Override
     public LagStats computeLagStats()
     {
       return null;
@@ -3117,12 +3073,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
       );
       reportingExec.scheduleAtFixedRate(
           this::emitNoticesQueueSize,
-          ioConfig.getStartDelay().getMillis(),
-          spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
-          TimeUnit.MILLISECONDS
-      );
-      reportingExec.scheduleAtFixedRate(
-          this::emitTaskCount,
           ioConfig.getStartDelay().getMillis(),
           spec.getMonitorSchedulerConfig().getEmissionDuration().getMillis(),
           TimeUnit.MILLISECONDS

@@ -343,4 +343,14 @@ public interface Task
   {
     return BroadcastDatasourceLoadingSpec.createFromContext(getContext(), BroadcastDatasourceLoadingSpec.ALL);
   }
+
+  /**
+   * specifies the current status of the task.
+   *
+   * @return string
+   */
+  default String status()
+  {
+    return "UNKONWN";
+  }
 }
