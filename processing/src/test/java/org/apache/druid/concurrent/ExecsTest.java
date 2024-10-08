@@ -19,7 +19,6 @@
 
 package org.apache.druid.concurrent;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -124,10 +123,10 @@ public class ExecsTest
   }
 
   @Test
-  public void testSynchronousQueueSingleThreadedExecutor() throws Exception
+  public void testTaskAddedToShutDownSynchronousQueueSingleThreadedExecutor() throws Exception
   {
     // The implementation of Execs.newBlockingSingleThreaded() rejectedExecutionHandler should not add tasks when it's in shutDown state
-    // When capacity is 0, a SynchronousQueue is used and if a task is put in it in ShutDown state, it will forever stuck in WAITING state
+    // When a SynchronousQueue is used in executor and a task is put in it in ShutDown state, it will forever stuck in WAITING state
     // as executor will not take() the task to schedule it.
     final ListeningExecutorService intermediateTempExecutor = MoreExecutors.listeningDecorator(
         Execs.newBlockingSingleThreaded("[TASK_ID]-appenderator-abandon", 0)
@@ -143,13 +142,12 @@ public class ExecsTest
     };
 
     // Submit multiple tasks together
-    ListenableFuture<Void> unused = intermediateTempExecutor.submit(task);
-    unused = intermediateTempExecutor.submit(task);
-    unused = intermediateTempExecutor.submit(task);
+    Assert.assertNotNull(intermediateTempExecutor.submit(task));
+    Assert.assertNotNull(intermediateTempExecutor.submit(task));
 
     intermediateTempExecutor.shutdownNow();
     // Submit task after shutDown / shutDownNow should not be added in queue
-    unused = intermediateTempExecutor.submit(task);
+    Assert.assertThrows(RejectedExecutionException.class, () -> intermediateTempExecutor.submit(task));
     Assert.assertTrue(intermediateTempExecutor.awaitTermination(10, TimeUnit.SECONDS));
     Assert.assertTrue(intermediateTempExecutor.isShutdown());
   }

@@ -163,8 +163,7 @@ public class Execs
           public void rejectedExecution(Runnable r, ThreadPoolExecutor executor)
           {
             if (executor.isShutdown()) {
-              log.debug("Executor is shutdown, rejecting task");
-              return;
+              throw new RejectedExecutionException("Executor is shutdown, rejecting task");
             }
             try {
               executor.getQueue().put(r);
