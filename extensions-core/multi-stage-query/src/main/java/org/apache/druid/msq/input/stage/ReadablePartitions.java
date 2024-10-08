@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2IntSortedMap;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 
 import java.util.Collections;
 import java.util.List;
@@ -39,6 +40,7 @@ import java.util.Map;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "collected", value = CollectedReadablePartitions.class),
     @JsonSubTypes.Type(name = "striped", value = StripedReadablePartitions.class),
+    @JsonSubTypes.Type(name = "sparseStriped", value = SparseStripedReadablePartitions.class),
     @JsonSubTypes.Type(name = "combined", value = CombinedReadablePartitions.class)
 })
 public interface ReadablePartitions extends Iterable<ReadablePartition>
@@ -59,7 +61,7 @@ public interface ReadablePartitions extends Iterable<ReadablePartition>
   /**
    * Combines various sets of partitions into a single set.
    */
-  static CombinedReadablePartitions combine(List<ReadablePartitions> readablePartitions)
+  static ReadablePartitions combine(List<ReadablePartitions> readablePartitions)
   {
     return new CombinedReadablePartitions(readablePartitions);
   }
@@ -68,7 +70,7 @@ public interface ReadablePartitions extends Iterable<ReadablePartition>
    * Returns a set of {@code numPartitions} partitions striped across {@code numWorkers} workers: each worker contains
    * a "stripe" of each partition.
    */
-  static StripedReadablePartitions striped(
+  static ReadablePartitions striped(
       final int stageNumber,
       final int numWorkers,
       final int numPartitions
@@ -83,10 +85,35 @@ public interface ReadablePartitions extends Iterable<ReadablePartition>
   }
 
   /**
+   * Returns a set of {@code numPartitions} partitions striped across {@code workers}: each worker contains
+   * a "stripe" of each partition.
+   */
+  static ReadablePartitions striped(
+      final int stageNumber,
+      final IntSortedSet workers,
+      final int numPartitions
+  )
+  {
+    final IntAVLTreeSet partitionNumbers = new IntAVLTreeSet();
+    for (int i = 0; i < numPartitions; i++) {
+      partitionNumbers.add(i);
+    }
+
+    if (workers.lastInt() == workers.size() - 1) {
+      // Dense worker set. Use StripedReadablePartitions for compactness (send a single number rather than the
+      // entire worker set) and for backwards compatibility (older workers cannot understand
+      // SparseStripedReadablePartitions).
+      return new StripedReadablePartitions(stageNumber, workers.size(), partitionNumbers);
+    } else {
+      return new SparseStripedReadablePartitions(stageNumber, workers, partitionNumbers);
+    }
+  }
+
+  /**
    * Returns a set of partitions that have been collected onto specific workers: each partition is on exactly
    * one worker.
    */
-  static CollectedReadablePartitions collected(
+  static ReadablePartitions collected(
       final int stageNumber,
       final Map<Integer, Integer> partitionToWorkerMap
   )
