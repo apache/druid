@@ -41,9 +41,7 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
@@ -54,7 +52,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 50)
 public class DataSourcesSnapshotBenchmark
 {
-  private static Interval TEST_SEGMENT_INTERVAL = Intervals.of("2012-03-15T00:00:00.000/2012-03-16T00:00:00.000");
+  private static final Interval TEST_SEGMENT_INTERVAL = Intervals.of("2012-03-15T00:00:00.000/2012-03-16T00:00:00.000");
 
   @Param({"500", "1000"})
   private int numDataSources;
@@ -69,11 +67,10 @@ public class DataSourcesSnapshotBenchmark
   {
     long start = System.currentTimeMillis();
 
-    Map<String, ImmutableDruidDataSource> dataSources = new HashMap<>();
+    final List<DataSegment> segments = new ArrayList<>();
 
     for (int i = 0; i < numDataSources; i++) {
       String dataSource = StringUtils.format("ds-%d", i);
-      List<DataSegment> segments = new ArrayList<>();
 
       for (int j = 0; j < numSegmentPerDataSource; j++) {
         segments.add(
@@ -90,11 +87,9 @@ public class DataSourcesSnapshotBenchmark
             )
         );
       }
-
-      dataSources.put(dataSource, new ImmutableDruidDataSource(dataSource, Collections.emptyMap(), segments));
     }
 
-    snapshot = new DataSourcesSnapshot(dataSources);
+    snapshot = DataSourcesSnapshot.fromUsedSegments(segments);
 
     System.out.println("Setup Time " + (System.currentTimeMillis() - start) + " ms");
   }

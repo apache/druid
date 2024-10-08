@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.inject.Inject;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -52,7 +53,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Duration;
 
 import java.util.ArrayList;
@@ -272,7 +272,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
   private synchronized void runCompactionDuty()
   {
     final CoordinatorRunStats stats = new CoordinatorRunStats();
-    duty.run(getLatestConfig(), getCurrentDatasourceTimelines(), supervisorConfig.getEngine(), stats);
+    duty.run(getLatestConfig(), getDatasourceSnapshot(), supervisorConfig.getEngine(), stats);
 
     // Emit stats only if emission period has elapsed
     if (!sinceStatsEmitted.isRunning() || sinceStatsEmitted.hasElapsed(METRIC_EMISSION_PERIOD)) {
@@ -309,7 +309,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     if (isRunning()) {
       return new CompactionRunSimulator(statusTracker, overlordClient).simulateRunWithConfig(
           getLatestConfig().withClusterConfig(updateRequest),
-          getCurrentDatasourceTimelines(),
+          getDatasourceSnapshot().getUsedSegmentsTimelinesPerDataSource(),
           supervisorConfig.getEngine()
       );
     } else {
@@ -334,10 +334,9 @@ public class OverlordCompactionScheduler implements CompactionScheduler
         .withDatasourceConfigs(new ArrayList<>(activeDatasourceConfigs.values()));
   }
 
-  private Map<String, SegmentTimeline> getCurrentDatasourceTimelines()
+  private DataSourcesSnapshot getDatasourceSnapshot()
   {
-    return segmentManager.getSnapshotOfDataSourcesWithAllUsedSegments()
-                         .getUsedSegmentsTimelinesPerDataSource();
+    return segmentManager.getSnapshotOfDataSourcesWithAllUsedSegments();
   }
 
   private void scheduleOnExecutor(Runnable runnable)

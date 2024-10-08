@@ -21,11 +21,13 @@ package org.apache.druid.client;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.CollectionUtils;
+import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -40,43 +42,56 @@ import java.util.Map;
  */
 public class DataSourcesSnapshot
 {
-  public static DataSourcesSnapshot fromUsedSegments(
-      Iterable<DataSegment> segments,
-      ImmutableMap<String, String> dataSourceProperties
-  )
+  public static DataSourcesSnapshot fromUsedSegments(Iterable<DataSegment> segments)
   {
-    Map<String, DruidDataSource> dataSources = new HashMap<>();
-    segments.forEach(segment -> {
-      dataSources
-          .computeIfAbsent(segment.getDataSource(), dsName -> new DruidDataSource(dsName, dataSourceProperties))
-          .addSegmentIfAbsent(segment);
-    });
-    return new DataSourcesSnapshot(CollectionUtils.mapValues(dataSources, DruidDataSource::toImmutableDruidDataSource));
+    return fromUsedSegments(segments, DateTimes.nowUtc());
   }
 
+  /**
+   * Creates a snapshot of all "used" segments that existed in the database at
+   * the {@code snapshotTime}.
+   */
+  public static DataSourcesSnapshot fromUsedSegments(Iterable<DataSegment> segments, DateTime snapshotTime)
+  {
+    final Map<String, String> dataSourceProperties = ImmutableMap.of("created", DateTimes.nowUtc().toString());
+    Map<String, DruidDataSource> dataSources = new HashMap<>();
+    segments.forEach(segment ->
+      dataSources
+          .computeIfAbsent(segment.getDataSource(), dsName -> new DruidDataSource(dsName, dataSourceProperties))
+          .addSegmentIfAbsent(segment)
+    );
+    return new DataSourcesSnapshot(
+        snapshotTime,
+        CollectionUtils.mapValues(dataSources, DruidDataSource::toImmutableDruidDataSource)
+    );
+  }
+
+  private final DateTime snapshotTime;
   private final Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments;
   private final Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource;
   private final ImmutableSet<DataSegment> overshadowedSegments;
 
-  public DataSourcesSnapshot(Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments)
-  {
-    this(
-        dataSourcesWithAllUsedSegments,
-        CollectionUtils.mapValues(
-            dataSourcesWithAllUsedSegments,
-            dataSource -> SegmentTimeline.forSegments(dataSource.getSegments())
-        )
-    );
-  }
-
   private DataSourcesSnapshot(
-      Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments,
-      Map<String, SegmentTimeline> usedSegmentsTimelinesPerDataSource
+      DateTime snapshotTime,
+      Map<String, ImmutableDruidDataSource> dataSourcesWithAllUsedSegments
   )
   {
+    this.snapshotTime = snapshotTime;
     this.dataSourcesWithAllUsedSegments = dataSourcesWithAllUsedSegments;
-    this.usedSegmentsTimelinesPerDataSource = usedSegmentsTimelinesPerDataSource;
+    this.usedSegmentsTimelinesPerDataSource = CollectionUtils.mapValues(
+        dataSourcesWithAllUsedSegments,
+        dataSource -> SegmentTimeline.forSegments(dataSource.getSegments())
+    );
     this.overshadowedSegments = ImmutableSet.copyOf(determineOvershadowedSegments());
+  }
+
+  /**
+   * Time when this snapshot was taken. Since polling segments from the database
+   * may be a slow operation, this represents the poll start time.
+   */
+  public DateTime getSnapshotTime()
+  {
+    return snapshotTime;
   }
 
   public Collection<ImmutableDruidDataSource> getDataSourcesWithAllUsedSegments()

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
@@ -129,7 +130,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     } else {
       run(
           params.getCompactionConfig(),
-          params.getUsedSegmentsTimelinesPerDataSource(),
+          params.getDataSourcesSnapshot(),
           CompactionEngine.NATIVE,
           params.getCoordinatorStats()
       );
@@ -139,7 +140,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
   public void run(
       DruidCompactionConfig dynamicConfig,
-      Map<String, SegmentTimeline> dataSources,
+      DataSourcesSnapshot dataSources,
       CompactionEngine defaultEngine,
       CoordinatorRunStats stats
   )
@@ -150,6 +151,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       return;
     }
 
+    statusTracker.onSegmentTimelineUpdated(dataSources.getSnapshotTime());
     statusTracker.onCompactionConfigUpdated(dynamicConfig);
     List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
     if (compactionConfigList == null || compactionConfigList.isEmpty()) {
@@ -225,7 +227,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     final CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
         policy,
         compactionConfigs,
-        dataSources,
+        dataSources.getUsedSegmentsTimelinesPerDataSource(),
         intervalsToSkipCompaction,
         statusTracker
     );

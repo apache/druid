@@ -209,7 +209,7 @@ public class CompactSegmentsTest
         }
       }
     }
-    dataSources = DataSourcesSnapshot.fromUsedSegments(allSegments, ImmutableMap.of());
+    dataSources = DataSourcesSnapshot.fromUsedSegments(allSegments);
     statusTracker = new CompactionStatusTracker(JSON_MAPPER);
   }
 
@@ -435,7 +435,7 @@ public class CompactSegmentsTest
       }
     }
 
-    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
@@ -589,7 +589,7 @@ public class CompactSegmentsTest
       }
     }
 
-    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
@@ -1497,7 +1497,7 @@ public class CompactSegmentsTest
             10L
         )
     );
-    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
@@ -1584,7 +1584,7 @@ public class CompactSegmentsTest
             10L
         )
     );
-    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
