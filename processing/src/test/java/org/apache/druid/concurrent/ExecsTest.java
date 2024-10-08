@@ -31,6 +31,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -123,7 +124,7 @@ public class ExecsTest
   }
 
   @Test
-  public void testTaskAddedToShutDownSynchronousQueueSingleThreadedExecutor() throws Exception
+  public void testTaskAddedToShutdownExecutorThrowsException() throws Exception
   {
     // The implementation of Execs.newBlockingSingleThreaded() rejectedExecutionHandler should not add tasks when it's in shutDown state
     // When a SynchronousQueue is used in executor and a task is put in it in ShutDown state, it will forever stuck in WAITING state
