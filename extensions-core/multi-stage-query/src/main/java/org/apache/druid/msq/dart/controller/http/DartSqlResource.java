@@ -239,7 +239,10 @@ public class DartSqlResource extends SqlResource
 
     List<SqlLifecycleManager.Cancelable> cancelables = sqlLifecycleManager.getAll(sqlQueryId);
     if (cancelables.isEmpty()) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      // Return ACCEPTED even if the query wasn't found. When the Router broadcasts cancellation requests to all
+      // Brokers, this ensures the user sees a successful request.
+      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
+      return Response.status(Response.Status.ACCEPTED).build();
     }
 
     final Access access = authorizeCancellation(req, cancelables);
@@ -249,14 +252,12 @@ public class DartSqlResource extends SqlResource
 
       // Don't call cancel() on the cancelables. That just cancels native queries, which is useless here. Instead,
       // get the controller and stop it.
-      boolean found = false;
       for (SqlLifecycleManager.Cancelable cancelable : cancelables) {
         final HttpStatement stmt = (HttpStatement) cancelable;
         final Object dartQueryId = stmt.context().get(DartSqlEngine.CTX_DART_QUERY_ID);
         if (dartQueryId instanceof String) {
           final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
           if (holder != null) {
-            found = true;
             holder.cancel();
           }
         } else {
@@ -269,7 +270,9 @@ public class DartSqlResource extends SqlResource
         }
       }
 
-      return Response.status(found ? Response.Status.ACCEPTED : Response.Status.NOT_FOUND).build();
+      // Return ACCEPTED even if the query wasn't found. When the Router broadcasts cancellation requests to all
+      // Brokers, this ensures the user sees a successful request.
+      return Response.status(Response.Status.ACCEPTED).build();
     } else {
       return Response.status(Response.Status.FORBIDDEN).build();
     }
