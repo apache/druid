@@ -77,6 +77,7 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
 
   @Override
   public DimensionMergerV9 makeMerger(
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
@@ -84,7 +85,7 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
       Closer closer
   )
   {
-    return new AutoTypeColumnMerger(name, castTo, indexSpec, segmentWriteOutMedium, closer);
+    return new AutoTypeColumnMerger(name, outputName, castTo, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override

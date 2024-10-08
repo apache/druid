@@ -106,13 +106,17 @@ public interface DimensionHandler
    *
    * See {@link DimensionMergerV9} interface for more information.
    *
-   * @param indexSpec     Specification object for the index merge
-   * @param segmentWriteOutMedium  this SegmentWriteOutMedium object could be used internally in the created merger, if needed
-   * @param capabilities  The ColumnCapabilities of the dimension represented by this DimensionHandler
-   * @param progress      ProgressIndicator used by the merging process
+   * @param outputName            Output "file" name for the column to use for serializers, to control where it is
+   *                              stored in the segments internal files
+   * @param indexSpec             Specification object for the index merge
+   * @param segmentWriteOutMedium this SegmentWriteOutMedium object could be used internally in the created merger, if
+   *                              needed
+   * @param capabilities          The ColumnCapabilities of the dimension represented by this DimensionHandler
+   * @param progress              ProgressIndicator used by the merging process
    * @return A new DimensionMergerV9 object.
    */
   DimensionMergerV9 makeMerger(
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,

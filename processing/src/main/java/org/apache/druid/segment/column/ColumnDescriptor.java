@@ -99,7 +99,8 @@ public class ColumnDescriptor implements Serializer
   public ColumnHolder read(
       ByteBuffer buffer,
       ColumnConfig columnConfig,
-      SmooshedFileMapper smooshedFiles
+      SmooshedFileMapper smooshedFiles,
+      @Nullable ColumnHolder parent
   )
   {
     final ColumnBuilder builder = new ColumnBuilder()
@@ -108,9 +109,8 @@ public class ColumnDescriptor implements Serializer
         .setFileMapper(smooshedFiles);
 
     for (ColumnPartSerde part : parts) {
-      part.getDeserializer().read(buffer, builder, columnConfig);
+      part.getDeserializer().read(buffer, builder, columnConfig, parent);
     }
-
     return builder.build();
   }
 

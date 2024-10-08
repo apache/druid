@@ -70,6 +70,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   private static final Logger log = new Logger(DictionaryEncodedColumnMerger.class);
 
   protected final String dimensionName;
+  protected final String outputName;
   protected final ProgressIndicator progress;
   protected final Closer closer;
   protected final IndexSpec indexSpec;
@@ -81,6 +82,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected int rowCount = 0;
   protected int cardinality = 0;
   protected boolean hasNull = false;
+  protected boolean writeDictionary = true;
 
   @Nullable
   protected GenericIndexedWriter<ImmutableBitmap> bitmapWriter;
@@ -102,6 +104,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
 
   public DictionaryEncodedColumnMerger(
       String dimensionName,
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
@@ -110,6 +113,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   )
   {
     this.dimensionName = dimensionName;
+    this.outputName = outputName;
     this.indexSpec = indexSpec;
     this.capabilities = capabilities;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
@@ -171,8 +175,9 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       numMergeIndex++;
     }
 
-    String dictFilename = StringUtils.format("%s.dim_values", dimensionName);
+    String dictFilename = StringUtils.format("%s.dim_values", outputName);
     dictionaryWriter = makeDictionaryWriter(dictFilename);
+
     firstDictionaryValue = null;
     dictionarySize = 0;
     dictionaryWriter.open();
@@ -338,7 +343,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     long dimStartTime = System.currentTimeMillis();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
 
-    String bmpFilename = StringUtils.format("%s.inverted", dimensionName);
+    String bmpFilename = StringUtils.format("%s.inverted", outputName);
     bitmapWriter = new GenericIndexedWriter<>(
         segmentWriteOutMedium,
         bmpFilename,
@@ -402,11 +407,11 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   {
     final CompressionStrategy compressionStrategy = indexSpec.getDimensionCompression();
 
-    String filenameBase = StringUtils.format("%s.forward_dim", dimensionName);
+    String filenameBase = StringUtils.format("%s.forward_dim", outputName);
     if (capabilities.hasMultipleValues().isTrue()) {
       if (compressionStrategy != CompressionStrategy.UNCOMPRESSED) {
         encodedValueSerializer = V3CompressedVSizeColumnarMultiIntsSerializer.create(
-            dimensionName,
+            outputName,
             segmentWriteOutMedium,
             filenameBase,
             cardinality,
@@ -414,12 +419,12 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
         );
       } else {
         encodedValueSerializer =
-            new VSizeColumnarMultiIntsSerializer(dimensionName, segmentWriteOutMedium, cardinality);
+            new VSizeColumnarMultiIntsSerializer(outputName, segmentWriteOutMedium, cardinality);
       }
     } else {
       if (compressionStrategy != CompressionStrategy.UNCOMPRESSED) {
         encodedValueSerializer = CompressedVSizeColumnarIntsSerializer.create(
-            dimensionName,
+            outputName,
             segmentWriteOutMedium,
             filenameBase,
             cardinality,

@@ -543,7 +543,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .collect(Collectors.toList())
                                       ),
                                       schema.getMetrics(),
-                                      schema.isRollup()
+                                      schema.isRollup(),
+                                      schema.getProjections()
                                   )
                           );
                           final IncrementalIndex index = input.buildIncrementalIndex();
@@ -571,7 +572,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .collect(Collectors.toList())
                                       ),
                                       schema.getMetrics(),
-                                      schema.isRollup()
+                                      schema.isRollup(),
+                                      schema.getProjections()
                                   )
                           );
                           final QueryableIndex index = input.buildMMappedIndex();
@@ -600,7 +602,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                         .collect(Collectors.toList())
                                               ),
                                               schema.getMetrics(),
-                                              schema.isRollup()
+                                              schema.isRollup(),
+                                              schema.getProjections()
                                           )
                                   )
                                   // if 1 row per segment some of the columns have null values for the row which causes 'auto'
@@ -677,7 +680,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                             .collect(Collectors.toList())
                                   ),
                                   schema.getMetrics(),
-                                  schema.isRollup()
+                                  schema.isRollup(),
+                                  schema.getProjections()
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
@@ -700,7 +704,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                             .collect(Collectors.toList())
                                   ),
                                   schema.getMetrics(),
-                                  schema.isRollup()
+                                  schema.isRollup(),
+                                  schema.getProjections()
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
