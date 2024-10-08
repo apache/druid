@@ -145,10 +145,11 @@
 
     .timing-bar {
       position: absolute;
-      top: 10px;
-      height: 36px;
+      top: 1px;
+      height: 3px;
+      border-radius: 2px;
       background: $druid-brand;
-      opacity: 0.15;
+      opacity: 0.8;
     }
   }
 }
