@@ -41,7 +41,7 @@ Druid has several types of services:
 * [Router](../design/router.md) routes requests to Brokers, Coordinators, and Overlords.
 * [Historical](../design/historical.md) stores queryable data.
 * [Middle Manager](../design/middlemanager.md) and [Peon](../design/peons.md) ingest data.
-* [Indexer](../design/indexer.md) serves an alternative to the Middle Manager + Peon task execution system.
+* [Indexer](../design/indexer.md) serves as an alternative to the Middle Manager + Peon task execution system.
 
 You can view services in the **Services** tab in the web console: 
 
