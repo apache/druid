@@ -96,7 +96,7 @@ Druid 31.0.0 includes experimental support for projections in segments. Like mat
 
 ### Low latency high complexity queries using Dart (experimental)
 
-Distributed Asynchronous Runtime Topology (Dart) is designed to support high complexity queries, such as large joins, high cardinality group by, subqueries and CTEs, commonly found in ad-hoc, data warehouse workloads. Instead of using data warehouse engines like Spark or Presto to execute high-complexity queries, you can use Dart, alleviating the need for additional infrastructure.
+Distributed Asynchronous Runtime Topology (Dart) is designed to support high complexity queries, such as large joins, high cardinality group by, subqueries and common table expressions, commonly found in ad-hoc, data warehouse workloads. Instead of using data warehouse engines like Spark or Presto to execute high-complexity queries, you can use Dart, alleviating the need for additional infrastructure.
 
 For more information, see [Dart](#dart).
 
@@ -348,7 +348,6 @@ Added the following fields from the query-based ingestion task report to the res
 - Added the ability to define the segment granularity of a table in the catalog [#16680](https://github.com/apache/druid/pull/16680)
 - Added a way for columns to provide `GroupByVectorColumnSelectors`, which controls how the groupBy engine operates on them [#16338](https://github.com/apache/druid/pull/16338)
 - Added `sqlPlannerBloat` query context parameter to control whether two project operators get merged when inlining expressions [#16248](https://github.com/apache/druid/pull/16248)
-- Added `enableRACOverWire` query context parameter to enable transfer of RACs over wire [#17150](https://github.com/apache/druid/pull/17150)
 - Improved window function offsets for `ArrayListRowsAndColumns` [#16718](https://github.com/apache/druid/pull/16718)
 - Improved the fallback strategy when the Broker is unable to materialize the subquery's results as frames for estimating the bytes [#16679](https://github.com/apache/druid/pull/16679)
 - Improved how Druid executes queries that contain a LIMIT clause [#16643](https://github.com/apache/druid/pull/16643)
@@ -364,13 +363,12 @@ Added the following fields from the query-based ingestion task report to the res
 - Fixed an issue that caused `maxSubqueryBytes` to fail when segments had missing columns [#16619](https://github.com/apache/druid/pull/16619)
 - Fixed an issue with the array type selector that caused the array aggregation over window frame to fail [#16653](https://github.com/apache/druid/pull/16653)
 - Fixed support for native window queries without a group by clause [#16753](https://github.com/apache/druid/pull/16753)
-- Added a query context parameter to enable trasfers of RAC over wire [17150](https://github.com/apache/druid/pull/17150)
 - Window functions now support `maxSubqueryBytes` [#16800](https://github.com/apache/druid/pull/16800)
 - Fixed an issue with window functions and partitioning [#17141](https://github.com/apache/druid/pull/17141)
 - Updated window functions to disallow multi-value dimensions for partitioning [#17036](https://github.com/apache/druid/pull/17036)
 - Fixed an issue with casting objects to vector expressions [#17148](https://github.com/apache/druid/pull/17148)
 - Added several fixes and improvements to vectorization fallback [#17098](https://github.com/apache/druid/pull/17098), [#17162](https://github.com/apache/druid/pull/17162)
-- You can now configure encoding method for sketches at query time [#17050](https://github.com/apache/druid/pull/17050)
+- You can now configure encoding method for sketches at query time [#17086](https://github.com/apache/druid/pull/17086)
 - Fixed an issue with joins failing to time out on Historicals [#17099](https://github.com/apache/druid/pull/17099)
 
 ### Cluster management
@@ -464,7 +462,7 @@ For more information, see [Automatic compaction](https://druid.apache.org/docs/l
 
 #### Compression for complex columns
 
-Compression is now available for all complex metric columns which don't have specialized implementations. You can configure the `complexMetricCompression` IndexSpec option to any compression strategy (lz4, zstd, etc). The default is uncompressed. This works for most complex columns except `compressed-big-decimal` and columns stored by first/last aggregators.
+Compression is now available for all complex metric columns which don't have specialized implementations. You can configure the `complexMetricCompression` IndexSpec option to any compression strategy (`lz4`, `zstd`, etc). The default is uncompressed. This works for most complex columns except `compressed-big-decimal` and columns stored by first/last aggregators.
 
 Note that enabling compression is not backwards compatible with Druid versions older than 31. Only enable it after comprehensive testing to ensure no need for rollback.
 
