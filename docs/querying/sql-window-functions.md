@@ -420,8 +420,4 @@ The number of rows considered for the `moving5` window for the `count5` column:
 
 The following are known issues with window functions:
 
--  Aggregates with ORDER BY specified are processed in the window: ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW  
-     This behavior differs from other databases that use the default of RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW.  
-     In cases where the order column is unique there is no difference between RANGE / ROWS; windows with RANGE specifications are handled as ROWS.
-- LEAD/LAG ignores the default value
-- LAST_VALUE returns the last value of the window even when you include an ORDER BY clause
+- SELECT * queries without a WHERE clause are not supported. If you want to retrieve all columns in this case, specify the column names.
