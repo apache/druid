@@ -33,7 +33,7 @@ Replace {{MILESTONE}} with the correct milestone number. For example: https://gi
 See the [complete set of changes](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A31.0.0+sort%3Aupdated-desc+) for additional details, including bug fixes.
 
 Review the [upgrade notes](#upgrade-notes) and [incompatible changes](#incompatible-changes) before you upgrade to Druid 31.0.0.
-If you are upgrading across multiple versions, see the [Upgrade notes](upgrade-notes.md) page, which lists upgrade notes for the most recent Druid versions.
+If you are upgrading across multiple versions, see the [Upgrade notes](https://druid.apache.org/docs/latest/release-info/upgrade-notes) page, which lists upgrade notes for the most recent Druid versions.
 
 <!-- 
 This file is a collaborative work in process. Adding a release note to this file doesn't guarantee its presence in the next release until the release branch is cut and the release notes are finalized.
@@ -62,17 +62,17 @@ This section contains important information about new and existing features.
 Druid now supports the following features:
 
 - Compaction scheduler with greater flexibility and control over when and what to compact.
-- MSQ task engine-based compaction for more performant compaction jobs.
+- MSQ task engine-based auto-compaction for more performant compaction jobs.
 
-See [Automatic compaction](https://druid.apache.org/docs/latest/data-management/automatic-compaction/) for details.
-
-Compaction tasks that take advantage of concurrent append and replace is now generally available.
+For more information, see [Compaction supervisors](#compaction-supervisors-experimental).
 
 [#16291](https://github.com/apache/druid/pull/16291)
 
+Additionally, compaction tasks that take advantage of concurrent append and replace is now generally available as part of concurrent append and replace becoming GA.
+
 ### Window functions are GA
 
-[Window functions](https://druid.apache.org/docs/latest//querying/sql-window-functions.md) are now generally available in Druid's native engine and in the MSQ task engine.
+[Window functions](https://druid.apache.org/docs/latest/querying/sql-window-functions) are now generally available in Druid's native engine and in the MSQ task engine.
 
 - You no longer need to use the query context `enableWindowing` to use window functions. [#17087](https://github.com/apache/druid/pull/17087)
 
@@ -80,15 +80,31 @@ Compaction tasks that take advantage of concurrent append and replace is now gen
 
 Concurrent append and replace is now GA. The feature safely replaces the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this feature is appending new data (such as with streaming ingestion) to an interval while compaction of that interval is already in progress. 
 
-### Projections (TBC)
+### Delta Lake improvements
 
-### Low latency high complexity queries using DART
+The community extension for Delta Lake has been improved to support [complex types](#delta-lake-complex-types) and [snapshot versions](#delta-lake-snapshot-versions).
 
-Distributed Asynchronous Runtime Topology (DART) supports high complexity queries, such as large joins, high cardinality group by, subqueries, and CTEs, commonly found in ad-hoc data warehouse workloads. DART uses multi-threaded workers, in-memory shuffles, and locally cached data to run these high complexity queries with low latency.
+### Iceberg improvements
 
-DART is fully compatible with current Druid query shapes and Druid's storage format. 
+The community extension for Iceberg has been improved. For more information, see [Iceberg improvements](#iceberg-improvements)
+
+### Projections (experimental)
+
+Druid 31.0.0 includes experimental support for projections in segments. Like materialized views, projections can improve the performance of queries by optimizing the route the query takes when it executes.
+
+[#17214](https://github.com/apache/druid/pull/17214)
+
+### Low latency high complexity queries using Dart (experimental)
+
+Distributed Asynchronous Runtime Topology (Dart) is designed to support high complexity queries, such as large joins, high cardinality group by, subqueries and CTEs, commonly found in ad-hoc, data warehouse workloads. Instead of using data warehouse engines like Spark or Presto to execute high-complexity queries, you can use Dart, alleviating the need for additional infrastructure.
+
+For more information, see [Dart](#dart).
 
 [#17140](https://github.com/apache/druid/pull/17140)
+
+### Storage improvements
+
+Druid 31.0.0 includes several improvements to how data is stored by Druid, including compressed columns and flexible segment sorting. For more information, see [Storage improvements](#storage-improvements-1).
 
 ### Upgrade-related changes
 
@@ -101,9 +117,14 @@ See the [Upgrade notes](#upgrade-notes) for more information about the following
 
 ### Deprecations
 
-- Java 8 support is being deprecated and will be removed in 32.0.0.
+#### Java 8 support
+
+Java 8 support is now deprecated and will be removed in 32.0.0. 
+
+#### Other deprecations
 - Deprecated API `/lockedIntervals` is now removed [#16799](https://github.com/apache/druid/pull/16799)
 - [Cluster-level compaction API](#api-for-cluster-level-compaction-configuration) deprecates taskslots compaction API [#16803](https://github.com/apache/druid/pull/16803)
+- The `arrayIngestMode` context parameter is deprecated and will be removed. For more information, see [Array ingest mode now defaults to array](#array-ingest-mode-now-defaults-to-array).
 
 ## Functional areas and related changes
 
@@ -225,15 +246,15 @@ The `CLIPeon` command line option `--loadBroadcastSegments` is deprecated in fav
 - Fixed a `WindowOperatorQueryFrameProcessor` issue where larger queries could reach the frame writer's capacity preventing it from outputting all of the result rows [#17209](https://github.com/apache/druid/pull/17209)
 - Fixed native ingestion task failures during rolling upgrades from a version before Druid 30 [#17219](https://github.com/apache/druid/pull/17219)
 
-### SQL-based ingestion
+#### SQL-based ingestion
 
-#### Optimized S3 storage writing for MSQ durable storage
+##### Optimized S3 storage writing for MSQ durable storage
 
 For queries that use the MSQ task engine and write their output to S3 as durable storage, uploading chunks of data is now faster.
 
 [#16481](https://github.com/apache/druid/pull/16481)
 
-#### Improved lookup performance
+##### Improved lookup performance
 
 Improved lookup performance for queries that use the MSQ task engine by only loading required lookups. This applies to both ingestion and querying.
 
@@ -274,6 +295,12 @@ The reader relies on a `ByteEntity` type of `KinesisRecordEntity` which includes
 - Improved the Supervisor so that it doesn't change to a running state from idle if the Overlord restarts [#16844](https://github.com/apache/druid/pull/16844)
 
 ### Querying
+
+#### Dart
+
+Dart is a query engine with multi-threaded workers that conducts in-memory shuffles to provide tunable concurrency and infrastructure costs for low-latency high complexity queries.
+
+To try out Dart, set `druid.msq.dart.enabled` to `true` in your common runtime properties. Then, you can select Dart as a query engine in the web console or through the API `/druid/v2/sql/dart`, which accepts the same JSON payload as `/druid/v2/sql`. Dart is fully compatible with current Druid query shapes and Druid's storage format. That means you can try Dart with your existing queries and datasources.
 
 #### Enabled querying cold datasources
 
@@ -352,7 +379,7 @@ Added the following fields from the query-based ingestion task report to the res
 
 Added an optional cluster configuration property `druid.indexing.formats.stringMultiValueHandlingMode` which overrides the default mode `SORTED_SET` used for string dimensions. Possible values are `SORTED_SET` (default), `SORTED_ARRAY`, `ARRAY`.
 
-Note that we recommend you use array types instead of MVDs where possible. For more information, see [Migration guide: MVD to arrays](./migr-mvd-array.md).
+Note that we recommend you use array types instead of MVDs where possible. For more information, see [Migration guide: MVD to arrays](https://druid.apache.org/docs/latest/release-info/migr-mvd-array).
 
 [#16822](https://github.com/apache/druid/pull/16822)
 
@@ -403,13 +430,22 @@ Improve the user experience around Coordinator management as follows:
 
 #### Compaction
 
-[TBC]
+##### Compaction supervisors (experimental)
 
-#### Optimized query for unused segments
+You can now configure automatic compaction to run as a supervisor rather than as a Coordinator duty. Compaction supervisors provide the following benefits over Coordinator duties:
 
-Improved the performance of the metadata query to fetch unused segments for a datasource returns results, which could cause issues with Overlord stability. Test queries that used to take over 30 seconds now complete in less than a second.
+* Can use the supervisor framework to get information about the auto-compaction, such as status or state
+* More easily suspend or resume compaction for a datasource
+* Can use either the native compaction engine or the MSQ task engine
+* More reactive and submits tasks as soon as a compaction slot is available
+* Tracked compaction task status to avoid re-compacting an interval repeatedly
 
-[#16623](https://github.com/apache/druid/pull/16623)
+You can submit your existing auto-compaction configs as part of the supervisor spec; the two auto-compaction options share the same syntax.
+
+For more information, see [Automatic compaction](https://druid.apache.org/docs/latest/data-management/automatic-compaction).
+
+[#16291](https://github.com/apache/druid/pull/16291)
+
 
 #### Kill tasks
 
@@ -418,24 +454,29 @@ Improved the performance of the metadata query to fetch unused segments for a da
 
 #### Other data management improvements
 
+- Improved the performance of the metadata query to fetch unused segments for a datasource returns results, which could cause issues with Overlord stability. Test queries that used to take over 30 seconds now complete in less than a second [#16623](https://github.com/apache/druid/pull/16623)
 - Fixed an issue in task bootstrapping that prevented tasks from accepting any segment assignments, including broadcast segments [#16475](https://github.com/apache/druid/pull/16475)
 - Improved the performance for writing segments [#16698](https://github.com/apache/druid/pull/16698)
 - Improved the logic so that unused segments and tombstones in the metadata cache don't get needlessly refreshed [#16990](https://github.com/apache/druid/pull/16990) [17025](https://github.com/apache/druid/pull/17025)
 - Improved how segments are fetched so that they can be reused [#17021](https://github.com/apache/druid/pull/17021)
 
-### Storage  improvements
+### Storage improvements
 
 #### Compression for complex columns
 
 Compression is now available for all complex metric columns which don't have specialized implementations. You can configure the `complexMetricCompression` IndexSpec option to any compression strategy (lz4, zstd, etc). The default is uncompressed. This works for most complex columns except `compressed-big-decimal` and columns stored by first/last aggregators.
 
-Note that enabling compression is not backwards compatible with Druid versions older than 31. Only enable it after comprehensive testing, to ensure no need for rollback.
+Note that enabling compression is not backwards compatible with Druid versions older than 31. Only enable it after comprehensive testing to ensure no need for rollback.
 
 [#16863](https://github.com/apache/druid/pull/16863)
 
-#### Improved segment sorting
+#### Flexible segment sorting
 
-Added the ability to sort segments by dimensions other than `__time` - this provides a significant storage benefit.
+Added the ability to sort segments by dimensions other than `__time` - this provides a significant storage benefit. Control the sorting method using the `segmentSortOrder` and `forceSegmentSortByTime` query context parameters. 
+
+This feature is not backwards compatible. Only enable it after comprehensive testing to ensure no need for rollback.
+
+For more information, see [Context parameters](https://druid.apache.org/docs/latest/multi-stage-query/reference/#context-parameters).
 
 [#16849](https://github.com/apache/druid/pull/16849)
 [#16958](https://github.com/apache/druid/pull/16958)
@@ -541,10 +582,16 @@ In MiddleManager-less ingestion, Druid adds the pod template name as an annotati
 - You can now optionally use the `caseSensitive` Boolean config to configure how Druid reads column names from Iceberg. Iceberg table scans are case sensitive by default [#16496](https://github.com/apache/druid/pull/16496)
 - Added support to the `iceberg` input source to read from Iceberg REST catalogs [#17124](https://github.com/apache/druid/pull/17124)
 
-#### Improved Delta Lake input source support
+#### Delta Lake complex types
+Added support for delta structs, arrays, and maps to the `delta` input source. 
 
-- Added support for delta structs, arrays, and maps to the `delta` input source [#16884](https://github.com/apache/druid/pull/16884)
-- Added the ability to optionally specify a `snapshotVersion` in the delta input source payload to ingest versioned snapshots from a Delta Lake table. When not specified, Druid ingests the latest snapshot from the table [#17004](https://github.com/apache/druid/pull/17004)
+[#16884](https://github.com/apache/druid/pull/16884) 
+
+#### Delta Lake snapshot versions
+
+Added the ability to optionally specify a `snapshotVersion` in the delta input source payload to ingest versioned snapshots from a Delta Lake table. When not specified, Druid ingests the latest snapshot from the table. 
+
+[#17004](https://github.com/apache/druid/pull/17004)
 
 #### Other extensions improvements
 
@@ -552,25 +599,23 @@ In MiddleManager-less ingestion, Druid adds the pod template name as an annotati
 - Reduced logging in S3 output stream extension [#16853](https://github.com/apache/druid/pull/16853)
 - Reduced logging in basic security extension [#16767](https://github.com/apache/druid/pull/16767)
 
-### Documentation improvements
-
 ## Upgrade notes and incompatible changes
 
 ### Upgrade notes
 
 #### Array ingest mode now defaults to array
 
-MSQ ingestion context flag `arrayIngestMode` now defaults to `array` instead of `mvd`. This means that SQL `VARCHAR ARRAY` types is no longer implicitly translated and stored in `VARCHAR` columns, but is instead stored as `VARCHAR ARRAY`. This change permits other array types such as `BIGINT ARRAY` and `DOUBLE ARRAY` to be inserted with MSQ into their respective array column types instead of failing as they do in `mvd` mode.
+The SQL-based ingestion context flag `arrayIngestMode` now defaults to `array` instead of `mvd`. This means that SQL `VARCHAR ARRAY` types is no longer implicitly translated and stored in `VARCHAR` columns, but is instead stored as `VARCHAR ARRAY`. This change permits other array types such as `BIGINT ARRAY` and `DOUBLE ARRAY` to be inserted with MSQ into their respective array column types instead of failing as they do in `mvd` mode.
 
 To continue to store multi-value strings, modify any insert/replace queries to wrap the array types with the `ARRAY_TO_MV` operator.
 
 Validation is in place to prevent mixing `VARCHAR` and `VARCHAR ARRAY` columns in the same table, so any ingestions affected by this change will fail and provide a descriptive error message instead of exhibiting unexpected behavior.
 
-The `arrayIngestMode` option of `none` has been removed. It was introduced prior to the table validation logic as a means for cluster operators to force query writers to explicitly set `array` or `mvd` on their query contexts, but provides little utility in Druid 31.
+The `arrayIngestMode` option of `none` has been removed. It was introduced prior to the table validation logic as a means for cluster operators to force query writers to explicitly set `array` or `mvd` on their query contexts but provides little utility in Druid 31.
 
 See the following topics for more information:
-* [Ingest multi-value dimensions](../querying/multi-value-dimensions.md#sql-based-ingestion) for how to ingest multi-value strings.
-* [Ingest arrays](../querying/arrays.md#sql-based-ingestion) for ingesting arrays.
+* [Ingest multi-value dimensions](https://druid.apache.org/docs/latest/querying/multi-value-dimensions#sql-based-ingestion) for how to ingest multi-value strings.
+* [Ingest arrays](https://druid.apache.org/docs/latest/querying/arrays#sql-based-ingestion) for ingesting arrays.
 
 [#16789](https://github.com/apache/druid/pull/16789)
 
@@ -602,9 +647,13 @@ In Druid 32.0.0, the front coded dictionaries feature will be turned on by defau
 
 Once this feature is on, you cannot easily downgrade to an earlier version that does not support the feature. 
 
-For more information, see [Migration guide: front-coded dictionaries](./migr-front-coded-dict.md).
+For more information, see [Migration guide: front-coded dictionaries](https://druid.apache.org/docs/latest/release-info/migr-front-coded-dict).
 
 If you're already using this feature, you don't need to take any action. 
+
+#### Storage improvement features
+
+Druid 31.0.0 includes storage improvements that are not backwards compatible. Once you enable [flexible segment sorting](#flexible-segment-sorting) or [compression for complex columns](#compression-for-complex-columns), you cannot downgrade to a release earlier than 31.0.0. Thoroughly test these features before rolling them out to your production cluster.
 
 ### Incompatible changes
 
