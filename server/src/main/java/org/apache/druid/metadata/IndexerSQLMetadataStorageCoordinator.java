@@ -32,6 +32,7 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
 import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -901,7 +902,15 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     } else if (pendingSegment.getId().getVersion().compareTo(replaceVersion) >= 0) {
       return false;
     } else if (!replaceInterval.contains(pendingSegment.getId().getInterval())) {
-      return false;
+      final SegmentId pendingSegmentId = pendingSegment.getId().asSegmentId();
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build(
+                              "Replacing with a finer segment granularity than a concurrent append is unsupported."
+                              + " Cannot upgrade pendingSegment[%s] to version[%s] as the replace interval[%s]"
+                              + " does not fully contain the pendingSegment interval[%s].",
+                              pendingSegmentId, replaceVersion, replaceInterval, pendingSegmentId.getInterval()
+                          );
     } else {
       // Do not upgrade already upgraded pending segment
       return pendingSegment.getSequenceName() == null
@@ -2200,10 +2209,16 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           newInterval = replaceInterval;
           break;
         } else if (replaceInterval.overlaps(oldInterval)) {
-          throw new ISE(
-              "Incompatible segment intervals for commit: [%s] and [%s].",
-              oldInterval, replaceInterval
-          );
+          final String conflictingSegmentId = oldSegment.getId().toString();
+          final String upgradeVersion = upgradeSegmentToLockVersion.get(conflictingSegmentId);
+          throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                              .ofCategory(DruidException.Category.UNSUPPORTED)
+                              .build(
+                                  "Replacing with a finer segment granularity than a concurrent append is unsupported."
+                                  + " Cannot upgrade segment[%s] to version[%s] as the replace interval[%s]"
+                                  + " does not fully contain the pending segment interval[%s].",
+                                  conflictingSegmentId, upgradeVersion, replaceInterval, oldInterval
+                              );
         }
       }
 
