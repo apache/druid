@@ -96,7 +96,7 @@ public class DoubleNumericColumnPartSerde implements ColumnPartSerde
   @Override
   public Deserializer getDeserializer()
   {
-    return (buffer, builder, columnConfig) -> {
+    return (buffer, builder, columnConfig, parent) -> {
       final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
           buffer,
           byteOrder

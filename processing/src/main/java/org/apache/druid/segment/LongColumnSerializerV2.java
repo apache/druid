@@ -121,12 +121,29 @@ public class LongColumnSerializerV2 implements GenericColumnSerializer<Object>
   public void serialize(ColumnValueSelector<?> selector) throws IOException
   {
     if (selector.isNull()) {
-      nullRowsBitmap.add(rowCount);
-      writer.add(0L);
+      serializeNull();
     } else {
-      writer.add(selector.getLong());
+      serializeValue(selector.getLong());
     }
-    rowCount++;
+  }
+
+  /**
+   * Serializes a null value at the rowCount position, and increments the current rowCount.
+   */
+  public void serializeNull() throws IOException
+  {
+    nullRowsBitmap.add(rowCount);
+    writer.add(0L);
+    ++rowCount;
+  }
+
+  /**
+   * Serializes a value of val at the rowCount position, and increments the current rowCount.
+   */
+  public void serializeValue(long val) throws IOException
+  {
+    writer.add(val);
+    ++rowCount;
   }
 
   @Override

@@ -100,6 +100,12 @@ public final class DictionaryIdLookup implements Closeable
     this.arrayDictionaryWriter = arrayDictionaryWriter;
   }
 
+  public int[] getArrayValue(int id)
+  {
+    ensureArrayDictionaryLoaded();
+    return arrayDictionary.get(id - arrayOffset());
+  }
+
   @Nullable
   public Object getDictionaryValue(int id)
   {
@@ -400,5 +406,29 @@ public final class DictionaryIdLookup implements Closeable
         return Ints.checkedCast(numBytesWritten);
       }
     };
+  }
+
+  public int getStringCardinality()
+  {
+    ensureStringDictionaryLoaded();
+    return stringDictionary == null ? 0 : stringDictionary.size();
+  }
+
+  public int getLongCardinality()
+  {
+    ensureLongDictionaryLoaded();
+    return longDictionary == null ? 0 : longDictionary.size();
+  }
+
+  public int getDoubleCardinality()
+  {
+    ensureDoubleDictionaryLoaded();
+    return doubleDictionary == null ? 0 : doubleDictionary.size();
+  }
+
+  public int getArrayCardinality()
+  {
+    ensureArrayDictionaryLoaded();
+    return arrayDictionary == null ? 0 : arrayDictionary.size();
   }
 }

@@ -76,6 +76,18 @@ public interface CursorHolder extends Closeable
   }
 
   /**
+   * Returns a set of replacement {@link AggregatorFactory} if and only if {@link #isPreAggregated()} is true. The
+   * query engine should replace the query aggregators with these aggregators, which are combining aggregators derived
+   * from the {@link CursorBuildSpec} passed into {@link CursorFactory#makeCursorHolder(CursorBuildSpec)}. If
+   * {@link #isPreAggregated()} is not true, this method returns null
+   */
+  @Nullable
+  default List<AggregatorFactory> getAggregatorsForPreAggregated()
+  {
+    return null;
+  }
+
+  /**
    * Returns cursor ordering, which may or may not match {@link CursorBuildSpec#getPreferredOrdering()}. If returns
    * an empty list then the cursor has no defined ordering.
    *

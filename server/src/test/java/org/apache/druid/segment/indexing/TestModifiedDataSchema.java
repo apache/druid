@@ -56,6 +56,7 @@ public class TestModifiedDataSchema extends DataSchema
         aggregators,
         granularitySpec,
         transformSpec,
+        null,
         parserMap,
         objectMapper
     );
