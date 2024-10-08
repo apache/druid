@@ -27,6 +27,7 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
@@ -93,6 +94,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final String dataSource;
 
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
+  // Maintain a timeline of ids of all segments including the base and upgraded versions
   private final VersionedIntervalTimeline<String, SegmentDescriptorOvershadowable> upgradedSegmentsTimeline;
   private final ObjectMapper objectMapper;
   private final ServiceEmitter emitter;
@@ -101,6 +103,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
+  // Map from a upgraded segment's descriptor to the base allocated segment's descriptor
   private final ConcurrentMap<SegmentDescriptor, SegmentDescriptor> newIdToBasePendingSegment
       = new ConcurrentHashMap<>();
 
@@ -201,6 +204,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
     try {
       for (final SegmentDescriptor descriptor : specs) {
+        // Get the upgraded segment id descriptor corresponding to the query segment descriptor.
         final PartitionChunk<SegmentDescriptorOvershadowable> descriptorChunk = upgradedSegmentsTimeline.findChunk(
             descriptor.getInterval(),
             descriptor.getVersion(),
@@ -208,13 +212,14 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         );
         final SegmentDescriptor baseDescriptor;
         if (descriptorChunk != null) {
-          baseDescriptor = newIdToBasePendingSegment.getOrDefault(
-              descriptorChunk.getObject().segmentDescriptor,
-              descriptor
-          );
+          // If the segment exists in the timeline, there must be a corresponding base descriptor entry in the map
+          baseDescriptor = newIdToBasePendingSegment.get(descriptorChunk.getObject().segmentDescriptor);
         } else {
           baseDescriptor = descriptor;
         }
+        // Find the sink corresponding to the descriptor of the base segment
+        // Note that this descriptor can be wider than the query descriptor
+        // However that's ok as it will be at most as wide as the sink's interval
         final PartitionChunk<Sink> chunk = sinkTimeline.findChunk(
             baseDescriptor.getInterval(),
             baseDescriptor.getVersion(),
@@ -378,6 +383,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
   }
 
+  /**
+   * Must be called when a segment is announced by a task.
+   * Either the base segment upon allocation or any upgraded version due to a concurrent replace
+   */
   public void registerUpgradedPendingSegment(
       SegmentIdWithShardSpec basePendingSegment,
       SegmentIdWithShardSpec upgradedPendingSegment
@@ -400,6 +409,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     );
   }
 
+  /**
+   * Must be called when dropping sink from the sinkTimeline
+   * It is the responsibility of the caller to unregister all associated ids including the base id
+   */
   public void unregisterUpgradedPendingSegment(SegmentIdWithShardSpec upgradedPendingSegment)
   {
     final SegmentDescriptor upgradedDescriptor = upgradedPendingSegment.asSegmentId().toDescriptor();
