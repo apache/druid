@@ -403,7 +403,7 @@ class ControllerStageTracker
       throw new ISE("Stage does not gather result key statistics");
     }
 
-    if (workerNumber < 0 || workerNumber >= workerCount) {
+    if (!workerInputs.workers().contains(workerNumber)) {
       throw new IAE("Invalid workerNumber [%s]", workerNumber);
     }
 
@@ -522,7 +522,7 @@ class ControllerStageTracker
       throw new ISE("Stage does not gather result key statistics");
     }
 
-    if (workerNumber < 0 || workerNumber >= workerCount) {
+    if (!workerInputs.workers().contains(workerNumber)) {
       throw new IAE("Invalid workerNumber [%s]", workerNumber);
     }
 
@@ -656,7 +656,7 @@ class ControllerStageTracker
       throw new ISE("Stage does not gather result key statistics");
     }
 
-    if (workerNumber < 0 || workerNumber >= workerCount) {
+    if (!workerInputs.workers().contains(workerNumber)) {
       throw new IAE("Invalid workerNumber [%s]", workerNumber);
     }
 
@@ -763,7 +763,7 @@ class ControllerStageTracker
     this.resultPartitionBoundaries = clusterByPartitions;
     this.resultPartitions = ReadablePartitions.striped(
         stageDef.getStageNumber(),
-        workerCount,
+        workerInputs.workers(),
         clusterByPartitions.size()
     );
 
@@ -788,7 +788,7 @@ class ControllerStageTracker
       throw DruidException.defensive("Cannot setDoneReadingInput for stage[%s], it is not sorting", stageDef.getId());
     }
 
-    if (workerNumber < 0 || workerNumber >= workerCount) {
+    if (!workerInputs.workers().contains(workerNumber)) {
       throw new IAE("Invalid workerNumber[%s] for stage[%s]", workerNumber, stageDef.getId());
     }
 
@@ -830,7 +830,7 @@ class ControllerStageTracker
   @SuppressWarnings("unchecked")
   boolean setResultsCompleteForWorker(final int workerNumber, final Object resultObject)
   {
-    if (workerNumber < 0 || workerNumber >= workerCount) {
+    if (!workerInputs.workers().contains(workerNumber)) {
       throw new IAE("Invalid workerNumber [%s]", workerNumber);
     }
 
@@ -947,14 +947,18 @@ class ControllerStageTracker
         resultPartitionBoundaries = maybeResultPartitionBoundaries.valueOrThrow();
         resultPartitions = ReadablePartitions.striped(
             stageNumber,
-            workerCount,
+            workerInputs.workers(),
             resultPartitionBoundaries.size()
         );
-      } else if (shuffleSpec.kind() == ShuffleKind.MIX) {
-        resultPartitionBoundaries = ClusterByPartitions.oneUniversalPartition();
-        resultPartitions = ReadablePartitions.striped(stageNumber, workerCount, shuffleSpec.partitionCount());
       } else {
-        resultPartitions = ReadablePartitions.striped(stageNumber, workerCount, shuffleSpec.partitionCount());
+        if (shuffleSpec.kind() == ShuffleKind.MIX) {
+          resultPartitionBoundaries = ClusterByPartitions.oneUniversalPartition();
+        }
+        resultPartitions = ReadablePartitions.striped(
+            stageNumber,
+            workerInputs.workers(),
+            shuffleSpec.partitionCount()
+        );
       }
     } else {
       // No reshuffling: retain partitioning from nonbroadcast inputs.
