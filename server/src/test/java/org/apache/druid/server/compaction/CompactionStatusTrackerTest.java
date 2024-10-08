@@ -122,7 +122,7 @@ public class CompactionStatusTrackerTest
     Assert.assertEquals("not compacted yet", status.getReason());
 
     // Verify that interval is skipped for compaction after task has finished
-    statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc());
+    statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc().minusMinutes(1));
     statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
     statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
 

@@ -176,6 +176,7 @@ public class CompactSegmentsTest
   private final BiFunction<Integer, Integer, ShardSpec> shardSpecFactory;
   private final CompactionEngine engine;
 
+  private final List<DataSegment> allSegments = new ArrayList<>();
   private DataSourcesSnapshot dataSources;
   private CompactionStatusTracker statusTracker;
   Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
@@ -194,7 +195,7 @@ public class CompactSegmentsTest
   @Before
   public void setup()
   {
-    List<DataSegment> allSegments = new ArrayList<>();
+    allSegments.clear();
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
       for (int j : new int[]{0, 1, 2, 3, 7, 8}) {
@@ -1988,22 +1989,14 @@ public class CompactSegmentsTest
 
   private void addMoreData(String dataSource, int day)
   {
-    final SegmentTimeline timeline
-        = dataSources.getUsedSegmentsTimelinesPerDataSource().get(dataSource);
     for (int i = 0; i < 2; i++) {
-      DataSegment newSegment = createSegment(dataSource, day, true, i);
-      timeline.add(
-          newSegment.getInterval(),
-          newSegment.getVersion(),
-          newSegment.getShardSpec().createChunk(newSegment)
-      );
-      newSegment = createSegment(dataSource, day, false, i);
-      timeline.add(
-          newSegment.getInterval(),
-          newSegment.getVersion(),
-          newSegment.getShardSpec().createChunk(newSegment)
-      );
+      allSegments.add(createSegment(dataSource, day, true, i));
+      allSegments.add(createSegment(dataSource, day, false, i));
     }
+
+    // Recreate the DataSourcesSnapshot with a future snapshotTime so that the
+    // statusTracker considers the intervals with new data eligible for compaction again
+    dataSources = DataSourcesSnapshot.fromUsedSegments(allSegments, DateTimes.nowUtc().plusMinutes(10));
   }
 
   private List<DataSourceCompactionConfig> createCompactionConfigs()
