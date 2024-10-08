@@ -331,6 +331,7 @@ public class DartSqlResourceTest extends MSQTestBase
         "sid",
         "did2",
         "SELECT 2",
+        "localhost:1002",
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2001"),
@@ -398,6 +399,7 @@ public class DartSqlResourceTest extends MSQTestBase
         "sid",
         "did2",
         "SELECT 2",
+        "localhost:1002",
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2000"),
@@ -434,6 +436,7 @@ public class DartSqlResourceTest extends MSQTestBase
         "sid",
         "did2",
         "SELECT 2",
+        "localhost:1002",
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2000"),
@@ -739,8 +742,15 @@ public class DartSqlResourceTest extends MSQTestBase
     Mockito.when(controller.queryId()).thenReturn("did_" + identity);
 
     final AuthenticationResult authenticationResult = makeAuthenticationResult(identity);
-    final ControllerHolder holder =
-        new ControllerHolder(controller, null, "sid", "SELECT 1", authenticationResult, DateTimes.of("2000"));
+    final ControllerHolder holder = new ControllerHolder(
+        controller,
+        null,
+        "sid",
+        "SELECT 1",
+        "localhost:1001",
+        authenticationResult,
+        DateTimes.of("2000")
+    );
 
     controllerRegistry.register(holder);
     return holder;
