@@ -177,10 +177,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     // transform TableDataSource to GlobalTableDataSource when eligible
     // before further transformation to potentially inline
 
-    // Populate the subquery ids of the subquery id present in the main query
-    Query<T> newQuery = SubQueryIdPopulator.populateSubQueryIds(query);
-
-    newQuery = ResourceIdPopulatingQueryRunner.populateResourceId(newQuery);
+    Query<T> newQuery = ResourceIdPopulatingQueryRunner.populateResourceId(query);
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.

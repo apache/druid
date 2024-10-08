@@ -36,6 +36,9 @@ import java.util.stream.Collectors;
 public class SubQueryIdPopulator
 {
 
+  /**
+   * Populate the subquery ids of the subquery id present in the main query
+   */
   public static <T> Query<T> populateSubQueryIds(final Query<T> query)
   {
     return query.withDataSource(generateSubqueryIds(
