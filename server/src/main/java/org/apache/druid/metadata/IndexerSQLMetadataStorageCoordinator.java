@@ -1327,7 +1327,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     {
       this.interval = interval;
       this.sequenceName = request.getSequenceName();
-      this.previousSegmentId = request.getPreviousSegmentId();
+      // Even if the previousSegmentId is set, disregard it when skipping lineage check for streaming ingestion
+      this.previousSegmentId = skipSegmentLineageCheck ? null : request.getPreviousSegmentId();
       this.skipSegmentLineageCheck = skipSegmentLineageCheck;
 
       this.hashCode = Objects.hash(interval, sequenceName, previousSegmentId, skipSegmentLineageCheck);
