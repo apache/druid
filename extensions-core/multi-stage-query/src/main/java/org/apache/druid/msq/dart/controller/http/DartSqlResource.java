@@ -154,7 +154,6 @@ public class DartSqlResource extends SqlResource
         controllerRegistry.getAllHolders()
                           .stream()
                           .map(DartQueryInfo::fromControllerHolder)
-                          .sorted(Comparator.comparing(DartQueryInfo::getStartTime))
                           .collect(Collectors.toList());
 
     // Add queries from all other servers, if "selfOnly" is not set.
@@ -171,6 +170,9 @@ public class DartSqlResource extends SqlResource
         }
       }
     }
+
+    // Sort queries by start time, breaking ties by query ID, so the list comes back in a consistent and nice order.
+    queries.sort(Comparator.comparing(DartQueryInfo::getStartTime).thenComparing(DartQueryInfo::getDartQueryId));
 
     final GetQueriesResponse response;
     if (stateReadAccess.isAllowed()) {
