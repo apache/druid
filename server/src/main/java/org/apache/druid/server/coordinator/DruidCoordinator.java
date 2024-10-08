@@ -333,8 +333,7 @@ public class DruidCoordinator
     return new CompactionRunSimulator(compactionStatusTracker, overlordClient).simulateRunWithConfig(
         metadataManager.configs().getCurrentCompactionConfig().withClusterConfig(updateRequest),
         metadataManager.segments()
-                       .getSnapshotOfDataSourcesWithAllUsedSegments()
-                       .getUsedSegmentsTimelinesPerDataSource(),
+                       .getSnapshotOfDataSourcesWithAllUsedSegments(),
         CompactionEngine.NATIVE
     );
   }

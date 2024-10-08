@@ -21,6 +21,7 @@ package org.apache.druid.server.compaction;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
@@ -76,7 +77,7 @@ public class CompactionRunSimulator
    */
   public CompactionSimulateResult simulateRunWithConfig(
       DruidCompactionConfig compactionConfig,
-      Map<String, SegmentTimeline> datasourceTimelines,
+      DataSourcesSnapshot dataSourcesSnapshot,
       CompactionEngine defaultEngine
   )
   {
@@ -146,7 +147,7 @@ public class CompactionRunSimulator
     final CoordinatorRunStats stats = new CoordinatorRunStats();
     new CompactSegments(simulationStatusTracker, readOnlyOverlordClient).run(
         configWithUnlimitedTaskSlots,
-        datasourceTimelines,
+        dataSourcesSnapshot,
         defaultEngine,
         stats
     );

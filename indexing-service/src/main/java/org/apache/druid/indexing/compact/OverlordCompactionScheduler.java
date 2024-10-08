@@ -309,7 +309,7 @@ public class OverlordCompactionScheduler implements CompactionScheduler
     if (isRunning()) {
       return new CompactionRunSimulator(statusTracker, overlordClient).simulateRunWithConfig(
           getLatestConfig().withClusterConfig(updateRequest),
-          getDatasourceSnapshot().getUsedSegmentsTimelinesPerDataSource(),
+          getDatasourceSnapshot(),
           supervisorConfig.getEngine()
       );
     } else {
