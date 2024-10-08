@@ -1304,8 +1304,76 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ),
           results4
       );
+
+      // Drop segment
+      appenderator.drop(IDENTIFIERS.get(0)).get();
+      // Drop its upgraded version (Drop happens for each version on handoff)
+      appenderator.drop(si("2000/2001", "B", 1)).get();
+
+      final List<Result<TimeseriesResultValue>> resultsAfterDrop1 =
+          QueryPlus.wrap(query1).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query1",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2000"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 4L))
+              )
+          ),
+          resultsAfterDrop1
+      );
+
+      final List<Result<TimeseriesResultValue>> resultsAfterDrop2 =
+          QueryPlus.wrap(query2).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query2",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2000"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 4L))
+              ),
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 4L, "met", 120L))
+              )
+          ),
+          resultsAfterDrop2
+      );
+
+      final List<Result<TimeseriesResultValue>> resultsAfterDrop3 =
+          QueryPlus.wrap(query3).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2000"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 4L))
+              ),
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 8L))
+              )
+          ),
+          resultsAfterDrop3
+      );
+
+      final List<Result<TimeseriesResultValue>> resultsAfterDrop4 =
+          QueryPlus.wrap(query4).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2000"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 4L))
+              ),
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 2L, "met", 72L))
+              )
+          ),
+          resultsAfterDrop4
+      );
     }
   }
+
   @Test
   public void testQueryByIntervals() throws Exception
   {

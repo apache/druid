@@ -93,7 +93,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final String dataSource;
 
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
-  private final VersionedIntervalTimeline<String, SegmentDescriptorOvershadowable> upgradeDescriptorTimeline;
+  private final VersionedIntervalTimeline<String, SegmentDescriptorOvershadowable> upgradedSegmentsTimeline;
   private final ObjectMapper objectMapper;
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
@@ -118,7 +118,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.sinkTimeline = Preconditions.checkNotNull(sinkTimeline, "sinkTimeline");
-    this.upgradeDescriptorTimeline = new VersionedIntervalTimeline<>(String.CASE_INSENSITIVE_ORDER);
+    this.upgradedSegmentsTimeline = new VersionedIntervalTimeline<>(String.CASE_INSENSITIVE_ORDER);
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.conglomerate = Preconditions.checkNotNull(conglomerate, "conglomerate");
@@ -137,7 +137,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   {
     final Iterable<SegmentDescriptor> specs = FunctionalIterable
         .create(intervals)
-        .transformCat(upgradeDescriptorTimeline::lookup)
+        .transformCat(upgradedSegmentsTimeline::lookup)
         .transformCat(
             holder -> FunctionalIterable
                 .create(holder.getObject())
@@ -201,7 +201,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
     try {
       for (final SegmentDescriptor descriptor : specs) {
-        final PartitionChunk<SegmentDescriptorOvershadowable> descriptorChunk = upgradeDescriptorTimeline.findChunk(
+        final PartitionChunk<SegmentDescriptorOvershadowable> descriptorChunk = upgradedSegmentsTimeline.findChunk(
             descriptor.getInterval(),
             descriptor.getVersion(),
             descriptor.getPartitionNumber()
@@ -384,7 +384,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   )
   {
     final SegmentDescriptor upgradedDescriptor = upgradedPendingSegment.asSegmentId().toDescriptor();
-    upgradeDescriptorTimeline.add(
+    upgradedSegmentsTimeline.add(
         upgradedDescriptor.getInterval(),
         upgradedDescriptor.getVersion(),
         IntegerPartitionChunk.make(
@@ -398,6 +398,22 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         upgradedDescriptor,
         basePendingSegment.asSegmentId().toDescriptor()
     );
+  }
+
+  public void unregisterUpgradedPendingSegment(SegmentIdWithShardSpec upgradedPendingSegment)
+  {
+    final SegmentDescriptor upgradedDescriptor = upgradedPendingSegment.asSegmentId().toDescriptor();
+    upgradedSegmentsTimeline.remove(
+        upgradedDescriptor.getInterval(),
+        upgradedDescriptor.getVersion(),
+        IntegerPartitionChunk.make(
+            null,
+            null,
+            upgradedDescriptor.getPartitionNumber(),
+            new SegmentDescriptorOvershadowable(upgradedDescriptor)
+        )
+    );
+    newIdToBasePendingSegment.remove(upgradedDescriptor);
   }
 
   @VisibleForTesting

@@ -95,6 +95,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -615,9 +616,22 @@ public class StreamAppenderator implements Appenderator
   @Override
   public ListenableFuture<?> drop(final SegmentIdWithShardSpec identifier)
   {
-    final Sink sink = sinks.get(identifier);
+    final SegmentIdWithShardSpec baseIdentifier = upgradedSegmentToBaseSegment.getOrDefault(identifier, identifier);
+    synchronized (abandonedSegments) {
+      abandonedSegments.add(identifier);
+      if (baseSegmentToUpgradedSegments.containsKey(baseIdentifier)) {
+        Set<SegmentIdWithShardSpec> relevantSegments = new HashSet<>(baseSegmentToUpgradedSegments.get(baseIdentifier));
+        relevantSegments.removeAll(abandonedSegments);
+        // If there are unabandoned segments associated with the sink, return early
+        // This may be the case if segments have been upgraded as the result of a concurrent replace
+        if (!relevantSegments.isEmpty()) {
+          return Futures.immediateFuture(null);
+        }
+      }
+    }
+    final Sink sink = sinks.get(baseIdentifier);
     if (sink != null) {
-      return abandonSegment(identifier, sink, true);
+      return abandonSegment(baseIdentifier, sink, true);
     } else {
       return Futures.immediateFuture(null);
     }
@@ -1108,12 +1122,12 @@ public class StreamAppenderator implements Appenderator
   /**
    * Unannounces the given base segment and all its upgraded versions.
    */
-  private void unannounceAllVersionsOfSegment(DataSegment baseSegment, Sink sink)
+  private Set<SegmentIdWithShardSpec> unannounceAllVersionsOfSegment(DataSegment baseSegment, Sink sink)
   {
     synchronized (sink) {
       final SegmentIdWithShardSpec baseId = SegmentIdWithShardSpec.fromDataSegment(baseSegment);
       if (!baseSegmentToUpgradedSegments.containsKey(baseId)) {
-        return;
+        return Collections.emptySet();
       }
 
       final Set<SegmentIdWithShardSpec> upgradedVersionsOfSegment = baseSegmentToUpgradedSegments.remove(baseId);
@@ -1132,6 +1146,7 @@ public class StreamAppenderator implements Appenderator
         unannounceSegment(newSegment);
         upgradedSegmentToBaseSegment.remove(newId);
       }
+      return upgradedVersionsOfSegment;
     }
   }
 
@@ -1448,19 +1463,6 @@ public class StreamAppenderator implements Appenderator
       final boolean removeOnDiskData
   )
   {
-    abandonedSegments.add(identifier);
-    final SegmentIdWithShardSpec baseIdentifier = upgradedSegmentToBaseSegment.getOrDefault(identifier, identifier);
-    synchronized (sink) {
-      if (baseSegmentToUpgradedSegments.containsKey(baseIdentifier)) {
-        Set<SegmentIdWithShardSpec> relevantSegments = new HashSet<>(baseSegmentToUpgradedSegments.get(baseIdentifier));
-        relevantSegments.removeAll(abandonedSegments);
-        // If there are unabandoned segments associated with the sink, return early
-        // This may be the case if segments have been upgraded as the result of a concurrent replace
-        if (!relevantSegments.isEmpty()) {
-          return Futures.immediateFuture(null);
-        }
-      }
-    }
     // Ensure no future writes will be made to this sink.
     if (sink.finishWriting()) {
       // Decrement this sink's rows from the counters. we only count active sinks so that we don't double decrement,
@@ -1478,7 +1480,7 @@ public class StreamAppenderator implements Appenderator
     }
 
     // Mark this identifier as dropping, so no future push tasks will pick it up.
-    droppingSinks.add(baseIdentifier);
+    droppingSinks.add(identifier);
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
@@ -1489,8 +1491,8 @@ public class StreamAppenderator implements Appenderator
           @Override
           public Void apply(@Nullable Object input)
           {
-            if (!sinks.remove(baseIdentifier, sink)) {
-              log.error("Sink for segment[%s] no longer valid, not abandoning.", baseIdentifier);
+            if (!sinks.remove(identifier, sink)) {
+              log.error("Sink for segment[%s] no longer valid, not abandoning.", identifier);
               return null;
             }
 
@@ -1498,17 +1500,17 @@ public class StreamAppenderator implements Appenderator
 
             if (removeOnDiskData) {
               // Remove this segment from the committed list. This must be done from the persist thread.
-              log.debug("Removing commit metadata for segment[%s].", baseIdentifier);
+              log.debug("Removing commit metadata for segment[%s].", identifier);
               try {
                 commitLock.lock();
                 final Committed oldCommit = readCommit();
                 if (oldCommit != null) {
-                  writeCommit(oldCommit.without(baseIdentifier.toString()));
+                  writeCommit(oldCommit.without(identifier.toString()));
                 }
               }
               catch (Exception e) {
                 log.makeAlert(e, "Failed to update committed segments[%s]", schema.getDataSource())
-                   .addData("identifier", baseIdentifier.toString())
+                   .addData("identifier", identifier.toString())
                    .emit();
                 throw new RuntimeException(e);
               }
@@ -1517,15 +1519,19 @@ public class StreamAppenderator implements Appenderator
               }
             }
 
-            unannounceAllVersionsOfSegment(sink.getSegment(), sink);
+            final Set<SegmentIdWithShardSpec> allVersionIds = unannounceAllVersionsOfSegment(sink.getSegment(), sink);
 
             Runnable removeRunnable = () -> {
-              droppingSinks.remove(baseIdentifier);
+              droppingSinks.remove(identifier);
               sinkTimeline.remove(
                   sink.getInterval(),
                   sink.getVersion(),
-                  baseIdentifier.getShardSpec().createChunk(sink)
+                  identifier.getShardSpec().createChunk(sink)
               );
+              for (SegmentIdWithShardSpec id : allVersionIds) {
+                // Update query mapping with SinkQuerySegmentWalker
+                ((SinkQuerySegmentWalker) texasRanger).unregisterUpgradedPendingSegment(id);
+              }
               for (FireHydrant hydrant : sink) {
                 if (cache != null) {
                   cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
@@ -1534,7 +1540,7 @@ public class StreamAppenderator implements Appenderator
               }
 
               if (removeOnDiskData) {
-                removeDirectory(computePersistDir(baseIdentifier));
+                removeDirectory(computePersistDir(identifier));
               }
 
               log.info("Dropped segment[%s].", identifier);
