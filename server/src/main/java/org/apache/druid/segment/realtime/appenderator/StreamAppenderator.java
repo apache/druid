@@ -613,8 +613,11 @@ public class StreamAppenderator implements Appenderator
     }
   }
 
-  @Override
-  public ListenableFuture<?> drop(final SegmentIdWithShardSpec identifier)
+  /**
+   * Mark a given version of a segment as abandoned and return its base segment if it can be dropped.
+   * Return null if there are other valid versions of the segment that are yet to be dropped.
+   */
+  private SegmentIdWithShardSpec abandonUpgradedIdentifier(final SegmentIdWithShardSpec identifier)
   {
     final SegmentIdWithShardSpec baseIdentifier = upgradedSegmentToBaseSegment.getOrDefault(identifier, identifier);
     synchronized (abandonedSegments) {
@@ -625,11 +628,18 @@ public class StreamAppenderator implements Appenderator
         // If there are unabandoned segments associated with the sink, return early
         // This may be the case if segments have been upgraded as the result of a concurrent replace
         if (!relevantSegments.isEmpty()) {
-          return Futures.immediateFuture(null);
+          return null;
         }
       }
     }
-    final Sink sink = sinks.get(baseIdentifier);
+    return baseIdentifier;
+  }
+
+  @Override
+  public ListenableFuture<?> drop(final SegmentIdWithShardSpec identifier)
+  {
+    final SegmentIdWithShardSpec baseIdentifier = abandonUpgradedIdentifier(identifier);
+    final Sink sink = baseIdentifier == null ? null : sinks.get(baseIdentifier);
     if (sink != null) {
       return abandonSegment(baseIdentifier, sink, true);
     } else {
@@ -1121,6 +1131,10 @@ public class StreamAppenderator implements Appenderator
 
   /**
    * Unannounces the given base segment and all its upgraded versions.
+   *
+   * @param baseSegment base segment
+   * @param sink sink corresponding to the base segment
+   * @return the set of all segment ids associated with the base segment containing the upgraded ids and itself.
    */
   private Set<SegmentIdWithShardSpec> unannounceAllVersionsOfSegment(DataSegment baseSegment, Sink sink)
   {
