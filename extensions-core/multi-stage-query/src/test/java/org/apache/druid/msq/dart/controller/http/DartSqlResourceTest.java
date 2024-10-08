@@ -333,7 +333,7 @@ public class DartSqlResourceTest extends MSQTestBase
         "SELECT 2",
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
-        DateTimes.of("2000"),
+        DateTimes.of("2001"),
         ControllerHolder.State.RUNNING.toString()
     );
     Mockito.when(dartSqlClient.getRunningQueries(true))
