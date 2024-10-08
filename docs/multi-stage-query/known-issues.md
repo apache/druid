@@ -75,7 +75,7 @@ where native engine has a non-empty `leafOperator`.
 
 The following known issues and limitations affect automatic compaction with the MSQ task engine:
 
-- The `metricSpec` field is only supported for idempotent aggregators. For more information, see [Idempotent aggregators](../data-management/automatic-compaction.md#idempotent-aggregators).
+- The `metricSpec` field is only supported for idempotent aggregators. For more information, see [Idempotent aggregators](../data-management/automatic-compaction.md#supported-aggregators).
 - Only dynamic and range-based partitioning are supported
 - Set `rollup`  to `true` if and only if `metricSpec` is not empty or null.
 - You can only partition on string dimensions. However, multi-valued string dimensions are not supported.
