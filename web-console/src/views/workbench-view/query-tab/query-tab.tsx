@@ -18,8 +18,7 @@
 
 import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult } from '@druid-toolkit/query';
-import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
+import { QueryResult, QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -42,6 +41,7 @@ import type { WorkbenchRunningPromise } from '../../../singletons/workbench-runn
 import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-promises';
 import type { ColumnMetadata, QueryAction, QuerySlice, RowColumn } from '../../../utils';
 import {
+  deepGet,
   DruidError,
   findAllSqlQueriesInText,
   localStorageGet,
@@ -88,7 +88,7 @@ export interface QueryTabProps
   columnMetadata: readonly ColumnMetadata[] | undefined;
   onQueryChange(newQuery: WorkbenchQuery): void;
   onQueryTab(newQuery: WorkbenchQuery, tabName?: string): void;
-  onDetails(id: string, initTab?: ExecutionDetailsTab): void;
+  onDetails(execution: Execution, initTab?: ExecutionDetailsTab): void;
   queryEngines: DruidEngine[];
   runMoreMenu: JSX.Element;
   clusterCapacity: number | undefined;
@@ -206,6 +206,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
         ExecutionStateCache.deleteState(id);
         const { engine, query, prefixLines, cancelQueryId } = q.getApiQuery();
 
+        const startTime = new Date();
         switch (engine) {
           case 'sql-msq-task':
             return await submitTaskQuery({
@@ -237,44 +238,104 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
             onQueryChange(props.query.changeLastExecution(undefined));
 
-            const startTime = new Date();
-            let result: QueryResult;
-            try {
-              const resultPromise = queryRunner.runQuery({
+            const executionPromise = queryRunner
+              .runQuery({
                 query,
                 extraQueryContext: mandatoryQueryContext,
                 defaultQueryContext: baseQueryContext,
                 cancelToken: new axios.CancelToken(cancelFn => {
                   nativeQueryCancelFnRef.current = cancelFn;
                 }),
-              });
-              WorkbenchRunningPromises.storePromise(id, {
-                promise: resultPromise,
-                prefixLines,
-                startTime,
-              });
+              })
+              .then(
+                queryResult => Execution.fromResult(engine, queryResult),
+                e => {
+                  const druidError = new DruidError(e, prefixLines);
+                  druidError.queryDuration = Date.now() - startTime.valueOf();
+                  throw druidError;
+                },
+              );
 
-              result = await resultPromise;
+            WorkbenchRunningPromises.storePromise(id, {
+              executionPromise,
+              startTime,
+            });
+
+            let execution: Execution;
+            try {
+              execution = await executionPromise;
               nativeQueryCancelFnRef.current = undefined;
             } catch (e) {
               nativeQueryCancelFnRef.current = undefined;
-              const druidError = new DruidError(e, prefixLines);
-              druidError.queryDuration = Date.now() - startTime.valueOf();
-              throw druidError;
+              throw e;
             }
 
-            return Execution.fromResult(engine, result);
+            return execution;
+          }
+
+          case 'sql-msq-dart': {
+            if (cancelQueryId) {
+              void cancelToken.promise
+                .then(cancel => {
+                  if (cancel.message === QueryManager.TERMINATION_MESSAGE) return;
+                  return Api.instance.delete(`/druid/v2/sql/dart/${Api.encodePath(cancelQueryId)}`);
+                })
+                .catch(() => {});
+            }
+
+            onQueryChange(props.query.changeLastExecution(undefined));
+
+            const executionPromise = Api.instance
+              .post(`/druid/v2/sql/dart`, query, {
+                cancelToken: new axios.CancelToken(cancelFn => {
+                  nativeQueryCancelFnRef.current = cancelFn;
+                }),
+              })
+              .then(
+                ({ data: dartResponse }) => {
+                  if (deepGet(query, 'context.fullReport') && dartResponse[0][0] === 'fullReport') {
+                    const dartReport = dartResponse[dartResponse.length - 1][0];
+
+                    return Execution.fromTaskReport(dartReport)
+                      .changeEngine('sql-msq-dart')
+                      .changeSqlQuery(query.query, query.context);
+                  } else {
+                    return Execution.fromResult(
+                      engine,
+                      QueryResult.fromRawResult(
+                        dartResponse,
+                        false,
+                        query.header,
+                        query.typesHeader,
+                        query.sqlTypesHeader,
+                      ),
+                    ).changeSqlQuery(query.query, query.context);
+                  }
+                },
+                e => {
+                  throw new DruidError(e, prefixLines);
+                },
+              );
+
+            WorkbenchRunningPromises.storePromise(id, {
+              executionPromise,
+              startTime,
+            });
+
+            let execution: Execution;
+            try {
+              execution = await executionPromise;
+              nativeQueryCancelFnRef.current = undefined;
+            } catch (e) {
+              nativeQueryCancelFnRef.current = undefined;
+              throw e;
+            }
+
+            return execution;
           }
         }
       } else if (WorkbenchRunningPromises.isWorkbenchRunningPromise(q)) {
-        let result: QueryResult;
-        try {
-          result = await q.promise;
-        } catch (e) {
-          throw new DruidError(e, q.prefixLines);
-        }
-
-        return Execution.fromResult('sql-native', result);
+        return await q.executionPromise;
       } else {
         switch (q.engine) {
           case 'sql-msq-task':
@@ -384,8 +445,6 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     queryManager.runQuery(effectiveQuery);
   });
 
-  const statsTaskId: string | undefined = execution?.id;
-
   const onUserCancel = (message?: string) => {
     queryManager.cancelCurrent(message);
     nativeQueryCancelFnRef.current?.();
@@ -441,7 +500,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               <ExecutionSummaryPanel
                 execution={execution}
                 queryErrorDuration={executionState.error?.queryDuration}
-                onExecutionDetail={() => onDetails(statsTaskId!)}
+                onExecutionDetail={() => onDetails(execution!)}
                 onReset={() => {
                   queryManager.reset();
                   onQueryChange(props.query.changeLastExecution(undefined));
@@ -466,24 +525,24 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
             </div>
           )}
           {execution &&
-            (execution.result ? (
-              <ResultTablePane
-                runeMode={execution.engine === 'native'}
-                queryResult={execution.result}
-                onQueryAction={handleQueryAction}
-              />
-            ) : execution.error ? (
+            (execution.error ? (
               <div className="error-container">
                 <ExecutionErrorPane execution={execution} />
                 {execution.stages && (
                   <ExecutionStagesPane
                     execution={execution}
-                    onErrorClick={() => onDetails(statsTaskId!, 'error')}
-                    onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
+                    onErrorClick={() => onDetails(execution, 'error')}
+                    onWarningClick={() => onDetails(execution, 'warnings')}
                     goToTask={goToTask}
                   />
                 )}
               </div>
+            ) : execution.result ? (
+              <ResultTablePane
+                runeMode={execution.engine === 'native'}
+                queryResult={execution.result}
+                onQueryAction={handleQueryAction}
+              />
             ) : execution.isSuccessfulIngest() ? (
               <IngestSuccessPane
                 execution={execution}
@@ -497,8 +556,8 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                 </div>
                 <ExecutionStagesPane
                   execution={execution}
-                  onErrorClick={() => onDetails(statsTaskId!, 'error')}
-                  onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
+                  onErrorClick={() => onDetails(execution, 'error')}
+                  onWarningClick={() => onDetails(execution, 'warnings')}
                   goToTask={goToTask}
                 />
               </div>

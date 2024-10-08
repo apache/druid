@@ -122,7 +122,7 @@ public class ExternalTableTest extends BaseExternTableTest
   {
     // Format is given without columns: it is validated
     CsvInputFormat format = new CsvInputFormat(
-        Collections.singletonList("a"), ";", false, false, 0);
+        Collections.singletonList("a"), ";", false, false, 0, null);
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a\n")))
         .inputFormat(formatToMap(format))

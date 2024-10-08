@@ -120,7 +120,7 @@ public class OverlordCompactionSchedulerTest
     serviceEmitter = new StubServiceEmitter();
     segmentsMetadataManager = new TestSegmentsMetadataManager();
 
-    supervisorConfig = new CompactionSupervisorConfig(true);
+    supervisorConfig = new CompactionSupervisorConfig(true, null);
     compactionConfig = DruidCompactionConfig.empty();
     coordinatorOverlordServiceConfig = new CoordinatorOverlordServiceConfig(false, null);
 
@@ -149,7 +149,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void testStartStopWhenSchedulerIsEnabled()
   {
-    supervisorConfig = new CompactionSupervisorConfig(true);
+    supervisorConfig = new CompactionSupervisorConfig(true, null);
     Assert.assertFalse(scheduler.isRunning());
 
     scheduler.start();
@@ -168,7 +168,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void testStartStopWhenScheduledIsDisabled()
   {
-    supervisorConfig = new CompactionSupervisorConfig(false);
+    supervisorConfig = new CompactionSupervisorConfig(false, null);
     initScheduler();
 
     Assert.assertFalse(scheduler.isRunning());
@@ -183,7 +183,7 @@ public class OverlordCompactionSchedulerTest
   @Test
   public void testSegmentsAreNotPolledWhenSchedulerIsDisabled()
   {
-    supervisorConfig = new CompactionSupervisorConfig(false);
+    supervisorConfig = new CompactionSupervisorConfig(false, null);
     initScheduler();
 
     verifySegmentPolling(false);
@@ -337,7 +337,7 @@ public class OverlordCompactionSchedulerTest
     );
 
     final CompactionSimulateResult simulateResult = scheduler.simulateRunWithConfigUpdate(
-        new ClusterCompactionConfig(null, null, null, null, null)
+        new ClusterCompactionConfig(null, null, null, null)
     );
     Assert.assertEquals(1, simulateResult.getCompactionStates().size());
     final Table pendingCompactionTable = simulateResult.getCompactionStates().get(CompactionStatus.State.PENDING);
@@ -362,7 +362,7 @@ public class OverlordCompactionSchedulerTest
     scheduler.stopCompaction(TestDataSource.WIKI);
 
     final CompactionSimulateResult simulateResultWhenDisabled = scheduler.simulateRunWithConfigUpdate(
-        new ClusterCompactionConfig(null, null, null, null, null)
+        new ClusterCompactionConfig(null, null, null, null)
     );
     Assert.assertTrue(simulateResultWhenDisabled.getCompactionStates().isEmpty());
 

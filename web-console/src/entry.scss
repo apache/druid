@@ -36,6 +36,7 @@ body {
   overflow: hidden;
   font-size: 13px;
   overscroll-behavior-x: none;
+  cursor: default;
 }
 
 body {
@@ -73,4 +74,11 @@ body {
 .#{$bp-ns}-popover-content > .#{$bp-ns}-menu {
   max-height: 47vh;
   overflow: auto;
+}
+
+// Make buttons stretch nicely
+.#{$bp-ns}-button.#{$bp-ns}-fill {
+  .#{$bp-ns}-button-text {
+    flex: 1;
+  }
 }

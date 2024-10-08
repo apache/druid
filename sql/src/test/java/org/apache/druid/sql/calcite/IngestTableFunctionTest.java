@@ -20,9 +20,14 @@
 package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
+import com.google.inject.Binder;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.data.input.impl.CsvInputFormat;
@@ -31,20 +36,28 @@ import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.metadata.DefaultPasswordProvider;
+import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
+import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.external.Externals;
+import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
+import org.apache.druid.sql.calcite.external.InlineOperatorConversion;
+import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.sql.http.SqlParameter;
 import org.hamcrest.CoreMatchers;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
@@ -53,8 +66,10 @@ import org.junit.jupiter.api.Test;
 import java.io.File;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -69,6 +84,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * query ensure that the resulting MSQ task is identical regardless of the path
  * taken.
  */
+@SqlTestFrameworkConfig.ComponentSupplier(IngestTableFunctionTest.ExportComponentSupplier.class)
 public class IngestTableFunctionTest extends CalciteIngestionDmlTest
 {
   protected static URI toURI(String uri)
@@ -90,7 +106,21 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
           null,
           new HttpInputSourceConfig(null, null)
       ),
-      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
+      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null),
+      RowSignature.builder()
+                  .add("x", ColumnType.STRING)
+                  .add("y", ColumnType.STRING)
+                  .add("z", ColumnType.LONG)
+                  .build()
+  );
+  protected final ExternalDataSource localDataSource = new ExternalDataSource(
+      new LocalInputSource(
+          null,
+          null,
+          Arrays.asList(new File("/tmp/foo.csv"), new File("/tmp/bar.csv")),
+          SystemFields.none()
+      ),
+      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null),
       RowSignature.builder()
                   .add("x", ColumnType.STRING)
                   .add("y", ColumnType.STRING)
@@ -262,9 +292,9 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             new DefaultPasswordProvider("secret"),
             SystemFields.none(),
             ImmutableMap.of("Accept", "application/ndjson", "a", "b"),
-            new HttpInputSourceConfig(null, null)
+            new HttpInputSourceConfig(null, Sets.newHashSet("Accept", "a"))
         ),
-        new CsvInputFormat(ImmutableList.of("timestamp", "isRobot"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("timestamp", "isRobot"), null, false, false, 0, null),
         RowSignature.builder()
                     .add("timestamp", ColumnType.STRING)
                     .add("isRobot", ColumnType.STRING)
@@ -549,21 +579,6 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
         .verify();
   }
 
-  protected final ExternalDataSource localDataSource = new ExternalDataSource(
-      new LocalInputSource(
-          null,
-          null,
-          Arrays.asList(new File("/tmp/foo.csv"), new File("/tmp/bar.csv")),
-          SystemFields.none()
-      ),
-      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
-      RowSignature.builder()
-                  .add("x", ColumnType.STRING)
-                  .add("y", ColumnType.STRING)
-                  .add("z", ColumnType.LONG)
-                  .build()
-  );
-
   /**
    * Basic use of LOCALFILES
    */
@@ -701,5 +716,67 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
          )
         .expectLogicalPlanFrom("localExtern")
         .verify();
+  }
+
+  protected static class ExportComponentSupplier extends IngestionDmlComponentSupplier
+  {
+    public ExportComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      builder.addModule(new DruidModule()
+      {
+
+        // Clone of MSQExternalDataSourceModule since it is not
+        // visible here.
+        @Override
+        public List<? extends Module> getJacksonModules()
+        {
+          return Collections.singletonList(
+              new SimpleModule(getClass().getSimpleName())
+                  .registerSubtypes(ExternalDataSource.class)
+          );
+        }
+
+        @Override
+        public void configure(Binder binder)
+        {
+          // Adding the config to allow following 2 headers.
+          binder.bind(HttpInputSourceConfig.class)
+                .toInstance(new HttpInputSourceConfig(null, ImmutableSet.of("Accept", "a")));
+
+        }
+      });
+
+      builder.addModule(new DruidModule()
+      {
+
+        @Override
+        public List<? extends Module> getJacksonModules()
+        {
+          // We want this module to bring input sources along for the ride.
+          List<Module> modules = new ArrayList<>(new InputSourceModule().getJacksonModules());
+          modules.add(new SimpleModule("test-module").registerSubtypes(TestFileInputSource.class));
+          return modules;
+        }
+
+        @Override
+        public void configure(Binder binder)
+        {
+          // Set up the EXTERN macro.
+          SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+
+          // Enable the extended table functions for testing even though these
+          // are not enabled in production in Druid 26.
+          SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+          SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+          SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
+        }
+      });
+    }
   }
 }

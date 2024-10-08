@@ -22,10 +22,10 @@ package org.apache.druid.server.coordinator.loading;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import org.apache.druid.java.util.common.Stopwatch;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
-import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
@@ -44,6 +44,24 @@ import java.util.Objects;
 public class SegmentHolder implements Comparable<SegmentHolder>
 {
   /**
+   * Orders newest segments first (i.e. segments with most recent intervals).
+   * <p>
+   * The order is needed to ensure that:
+   * <ul>
+   * <li>Round-robin assignment distributes segments belonging to same or adjacent
+   * intervals uniformly across all servers.</li>
+   * <li>Load queue prioritizes load of most recent segments, as
+   * they are presumed to contain more important data which is queried more often.</li>
+   * <li>Replication throttler has a smaller impact on replicas of newer segments.</li>
+   * </ul>
+   */
+  public static final Ordering<DataSegment> NEWEST_SEGMENT_FIRST = Ordering
+      .from(Comparators.intervalsByEndThenStart())
+      .onResultOf(DataSegment::getInterval)
+      .compound(Ordering.<DataSegment>natural())
+      .reverse();
+
+  /**
    * Orders segment requests:
    * <ul>
    *   <li>first by action: all drops, then all loads, then all moves</li>
@@ -53,7 +71,7 @@ public class SegmentHolder implements Comparable<SegmentHolder>
   private static final Comparator<SegmentHolder> COMPARE_ACTION_THEN_INTERVAL =
       Ordering.explicit(SegmentAction.DROP, SegmentAction.LOAD, SegmentAction.REPLICATE, SegmentAction.MOVE_TO)
               .onResultOf(SegmentHolder::getAction)
-              .compound(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST.onResultOf(SegmentHolder::getSegment));
+              .compound(NEWEST_SEGMENT_FIRST.onResultOf(SegmentHolder::getSegment));
 
   private final DataSegment segment;
   private final DataSegmentChangeRequest changeRequest;

@@ -23,9 +23,11 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -65,8 +67,11 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
   @Before
   public void setup() throws IOException
   {
-    final RowSignature signature = RowSignature.builder().add("x", ColumnType.STRING).build();
-    final List<String> dims = ImmutableList.of("x");
+    final RowSignature signature = RowSignature.builder()
+                                               .add("x", ColumnType.STRING)
+                                               .add("y", ColumnType.STRING)
+                                               .build();
+    final List<String> dims = ImmutableList.of("x", "y");
     final IncrementalIndexSchema schema =
         IncrementalIndexSchema.builder()
                               .withDimensionsSpec(DimensionsSpec.builder().useSchemaDiscovery(true).build())
@@ -81,79 +86,79 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
                                 signature,
                                 DateTimes.of("2024-01-01T00:00Z"),
                                 dims,
-                                ImmutableList.of("a")
+                                ImmutableList.of("a", "1")
                             ),
                             new ListBasedInputRow(
                                 signature,
                                 DateTimes.of("2024-01-01T00:01Z"),
                                 dims,
-                                ImmutableList.of("b")
+                                ImmutableList.of("b", "2")
                             ),
                             new ListBasedInputRow(
                                 signature,
                                 DateTimes.of("2024-01-01T00:02Z"),
                                 dims,
-                                ImmutableList.of("c")
+                                ImmutableList.of("c", "1")
                             ),
                             new ListBasedInputRow(
                                 signature,
                                 DateTimes.of("2024-01-01T00:03Z"),
                                 dims,
-                                ImmutableList.of("d")
+                                ImmutableList.of("d", "2")
                             ),
                             new ListBasedInputRow(
                                 signature,
                                 DateTimes.of("2024-01-01T01:00Z"),
                                 dims,
-                                ImmutableList.of("e")
+                                ImmutableList.of("e", "1")
                             ),
                             new ListBasedInputRow(
                                 signature,
                                 DateTimes.of("2024-01-01T01:01Z"),
                                 dims,
-                                ImmutableList.of("f")
+                                ImmutableList.of("f", "2")
                             ),
                             new ListBasedInputRow(
                                 signature,
                                 DateTimes.of("2024-01-01T03:04Z"),
                                 dims,
-                                ImmutableList.of("g")
+                                ImmutableList.of("g", "1")
                             ),
                             new ListBasedInputRow(
                                 signature,
                                 DateTimes.of("2024-01-01T03:05Z"),
                                 dims,
-                                ImmutableList.of("h")
+                                ImmutableList.of("h", "2")
                             ),
                             new ListBasedInputRow(
                                 signature,
                                 DateTimes.of("2024-01-01T03:15Z"),
                                 dims,
-                                ImmutableList.of("i")
+                                ImmutableList.of("i", "1")
                             ),
                             new ListBasedInputRow(
                                 signature,
                                 DateTimes.of("2024-01-01T05:03Z"),
                                 dims,
-                                ImmutableList.of("j")
+                                ImmutableList.of("j", "2")
                             ),
                             new ListBasedInputRow(
                                 signature,
                                 DateTimes.of("2024-01-01T06:00Z"),
                                 dims,
-                                ImmutableList.of("k")
+                                ImmutableList.of("k", "1")
                             ),
                             new ListBasedInputRow(
                                 signature,
                                 DateTimes.of("2024-01-01T09:01Z"),
                                 dims,
-                                ImmutableList.of("l")
+                                ImmutableList.of("l", "2")
                             )
                         )
                     )
                     .tmpDir(temporaryFolder.newFolder());
 
-    final QueryableIndex index = bob.buildMMappedIndex();
+    final QueryableIndex index = bob.buildMMappedIndex(Intervals.of("2024-01-01T00:00Z/2024-01-02T00:00Z"));
     interval = index.getDataInterval();
     cursorFactory = new QueryableIndexCursorFactory(index);
     timeBoundaryInspector = QueryableIndexTimeBoundaryInspector.create(index);
@@ -256,6 +261,104 @@ public class CursorGranularizerTest extends InitializedNullHandlingTest
               ImmutableList.of(),
               ImmutableList.of("f", "e"),
               ImmutableList.of("d", "c", "b", "a")
+          ),
+          granularized
+      );
+    }
+  }
+
+  @Test
+  public void testGranularizeFiltered()
+  {
+    final CursorBuildSpec filtered = CursorBuildSpec.builder()
+                                                    .setFilter(new EqualityFilter("y", ColumnType.STRING, "1", null))
+                                                    .build();
+    try (CursorHolder cursorHolder = cursorFactory.makeCursorHolder(filtered)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      CursorGranularizer granularizer = CursorGranularizer.create(
+          cursor,
+          timeBoundaryInspector,
+          Order.ASCENDING,
+          Granularities.HOUR,
+          interval
+      );
+
+      final ColumnSelectorFactory selectorFactory = cursor.getColumnSelectorFactory();
+      final ColumnValueSelector xSelector = selectorFactory.makeColumnValueSelector("x");
+      final Sequence<List<String>> theSequence =
+          Sequences.simple(granularizer.getBucketIterable())
+                   .map(bucketInterval -> {
+                     List<String> bucket = new ArrayList<>();
+                     if (!granularizer.advanceToBucket(bucketInterval)) {
+                       return bucket;
+                     }
+                     while (!cursor.isDone()) {
+                       bucket.add((String) xSelector.getObject());
+                       if (!granularizer.advanceCursorWithinBucket()) {
+                         break;
+                       }
+                     }
+                     return bucket;
+                   });
+
+      List<List<String>> granularized = theSequence.toList();
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of("a", "c"),
+              ImmutableList.of("e"),
+              ImmutableList.of(),
+              ImmutableList.of("g", "i"),
+              ImmutableList.of(),
+              ImmutableList.of(),
+              ImmutableList.of("k"),
+              ImmutableList.of(),
+              ImmutableList.of(),
+              ImmutableList.of()
+          ),
+          granularized
+      );
+    }
+  }
+
+  @Test
+  public void testGranularizeFilteredClippedAndPartialOverlap()
+  {
+    final CursorBuildSpec filtered = CursorBuildSpec.builder()
+                                                    .setFilter(new EqualityFilter("y", ColumnType.STRING, "1", null))
+                                                    .build();
+    try (CursorHolder cursorHolder = cursorFactory.makeCursorHolder(filtered)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      CursorGranularizer granularizer = CursorGranularizer.create(
+          cursor,
+          timeBoundaryInspector,
+          Order.ASCENDING,
+          Granularities.HOUR,
+          Intervals.of("2024-01-01T08:00Z/2024-01-03T00:00Z")
+      );
+
+      final ColumnSelectorFactory selectorFactory = cursor.getColumnSelectorFactory();
+      final ColumnValueSelector xSelector = selectorFactory.makeColumnValueSelector("x");
+      final Sequence<List<String>> theSequence =
+          Sequences.simple(granularizer.getBucketIterable())
+                   .map(bucketInterval -> {
+                     List<String> bucket = new ArrayList<>();
+                     if (!granularizer.advanceToBucket(bucketInterval)) {
+                       return bucket;
+                     }
+                     while (!cursor.isDone()) {
+                       bucket.add((String) xSelector.getObject());
+                       if (!granularizer.advanceCursorWithinBucket()) {
+                         break;
+                       }
+                     }
+                     return bucket;
+                   });
+
+      List<List<String>> granularized = theSequence.toList();
+      Assert.assertEquals(
+          ImmutableList.of(
+              ImmutableList.of(),
+              ImmutableList.of()
           ),
           granularized
       );

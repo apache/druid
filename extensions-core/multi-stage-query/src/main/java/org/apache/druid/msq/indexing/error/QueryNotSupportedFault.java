@@ -21,6 +21,7 @@ package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.error.DruidException;
 
 @JsonTypeName(QueryNotSupportedFault.CODE)
 public class QueryNotSupportedFault extends BaseMSQFault
@@ -31,6 +32,15 @@ public class QueryNotSupportedFault extends BaseMSQFault
   QueryNotSupportedFault()
   {
     super(CODE);
+  }
+
+  @Override
+  public DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.UNSUPPORTED)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
   }
 
   @JsonCreator

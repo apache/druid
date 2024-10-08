@@ -75,6 +75,19 @@ public class LongsLongEncodingWriter implements CompressionFactory.LongEncodingW
   }
 
   @Override
+  public void write(long[] values, int offset, int length) throws IOException
+  {
+    if (outBuffer != null) {
+      outBuffer.asLongBuffer().put(values, offset, length);
+      outBuffer.position(outBuffer.position() + (length * Long.BYTES));
+    } else {
+      for (int i = offset; i < length; ++i) {
+        write(values[i]);
+      }
+    }
+  }
+
+  @Override
   public void flush()
   {
   }

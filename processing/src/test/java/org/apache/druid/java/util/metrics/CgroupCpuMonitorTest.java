@@ -100,9 +100,9 @@ public class CgroupCpuMonitorTest
             .collect(Collectors.toList())
             .containsAll(
                 ImmutableSet.of(
-                    CgroupCpuMonitor.TOTAL_USAGE_METRIC,
-                    CgroupCpuMonitor.USER_USAGE_METRIC,
-                    CgroupCpuMonitor.SYS_USAGE_METRIC
+                    CgroupUtil.CPU_TOTAL_USAGE_METRIC,
+                    CgroupUtil.CPU_USER_USAGE_METRIC,
+                    CgroupUtil.CPU_SYS_USAGE_METRIC
                 )));
   }
 

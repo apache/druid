@@ -52,7 +52,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
-import java.util.concurrent.Callable;
 
 public class MaterializedViewSupervisorSpecTest
 {
@@ -202,19 +201,6 @@ public class MaterializedViewSupervisorSpecTest
 
       SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor);
       Assert.assertNull(autoscaler);
-
-      Assert.assertThrows(UnsupportedOperationException.class, () -> supervisor.computeLagStats());
-
-      Assert.assertThrows(UnsupportedOperationException.class, () -> supervisor.getActiveTaskGroupsCount());
-
-      Callable<Integer> noop = new Callable<Integer>() {
-        @Override
-        public Integer call()
-        {
-          return -1;
-        }
-      };
-
     }
     catch (Exception e) {
       ex = e;

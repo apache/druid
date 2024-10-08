@@ -42,7 +42,57 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
     className="execution-details-pane-general"
   >
     <p>
-      General info for query-26d490c6-c06d-4cd2-938f-bc5f7f982754 ingesting into "kttm-blank-lines"
+      General info for 
+      <Blueprint5.Tag
+        active={false}
+        fill={false}
+        interactive={false}
+        large={false}
+        minimal={true}
+        round={false}
+      >
+        query-26d490c6-c06d-4cd2-938f-bc5f7f982754
+      </Blueprint5.Tag>
+      <React.Fragment>
+         
+        ingesting into 
+        <Blueprint5.Tag
+          active={false}
+          fill={false}
+          interactive={false}
+          large={false}
+          minimal={true}
+          round={false}
+        >
+          "kttm-blank-lines"
+        </Blueprint5.Tag>
+      </React.Fragment>
+    </p>
+    <p>
+      Query took 
+      <Blueprint5.Tag
+        active={false}
+        fill={false}
+        interactive={false}
+        large={false}
+        minimal={true}
+        round={false}
+      >
+        0:00:04
+      </Blueprint5.Tag>
+       
+      (starting at 
+      <Blueprint5.Tag
+        active={false}
+        fill={false}
+        interactive={false}
+        large={false}
+        minimal={true}
+        round={false}
+      >
+        2024-01-23 19:56:44
+      </Blueprint5.Tag>
+      )
     </p>
     <p>
       Results written to dataSource

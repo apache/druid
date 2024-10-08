@@ -253,9 +253,7 @@ public class CompressedColumnarIntsSerializerTest
     );
 
     writer.open();
-    for (int val : vals) {
-      writer.addValue(val);
-    }
+    writer.addValues(vals, 0, vals.length);
     final SmooshedWriter channel = smoosher.addWithSmooshedWriter("test", writer.getSerializedSize());
     writer.writeTo(channel, smoosher);
     channel.close();
