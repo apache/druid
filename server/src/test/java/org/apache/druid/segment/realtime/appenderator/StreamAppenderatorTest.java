@@ -1134,6 +1134,489 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testQueryBySegments_withSegmentVersionUpgrades() throws Exception
+  {
+    try (
+        final StreamAppenderatorTester tester =
+            new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
+                                                  .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .build()) {
+
+      final StreamAppenderator appenderator = (StreamAppenderator) tester.getAppenderator();
+      appenderator.startJob();
+
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 2), Suppliers.ofInstance(Committers.nil()));
+      // Segment0 for interval upgraded after appends
+      appenderator.registerUpgradedPendingSegment(
+          new PendingSegmentRecord(
+              si("2000/2001", "B", 1),
+              si("2000/2001", "B", 1).asSegmentId().toString(),
+              IDENTIFIERS.get(0).asSegmentId().toString(),
+              IDENTIFIERS.get(0).asSegmentId().toString(),
+              StreamAppenderatorTester.DATASOURCE
+          )
+      );
+
+      // Segment1 allocated for version B
+      appenderator.add(si("2000/2001", "B", 2), ir("2000", "foo", 4), Suppliers.ofInstance(Committers.nil()));
+
+      appenderator.add(IDENTIFIERS.get(2), ir("2001", "foo", 8), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T01", "foo", 16), Suppliers.ofInstance(Committers.nil()));
+      // Concurrent replace registers a segment version upgrade for the second interval
+      appenderator.registerUpgradedPendingSegment(
+          new PendingSegmentRecord(
+              si("2001/2002", "B", 1),
+              si("2001/2002", "B", 1).asSegmentId().toString(),
+              IDENTIFIERS.get(2).asSegmentId().toString(),
+              IDENTIFIERS.get(2).asSegmentId().toString(),
+              StreamAppenderatorTester.DATASOURCE
+          )
+      );
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T02", "foo", 32), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), ir("2001T03", "foo", 64), Suppliers.ofInstance(Committers.nil()));
+      // Another Concurrent replace registers upgrade with version C for the second interval
+      appenderator.registerUpgradedPendingSegment(
+          new PendingSegmentRecord(
+              si("2001/2002", "C", 7),
+              si("2001/2002", "C", 7).asSegmentId().toString(),
+              IDENTIFIERS.get(2).asSegmentId().toString(),
+              IDENTIFIERS.get(2).asSegmentId().toString(),
+              StreamAppenderatorTester.DATASOURCE
+          )
+      );
+
+
+      // Query1: segment #2
+      final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                           .aggregators(
+                                               Arrays.asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(Granularities.DAY)
+                                           .intervals(
+                                               new MultipleSpecificSegmentSpec(
+                                                   ImmutableList.of(
+                                                       new SegmentDescriptor(
+                                                           IDENTIFIERS.get(2).getInterval(),
+                                                           IDENTIFIERS.get(2).getVersion(),
+                                                           IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                       )
+                                                   )
+                                               )
+                                           )
+                                           .build();
+      final TimeseriesQuery query1_B = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                           .aggregators(
+                                               Arrays.asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(Granularities.DAY)
+                                           .intervals(
+                                               new MultipleSpecificSegmentSpec(
+                                                   ImmutableList.of(
+                                                       new SegmentDescriptor(
+                                                           IDENTIFIERS.get(2).getInterval(),
+                                                           "B",
+                                                           1
+                                                       )
+                                                   )
+                                               )
+                                           )
+                                           .build();
+      final TimeseriesQuery query1_C = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                           .aggregators(
+                                               Arrays.asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(Granularities.DAY)
+                                           .intervals(
+                                               new MultipleSpecificSegmentSpec(
+                                                   ImmutableList.of(
+                                                       new SegmentDescriptor(
+                                                           IDENTIFIERS.get(2).getInterval(),
+                                                           "C",
+                                                           7
+                                                       )
+                                                   )
+                                               )
+                                           )
+                                           .build();
+
+      final List<Result<TimeseriesResultValue>> results1 =
+          QueryPlus.wrap(query1).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query1",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 4L, "met", 120L))
+              )
+          ),
+          results1
+      );
+      final List<Result<TimeseriesResultValue>> results1_B =
+          QueryPlus.wrap(query1_B).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query1_B",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 4L, "met", 120L))
+              )
+          ),
+          results1_B
+      );
+      final List<Result<TimeseriesResultValue>> results1_C =
+          QueryPlus.wrap(query1_C).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query1_C",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 4L, "met", 120L))
+              )
+          ),
+          results1_C
+      );
+
+      // Query2: segment #2, partial
+      final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                           .aggregators(
+                                               Arrays.asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(Granularities.DAY)
+                                           .intervals(
+                                               new MultipleSpecificSegmentSpec(
+                                                   ImmutableList.of(
+                                                       new SegmentDescriptor(
+                                                           Intervals.of("2001/PT1H"),
+                                                           IDENTIFIERS.get(2).getVersion(),
+                                                           IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                       )
+                                                   )
+                                               )
+                                           )
+                                           .build();
+      final TimeseriesQuery query2_B = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                           .aggregators(
+                                               Arrays.asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(Granularities.DAY)
+                                           .intervals(
+                                               new MultipleSpecificSegmentSpec(
+                                                   ImmutableList.of(
+                                                       new SegmentDescriptor(
+                                                           Intervals.of("2001/PT1H"),
+                                                           "B",
+                                                           1
+                                                       )
+                                                   )
+                                               )
+                                           )
+                                           .build();
+      final TimeseriesQuery query2_C = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                           .aggregators(
+                                               Arrays.asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(Granularities.DAY)
+                                           .intervals(
+                                               new MultipleSpecificSegmentSpec(
+                                                   ImmutableList.of(
+                                                       new SegmentDescriptor(
+                                                           Intervals.of("2001/PT1H"),
+                                                           "C",
+                                                           7
+                                                       )
+                                                   )
+                                               )
+                                           )
+                                           .build();
+
+      final List<Result<TimeseriesResultValue>> results2 =
+          QueryPlus.wrap(query2).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query2",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 8L))
+              )
+          ),
+          results2
+      );
+      final List<Result<TimeseriesResultValue>> results2_B =
+          QueryPlus.wrap(query2_B).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query2_B",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 8L))
+              )
+          ),
+          results2_B
+      );
+      final List<Result<TimeseriesResultValue>> results2_C =
+          QueryPlus.wrap(query2_C).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query2_C",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 1L, "met", 8L))
+              )
+          ),
+          results2_C
+      );
+
+      // Query3: segment #2, two disjoint intervals
+      final TimeseriesQuery query3 = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                           .aggregators(
+                                               Arrays.asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(Granularities.DAY)
+                                           .intervals(
+                                               new MultipleSpecificSegmentSpec(
+                                                   ImmutableList.of(
+                                                       new SegmentDescriptor(
+                                                           Intervals.of("2001/PT1H"),
+                                                           IDENTIFIERS.get(2).getVersion(),
+                                                           IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                       ),
+                                                       new SegmentDescriptor(
+                                                           Intervals.of("2001T03/PT1H"),
+                                                           IDENTIFIERS.get(2).getVersion(),
+                                                           IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                       )
+                                                   )
+                                               )
+                                           )
+                                           .build();
+      final TimeseriesQuery query3_B = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                           .aggregators(
+                                               Arrays.asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(Granularities.DAY)
+                                           .intervals(
+                                               new MultipleSpecificSegmentSpec(
+                                                   ImmutableList.of(
+                                                       new SegmentDescriptor(
+                                                           Intervals.of("2001/PT1H"),
+                                                           "B",
+                                                           1
+                                                       ),
+                                                       new SegmentDescriptor(
+                                                           Intervals.of("2001T03/PT1H"),
+                                                           "B",
+                                                           1
+                                                       )
+                                                   )
+                                               )
+                                           )
+                                           .build();
+      final TimeseriesQuery query3_C = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                           .aggregators(
+                                               Arrays.asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(Granularities.DAY)
+                                           .intervals(
+                                               new MultipleSpecificSegmentSpec(
+                                                   ImmutableList.of(
+                                                       new SegmentDescriptor(
+                                                           Intervals.of("2001/PT1H"),
+                                                           "C",
+                                                           7
+                                                       ),
+                                                       new SegmentDescriptor(
+                                                           Intervals.of("2001T03/PT1H"),
+                                                           "C",
+                                                           7
+                                                       )
+                                                   )
+                                               )
+                                           )
+                                           .build();
+
+      final List<Result<TimeseriesResultValue>> results3 =
+          QueryPlus.wrap(query3).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query3",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 2L, "met", 72L))
+              )
+          ),
+          results3
+      );
+      final List<Result<TimeseriesResultValue>> results3_B =
+          QueryPlus.wrap(query3_B).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query3_B",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 2L, "met", 72L))
+              )
+          ),
+          results3_B
+      );
+      final List<Result<TimeseriesResultValue>> results3_C =
+          QueryPlus.wrap(query3_C).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(
+          "query3_C",
+          ImmutableList.of(
+              new Result<>(
+                  DateTimes.of("2001"),
+                  new TimeseriesResultValue(ImmutableMap.of("count", 2L, "met", 72L))
+              )
+          ),
+          results3_C
+      );
+
+      final ScanQuery query4 = Druids.newScanQueryBuilder()
+                                     .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                     .intervals(
+                                         new MultipleSpecificSegmentSpec(
+                                             ImmutableList.of(
+                                                 new SegmentDescriptor(
+                                                     Intervals.of("2001/PT1H"),
+                                                     IDENTIFIERS.get(2).getVersion(),
+                                                     IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                 ),
+                                                 new SegmentDescriptor(
+                                                     Intervals.of("2001T03/PT1H"),
+                                                     IDENTIFIERS.get(2).getVersion(),
+                                                     IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                 )
+                                             )
+                                         )
+                                     )
+                                     .order(Order.ASCENDING)
+                                     .batchSize(10)
+                                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                     .build();
+      final ScanQuery query4_B = Druids.newScanQueryBuilder()
+                                     .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                     .intervals(
+                                         new MultipleSpecificSegmentSpec(
+                                             ImmutableList.of(
+                                                 new SegmentDescriptor(
+                                                     Intervals.of("2001/PT1H"),
+                                                     "B",
+                                                     1
+                                                 ),
+                                                 new SegmentDescriptor(
+                                                     Intervals.of("2001T03/PT1H"),
+                                                     "B",
+                                                     1
+                                                 )
+                                             )
+                                         )
+                                     )
+                                     .order(Order.ASCENDING)
+                                     .batchSize(10)
+                                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                     .build();
+      final ScanQuery query4_C = Druids.newScanQueryBuilder()
+                                     .dataSource(StreamAppenderatorTester.DATASOURCE)
+                                     .intervals(
+                                         new MultipleSpecificSegmentSpec(
+                                             ImmutableList.of(
+                                                 new SegmentDescriptor(
+                                                     Intervals.of("2001/PT1H"),
+                                                     "C",
+                                                     7
+                                                 ),
+                                                 new SegmentDescriptor(
+                                                     Intervals.of("2001T03/PT1H"),
+                                                     "C",
+                                                     7
+                                                 )
+                                             )
+                                         )
+                                     )
+                                     .order(Order.ASCENDING)
+                                     .batchSize(10)
+                                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                     .build();
+      final List<ScanResultValue> results4 =
+          QueryPlus.wrap(query4).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(2, results4.size()); // 2 segments, 1 row per segment
+      Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4.get(0).getColumns().toArray());
+      Assert.assertArrayEquals(
+          new Object[]{DateTimes.of("2001").getMillis(), "foo", 1L, 8L},
+          ((List<Object>) ((List<Object>) results4.get(0).getEvents()).get(0)).toArray()
+      );
+      Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4.get(0).getColumns().toArray());
+      Assert.assertArrayEquals(
+          new Object[]{DateTimes.of("2001T03").getMillis(), "foo", 1L, 64L},
+          ((List<Object>) ((List<Object>) results4.get(1).getEvents()).get(0)).toArray()
+      );
+      final List<ScanResultValue> results4_B =
+          QueryPlus.wrap(query4_B).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(2, results4_B.size()); // 2 segments, 1 row per segment
+      Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4_B.get(0).getColumns().toArray());
+      Assert.assertArrayEquals(
+          new Object[]{DateTimes.of("2001").getMillis(), "foo", 1L, 8L},
+          ((List<Object>) ((List<Object>) results4_B.get(0).getEvents()).get(0)).toArray()
+      );
+      Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4_B.get(0).getColumns().toArray());
+      Assert.assertArrayEquals(
+          new Object[]{DateTimes.of("2001T03").getMillis(), "foo", 1L, 64L},
+          ((List<Object>) ((List<Object>) results4_B.get(1).getEvents()).get(0)).toArray()
+      );
+      final List<ScanResultValue> results4_C =
+          QueryPlus.wrap(query4_C).run(appenderator, ResponseContext.createEmpty()).toList();
+      Assert.assertEquals(2, results4_C.size()); // 2 segments, 1 row per segment
+      Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4_C.get(0).getColumns().toArray());
+      Assert.assertArrayEquals(
+          new Object[]{DateTimes.of("2001").getMillis(), "foo", 1L, 8L},
+          ((List<Object>) ((List<Object>) results4_C.get(0).getEvents()).get(0)).toArray()
+      );
+      Assert.assertArrayEquals(new String[]{"__time", "dim", "count", "met"}, results4_C.get(0).getColumns().toArray());
+      Assert.assertArrayEquals(
+          new Object[]{DateTimes.of("2001T03").getMillis(), "foo", 1L, 64L},
+          ((List<Object>) ((List<Object>) results4_C.get(1).getEvents()).get(0)).toArray()
+      );
+    }
+  }
+
+  @Test
   public void testQueryByIntervals_withSegmentVersionUpgrades() throws Exception
   {
     try (

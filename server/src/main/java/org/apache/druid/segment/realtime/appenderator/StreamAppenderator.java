@@ -82,7 +82,6 @@ import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -151,7 +150,6 @@ public class StreamAppenderator implements Appenderator
   private final ConcurrentMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, SegmentIdWithShardSpec> idToPendingSegment = new ConcurrentHashMap<>();
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
-  private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
   private final boolean useMaxMemoryEstimates;
@@ -250,14 +248,6 @@ public class StreamAppenderator implements Appenderator
     this.texasRanger = sinkQuerySegmentWalker;
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
-
-    if (sinkQuerySegmentWalker == null) {
-      this.sinkTimeline = new VersionedIntervalTimeline<>(
-          String.CASE_INSENSITIVE_ORDER
-      );
-    } else {
-      this.sinkTimeline = sinkQuerySegmentWalker.getSinkTimeline();
-    }
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
@@ -1184,11 +1174,13 @@ public class StreamAppenderator implements Appenderator
       return;
     }
 
+    final Sink sink = sinks.get(basePendingSegment);
+
     // Update query mapping with SinkQuerySegmentWalker
-    ((SinkQuerySegmentWalker) texasRanger).registerUpgradedPendingSegment(basePendingSegment, upgradedPendingSegment);
+    ((SinkQuerySegmentWalker) texasRanger).registerUpgradedPendingSegment(upgradedPendingSegment, sink);
 
     // Announce segments
-    final DataSegment baseSegment = sinks.get(basePendingSegment).getSegment();
+    final DataSegment baseSegment = sink.getSegment();
     final DataSegment newSegment = getUpgradedSegment(baseSegment, upgradedPendingSegment);
 
     segmentAnnouncer.announceSegment(newSegment);
@@ -1463,12 +1455,7 @@ public class StreamAppenderator implements Appenderator
     baseSegmentToUpgradedSegments.put(identifier, new HashSet<>());
     baseSegmentToUpgradedSegments.get(identifier).add(identifier);
 
-    sinkTimeline.add(
-        sink.getInterval(),
-        sink.getVersion(),
-        identifier.getShardSpec().createChunk(sink)
-    );
-    ((SinkQuerySegmentWalker) texasRanger).registerUpgradedPendingSegment(identifier, identifier);
+    ((SinkQuerySegmentWalker) texasRanger).registerUpgradedPendingSegment(identifier, sink);
   }
 
   private ListenableFuture<?> abandonSegment(
@@ -1537,14 +1524,9 @@ public class StreamAppenderator implements Appenderator
 
             Runnable removeRunnable = () -> {
               droppingSinks.remove(identifier);
-              sinkTimeline.remove(
-                  sink.getInterval(),
-                  sink.getVersion(),
-                  identifier.getShardSpec().createChunk(sink)
-              );
               for (SegmentIdWithShardSpec id : allVersionIds) {
                 // Update query mapping with SinkQuerySegmentWalker
-                ((SinkQuerySegmentWalker) texasRanger).unregisterUpgradedPendingSegment(id);
+                ((SinkQuerySegmentWalker) texasRanger).unregisterUpgradedPendingSegment(id, sink);
               }
               for (FireHydrant hydrant : sink) {
                 if (cache != null) {
