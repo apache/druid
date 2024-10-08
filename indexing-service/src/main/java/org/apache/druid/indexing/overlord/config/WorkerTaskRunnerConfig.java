@@ -21,9 +21,6 @@ package org.apache.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class WorkerTaskRunnerConfig
 {
   @JsonProperty
@@ -32,9 +29,6 @@ public class WorkerTaskRunnerConfig
   @JsonProperty
   private double parallelIndexTaskSlotRatio = 1;
 
-  @JsonProperty
-  private Map<String, Double> taskSlotRatiosPerWorker = new HashMap<>();
-
   public String getMinWorkerVersion()
   {
     return minWorkerVersion;
@@ -42,7 +36,7 @@ public class WorkerTaskRunnerConfig
 
   /**
    * The number of task slots that a parallel indexing task can take is restricted using this config as a multiplier
-   * <p>
+   *
    * A value of 1 means no restriction on the number of slots ParallelIndexSupervisorTasks can occupy (default behaviour)
    * A value of 0 means ParallelIndexSupervisorTasks can occupy no slots.
    * Deadlocks can occur if the all task slots are occupied by ParallelIndexSupervisorTasks,
@@ -53,15 +47,5 @@ public class WorkerTaskRunnerConfig
   public double getParallelIndexTaskSlotRatio()
   {
     return parallelIndexTaskSlotRatio;
-  }
-
-  /**
-   * Map from task type to task slot ratio for that type per worker.
-   * A value of 0 for a task type indicates that the task type cannot occupy any slots.
-   * A value of 1 indicates that the task type may take up all available slots of a worker if available.
-   */
-  public Map<String, Double> getTaskSlotRatiosPerWorker()
-  {
-    return taskSlotRatiosPerWorker;
   }
 }
