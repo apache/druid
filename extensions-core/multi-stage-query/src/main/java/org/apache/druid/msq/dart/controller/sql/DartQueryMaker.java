@@ -154,6 +154,7 @@ public class DartQueryMaker implements QueryMaker
         controllerContext,
         plannerContext.getSqlQueryId(),
         plannerContext.getSql(),
+        controllerContext.selfNode().getHostAndPortToUse(),
         plannerContext.getAuthenticationResult(),
         DateTimes.nowUtc()
     );
