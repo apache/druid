@@ -26,6 +26,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.messages.MessageBatch;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -69,7 +70,7 @@ public class MessageRelayClientImpl<MessageType> implements MessageRelayClient<M
     );
 
     return FutureUtils.transform(
-        serviceClient.asyncRequest(
+        (ListenableFuture<BytesFullResponseHolder>) serviceClient.asyncRequest(
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
