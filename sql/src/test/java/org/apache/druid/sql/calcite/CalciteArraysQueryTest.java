@@ -7481,4 +7481,49 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+  @Test
+  public void testArrayGroupStringArrayColumnLimit()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT arrayStringNulls, SUM(cnt) FROM druid.arrays GROUP BY 1 ORDER BY 1 DESC LIMIT 10",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.ARRAYS_DATASOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("arrayStringNulls", "d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "d0",
+                                        OrderByColumnSpec.Direction.DESCENDING,
+                                        StringComparators.NATURAL
+                                    )
+                                ),
+                                10
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{Arrays.asList("d", null, "b"), 2L},
+            new Object[]{Arrays.asList("b", "b"), 2L},
+            new Object[]{Arrays.asList("a", "b"), 3L},
+            new Object[]{Arrays.asList(null, "b"), 2L},
+            new Object[]{Collections.singletonList(null), 1L},
+            new Object[]{Collections.emptyList(), 1L},
+            new Object[]{null, 3L}
+        )
+    );
+  }
 }
