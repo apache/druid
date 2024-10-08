@@ -64,7 +64,7 @@ Druid now supports the following features:
 - Compaction scheduler with greater flexibility and control over when and what to compact.
 - MSQ task engine-based compaction for more performant compaction jobs.
 
-See [Automatic compaction]([../data-management/automatic-compaction.md](https://druid.apache.org/docs/latest/data-management/automatic-compaction/)) for details.
+See [Automatic compaction](https://druid.apache.org/docs/latest/data-management/automatic-compaction/) for details.
 
 Compaction tasks that take advantage of concurrent append and replace is now generally available.
 
