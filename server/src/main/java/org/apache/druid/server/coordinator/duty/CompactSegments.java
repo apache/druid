@@ -62,7 +62,6 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

@@ -55,10 +55,10 @@ public class DataSourcesSnapshot
   {
     final Map<String, String> dataSourceProperties = ImmutableMap.of("created", DateTimes.nowUtc().toString());
     Map<String, DruidDataSource> dataSources = new HashMap<>();
-    segments.forEach(segment ->
-      dataSources
-          .computeIfAbsent(segment.getDataSource(), dsName -> new DruidDataSource(dsName, dataSourceProperties))
-          .addSegmentIfAbsent(segment)
+    segments.forEach(
+        segment -> dataSources
+            .computeIfAbsent(segment.getDataSource(), dsName -> new DruidDataSource(dsName, dataSourceProperties))
+            .addSegmentIfAbsent(segment)
     );
     return new DataSourcesSnapshot(
         snapshotTime,
