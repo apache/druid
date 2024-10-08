@@ -24,6 +24,7 @@ import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.projections.QueryableProjection;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -85,4 +86,16 @@ public interface QueryableIndex extends Closeable, ColumnInspector
   //@Deprecated // This is still required for SimpleQueryableIndex. It should not go away until SimpleQueryableIndex is fixed
   @Override
   void close();
+
+  @Nullable
+  default QueryableProjection<QueryableIndex> getProjection(CursorBuildSpec cursorBuildSpec)
+  {
+    return null;
+  }
+
+  @Nullable
+  default QueryableIndex getProjectionQueryableIndex(String name)
+  {
+    return null;
+  }
 }

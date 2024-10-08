@@ -145,11 +145,11 @@ public class FrameProcessorExecutorTest
       final ListenableFuture<Long> blasterFuture = exec.runFully(blaster, null);
       final ListenableFuture<Long> muxerFuture = exec.runFully(muxer, null);
 
-      Assert.assertEquals(index.size(), (long) blasterFuture.get());
-      Assert.assertEquals(index.size() * 2, (long) muxerFuture.get());
+      Assert.assertEquals(index.numRows(), (long) blasterFuture.get());
+      Assert.assertEquals(index.numRows() * 2, (long) muxerFuture.get());
 
       Assert.assertEquals(
-          index.size() * 2,
+          index.numRows() * 2,
           FrameTestUtil.readRowsFromFrameChannel(
               new ReadableFileFrameChannel(FrameFile.open(outFile, null)),
               FrameReader.create(cursorFactory.getRowSignature())
@@ -222,6 +222,7 @@ public class FrameProcessorExecutorTest
       final SettableFuture<Object> future = SettableFuture.create();
       final String cancellationId = "xyzzy";
 
+      exec.registerCancellationId(cancellationId);
       Assert.assertSame(future, exec.registerCancelableFuture(future, false, cancellationId));
       exec.cancel(cancellationId);
 
@@ -236,6 +237,8 @@ public class FrameProcessorExecutorTest
     {
       final SleepyFrameProcessor processor = new SleepyFrameProcessor();
       final String cancellationId = "xyzzy";
+
+      exec.registerCancellationId(cancellationId);
       final ListenableFuture<Long> future = exec.runFully(processor, cancellationId);
 
       processor.awaitRun();
@@ -254,6 +257,8 @@ public class FrameProcessorExecutorTest
     {
       final SleepyFrameProcessor processor = new SleepyFrameProcessor();
       final String cancellationId = "xyzzy";
+
+      exec.registerCancellationId(cancellationId);
       final ListenableFuture<Long> future = exec.runFully(processor, cancellationId);
 
       processor.awaitRun();
@@ -314,6 +319,8 @@ public class FrameProcessorExecutorTest
 
       // Start up all systems at once.
       for (final String systemId : systemGeneratorsMap.keySet()) {
+        exec.registerCancellationId(systemId);
+
         for (InfiniteFrameProcessor generator : systemGeneratorsMap.get(systemId)) {
           processorFutureMap.put(generator, exec.runFully(generator, systemId));
         }
@@ -390,6 +397,22 @@ public class FrameProcessorExecutorTest
     {
       // Just making sure no error is thrown when we refer to a nonexistent cancellationId.
       exec.cancel("nonexistent");
+    }
+
+    @Test
+    public void test_runFully_nonexistentCancellationId()
+    {
+      final SleepyFrameProcessor processor = new SleepyFrameProcessor();
+      final String cancellationId = "xyzzy";
+
+      // Don't registerCancellationId(cancellationId).
+      final ListenableFuture<Long> future = exec.runFully(processor, cancellationId);
+
+      // Future should be immediately canceled, without running the processor.
+      Assert.assertTrue(future.isDone());
+      Assert.assertTrue(future.isCancelled());
+      Assert.assertFalse(processor.didGetInterrupt());
+      Assert.assertFalse(processor.didCleanup());
     }
   }
 

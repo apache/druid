@@ -91,7 +91,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
-      ColumnConfig columnConfig
+      ColumnConfig columnConfig,
+      @Nullable ScalarDoubleColumnAndIndexSupplier parent
   )
   {
     final byte version = bb.get();
@@ -103,23 +104,29 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
 
-        final ByteBuffer doubleDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
-        );
         final ByteBuffer doublesValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
             ColumnSerializerUtils.DOUBLE_VALUE_COLUMN_FILE_NAME
         );
 
-        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier = FixedIndexed.read(
-            doubleDictionaryBuffer,
-            ColumnType.DOUBLE.getStrategy(),
-            byteOrder,
-            Double.BYTES
-        );
+        final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
+        if (parent != null) {
+          doubleDictionarySupplier = parent.doubleDictionarySupplier;
+        } else {
+          final ByteBuffer doubleDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
+          );
+
+          doubleDictionarySupplier = FixedIndexed.read(
+              doubleDictionaryBuffer,
+              ColumnType.DOUBLE.getStrategy(),
+              byteOrder,
+              Double.BYTES
+          );
+        }
 
         final Supplier<ColumnarDoubles> doubles = CompressedColumnarDoublesSuppliers.fromByteBuffer(
             doublesValueColumn,
@@ -241,9 +248,16 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         return new AllFalseBitmapColumnIndex(bitmapFactory, nullValueBitmap);
       }
       final double doubleValue = castForComparison.asDouble();
+
       return new SimpleBitmapColumnIndex()
       {
         final FixedIndexed<Double> dictionary = doubleDictionarySupplier.get();
+
+        @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -307,6 +321,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
               bitmapFactory,
               ColumnType.DOUBLE.getNullableStrategy(),
               tailSet,
+              tailSet.size(),
               dictionary,
               valueIndexes,
               unknownsIndex
@@ -316,6 +331,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
             bitmapFactory,
             tailSet,
+            tailSet.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
@@ -325,6 +341,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         return ValueSetIndexes.buildBitmapColumnIndexFromIteratorBinarySearch(
             bitmapFactory,
             Iterables.transform(sortedValues, DimensionHandlerUtils::convertObjectToDouble),
+            sortedValues.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
@@ -345,6 +362,11 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
       return new SimpleBitmapColumnIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -390,6 +412,12 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
     {
       return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return values.size();
+        }
+
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {

@@ -70,9 +70,16 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
   private static final Map<String, Object> DEFAULT_QUERY_CONTEXT = ImmutableMap.of(
-      PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
-      QueryContexts.ENABLE_DEBUG, true
+      QueryContexts.ENABLE_DEBUG, true,
+      QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false
   );
+
+  private static final Map<String, Object> DEFAULT_QUERY_CONTEXT_WITH_SUBQUERY_BYTES =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_QUERY_CONTEXT)
+                  .put(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "100000")
+                  .put(QueryContexts.MAX_SUBQUERY_ROWS_KEY, "0")
+                  .build();
 
   public static Object[] parametersForWindowQueryTest() throws Exception
   {
@@ -161,7 +168,7 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
           }
         }
       }
-      assertResultsValid(ResultMatchMode.RELAX_NULLS, input.expectedResults, results);
+      assertResultsValid(ResultMatchMode.RELAX_NULLS_EPS, input.expectedResults, results);
     }
 
     private void validateOperators(List<OperatorFactory> expectedOperators, List<OperatorFactory> currentOperators)
@@ -223,6 +230,30 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     }
   }
 
+  @MethodSource("parametersForWindowQueryTest")
+  @ParameterizedTest(name = "{0}")
+  @SuppressWarnings("unchecked")
+  public void windowQueryTestsWithSubqueryBytes(String filename) throws Exception
+  {
+    TestCase testCase = new TestCase(filename);
+
+    assumeTrue(testCase.getType() != TestType.failingTest);
+
+    if (testCase.getType() == TestType.operatorValidation) {
+      testBuilder()
+          .skipVectorize(true)
+          .sql(testCase.getSql())
+          .queryContext(
+              ImmutableMap.<String, Object>builder()
+                          .putAll(DEFAULT_QUERY_CONTEXT_WITH_SUBQUERY_BYTES)
+                          .putAll(testCase.getQueryContext())
+                          .build()
+          )
+          .addCustomVerification(QueryVerification.ofResults(testCase))
+          .run();
+    }
+  }
+
   @Test
   public void testWithArrayConcat()
   {
@@ -237,14 +268,14 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         .expectedResults(
             ResultMatchMode.RELAX_NULLS,
             ImmutableList.of(
-              new Object[]{"Austria", null, "#de.wikipedia", "[\"abc\",\"#de.wikipedia\"]"},
-              new Object[]{"Republic of Korea", null, "#en.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#en.wikipedia\",\"abc\",\"#ja.wikipedia\",\"abc\",\"#ko.wikipedia\"]"},
-              new Object[]{"Republic of Korea", null, "#ja.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#en.wikipedia\",\"abc\",\"#ja.wikipedia\",\"abc\",\"#ko.wikipedia\"]"},
-              new Object[]{"Republic of Korea", null, "#ko.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#en.wikipedia\",\"abc\",\"#ja.wikipedia\",\"abc\",\"#ko.wikipedia\"]"},
-              new Object[]{"Republic of Korea", "Seoul", "#ko.wikipedia", "[\"abc\",\"#ko.wikipedia\"]"},
-              new Object[]{"Austria", "Vienna", "#de.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#es.wikipedia\",\"abc\",\"#tr.wikipedia\"]"},
-              new Object[]{"Austria", "Vienna", "#es.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#es.wikipedia\",\"abc\",\"#tr.wikipedia\"]"},
-              new Object[]{"Austria", "Vienna", "#tr.wikipedia", "[\"abc\",\"#de.wikipedia\",\"abc\",\"#es.wikipedia\",\"abc\",\"#tr.wikipedia\"]"}
+              new Object[]{"Austria", null, "#de.wikipedia", ImmutableList.of("abc", "#de.wikipedia")},
+              new Object[]{"Republic of Korea", null, "#en.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#en.wikipedia", "abc", "#ja.wikipedia", "abc", "#ko.wikipedia")},
+              new Object[]{"Republic of Korea", null, "#ja.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#en.wikipedia", "abc", "#ja.wikipedia", "abc", "#ko.wikipedia")},
+              new Object[]{"Republic of Korea", null, "#ko.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#en.wikipedia", "abc", "#ja.wikipedia", "abc", "#ko.wikipedia")},
+              new Object[]{"Republic of Korea", "Seoul", "#ko.wikipedia", ImmutableList.of("abc", "#ko.wikipedia")},
+              new Object[]{"Austria", "Vienna", "#de.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#es.wikipedia", "abc", "#tr.wikipedia")},
+              new Object[]{"Austria", "Vienna", "#es.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#es.wikipedia", "abc", "#tr.wikipedia")},
+              new Object[]{"Austria", "Vienna", "#tr.wikipedia", ImmutableList.of("abc", "#de.wikipedia", "abc", "#es.wikipedia", "abc", "#tr.wikipedia")}
             )
         )
         .run();
@@ -269,6 +300,28 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
         "Encountered a multi value column [v0]. Window processing does not support MVDs. "
         + "Consider using UNNEST or MV_TO_ARRAY.",
         e.getMessage()
+    );
+
+    final DruidException e1 = Assert.assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .sql("select cityName, countryName, array_to_mv(array[1,length(cityName)]),\n"
+                 + "row_number() over (partition by  array_to_mv(array[1,length(cityName)]) order by countryName, cityName)\n"
+                 + "from wikipedia\n"
+                 + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
+                 + "order by 1, 2, 3")
+            .queryContext(ImmutableMap.of(
+                QueryContexts.ENABLE_DEBUG, true,
+                QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false,
+                PlannerContext.CTX_ENABLE_RAC_TRANSFER_OVER_WIRE, true
+            ))
+            .run()
+    );
+
+    assertEquals(
+        "Encountered a multi value column. Window processing does not support MVDs. "
+        + "Consider using UNNEST or MV_TO_ARRAY.",
+        e1.getMessage()
     );
   }
 

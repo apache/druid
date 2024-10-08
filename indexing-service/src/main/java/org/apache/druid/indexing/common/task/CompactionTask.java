@@ -41,6 +41,7 @@ import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
@@ -469,7 +470,10 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     );
 
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
-    CompactionConfigValidationResult supportsCompactionConfig = compactionRunner.validateCompactionTask(this);
+    CompactionConfigValidationResult supportsCompactionConfig = compactionRunner.validateCompactionTask(
+        this,
+        intervalDataSchemas
+    );
     if (!supportsCompactionConfig.isValid()) {
       throw InvalidInput.exception("Compaction spec not supported. Reason[%s].", supportsCompactionConfig.getReason());
     }
@@ -989,9 +993,19 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
           // column for it.
           final ColumnHolder columnHolder = index.getColumnHolder(dimension);
           if (columnHolder != null) {
+            DimensionSchema schema = columnHolder.getColumnFormat().getColumnSchema(dimension);
+            // rewrite string dimensions to always use MultiValueHandling.ARRAY since it preserves the exact order of
+            // the row regardless of the mode the initial ingest was using
+            if (schema instanceof StringDimensionSchema) {
+              schema = new StringDimensionSchema(
+                  schema.getName(),
+                  DimensionSchema.MultiValueHandling.ARRAY,
+                  schema.hasBitmapIndex()
+              );
+            }
             dimensionSchemaMap.put(
                 dimension,
-                columnHolder.getColumnFormat().getColumnSchema(dimension)
+                schema
             );
           }
         }

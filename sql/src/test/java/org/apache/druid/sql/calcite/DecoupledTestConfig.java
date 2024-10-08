@@ -21,7 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.aggregation.post.FinalizingFieldAccessPostAggregator;
+import org.apache.druid.query.UnnestDataSource;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -41,6 +41,25 @@ public @interface DecoupledTestConfig
    * The value of this field should describe the root cause of the difference.
    */
   QuidemTestCaseReason quidemReason() default QuidemTestCaseReason.NONE;
+
+  /**
+   * Run the tests normally; however disable the native plan checks.
+   */
+  IgnoreQueriesReason ignoreExpectedQueriesReason() default IgnoreQueriesReason.NONE;
+
+  enum IgnoreQueriesReason
+  {
+    NONE,
+    /**
+     * An extra ScanQuery to service a Project and/or Filter was added.
+     */
+    UNNEST_EXTRA_SCANQUERY;
+
+    public boolean isPresent()
+    {
+      return this != NONE;
+    }
+  }
 
   enum QuidemTestCaseReason
   {
@@ -87,9 +106,58 @@ public @interface DecoupledTestConfig
      */
     DEFINETLY_WORSE_PLAN,
     /**
-     * A new {@link FinalizingFieldAccessPostAggregator} appeared in the plan.
+     * Some extra unused columns are being projected.
+     *
+     * Example: ScanQuery over a join projects columns=[dim2, j0.m1, m1, m2] instead of just columns=[dim2, m2]
      */
-    FINALIZING_FIELD_ACCESS;
+    EQUIV_PLAN_EXTRA_COLUMNS,
+    /**
+     * Materialization of a CAST was pushed down to a join branch
+     *
+     * instead of  joining on condition (CAST("j0.k", 'DOUBLE') == "_j0.m1")
+     * a vc was computed for CAST("j0.k", 'DOUBLE')
+     */
+    EQUIV_PLAN_CAST_MATERIALIZED_EARLIER,
+    /**
+     * Filter pushed down.
+     *
+     * Instead:
+     *  Filter -> Join -> Table
+     *  Join -> Filter -> Table
+     */
+    SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND,
+    /**
+     * Instead:
+     * Join (l=r && lCol='a') -> Gby
+     * Join (l=r) -> Gby[lCol='a]
+     */
+    FILTER_PUSHED_DOWN_FROM_JOIN_CAN_BE_MORE,
+    /**
+     * Strange things; needs more investigation
+     */
+    IRRELEVANT_SCANQUERY,
+    /**
+     * Extra scan query under {@link UnnestDataSource}.
+     */
+    UNNEST_EXTRA_SCAN,
+    /**
+     * Extra virtualcolumn appeared; seemingly unused
+     */
+    UNUSED_VIRTUALCOLUMN,
+    /**
+     * Unnest uses a VC to access a constant like array(1,2,3).
+     */
+    UNNEST_VC_USES_PROJECTED_CONSTANT,
+    /**
+     * This should need some investigation.
+     *
+     * Its not invalid; just strange.
+     */
+    SCAN_QUERY_ON_FILTERED_DS_DOING_FILTERING,
+    /**
+     * New plan UNNEST-s a different resultset.
+     */
+    UNNEST_DIFFERENT_RESULTSET;
 
     public boolean isPresent()
     {

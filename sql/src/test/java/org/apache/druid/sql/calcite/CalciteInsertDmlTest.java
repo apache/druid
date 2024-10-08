@@ -369,7 +369,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           ),
           Calcites.escapeStringLiteral(
               queryJsonMapper.writeValueAsString(
-                  new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0)
+                  new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null)
               )
           )
       );
@@ -414,7 +414,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           ),
           Calcites.escapeStringLiteral(
               queryJsonMapper.writeValueAsString(
-                  new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0)
+                  new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null)
               )
           )
       );
@@ -458,7 +458,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
               new InlineInputSource("a,b,1\nc,d,2\n")
           ),
           queryJsonMapper.writeValueAsString(
-              new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0)
+              new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null)
           )
       );
     }
@@ -494,7 +494,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
         new TestFileInputSource(ImmutableList.of(new File("/tmp/foo.csv").getAbsoluteFile()));
     final ExternalDataSource externalDataSource = new ExternalDataSource(
         inputSource,
-        new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null),
         RowSignature.builder()
                     .add("x", ColumnType.STRING)
                     .add("y", ColumnType.STRING)
@@ -510,7 +510,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           + "inputFormat => '%s'))",
           queryJsonMapper.writeValueAsString(inputSource),
           queryJsonMapper.writeValueAsString(
-              new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0)
+              new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null)
           )
       );
     }
@@ -552,7 +552,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
           queryJsonMapper.writeValueAsString(
               new TestFileInputSource(ImmutableList.of(new File("/tmp/foo.csv").getAbsoluteFile()))),
           queryJsonMapper.writeValueAsString(
-              new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0)
+              new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null)
           )
       );
     }
@@ -1488,7 +1488,7 @@ public class CalciteInsertDmlTest extends CalciteIngestionDmlTest
   {
     ExternalDataSource restrictedSignature = new ExternalDataSource(
         new InlineInputSource("100\nc200\n"),
-        new CsvInputFormat(ImmutableList.of("__time"), null, false, false, 0),
+        new CsvInputFormat(ImmutableList.of("__time"), null, false, false, 0, null),
         RowSignature.builder()
                     .add("__time", ColumnType.STRING)
                     .build()

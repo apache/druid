@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.topn;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
@@ -73,7 +74,7 @@ public class TopNQueryEngine
    * update {@link TopNResultValue}
    */
   public Sequence<Result<TopNResultValue>> query(
-      final TopNQuery query,
+      TopNQuery query,
       final Segment segment,
       @Nullable final TopNQueryMetrics queryMetrics
   )
@@ -87,6 +88,9 @@ public class TopNQueryEngine
 
     final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, queryMetrics);
     final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec);
+    if (cursorHolder.isPreAggregated()) {
+      query = query.withAggregatorSpecs(Preconditions.checkNotNull(cursorHolder.getAggregatorsForPreAggregated()));
+    }
     final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
       return Sequences.withBaggage(Sequences.empty(), cursorHolder);
@@ -126,7 +130,6 @@ public class TopNQueryEngine
     if (granularizer == null || selectorPlus.getSelector() == null) {
       return Sequences.withBaggage(Sequences.empty(), cursorHolder);
     }
-
 
     if (queryMetrics != null) {
       queryMetrics.cursor(cursor);

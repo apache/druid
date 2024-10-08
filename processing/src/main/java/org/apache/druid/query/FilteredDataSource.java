@@ -51,7 +51,6 @@ import java.util.function.Function;
  */
 public class FilteredDataSource implements DataSource
 {
-
   private final DataSource base;
   private final DimFilter filter;
 

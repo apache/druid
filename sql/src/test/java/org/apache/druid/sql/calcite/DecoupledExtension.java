@@ -21,6 +21,8 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.math.expr.ExpressionProcessing;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.quidem.ProjectPathUtils;
@@ -32,6 +34,7 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.File;
+import java.util.List;
 
 public class DecoupledExtension implements BeforeEachCallback
 {
@@ -52,10 +55,16 @@ public class DecoupledExtension implements BeforeEachCallback
   }
 
   private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.<String, Object>builder()
-      .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
-      .put(PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
-      .put(QueryContexts.ENABLE_DEBUG, true)
-      .build();
+                                                                                    .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+                                                                                    .put(
+                                                                                        PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+                                                                                        PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+                                                                                    )
+                                                                                    .put(
+                                                                                        QueryContexts.ENABLE_DEBUG,
+                                                                                        true
+                                                                                    )
+                                                                                    .build();
 
   public QueryTestBuilder testBuilder()
   {
@@ -63,6 +72,8 @@ public class DecoupledExtension implements BeforeEachCallback
         .getAnnotation(DecoupledTestConfig.class);
 
     boolean runQuidem = (decTestConfig != null && decTestConfig.quidemReason().isPresent());
+
+    boolean ignoreQueries = (decTestConfig != null && decTestConfig.ignoreExpectedQueriesReason().isPresent());
 
     CalciteTestConfig testConfig = baseTest.new CalciteTestConfig(CONTEXT_OVERRIDES)
     {
@@ -93,7 +104,7 @@ public class DecoupledExtension implements BeforeEachCallback
               qCaseDir,
               testName,
               "quidem testcase reason: " + decTestConfig.quidemReason()
-              );
+          );
         } else {
           return null;
         }
@@ -101,9 +112,22 @@ public class DecoupledExtension implements BeforeEachCallback
     };
 
     QueryTestBuilder builder = new QueryTestBuilder(testConfig)
-        .cannotVectorize(baseTest.cannotVectorize)
-        .skipVectorize(baseTest.skipVectorize);
+    {
+      @Override
+      public QueryTestBuilder expectedQueries(List<Query<?>> expectedQueries)
+      {
+        if (ignoreQueries) {
+          return this;
+        } else {
+          return super.expectedQueries(expectedQueries);
+        }
+      }
+    };
 
-    return builder;
+    return builder.cannotVectorize(
+                      baseTest.cannotVectorize ||
+                      (!ExpressionProcessing.allowVectorizeFallback() && baseTest.cannotVectorizeUnlessFallback)
+                  )
+                  .skipVectorize(baseTest.skipVectorize);
   }
 }

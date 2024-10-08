@@ -59,6 +59,7 @@ public class IndexerWorkerContextTest
         null,
         null,
         null,
+        null,
         null
     );
   }

@@ -19,6 +19,7 @@
 export * from './use-clock';
 export * from './use-constant';
 export * from './use-global-event-listener';
+export * from './use-hash-and-local-storage-hybrid-state';
 export * from './use-interval';
 export * from './use-last-defined';
 export * from './use-local-storage-state';

@@ -34,6 +34,7 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
@@ -112,6 +113,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
             Cursors.getTimeOrdering(ordering),
             interval,
             filter,
+            cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, true),
             metrics
         )
     );
@@ -212,11 +214,9 @@ public class QueryableIndexCursorHolder implements CursorHolder
     }
 
     final Offset baseCursorOffset = offset.clone();
-    final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
-        virtualColumns,
-        Cursors.getTimeOrdering(ordering),
-        baseCursorOffset.getBaseReadableOffset(),
-        columnCache
+    final ColumnSelectorFactory columnSelectorFactory = makeColumnSelectorFactoryForOffset(
+        columnCache,
+        baseCursorOffset
     );
     // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter
     // needs to use a value matcher
@@ -325,7 +325,20 @@ public class QueryableIndexCursorHolder implements CursorHolder
   }
 
 
-  private VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
+  protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
+      ColumnCache columnCache,
+      Offset baseOffset
+  )
+  {
+    return new QueryableIndexColumnSelectorFactory(
+        virtualColumns,
+        Cursors.getTimeOrdering(ordering),
+        baseOffset.getBaseReadableOffset(),
+        columnCache
+    );
+  }
+
+  protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
       ColumnCache columnCache,
       VectorOffset baseOffset
   )
@@ -346,7 +359,6 @@ public class QueryableIndexCursorHolder implements CursorHolder
    * @param timestamp  the timestamp to search for
    * @param startIndex first index to search, inclusive
    * @param endIndex   last index to search, exclusive
-   *
    * @return first index that has a timestamp equal to, or greater, than "timestamp"
    */
   @VisibleForTesting
@@ -665,6 +677,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
         Order timeOrder,
         Interval interval,
         @Nullable Filter filter,
+        boolean cursorAutoArrangeFilters,
         @Nullable QueryMetrics<? extends Query<?>> metrics
     )
     {
@@ -688,6 +701,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
                 interval,
                 filter
             ),
+            cursorAutoArrangeFilters,
             bitmapIndexSelector,
             numRows,
             metrics
@@ -708,13 +722,14 @@ public class QueryableIndexCursorHolder implements CursorHolder
 
   /**
    * Create a {@link FilterBundle} for a cursor hold instance.
-   *
+   * <p>
    * The provided filter must include the query-level interface if needed. To compute this properly, use
    * {@link #computeFilterWithIntervalIfNeeded}.
    */
   @Nullable
   private static FilterBundle makeFilterBundle(
       @Nullable final Filter filter,
+      boolean cursorAutoArrangeFilters,
       final ColumnSelectorColumnIndexSelector bitmapIndexSelector,
       final int numRows,
       @Nullable final QueryMetrics<?> metrics
@@ -732,8 +747,11 @@ public class QueryableIndexCursorHolder implements CursorHolder
       return null;
     }
     final long bitmapConstructionStartNs = System.nanoTime();
-    final FilterBundle filterBundle = filter.makeFilterBundle(
+    final FilterBundle filterBundle = new FilterBundle.Builder(
+        filter,
         bitmapIndexSelector,
+        cursorAutoArrangeFilters
+    ).build(
         bitmapResultFactory,
         numRows,
         numRows,

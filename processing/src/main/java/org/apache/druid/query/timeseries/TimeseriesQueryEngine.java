@@ -20,6 +20,7 @@
 package org.apache.druid.query.timeseries;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.collections.NonBlockingPool;
@@ -86,7 +87,7 @@ public class TimeseriesQueryEngine
    * scoped down to a single interval before calling this method.
    */
   public Sequence<Result<TimeseriesResultValue>> process(
-      final TimeseriesQuery query,
+      TimeseriesQuery query,
       final CursorFactory cursorFactory,
       @Nullable TimeBoundaryInspector timeBoundaryInspector,
       @Nullable final TimeseriesQueryMetrics timeseriesQueryMetrics
@@ -102,6 +103,9 @@ public class TimeseriesQueryEngine
     final Granularity gran = query.getGranularity();
 
     final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(query, timeseriesQueryMetrics));
+    if (cursorHolder.isPreAggregated()) {
+      query = query.withAggregatorSpecs(Preconditions.checkNotNull(cursorHolder.getAggregatorsForPreAggregated()));
+    }
     try {
       final Sequence<Result<TimeseriesResultValue>> result;
 

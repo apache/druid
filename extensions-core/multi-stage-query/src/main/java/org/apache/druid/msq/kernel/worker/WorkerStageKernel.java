@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageId;
@@ -182,6 +183,12 @@ public class WorkerStageKernel
       throw new NullPointerException("resultObject must not be null");
     }
 
+    if (phase.isTerminal()) {
+      // Ignore RESULTS_COMPLETE if work is already finished. This can happen if we transition to FINISHED early
+      // due to a downstream stage including a limit.
+      return;
+    }
+
     transitionTo(WorkerStagePhase.RESULTS_COMPLETE);
     this.resultObject = resultObject;
   }
@@ -195,12 +202,18 @@ public class WorkerStageKernel
   {
     Preconditions.checkNotNull(t, "t");
 
-    transitionTo(WorkerStagePhase.FAILED);
-    resultKeyStatisticsSnapshot = null;
-    resultPartitionBoundaries = null;
+    if (WorkerStagePhase.FAILED.canTransitionFrom(phase)) {
+      transitionTo(WorkerStagePhase.FAILED);
+      resultKeyStatisticsSnapshot = null;
+      resultPartitionBoundaries = null;
 
-    if (exceptionFromFail == null) {
-      exceptionFromFail = t;
+      if (exceptionFromFail == null) {
+        exceptionFromFail = t;
+      }
+    } else if (!MSQFaultUtils.isCanceledException(t)) {
+      // Current phase is already terminal. Log and suppress this error. It likely happened during cleanup.
+      // (Don't log CanceledFault though. Ignore those if they come after the kernel is in a terminal phase.)
+      log.warn(t, "Stage[%s] failed while in phase[%s]", getStageDefinition().getId(), phase);
     }
   }
 

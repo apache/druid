@@ -232,6 +232,42 @@ public class HllSketchAggregatorFactoryTest
   }
 
   @Test
+  public void testCanSubstitute()
+  {
+    HllSketchBuildAggregatorFactory factory = new HllSketchBuildAggregatorFactory(
+        NAME,
+        FIELD_NAME,
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        true,
+        true
+    );
+    HllSketchBuildAggregatorFactory other = new HllSketchBuildAggregatorFactory(
+        "other name",
+        FIELD_NAME,
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        false,
+        false
+    );
+
+    HllSketchBuildAggregatorFactory incompatible = new HllSketchBuildAggregatorFactory(
+        NAME,
+        "different field",
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        false,
+        false
+    );
+    Assert.assertNotNull(other.substituteCombiningFactory(factory));
+    Assert.assertNotNull(factory.substituteCombiningFactory(other));
+    Assert.assertNull(factory.substituteCombiningFactory(incompatible));
+  }
+
+  @Test
   public void testToString()
   {
     String string = target.toString();

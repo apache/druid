@@ -21,7 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
 import com.google.errorprone.annotations.Immutable;
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -127,6 +127,11 @@ abstract class ConstantExpr<T> implements Expr
     return new ExprEvalBasedConstantExpr<T>(realEval());
   }
 
+  @Override
+  public <E> ExprVectorProcessor<E> asVectorProcessor(VectorInputBindingInspector inspector)
+  {
+    return VectorProcessors.constant(value, inspector.getMaxVectorSize(), outputType);
+  }
   /**
    * Constant expression based on a concreate ExprEval.
    *
@@ -415,14 +420,14 @@ class StringExpr extends ConstantExpr<String>
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorProcessors.constant(value, inspector.getMaxVectorSize());
+    return VectorProcessors.constant(value, inspector.getMaxVectorSize(), ExpressionType.STRING);
   }
 
   @Override
   public String stringify()
   {
     // escape as javascript string since string literals are wrapped in single quotes
-    return value == null ? NULL_LITERAL : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript(value));
+    return value == null ? NULL_LITERAL : StringUtils.format("'%s'", StringEscapeUtils.escapeEcmaScript(value));
   }
 
   @Override
@@ -460,12 +465,6 @@ class ArrayExpr extends ConstantExpr<Object[]>
   }
 
   @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return false;
-  }
-
-  @Override
   public String stringify()
   {
     if (value == null) {
@@ -483,7 +482,7 @@ class ArrayExpr extends ConstantExpr<Object[]>
                     .map(s -> s == null
                               ? NULL_LITERAL
                               // escape as javascript string since string literals are wrapped in single quotes
-                              : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript((String) s))
+                              : StringUtils.format("'%s'", StringEscapeUtils.escapeEcmaScript((String) s))
                     )
                     .iterator()
           )
@@ -545,12 +544,6 @@ class ComplexExpr extends ConstantExpr<Object>
   protected ExprEval realEval()
   {
     return ExprEval.ofComplex(outputType, value);
-  }
-
-  @Override
-  public boolean canVectorize(InputBindingInspector inspector)
-  {
-    return false;
   }
 
   @Override

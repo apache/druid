@@ -86,7 +86,9 @@ public class QuantilesSketchKeyCollector implements KeyCollector<QuantilesSketch
     double otherBytesCount = other.averageKeyLength * other.getSketch().getN();
     averageKeyLength = ((sketchBytesCount + otherBytesCount) / (sketch.getN() + other.sketch.getN()));
 
-    union.union(sketch);
+    if (!sketch.isEmpty()) {
+      union.union(sketch);
+    }
     union.union(other.sketch);
     sketch = union.getResultAndReset();
   }

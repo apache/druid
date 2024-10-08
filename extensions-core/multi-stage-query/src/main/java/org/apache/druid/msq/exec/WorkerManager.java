@@ -83,8 +83,11 @@ public interface WorkerManager
   Map<Integer, List<WorkerStats>> getWorkerStats();
 
   /**
-   * Blocks until all workers exit. Returns quietly, no matter whether there was an exception associated with the
-   * future from {@link #start()} or not.
+   * Stop all workers.
+   *
+   * The task-based implementation blocks until all tasks exit. Dart's implementation queues workers for stopping in
+   * the background, and returns immediately. Either way, this method returns quietly, no matter whether there was an
+   * exception associated with the future from {@link #start()} or not.
    *
    * @param interrupt whether to interrupt currently-running work
    */

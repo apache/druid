@@ -1112,12 +1112,17 @@ public class RowBasedGrouperHelper
               DimensionHandlerUtils.convertObjectToType(rhs, fieldType)
           );
         } else if (fieldType.equals(ColumnType.STRING_ARRAY)) {
-          cmp = new DimensionComparisonUtils.ArrayComparator<String>(
-              comparator == null ? StringComparators.LEXICOGRAPHIC : comparator
-          ).compare(
-              DimensionHandlerUtils.coerceToStringArray(lhs),
-              DimensionHandlerUtils.coerceToStringArray(rhs)
-          );
+          if (useNaturalStringArrayComparator(comparator)) {
+            cmp = fieldType.getNullableStrategy().compare(
+                DimensionHandlerUtils.coerceToStringArray(lhs),
+                DimensionHandlerUtils.coerceToStringArray(rhs)
+            );
+          } else {
+            cmp = new DimensionComparisonUtils.ArrayComparator<>(comparator).compare(
+                DimensionHandlerUtils.coerceToStringArray(lhs),
+                DimensionHandlerUtils.coerceToStringArray(rhs)
+            );
+          }
         } else if (fieldType.equals(ColumnType.LONG_ARRAY)
                    || fieldType.equals(ColumnType.DOUBLE_ARRAY)) {
           cmp = fieldType.getNullableStrategy().compare(
@@ -1806,13 +1811,17 @@ public class RowBasedGrouperHelper
       )
       {
         super(keyBufferPosition);
+        final Comparator<Object[]> comparator;
+        if (useNaturalStringArrayComparator(stringComparator)) {
+          comparator = ColumnType.STRING_ARRAY.getNullableStrategy();
+        } else {
+          comparator = new DimensionComparisonUtils.ArrayComparator<>(stringComparator);
+        }
         bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
-            new DimensionComparisonUtils.ArrayComparator<>(
-                stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator)
-                .compare(
-                    stringArrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
-                    stringArrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
-                );
+            comparator.compare(
+                stringArrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                stringArrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
+            );
       }
 
       @Override
@@ -1859,7 +1868,7 @@ public class RowBasedGrouperHelper
               rankOfDictionaryIds[rhsBuffer.getInt(rhsPosition + keyBufferPosition)]
           );
         } else {
-          final StringComparator realComparator = stringComparator == null ?
+          final StringComparator realComparator = useNaturalStringArrayComparator(stringComparator) ?
                                                   StringComparators.LEXICOGRAPHIC :
                                                   stringComparator;
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
@@ -2181,5 +2190,17 @@ public class RowBasedGrouperHelper
         return delegate.getClazz();
       }
     }
+  }
+
+  /**
+   * Check if the {@link StringComparator} is the 'natural' {@link ColumnType#STRING_ARRAY} comparator. If so,
+   * callers can safely use the column type to compare values. If false, the {@link StringComparator} must be called
+   * against each array element for the comparison of values.
+   */
+  private static boolean useNaturalStringArrayComparator(@Nullable StringComparator stringComparator)
+  {
+    return stringComparator == null
+           || StringComparators.NATURAL.equals(stringComparator)
+           || StringComparators.LEXICOGRAPHIC.equals(stringComparator);
   }
 }

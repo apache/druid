@@ -163,8 +163,28 @@ public class IndexTaskTest extends IngestionTestBase
       null,
       null,
       false,
-      0
+      0,
+      null
   );
+
+  private static final DataSchema DATA_SCHEMA =
+      DataSchema.builder()
+                .withDataSource("test-json")
+                .withTimestamp(DEFAULT_TIMESTAMP_SPEC)
+                .withDimensions(
+                    new StringDimensionSchema("ts"),
+                    new StringDimensionSchema("dim"),
+                    new LongDimensionSchema("valDim")
+                )
+                .withAggregators(new LongSumAggregatorFactory("valMet", "val"))
+                .withGranularity(
+                    new UniformGranularitySpec(
+                        Granularities.DAY,
+                        Granularities.MINUTE,
+                        Collections.singletonList(Intervals.of("2014/P1D"))
+                    )
+                )
+                .build();
 
   @Parameterized.Parameters(name = "{0}, useInputFormatApi={1}")
   public static Iterable<Object[]> constructorFeeder()
@@ -225,24 +245,7 @@ public class IndexTaskTest extends IngestionTestBase
   {
     IndexTask indexTask = createIndexTask(
         new IndexIngestionSpec(
-            new DataSchema(
-                "test-json",
-                DEFAULT_TIMESTAMP_SPEC,
-                new DimensionsSpec(
-                    ImmutableList.of(
-                        new StringDimensionSchema("ts"),
-                        new StringDimensionSchema("dim"),
-                        new LongDimensionSchema("valDim")
-                    )
-                ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    Collections.singletonList(Intervals.of("2014/P1D"))
-                ),
-                null
-            ),
+            DATA_SCHEMA,
             new IndexIOConfig(
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
@@ -275,24 +278,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     IndexTask indexTask = createIndexTask(
         new IndexIngestionSpec(
-            new DataSchema(
-                "test-json",
-                DEFAULT_TIMESTAMP_SPEC,
-                new DimensionsSpec(
-                    ImmutableList.of(
-                        new StringDimensionSchema("ts"),
-                        new StringDimensionSchema("dim"),
-                        new LongDimensionSchema("valDim")
-                    )
-                ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    Collections.singletonList(Intervals.of("2014/P1D"))
-                ),
-                null
-            ),
+            DATA_SCHEMA,
             new IndexIOConfig(
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
@@ -337,24 +323,7 @@ public class IndexTaskTest extends IngestionTestBase
 
     IndexTask indexTask = createIndexTask(
         new IndexIngestionSpec(
-            new DataSchema(
-                "test-json",
-                DEFAULT_TIMESTAMP_SPEC,
-                new DimensionsSpec(
-                    ImmutableList.of(
-                        new StringDimensionSchema("ts"),
-                        new StringDimensionSchema("dim"),
-                        new LongDimensionSchema("valDim")
-                    )
-                ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("valMet", "val")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    Collections.singletonList(Intervals.of("2014/P1D"))
-                ),
-                null
-            ),
+            DATA_SCHEMA,
             new IndexIOConfig(
                 new LocalInputSource(tmpDir, "druid*"),
                 DEFAULT_INPUT_FORMAT,
@@ -505,7 +474,7 @@ public class IndexTaskTest extends IngestionTestBase
       indexIngestionSpec = createIngestionSpec(
           DEFAULT_TIMESTAMP_SPEC,
           dimensionsSpec,
-          new CsvInputFormat(columns, listDelimiter, null, false, 0),
+          new CsvInputFormat(columns, listDelimiter, null, false, 0, null),
           transformSpec,
           null,
           tuningConfig,
@@ -933,7 +902,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           timestampSpec,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(null, null, null, true, 0),
+          new CsvInputFormat(null, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -973,7 +942,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           timestampSpec,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1212,7 +1181,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.expect(mockToolbox.getSegmentHandoffNotifierFactory()).andReturn(mockFactory).once();
     EasyMock.expect(mockToolbox.getEmitter()).andReturn(new NoopServiceEmitter()).anyTimes();
     EasyMock.expect(mockDataSegment1.getDataSource()).andReturn("MockDataSource").once();
-    EasyMock.expect(mockFactory.createSegmentHandoffNotifier("MockDataSource")).andReturn(mockNotifier).once();
+    EasyMock.expect(mockFactory.createSegmentHandoffNotifier("MockDataSource", indexTask.getId())).andReturn(mockNotifier).once();
     mockNotifier.start();
     EasyMock.expectLastCall().once();
     mockNotifier.registerSegmentHandoffCallback(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
@@ -1373,7 +1342,7 @@ public class IndexTaskTest extends IngestionTestBase
       parseExceptionIgnoreSpec = createIngestionSpec(
           timestampSpec,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1423,7 +1392,7 @@ public class IndexTaskTest extends IngestionTestBase
       indexIngestionSpec = createIngestionSpec(
           timestampSpec,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1664,7 +1633,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           timestampSpec,
           dimensionsSpec,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1783,7 +1752,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           timestampSpec,
           dimensionsSpec,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1877,7 +1846,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           DEFAULT_TIMESTAMP_SPEC,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(null, null, null, true, 0),
+          new CsvInputFormat(null, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1947,7 +1916,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           DEFAULT_TIMESTAMP_SPEC,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -2698,20 +2667,20 @@ public class IndexTaskTest extends IngestionTestBase
     if (inputFormat != null) {
       Preconditions.checkArgument(parseSpec == null, "Can't use parseSpec");
       return new IndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              Preconditions.checkNotNull(timestampSpec, "timestampSpec"),
-              Preconditions.checkNotNull(dimensionsSpec, "dimensionsSpec"),
-              new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
-              },
-              granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
-                  Granularities.DAY,
-                  Granularities.MINUTE,
-                  Collections.singletonList(Intervals.of("2014/2015"))
-              ),
-              transformSpec
-          ),
+          DataSchema.builder()
+                    .withDataSource(DATASOURCE)
+                    .withTimestamp(Preconditions.checkNotNull(timestampSpec, "timestampSpec"))
+                    .withDimensions(Preconditions.checkNotNull(dimensionsSpec, "dimensionsSpec"))
+                    .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                    .withGranularity(
+                        granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
+                            Granularities.DAY,
+                            Granularities.MINUTE,
+                            Collections.singletonList(Intervals.of("2014/2015"))
+                        )
+                    )
+                    .withTransform(transformSpec)
+                    .build(),
           new IndexIOConfig(
               new LocalInputSource(baseDir, "druid*"),
               inputFormat,
@@ -2723,22 +2692,21 @@ public class IndexTaskTest extends IngestionTestBase
     } else {
       parseSpec = parseSpec != null ? parseSpec : DEFAULT_PARSE_SPEC;
       return new IndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              parseSpec.getTimestampSpec(),
-              parseSpec.getDimensionsSpec(),
-              new AggregatorFactory[]{
-                  new LongSumAggregatorFactory("val", "val")
-              },
-              granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
-                  Granularities.DAY,
-                  Granularities.MINUTE,
-                  Collections.singletonList(Intervals.of("2014/2015"))
-              ),
-              transformSpec,
-              null,
-              objectMapper
-          ),
+          DataSchema.builder()
+                    .withDataSource(DATASOURCE)
+                    .withTimestamp(parseSpec.getTimestampSpec())
+                    .withDimensions(parseSpec.getDimensionsSpec())
+                    .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                    .withGranularity(
+                        granularitySpec != null ? granularitySpec : new UniformGranularitySpec(
+                            Granularities.DAY,
+                            Granularities.MINUTE,
+                            Collections.singletonList(Intervals.of("2014/2015"))
+                        )
+                    )
+                    .withTransform(transformSpec)
+                    .withObjectMapper(objectMapper)
+                    .build(),
           new IndexIOConfig(
               new LocalInputSource(baseDir, "druid*"),
               createInputFormatFromParseSpec(parseSpec),
