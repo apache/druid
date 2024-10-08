@@ -454,13 +454,4 @@ public class AggregatorUtil
     }
     return false;
   }
-
-  public static List<AggregatorFactory> getCombiningAggregators(List<AggregatorFactory> aggs)
-  {
-    List<AggregatorFactory> combining = new ArrayList<>(aggs.size());
-    for (AggregatorFactory agg : aggs) {
-      combining.add(agg.getCombiningFactory());
-    }
-    return combining;
-  }
 }

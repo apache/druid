@@ -18,7 +18,7 @@
 
 import './grouping-table-module';
 import './record-table-module';
+import './time-chart-module';
 import './bar-chart-module';
 import './pie-chart-module';
-import './time-chart-module';
 import './multi-axis-chart-module';

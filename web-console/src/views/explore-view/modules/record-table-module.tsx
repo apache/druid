@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { IconNames } from '@blueprintjs/icons';
 import { C, SqlQuery } from '@druid-toolkit/query';
 import React, { useMemo } from 'react';
 
@@ -38,6 +39,7 @@ interface RecordTableParameterValues {
 ModuleRepository.registerModule<RecordTableParameterValues>({
   id: 'record-table',
   title: 'Record table',
+  icon: IconNames.TH,
   parameters: {
     maxRows: {
       type: 'number',
@@ -79,7 +81,7 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
         .toString();
     }, [querySource, where, parameterValues]);
 
-    const [resultState] = useQueryManager({
+    const [resultState, queryManager] = useQueryManager({
       query: query,
       processQuery: runSqlQuery,
     });
@@ -110,7 +112,9 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
             initPageSize={calculateInitPageSize(stage.height)}
           />
         ) : undefined}
-        {resultState.loading && <Loader />}
+        {resultState.loading && (
+          <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
+        )}
       </div>
     );
   },

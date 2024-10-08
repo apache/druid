@@ -128,14 +128,14 @@ public class StringFieldWriter implements FieldWriter
         written++;
 
         if (len > 0) {
-          FrameWriterUtils.copyByteBufferToMemoryDisallowingNullBytes(
+          int lenWritten = FrameWriterUtils.copyByteBufferToMemoryDisallowingNullBytes(
               utf8Datum,
               memory,
               position + written,
               len,
               removeNullBytes
           );
-          written += len;
+          written += lenWritten;
         }
       }
 
