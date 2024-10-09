@@ -132,16 +132,16 @@ This section contains detailed release notes separated by areas.
 
 ### Web console
 
-#### Improvments to the stages display
+#### Improvements to the stages display
 
 A number of improvements have been made to the query stages visualization
 ![new_stages.png](web-console-31-rn-new_stages.png)
 These changes include:
 - Added a graph visualization to illustrate the flow of query stages [#17135](https://github.com/apache/druid/pull/17135)
-- Added a column for CPU counters in the query stages detail view when they are present. Also added tooltips to expose potentially hidden data like CPU time [#17132](https://github.com/apache/druid/pull/17132)
+- Added a column for CPU counters in the query stages detail view when they are present. Also added tool tips to expose potentially hidden data like CPU time [#17132](https://github.com/apache/druid/pull/17132)
 
 #### Dart
-Added the ability to detect the presense of the Dart engine and to run Dart queries from the console as well as to see currently running Dart queries.
+Added the ability to detect the presence of the Dart engine and to run Dart queries from the console as well as to see currently running Dart queries.
 ![dart.png](web-console-31-rn-dart.png)
 [#17147](https://github.com/apache/druid/pull/17147)
 
@@ -182,7 +182,7 @@ Other changes to the Explore view include the following:
 - Added the ability to expand a nested column into is constituent paths
 [#17213](https://github.com/apache/druid/pull/17213) [#17225](https://github.com/apache/druid/pull/17225) [#17234](https://github.com/apache/druid/pull/17234) [#17180](https://github.com/apache/druid/pull/17180)
 
-#### Support Delta lake igestion in the data loaders
+#### Support Delta lake ingestion in the data loaders
 - Added the Delta tile to the data loader for SQL-based batch and classic batch ingestion methods
 [#17160](https://github.com/apache/druid/pull/17160) [#17023](https://github.com/apache/druid/pull/17023)
 
