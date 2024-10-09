@@ -29,7 +29,6 @@ import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.messages.server.Outbox;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.messages.ControllerMessage;
-import org.apache.druid.msq.dart.worker.http.DartWorkerResource;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.ProcessingBuffersProvider;
 import org.apache.druid.msq.exec.Worker;
@@ -44,15 +43,12 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
-import java.net.URI;
-import java.net.URISyntaxException;
 
 /**
  * Production implementation of {@link DartWorkerFactory}.
  */
 public class DartWorkerFactoryImpl implements DartWorkerFactory
 {
-  private final String id;
   private final DruidNode selfNode;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -82,7 +78,6 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
       Outbox<ControllerMessage> outbox
   )
   {
-    this.id = makeWorkerId(selfNode);
     this.selfNode = selfNode;
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
@@ -103,7 +98,6 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
     final WorkerContext workerContext = new DartWorkerContext(
         queryId,
         controllerHost,
-        id,
         selfNode,
         jsonMapper,
         injector,
@@ -120,23 +114,5 @@ public class DartWorkerFactoryImpl implements DartWorkerFactory
     );
 
     return new WorkerImpl(null, workerContext);
-  }
-
-  private static String makeWorkerId(final DruidNode selfNode)
-  {
-    try {
-      return new URI(
-          selfNode.getServiceScheme(),
-          null,
-          selfNode.getHost(),
-          selfNode.getPortToUse(),
-          DartWorkerResource.PATH,
-          null,
-          null
-      ).toString();
-    }
-    catch (URISyntaxException e) {
-      throw new RuntimeException(e);
-    }
   }
 }

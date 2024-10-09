@@ -58,7 +58,7 @@ public class DartWorkerContext implements WorkerContext
 {
   private final String queryId;
   private final String controllerHost;
-  private final String workerId;
+  private final WorkerId workerId;
   private final DruidNode selfNode;
   private final ObjectMapper jsonMapper;
   private final Injector injector;
@@ -82,7 +82,6 @@ public class DartWorkerContext implements WorkerContext
   DartWorkerContext(
       final String queryId,
       final String controllerHost,
-      final String workerId,
       final DruidNode selfNode,
       final ObjectMapper jsonMapper,
       final Injector injector,
@@ -100,7 +99,7 @@ public class DartWorkerContext implements WorkerContext
   {
     this.queryId = queryId;
     this.controllerHost = controllerHost;
-    this.workerId = workerId;
+    this.workerId = WorkerId.fromDruidNode(selfNode, queryId);
     this.selfNode = selfNode;
     this.jsonMapper = jsonMapper;
     this.injector = injector;
@@ -125,7 +124,7 @@ public class DartWorkerContext implements WorkerContext
   @Override
   public String workerId()
   {
-    return workerId;
+    return workerId.toString();
   }
 
   @Override
