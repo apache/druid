@@ -231,7 +231,7 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
       for (String column : partitionColumns) {
         final Column theCol = rac.findColumn(column);
         if (theCol == null) {
-          throw new ISE("Partition column [%s] not found in RAC.");
+          throw new ISE("Partition column [%s] not found in RAC.", column);
         }
         final ColumnAccessor accessor = theCol.toAccessor();
         int comparison = accessor.compareRows(index1, index2);
