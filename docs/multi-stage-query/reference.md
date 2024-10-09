@@ -95,12 +95,12 @@ For more information, see [Read external data with EXTERN](concepts.md#read-exte
 #### `EXTERN` to export to a destination
 
 You can use `EXTERN` to specify a destination to export data.
-This variation of EXTERN acppets the details of the destination as the only argument.
-This variation additionally requires an `AS` clause to specify the format of the exported rows.
+This variation of EXTERN:
+- accepts the details of the destination as the only argument
+- requires an `AS` clause to specify the format of the exported rows.
 
-When you export data, Druid creates metadata files in a subdirectory of the destination directory named `_symlink_format_manifest`:
-
-- `_symlink_format_manifest/manifest`: Lists absolute paths to exported files using the symlink manifest format. For example:
+When you export data, Druid creates metadata files in a subdirectory of the destination directory named `_symlink_format_manifest`.
+The `manifest` file within that directory`_symlink_format_manifest/manifest` lists absolute paths to exported files using the symlink manifest format. For example:
 
 ```text
 s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker2-partition2.csv
@@ -114,7 +114,7 @@ Keep the following in mind when using EXTERN to export rows:
 - Only INSERT statements are supported.
 - Only `CSV` format is supported as an export format.
 - Partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) aren't supported with EXTERN statements.
-- You can export to Amazon S3, Google CS, or local storage.
+- You can export to Amazon S3, Google GCS, or local storage.
 - The destination provided should contain no other files or directories.
 
 When you export data, use the `rowsPerPage` context parameter to restrict the size of exported files.
@@ -129,7 +129,7 @@ SELECT
 FROM <table>
 ```
 
-##### Amazon S3
+##### S3 - Amazon S3
 
 To export results to S3, pass the `s3()` function as an argument to the EXTERN function. S3 export requires the `druid-s3-extensions`.
 The `s3()` function configures the connection to AWS.
@@ -163,7 +163,7 @@ The following runtime parameters must be configured to export into an S3 destina
 | `druid.export.storage.s3.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
 
 
-##### Google Cloud Storage
+##### GOOGLE - Google Cloud Storage
 
 To export query results to Google Cloud Storage (GCS), passing the `google()` function as an argument to the `EXTERN` function.
 This requires the `druid-google-extensions`.
@@ -196,7 +196,7 @@ Configure the following runtime parameters to export query results to a GCS dest
 | `druid.export.storage.google.maxRetry` | No | The maximum number of  attempts for GCS API calls to avoid failures due to transient errors. | 10 |
 | `druid.export.storage.google.chunkSize` | No | Individual chunk size to  store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks. | 4 MiB |
 
-##### Local file storage
+##### LOCAL - local file storage
 
 You can export queryies to local storage, which writes the results to the filesystem on the MSQ worker.
 This is useful in a single node setup or for testing but is not suitable for production use cases.
