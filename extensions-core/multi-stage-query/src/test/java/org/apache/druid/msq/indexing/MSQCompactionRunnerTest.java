@@ -579,7 +579,8 @@ public class MSQCompactionRunnerTest
                     .build();
   }
 
-  private static DataSourceMSQDestination getExpectedDestination(){
+  private static DataSourceMSQDestination getExpectedDestination()
+  {
     return new DataSourceMSQDestination(
         DATA_SOURCE,
         SEGMENT_GRANULARITY.getDefaultGranularity(),
@@ -590,7 +591,8 @@ public class MSQCompactionRunnerTest
     );
   }
 
-  private static MSQTuningConfig getExpectedTuningConfig() {
+  private static MSQTuningConfig getExpectedTuningConfig()
+  {
     return new MSQTuningConfig(
         1,
         MultiStageQueryContext.DEFAULT_ROWS_IN_MEMORY,

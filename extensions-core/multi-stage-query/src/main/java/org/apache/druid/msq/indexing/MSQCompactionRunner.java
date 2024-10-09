@@ -371,7 +371,8 @@ public class MSQCompactionRunner implements CompactionRunner
                         ? TIME_VIRTUAL_COLUMN
                         : ColumnHolder.TIME_COLUMN_NAME;
     ColumnMapping timeColumnMapping = new ColumnMapping(timeColumn, ColumnHolder.TIME_COLUMN_NAME);
-    if (dataSchema.getDimensionsSpec().isForceSegmentSortByTime()){
+    if (dataSchema.getDimensionsSpec().isForceSegmentSortByTime()) {
+      // When not sorted by time, the __time column is missing from dimensionsSpec
       columnMappings.add(timeColumnMapping);
     }
     columnMappings.addAll(
