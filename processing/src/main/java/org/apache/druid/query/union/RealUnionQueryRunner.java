@@ -25,13 +25,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.Result;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
-import org.apache.druid.query.timeseries.TimeseriesResultValue;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,19 +48,7 @@ public class RealUnionQueryRunner implements QueryRunner<RealUnionResult>
       seqs.add(makeUnionResult(queryPlus.withQuery(query), responseContext));
     }
     return Sequences.simple(seqs);
-
-    // return Sequences.map(
-    // Sequences.simple(unionQuery.queries),
-    // this::makeUnionResult
-    // );
   }
-
-  // private RealUnionResult makeUnionResult(Query<?> query)
-  // {
-  // QueryRunner<?> runner = query.getRunner(walker);
-  // return new RealUnionResult(
-  // runner.run
-  // }
 
   private <T> RealUnionResult makeUnionResult(QueryPlus<T> withQuery, ResponseContext responseContext)
   {
@@ -74,17 +56,4 @@ public class RealUnionQueryRunner implements QueryRunner<RealUnionResult>
     Sequence<T> seq = runner.run(withQuery, responseContext);
     return new RealUnionResult(seq);
   }
-
-  private void runTsQuery(QueryPlus<RowsAndColumns> queryPlus, TimeseriesQuery q, ResponseContext responseContext)
-  {
-    QueryRunner<Result<TimeseriesResultValue>> runner = q.getRunner(walker);
-    Sequence<Result<TimeseriesResultValue>> res = runner.run(queryPlus.withQuery(q), responseContext);
-
-    TimeseriesQueryQueryToolChest tsToolChest = new TimeseriesQueryQueryToolChest();
-    Sequence<Object[]> res1 = tsToolChest.resultsAsArrays(q, res);
-    List<Object[]> li = res1.toList();
-    // tsToolChest.mergeResults()
-
-  }
-
 }

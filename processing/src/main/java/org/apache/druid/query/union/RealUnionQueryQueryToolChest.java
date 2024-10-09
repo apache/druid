@@ -31,7 +31,9 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.SupportRowSignature;
@@ -45,17 +47,110 @@ import java.util.Optional;
 
 public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, UnionQuery>
 {
+  public Optional<QueryRunner<RealUnionResult>> executeQuery(QueryToolChestWarehouse warehouse,
+      Query<RealUnionResult> query, QuerySegmentWalker clientQuerySegmentWalker)
+  {
+    RealUnionQueryRunner2 runner = new RealUnionQueryRunner2(warehouse, (UnionQuery) query, clientQuerySegmentWalker);
+    return Optional.of(runner);
+  }
+
+  public Optional<QueryRunner<RealUnionResult>> executeQuery1(QueryToolChestWarehouse warehouse,
+      Query<RealUnionResult> query, QuerySegmentWalker clientQuerySegmentWalker)
+  {
+    UnionQuery unionQuery = (UnionQuery) query;
+    List<QueryRunner> queryRunners = new ArrayList<>();
+    for (Query<?> q : unionQuery.queries) {
+      QueryRunner subRunner = clientQuerySegmentWalker.executeQuery(q);
+      queryRunners.add(subRunner);
+    }
+    QueryRunner<RealUnionResult> unionRunner = new LocalRealUnionQueryRunner(
+        queryRunners
+    );
+    return Optional.of(unionRunner);
+  }
+
+  private static class RealUnionQueryRunner2 implements QueryRunner<RealUnionResult>
+  {
+
+    private QueryToolChestWarehouse warehouse;
+    private QuerySegmentWalker walker;
+    private UnionQuery query;
+    private List<QueryRunner> runners;
+
+    public RealUnionQueryRunner2(QueryToolChestWarehouse warehouse, UnionQuery query,
+        QuerySegmentWalker walker)
+    {
+      this.warehouse = warehouse;
+      this.query = query;
+      this.walker = walker;
+
+      this.runners = makeSubQueryRunners(query);
+    }
+
+    private List<QueryRunner> makeSubQueryRunners(UnionQuery unionQuery)
+    {
+      List<QueryRunner> runners = new ArrayList<>();
+      for (Query<?> query : unionQuery.queries) {
+        runners.add(query.getRunner(walker));
+      }
+      return runners;
+
+    }
+
+    @Override
+    public Sequence<RealUnionResult> run(QueryPlus<RealUnionResult> queryPlus, ResponseContext responseContext)
+    {
+      UnionQuery unionQuery = queryPlus.unwrapQuery(UnionQuery.class);
+
+      List<RealUnionResult> seqs = new ArrayList<RealUnionResult>();
+      for (int i = 0; i < runners.size(); i++) {
+        Query<?> q = unionQuery.queries.get(i);
+        QueryRunner r = runners.get(i);
+        seqs.add(makeUnionResult(r, queryPlus.withQuery(q), responseContext));
+      }
+      return Sequences.simple(seqs);
+    }
+
+    private <T> RealUnionResult makeUnionResult(QueryRunner runner, QueryPlus<T> withQuery,
+        ResponseContext responseContext)
+    {
+      Sequence<T> seq = runner.run(withQuery, responseContext);
+      return new RealUnionResult(seq);
+    }
+  }
+
+  private static class LocalRealUnionQueryRunner implements QueryRunner<RealUnionResult>
+  {
+
+    public LocalRealUnionQueryRunner(List<QueryRunner> queryRunners)
+    {
+
+    }
+
+    @Override
+    public Sequence<RealUnionResult> run(QueryPlus<RealUnionResult> queryPlus, ResponseContext responseContext)
+    {
+      return buildSequence();
+    }
+
+    Sequence<RealUnionResult> buildSequence()
+    {
+      return null;
+    }
+
+  }
 
   public void RealUnionQueryQueryToolChest()
   {
-    int asd=1;
+    int asd = 1;
   }
+
   @Override
   @SuppressWarnings("unchecked")
   public QueryRunner<RealUnionResult> mergeResults(QueryRunner<RealUnionResult> runner)
   {
-    if(true) {
-      throw new  UnsupportedOperationException("Not supported");
+    if (true) {
+      throw new UnsupportedOperationException("Not supported");
     }
 
     return new RealUnionResultSerializingQueryRunner(
@@ -74,8 +169,7 @@ public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult
   @Override
   public Function<RealUnionResult, RealUnionResult> makePreComputeManipulatorFn(
       UnionQuery query,
-      MetricManipulationFn fn
-  )
+      MetricManipulationFn fn)
   {
     return Functions.identity();
   }
@@ -102,8 +196,7 @@ public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Sequence<Object[]> resultsAsArrays(
       UnionQuery query,
-      Sequence<RealUnionResult> resultSequence
-  )
+      Sequence<RealUnionResult> resultSequence)
   {
     List<RealUnionResult> results = resultSequence.toList();
 
@@ -118,14 +211,15 @@ public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult
     return Sequences.concat(resultSeqs);
   }
 
-  private <T,QueryType extends Query<T>> Sequence<Object[]> resultsAsArrays(QueryType q, RealUnionResult realUnionResult)
+  private <T, QueryType extends Query<T>> Sequence<Object[]> resultsAsArrays(QueryType q,
+      RealUnionResult realUnionResult)
   {
     QueryToolChest<T, QueryType> toolChest = warehouse.getToolChest(q);
     return toolChest.resultsAsArrays(q, realUnionResult.getResults());
   }
 
   @SuppressWarnings("unused")
-  private  Sequence<Object[]> resultsAsArrays1(Query<?> q, RealUnionResult realUnionResult)
+  private Sequence<Object[]> resultsAsArrays1(Query<?> q, RealUnionResult realUnionResult)
   {
     warehouse.getToolChest(q);
     return null;
@@ -137,24 +231,28 @@ public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult
       UnionQuery query,
       Sequence<RealUnionResult> resultSequence,
       MemoryAllocatorFactory memoryAllocatorFactory,
-      boolean useNestedForUnknownTypes
-  )
+      boolean useNestedForUnknownTypes)
   {
-    throw new  UnsupportedOperationException("Not supported");
+    throw new UnsupportedOperationException("Not supported");
   }
 
   /**
-   * This class exists to serialize the RealUnionResult that are used in this query and make it the return Sequence
-   * actually be a Sequence of rows or frames, as the query requires.
-   * This is relatively broken in a number of regards, the most obvious of which is that it is going to run counter to the stated class on the Generic of the QueryToolChest.
-   * That is, the code makes it look like you are getting a Sequence of RealUnionResult, but, by using this, the query will
-   * actually ultimately produce a Sequence of Object[] or Frames.  This works because of type Erasure in Java (it's all Object
-   * at the end of the day).
+   * This class exists to serialize the RealUnionResult that are used in this
+   * query and make it the return Sequence actually be a Sequence of rows or
+   * frames, as the query requires. This is relatively broken in a number of
+   * regards, the most obvious of which is that it is going to run counter to
+   * the stated class on the Generic of the QueryToolChest. That is, the code
+   * makes it look like you are getting a Sequence of RealUnionResult, but, by
+   * using this, the query will actually ultimately produce a Sequence of
+   * Object[] or Frames. This works because of type Erasure in Java (it's all
+   * Object at the end of the day).
    * <p>
-   * While it might seem like this will break all sorts of things, the Generic type is actually there more as a type
-   * "hint" to make the writing of the ToolChest and Factory and stuff a bit more simple.  Any caller of this cannot
-   * truly depend on the type anyway other than to just throw it across the wire, so this should just magically work
-   * even though it looks like it shouldn't even compile.
+   * While it might seem like this will break all sorts of things, the Generic
+   * type is actually there more as a type "hint" to make the writing of the
+   * ToolChest and Factory and stuff a bit more simple. Any caller of this
+   * cannot truly depend on the type anyway other than to just throw it across
+   * the wire, so this should just magically work even though it looks like it
+   * shouldn't even compile.
    * <p>
    * Not our proudest moment, but we use the tools available to us.
    */
@@ -165,8 +263,7 @@ public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult
     private final QueryRunner<RealUnionResult> baseQueryRunner;
 
     private RealUnionResultSerializingQueryRunner(
-        QueryRunner<RealUnionResult> baseQueryRunner
-    )
+        QueryRunner<RealUnionResult> baseQueryRunner)
     {
       this.baseQueryRunner = baseQueryRunner;
     }
@@ -174,8 +271,7 @@ public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult
     @Override
     public Sequence run(
         QueryPlus queryPlus,
-        ResponseContext responseContext
-    )
+        ResponseContext responseContext)
     {
       throw new UnsupportedOperationException("Not supported");
     }

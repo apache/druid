@@ -54,4 +54,9 @@ public interface QuerySegmentWalker
    * @return the Queryable object with the given SegmentSpecs
    */
   <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs);
+
+  default <T> QueryRunner<T> executeQuery(Query<T> query)
+  {
+    throw new UnsupportedOperationException("executeQuery is not implemented");
+  }
 }

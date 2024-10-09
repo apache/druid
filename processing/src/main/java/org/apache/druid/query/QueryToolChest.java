@@ -428,4 +428,13 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   {
     this.warehouse=warehouse;
   }
+
+  public Optional<QueryRunner<ResultType>> executeQuery(
+      // ideally; it should know about the warehouse
+      QueryToolChestWarehouse warehouse,
+      Query<ResultType> query,
+      QuerySegmentWalker clientQuerySegmentWalker)
+  {
+    return Optional.empty();
+  }
 }
