@@ -30,162 +30,86 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.function.BiFunction;
 
 public class GlueingPartitioningOperatorTest
 {
   @Test
-  public void testDefaultImplementation()
+  public void testPartitioning()
   {
-    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
-            "unsorted", new IntArrayColumn(new int[]{10, 10, 10, 20, 20, 11})
-        )
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        makeSimpleRac(1, 1, 1, 2, 2, 1)
     );
-
-    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1);
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         inlineScanOperator,
-        ImmutableList.of("sorted")
+        ImmutableList.of("column")
     );
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1, 1})
-                .expectColumn("unsorted", new int[]{10, 10, 10})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{2, 2})
-                .expectColumn("unsorted", new int[]{20, 20})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1})
-                .expectColumn("unsorted", new int[]{11})
-                .allColumnsRegistered()
+            expectedSimpleRac(1, 1, 1),
+            expectedSimpleRac(2, 2),
+            expectedSimpleRac(1)
         )
         .runToCompletion(op);
   }
 
   @Test
-  public void testDefaultImplementationWithMultipleRACs()
+  public void testPartitioningWithMultipleRACs()
   {
-    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
-            "unsorted", new IntArrayColumn(new int[]{10, 10, 10, 20, 20, 11})
-        )
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        makeSimpleRac(1, 1, 1, 2, 2, 1),
+        makeSimpleRac(1, 1, 1, 2, 2, 1),
+        makeSimpleRac(1, 1, 2, 2, 1)
     );
-    RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
-            "unsorted", new IntArrayColumn(new int[]{50, 51, 52, 53, 54, 55})
-        )
-    );
-    RowsAndColumns rac3 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1, 2, 2, 1}),
-            "unsorted", new IntArrayColumn(new int[]{70, 71, 72, 73, 74})
-        )
-    );
-
-    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1, rac2, rac3);
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         inlineScanOperator,
-        ImmutableList.of("sorted")
+        ImmutableList.of("column")
     );
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1, 1})
-                .expectColumn("unsorted", new int[]{10, 10, 10})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{2, 2})
-                .expectColumn("unsorted", new int[]{20, 20})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1, 1, 1})
-                .expectColumn("unsorted", new int[]{11, 50, 51, 52})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{2, 2})
-                .expectColumn("unsorted", new int[]{53, 54})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1, 1})
-                .expectColumn("unsorted", new int[]{55, 70, 71})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{2, 2})
-                .expectColumn("unsorted", new int[]{72, 73})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1})
-                .expectColumn("unsorted", new int[]{74})
-                .allColumnsRegistered()
+            expectedSimpleRac(1, 1, 1),
+            expectedSimpleRac(2, 2),
+            expectedSimpleRac(1, 1, 1, 1),
+            expectedSimpleRac(2, 2),
+            expectedSimpleRac(1, 1, 1),
+            expectedSimpleRac(2, 2),
+            expectedSimpleRac(1)
         )
         .runToCompletion(op);
   }
 
   @Test
-  public void testDefaultImplementationWithMultipleConcatenationBetweenRACs()
+  public void testPartitioningWithMultipleConcatenationBetweenRACs()
   {
-    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1}),
-            "unsorted", new IntArrayColumn(new int[]{10, 10})
-        )
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        makeSimpleRac(1, 1),
+        makeSimpleRac(1, 1),
+        makeSimpleRac(1, 2)
     );
-    RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1}),
-            "unsorted", new IntArrayColumn(new int[]{20, 20})
-        )
-    );
-    RowsAndColumns rac3 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 2}),
-            "unsorted", new IntArrayColumn(new int[]{30, 40})
-        )
-    );
-
-    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1, rac2, rac3);
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         inlineScanOperator,
-        ImmutableList.of("sorted")
+        ImmutableList.of("column")
     );
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1, 1, 1, 1})
-                .expectColumn("unsorted", new int[]{10, 10, 20, 20, 30})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{2})
-                .expectColumn("unsorted", new int[]{40})
-                .allColumnsRegistered()
+            expectedSimpleRac(1, 1, 1, 1, 1),
+            expectedSimpleRac(2)
         )
         .runToCompletion(op);
   }
 
   @Test
-  public void testDefaultImplementationWithNoPartitionColumns()
+  public void testPartitioningWithNoPartitionColumns()
   {
-    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
-            "unsorted", new IntArrayColumn(new int[]{10, 10, 10, 20, 20, 11})
-        )
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        makeSimpleRac(1, 1, 1, 2, 2, 1),
+        makeSimpleRac(1, 1, 1, 2, 2, 1)
     );
-
-    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1);
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         inlineScanOperator,
@@ -194,43 +118,7 @@ public class GlueingPartitioningOperatorTest
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1, 1, 2, 2, 1})
-                .expectColumn("unsorted", new int[]{10, 10, 10, 20, 20, 11})
-                .allColumnsRegistered()
-        )
-        .runToCompletion(op);
-  }
-
-  @Test
-  public void testDefaultImplementationWithMultipleRACsAndNoPartitionColumns()
-  {
-    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
-            "unsorted", new IntArrayColumn(new int[]{10, 10, 10, 20, 20, 11})
-        )
-    );
-    RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
-            "unsorted", new IntArrayColumn(new int[]{50, 51, 52, 53, 54, 55})
-        )
-    );
-
-    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1, rac2);
-
-    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
-        inlineScanOperator,
-        Collections.emptyList()
-    );
-
-    new OperatorTestHelper()
-        .expectRowsAndColumns(
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1})
-                .expectColumn("unsorted", new int[]{10, 10, 10, 20, 20, 11, 50, 51, 52, 53, 54, 55})
-                .allColumnsRegistered()
+            expectedSimpleRac(1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1)
         )
         .runToCompletion(op);
   }
@@ -238,111 +126,62 @@ public class GlueingPartitioningOperatorTest
   @Test
   public void testMaxRowsConstraintViolation()
   {
-    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1, 1}),
-            "unsorted", new IntArrayColumn(new int[]{10, 10, 10})
-        )
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        makeSimpleRac(1, 1, 1)
     );
-
-    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1);
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         inlineScanOperator,
-        ImmutableList.of("sorted"),
+        ImmutableList.of("column"),
         2
     );
 
-    boolean exceptionThrown = false;
-    try {
-      new OperatorTestHelper()
-          .expectRowsAndColumns()
-          .runToCompletion(op);
-    }
-    catch (DruidException e) {
-      Assert.assertEquals(
-          e.getMessage(),
-          "Too many rows to process (requested = 3, max = 2)."
-      );
-      exceptionThrown = true;
-    }
-    Assert.assertTrue(exceptionThrown);
+    Assert.assertThrows(
+        "Too many rows to process (requested = 3, max = 2).",
+        DruidException.class,
+        () -> new OperatorTestHelper().expectRowsAndColumns().runToCompletion(op)
+    );
   }
 
   @Test
   public void testMaxRowsConstraintViolationWhenGlueing()
   {
-    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1, 1}),
-            "unsorted", new IntArrayColumn(new int[]{10, 10, 10})
-        )
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        makeSimpleRac(1, 1, 1),
+        makeSimpleRac(1, 2, 3)
     );
-    RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 2, 3}),
-            "unsorted", new IntArrayColumn(new int[]{10, 10, 10})
-        )
-    );
-
-    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1, rac2);
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         inlineScanOperator,
-        ImmutableList.of("sorted"),
+        ImmutableList.of("column"),
         3
     );
 
-    boolean exceptionThrown = false;
-    try {
-      new OperatorTestHelper()
-          .expectRowsAndColumns()
-          .runToCompletion(op);
-    }
-    catch (DruidException e) {
-      Assert.assertEquals(
-          e.getMessage(),
-          "Too many rows to process (requested = 4, max = 3)."
-      );
-      exceptionThrown = true;
-    }
-    Assert.assertTrue(exceptionThrown);
+    Assert.assertThrows(
+        "Too many rows to process (requested = 4, max = 3).",
+        DruidException.class,
+        () -> new OperatorTestHelper().expectRowsAndColumns().runToCompletion(op)
+    );
   }
 
   @Test
   public void testMaxRowsConstraintWhenGlueing()
   {
-    RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1, 1}),
-            "unsorted", new IntArrayColumn(new int[]{10, 10, 10})
-        )
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        makeSimpleRac(1, 1, 1),
+        makeSimpleRac(2, 2, 2)
     );
-    RowsAndColumns rac2 = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{2, 2, 2}),
-            "unsorted", new IntArrayColumn(new int[]{20, 20, 20})
-        )
-    );
-
-    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac1, rac2);
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         inlineScanOperator,
-        ImmutableList.of("sorted"),
+        ImmutableList.of("column"),
         3
     );
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1, 1})
-                .expectColumn("unsorted", new int[]{10, 10, 10})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{2, 2, 2})
-                .expectColumn("unsorted", new int[]{20, 20, 20})
-                .allColumnsRegistered()
+            expectedSimpleRac(1, 1, 1),
+            expectedSimpleRac(2, 2, 2)
         )
         .runToCompletion(op);
   }
@@ -350,68 +189,34 @@ public class GlueingPartitioningOperatorTest
   @Test
   public void testStopMidStream()
   {
-    RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{1, 1, 1, 2, 2, 1}),
-            "unsorted", new IntArrayColumn(new int[]{10, 10, 10, 20, 20, 11})
-        )
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        makeSimpleRac(1, 1, 1, 2, 2, 1)
     );
-
-    InlineScanOperator inlineScanOperator = InlineScanOperator.make(rac);
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
         inlineScanOperator,
-        ImmutableList.of("sorted")
+        ImmutableList.of("column")
     );
 
     new OperatorTestHelper()
         .expectAndStopAfter(
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{1, 1, 1})
-                .expectColumn("unsorted", new int[]{10, 10, 10})
-                .allColumnsRegistered(),
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{2, 2})
-                .expectColumn("unsorted", new int[]{20, 20})
-                .allColumnsRegistered()
+            expectedSimpleRac(1, 1, 1),
+            expectedSimpleRac(2, 2)
         )
         .runToCompletion(op);
   }
 
-  @Test
-  public void testDoesNotValidateSort()
+  private RowsAndColumns makeSimpleRac(int... values)
   {
-    BiFunction<Integer, Integer, RowsAndColumnsHelper> singleHelperMaker =
-        (sorted, unsorted) ->
-            new RowsAndColumnsHelper()
-                .expectColumn("sorted", new int[]{sorted})
-                .expectColumn("unsorted", new int[]{unsorted})
-                .allColumnsRegistered();
-
-    RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of(
-            "sorted", new IntArrayColumn(new int[]{0, 0, 0, 1, 1, 2, 4, 4, 4}),
-            "unsorted", new IntArrayColumn(new int[]{3, 54, 21, 1, 5, 54, 2, 3, 92})
-        )
+    return MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of("column", new IntArrayColumn(values))
     );
+  }
 
-    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
-        InlineScanOperator.make(rac),
-        ImmutableList.of("unsorted")
-    );
-
-    new OperatorTestHelper()
-        .expectRowsAndColumns(
-            singleHelperMaker.apply(0, 3),
-            singleHelperMaker.apply(0, 54),
-            singleHelperMaker.apply(0, 21),
-            singleHelperMaker.apply(1, 1),
-            singleHelperMaker.apply(1, 5),
-            singleHelperMaker.apply(2, 54),
-            singleHelperMaker.apply(4, 2),
-            singleHelperMaker.apply(4, 3),
-            singleHelperMaker.apply(4, 92)
-        )
-        .runToCompletion(op);
+  private RowsAndColumnsHelper expectedSimpleRac(int... values)
+  {
+    return new RowsAndColumnsHelper()
+        .expectColumn("column", values)
+        .allColumnsRegistered();
   }
 }

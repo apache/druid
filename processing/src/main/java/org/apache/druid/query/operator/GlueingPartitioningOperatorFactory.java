@@ -27,12 +27,12 @@ import java.util.Objects;
 
 public class GlueingPartitioningOperatorFactory extends AbstractPartitioningOperatorFactory
 {
-  private final int maxRowsMaterialized;
+  private final Integer maxRowsMaterialized;
 
   @JsonCreator
   public GlueingPartitioningOperatorFactory(
       @JsonProperty("partitionColumns") List<String> partitionColumns,
-      @JsonProperty("maxRowsMaterialized") int maxRowsMaterialized
+      @JsonProperty("maxRowsMaterialized") Integer maxRowsMaterialized
   )
   {
     super(partitionColumns);
@@ -40,7 +40,7 @@ public class GlueingPartitioningOperatorFactory extends AbstractPartitioningOper
   }
 
   @JsonProperty("maxRowsMaterialized")
-  public int getMaxRowsMaterialized()
+  public Integer getMaxRowsMaterialized()
   {
     return maxRowsMaterialized;
   }
@@ -54,8 +54,15 @@ public class GlueingPartitioningOperatorFactory extends AbstractPartitioningOper
   @Override
   public boolean validateEquivalent(OperatorFactory other)
   {
-    return super.validateEquivalent(other) &&
-           maxRowsMaterialized == ((GlueingPartitioningOperatorFactory) other).getMaxRowsMaterialized();
+    if (!super.validateEquivalent(other)) {
+      return false;
+    }
+
+    if (!(other instanceof GlueingPartitioningOperatorFactory)) {
+      return false;
+    }
+
+    return Objects.equals(maxRowsMaterialized, ((GlueingPartitioningOperatorFactory) other).getMaxRowsMaterialized());
   }
 
   @Override

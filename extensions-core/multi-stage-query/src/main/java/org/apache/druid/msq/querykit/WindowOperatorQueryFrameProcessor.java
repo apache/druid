@@ -139,7 +139,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
     if (inputChannel.canRead()) {
       final Frame frame = inputChannel.read();
-      convertRowFrameToRowsAndColumns(frame);
+      LazilyDecoratedRowsAndColumns ldrc = convertRowFrameToRowsAndColumns(frame);
+      frameRowsAndColsBuilder.add(ldrc);
+      ensureMaxRowsInAWindowConstraint(frameRowsAndColsBuilder.getNumRows());
 
       if (needToProcessBatch()) {
         runAllOpsOnBatch();
@@ -175,7 +177,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
       {
         RowsAndColumns rac = frameRowsAndColsBuilder.build();
-        frameRowsAndColsBuilder.clear();
         ensureMaxRowsInAWindowConstraint(rac.numRows());
         receiver.push(rac);
 
@@ -306,8 +307,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   /**
    * @param frame Row based frame to be converted to a {@link RowsAndColumns} object
    *              Throw an exception if the resultant rac used goes above the guardrail value
+   * @return A {@link LazilyDecoratedRowsAndColumns} encapsulating the frame.
    */
-  private void convertRowFrameToRowsAndColumns(Frame frame)
+  private LazilyDecoratedRowsAndColumns convertRowFrameToRowsAndColumns(Frame frame)
   {
     final RowSignature signature = frameReader.signature();
     RowBasedFrameRowsAndColumns frameRowsAndColumns = new RowBasedFrameRowsAndColumns(frame, signature);
@@ -321,9 +323,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         null,
         (int) frameWriterFactory.allocatorCapacity()
     );
-    // check if existing + newly added rows exceed guardrails
-    ensureMaxRowsInAWindowConstraint(frameRowsAndColsBuilder.getNumRows() + ldrc.numRows());
-    frameRowsAndColsBuilder.add(ldrc);
+    return ldrc;
   }
 
   private void ensureMaxRowsInAWindowConstraint(int numRowsInWindow)
@@ -365,7 +365,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
     public RowsAndColumns build()
     {
-      return new ConcatRowsAndColumns(new ArrayList<>(racList));
+      ConcatRowsAndColumns concatRowsAndColumns = new ConcatRowsAndColumns(new ArrayList<>(racList));
+      clear();
+      return concatRowsAndColumns;
     }
 
     public void clear()

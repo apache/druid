@@ -20,6 +20,7 @@
 package org.apache.druid.query.operator;
 
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.ConcatRowsAndColumns;
 import org.apache.druid.query.rowsandcols.LimitedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -31,6 +32,7 @@ import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitio
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -48,7 +50,7 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
   private final int maxRowsMaterialized;
   private RowsAndColumns previousRac;
 
-  private static final int MAX_ROWS_MATERIALIZED_NO_LIMIT = -1;
+  private static final Integer MAX_ROWS_MATERIALIZED_NO_LIMIT = Integer.MAX_VALUE;
 
   public GlueingPartitioningOperator(
       Operator child,
@@ -61,7 +63,7 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
   public GlueingPartitioningOperator(
       Operator child,
       List<String> partitionColumns,
-      int maxRowsMaterialized
+      Integer maxRowsMaterialized
   )
   {
     super(partitionColumns, child);
@@ -190,12 +192,12 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
         int end = boundaries[currentIndex + 1];
         LimitedRowsAndColumns limitedRAC = new LimitedRowsAndColumns(rac, start, end);
 
-        if (isGlueingNeeded(previousRac, limitedRAC)) {
-          RowsAndColumns gluedRAC = getConcatRacForFirstPartition(previousRac, limitedRAC);
-          ensureMaxRowsMaterializedConstraint(gluedRAC.numRows());
+        final ConcatRowsAndColumns concatRacForFirstPartition = getConcatRacForFirstPartition(previousRac, limitedRAC);
+        if (previousRac != null && isGlueingNeeded(concatRacForFirstPartition, 0, previousRac.numRows())) {
+          ensureMaxRowsMaterializedConstraint(concatRacForFirstPartition.numRows());
           previousRac = null;
           currentIndex++;
-          return gluedRAC;
+          return concatRacForFirstPartition;
         } else {
           if (previousRac != null) {
             RowsAndColumns temp = previousRac;
@@ -212,29 +214,27 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
     }
 
     /**
-     * Determines whether gluing is needed between the previous RowsAndColumns and the first partition
-     * of the current RowsAndColumns based on the partition columns. If the columns match, the two RACs
-     * will be glued together.
-     *
-     * @param previousRac The previous RowsAndColumns.
-     * @param firstPartitionOfCurrentRac The first partition of the current RowsAndColumns.
+     * Determines whether glueing is needed between 2 RACs represented as a ConcatRowsAndColumns, by comparing a row belonging to each RAC.
+     * The rows of different RACs are expected to be present at index1 and index2 respectively in the ConcatRAC. If the columns match, we
+     * can glue the 2 RACs and use the ConcatRAC.
+     * @param rac A {@link ConcatRowsAndColumns containing 2 RACs}
+     * @param index1 A row number belonging to the first RAC
+     * @param index2 A row number belonging to the second RAC
      * @return true if gluing is needed, false otherwise.
      */
-    private boolean isGlueingNeeded(RowsAndColumns previousRac, RowsAndColumns firstPartitionOfCurrentRac)
+    private boolean isGlueingNeeded(ConcatRowsAndColumns rac, int index1, int index2)
     {
       if (previousRac == null) {
         return false;
       }
 
-      final ConcatRowsAndColumns concatRac = getConcatRacForFirstPartition(previousRac, firstPartitionOfCurrentRac);
       for (String column : partitionColumns) {
-        final Column theCol = concatRac.findColumn(column);
+        final Column theCol = rac.findColumn(column);
         if (theCol == null) {
-          continue;
+          throw new ISE("Partition column [%s] not found in RAC.");
         }
         final ColumnAccessor accessor = theCol.toAccessor();
-        // Compare 1st row of previousRac and firstPartitionOfCurrentRac in [previousRac, firstPartitionOfCurrentRac] form.
-        int comparison = accessor.compareRows(0, previousRac.numRows());
+        int comparison = accessor.compareRows(index1, index2);
         if (comparison != 0) {
           return false;
         }
@@ -244,13 +244,16 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
 
     private ConcatRowsAndColumns getConcatRacForFirstPartition(RowsAndColumns previousRac, RowsAndColumns firstPartitionOfCurrentRac)
     {
+      if (previousRac == null) {
+        return new ConcatRowsAndColumns(new ArrayList<>(Collections.singletonList(firstPartitionOfCurrentRac)));
+      }
       return new ConcatRowsAndColumns(new ArrayList<>(Arrays.asList(previousRac, firstPartitionOfCurrentRac)));
     }
   }
 
   private void ensureMaxRowsMaterializedConstraint(int numRows)
   {
-    if (maxRowsMaterialized != MAX_ROWS_MATERIALIZED_NO_LIMIT && numRows > maxRowsMaterialized) {
+    if (numRows > maxRowsMaterialized) {
       throw InvalidInput.exception(
           "Too many rows to process (requested = %d, max = %d).",
           numRows,

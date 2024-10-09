@@ -32,7 +32,7 @@ import java.util.function.BiFunction;
 public class NaivePartitioningOperatorTest
 {
   @Test
-  public void testDefaultImplementation()
+  public void testPartitioning()
   {
     RowsAndColumns rac = MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
@@ -69,7 +69,7 @@ public class NaivePartitioningOperatorTest
   }
 
   @Test
-  public void testDefaultImplementationWithMultipleRACs()
+  public void testPartitioningWithMultipleRACs()
   {
     RowsAndColumns rac1 = MapOfColumnsRowsAndColumns.fromMap(
         ImmutableMap.of(
