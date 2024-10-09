@@ -62,7 +62,6 @@ import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -173,12 +172,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         subqueryGuardrailHelper,
         subqueryStatsProvider
     );
-  }
-
-  @Override
-  public <T> QueryRunner<T> executeQuery(Query<T> query)
-  {
-    return getQueryRunnerForIntervals(query, query.getIntervals());
   }
 
   @Override
@@ -301,30 +294,17 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingLocalWalker(Query<T> query)
   {
-    if(query instanceof UnionQuery) {
+    final DataSource dataSourceFromQuery = query.getDataSource();
+    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
+    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
-      UnionQuery unionQuery = (UnionQuery) query;
-      final DataSourceAnalysis analysis = unionQuery.getDataSourceAnalysis();
-//      return analysis.isConcreteBased() && !analysis.isConcreteAndTableBased() && unionQuery.dataSource_isGlobal()
-//          && (!(dataSourceFromQuery instanceof QueryDataSource)
-//              || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
-
-      // FIXME ??
-      return false;
-    } else {
-
-      final DataSource dataSourceFromQuery = query.getDataSource();
-      final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
-      final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-
-      // 1) Must be based on a concrete datasource that is not a table.
-      // 2) Must be based on globally available data (so we have a copy here on the Broker).
-      // 3) If there is an outer query, it must be handleable by the query toolchest (the local walker does not handle
-      //    subqueries on its own).
-      return analysis.isConcreteBased() && !analysis.isConcreteAndTableBased() && dataSourceFromQuery.isGlobal()
-             && (!(dataSourceFromQuery instanceof QueryDataSource)
-                 || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
-    }
+    // 1) Must be based on a concrete datasource that is not a table.
+    // 2) Must be based on globally available data (so we have a copy here on the Broker).
+    // 3) If there is an outer query, it must be handleable by the query toolchest (the local walker does not handle
+    //    subqueries on its own).
+    return analysis.isConcreteBased() && !analysis.isConcreteAndTableBased() && dataSourceFromQuery.isGlobal()
+           && (!(dataSourceFromQuery instanceof QueryDataSource)
+               || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
   }
 
   /**
@@ -333,13 +313,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingClusterWalker(Query<T> query)
   {
-    if(query instanceof UnionQuery) {
-      UnionQuery unionQuery = (UnionQuery) query;
-      final DataSourceAnalysis analysis = unionQuery.getDataSourceAnalysis();
-
-      return analysis.isConcreteAndTableBased();
-    }
-
     final DataSource dataSourceFromQuery = query.getDataSource();
     final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
@@ -483,13 +456,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         return toInlineDataSource(
             subQuery,
             queryResults,
+            warehouse.getToolChest(subQuery),
             subqueryRowLimitAccumulator,
             subqueryMemoryLimitAccumulator,
             cannotMaterializeToFrames,
             maxSubqueryRows,
             maxSubqueryMemory,
             useNestedForUnknownTypeInSubquery,
-            !dryRun
+            subqueryStatsProvider,
+            !dryRun,
+            emitter
         );
       } else {
         // Cannot inline subquery. Attempt to inline one level deeper, and then try again.
@@ -683,8 +659,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                                                            .collect(Collectors.toList()));
   }
 
-
-
   /**
    *
    * Convert the results of a particular query into a materialized (List-based) InlineDataSource.
@@ -697,21 +671,26 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    *                         If zero, this method will throw an error immediately.
    * @param memoryLimit      User configured byte limit.
    * @param useNestedForUnknownTypeInSubquery Uses nested json for unknown types when materializing subquery results
+   * @param subqueryStatsProvider Statistics about the subquery materialization
    * @param emitMetrics      Flag to control if the metrics need to be emitted while materializing. The metrics are omitted
    *                         when we are performing a dry run of the query to avoid double reporting the same metric incorrectly
+   * @param emitter          Metrics emitter
    * @return                 Inlined datasource represented by the provided results
    * @throws ResourceLimitExceededException if the limit is exceeded
    */
-  private <T, QueryType extends Query<T>> DataSource toInlineDataSource(
+  private static <T, QueryType extends Query<T>> DataSource toInlineDataSource(
       final QueryType query,
       final Sequence<T> queryResults,
+      final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
       final AtomicBoolean cannotMaterializeToFrames,
       final int limit,
       long memoryLimit,
       final boolean useNestedForUnknownTypeInSubquery,
-      final boolean emitMetrics
+      final SubqueryCountStatsProvider subqueryStatsProvider,
+      final boolean emitMetrics,
+      final ServiceEmitter emitter
   )
   {
     final int rowLimitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
@@ -728,9 +707,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         dataSource = materializeResultsAsArray(
             query,
             queryResults,
+            toolChest,
             limitAccumulator,
             limit,
-            emitMetrics
+            subqueryStatsProvider,
+            emitMetrics,
+            emitter
         );
         break;
       case MEMORY_LIMIT:
@@ -741,11 +723,14 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         Optional<DataSource> maybeDataSource = materializeResultsAsFrames(
             query,
             queryResults,
+            toolChest,
             limitAccumulator,
             memoryLimitAccumulator,
             memoryLimit,
             useNestedForUnknownTypeInSubquery,
-            emitMetrics
+            subqueryStatsProvider,
+            emitMetrics,
+            emitter
         );
         if (!maybeDataSource.isPresent()) {
           cannotMaterializeToFrames.set(true);
@@ -759,9 +744,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           dataSource = materializeResultsAsArray(
               query,
               queryResults,
+              toolChest,
               limitAccumulator,
               limit,
-              emitMetrics
+              subqueryStatsProvider,
+              emitMetrics,
+              emitter
           );
         } else {
           subqueryStatsProvider.incrementSubqueriesWithByteLimit();
@@ -778,17 +766,19 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    * This method materializes the query results as Frames. The method defaults back to materializing as rows in case
    * one cannot materialize the results as frames
    */
-  private <T, QueryType extends Query<T>> Optional<DataSource> materializeResultsAsFrames(
+  private static <T, QueryType extends Query<T>> Optional<DataSource> materializeResultsAsFrames(
       final QueryType query,
       final Sequence<T> results,
+      final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
       final AtomicLong memoryLimitAccumulator,
       final long memoryLimit,
       final boolean useNestedForUnknownTypeInSubquery,
-      final boolean emitMetrics
+      final SubqueryCountStatsProvider subqueryStatsProvider,
+      final boolean emitMetrics,
+      final ServiceEmitter emitter
   )
   {
-    QueryToolChest<T, QueryType> toolChest = getToolChest(query);
     boolean startedAccumulating = false;
     try {
       Optional<Sequence<FrameSignaturePair>> framesOptional = toolChest.resultsAsFrames(
@@ -862,32 +852,26 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     }
   }
 
-  private <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
-  {
-    QueryToolChest<T, QueryType> toolChest = warehouse.getToolChest(query);
-    toolChest.setWarehouse(warehouse);
-    return toolChest;
-  }
-
   /**
    * This method materializes the query results as {@code List<Objects[]>}
    */
-  private <T, QueryType extends Query<T>> DataSource materializeResultsAsArray(
+  private static <T, QueryType extends Query<T>> DataSource materializeResultsAsArray(
       final QueryType query,
       final Sequence<T> results,
+      final QueryToolChest<T, QueryType> toolChest,
       final AtomicInteger limitAccumulator,
       final int limit,
-      boolean emitMetrics
+      final SubqueryCountStatsProvider subqueryStatsProvider,
+      boolean emitMetrics,
+      final ServiceEmitter emitter
   )
   {
-    QueryToolChest<T, QueryType> toolChest = warehouse.getToolChest(query);
     final int rowLimitToUse = limit < 0 ? Integer.MAX_VALUE : limit;
     final RowSignature signature = toolChest.resultArraySignature(query);
 
     final ArrayList<Object[]> resultList = new ArrayList<>();
 
     final int initialSubqueryRows = limitAccumulator.get();
-    toolChest.setWarehouse(warehouse);
     toolChest.resultsAsArrays(query, results).accumulate(
         resultList,
         (acc, in) -> {
