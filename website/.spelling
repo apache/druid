@@ -242,6 +242,7 @@ TLS
 tls
 TopN
 TopNs
+tryParseNumbers
 UI
 UIs
 UPSERT

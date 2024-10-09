@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 
@@ -135,10 +136,28 @@ public interface ApplyFunction extends NamedFunction
     {
       final int length = bindings.getLength();
       Object[] out = new Object[length];
+      final boolean computeArrayType = arrayType == null;
+      ExpressionType arrayElementType = arrayType != null
+                                        ? (ExpressionType) arrayType.getElementType()
+                                        : null;
+      final ExprEval<?>[] outEval = computeArrayType ? new ExprEval[length] : null;
       for (int i = 0; i < length; i++) {
-
-        ExprEval evaluated = expr.eval(bindings.withIndex(i));
-        arrayType = Function.ArrayConstructorFunction.setArrayOutput(arrayType, out, i, evaluated);
+        final ExprEval<?> eval = expr.eval(bindings.withIndex(i));
+        if (computeArrayType && outEval[i].value() != null) {
+          arrayElementType = ExpressionTypeConversion.leastRestrictiveType(arrayElementType, eval.type());
+          outEval[i] = eval;
+        } else {
+          out[i] = eval.castTo(arrayElementType).value();
+        }
+      }
+      if (arrayElementType == null) {
+        arrayElementType = NullHandling.sqlCompatible() ? ExpressionType.LONG : ExpressionType.STRING;
+      }
+      if (computeArrayType) {
+        arrayType = ExpressionTypeFactory.getInstance().ofArray(arrayElementType);
+        for (int i = 0; i < length; i++) {
+          out[i] = outEval[i].castTo(arrayElementType).value();
+        }
       }
       return ExprEval.ofArray(arrayType, out);
     }
@@ -237,7 +256,7 @@ public interface ApplyFunction extends NamedFunction
       List<List<Object>> product = CartesianList.create(arrayInputs);
       CartesianMapLambdaBinding lambdaBinding = new CartesianMapLambdaBinding(elementType, product, lambdaExpr, bindings);
       ExpressionType lambdaType = lambdaExpr.getOutputType(lambdaBinding);
-      return applyMap(ExpressionType.asArrayType(lambdaType), lambdaExpr, lambdaBinding);
+      return applyMap(lambdaType == null ? null : ExpressionTypeFactory.getInstance().ofArray(lambdaType), lambdaExpr, lambdaBinding);
     }
 
     @Override

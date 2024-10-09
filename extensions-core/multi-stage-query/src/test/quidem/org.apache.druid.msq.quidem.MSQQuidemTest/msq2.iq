@@ -1,0 +1,54 @@
+!set plannerStrategy DECOUPLED
+!use druidtest://?componentSupplier=DrillWindowQueryMSQComponentSupplier
+!set outputformat mysql
+
+# This test validates that all output rows are flushed to the output channel even if frame writer's capacity is reached.
+
+select count(*) as actualNumRows
+from (
+	select countryName, cityName, channel, added, delta, row_number() over() as rowNumber
+	from wikipedia
+	group by countryName, cityName, channel, added, delta
+);
++---------------+
+| actualNumRows |
++---------------+
+|         11631 |
++---------------+
+(1 row)
+
+!ok
+
+# Validate that all rows are outputted by window WindowOperatorQueryFrameProcessor layer for empty over() clause scenario.
+
+select count(*) as numRows, max(rowNumber) as maxRowNumber
+from (
+	select countryName, cityName, channel, added, delta, row_number() over() as rowNumber
+	from wikipedia
+	group by countryName, cityName, channel, added, delta
+);
++---------+--------------+
+| numRows | maxRowNumber |
++---------+--------------+
+|   11631 |        11631 |
++---------+--------------+
+(1 row)
+
+!ok
+
+# Validate that all rows are outputted by window WindowOperatorQueryFrameProcessor layer for non-empty over() clause scenario.
+
+select rowNumber, count(rowNumber) as numRows
+from (
+	select countryName, cityName, channel, added, delta, row_number() over(partition by countryName, cityName, channel, added, delta) as rowNumber
+	from wikipedia
+	group by countryName, cityName, channel, added, delta
+) group by rowNumber;
++-----------+---------+
+| rowNumber | numRows |
++-----------+---------+
+|         1 |   11631 |
++-----------+---------+
+(1 row)
+
+!ok

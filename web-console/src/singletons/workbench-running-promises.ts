@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import type { QueryResult } from '@druid-toolkit/query';
+import type { Execution } from '../druid-models';
 
 export interface WorkbenchRunningPromise {
-  promise: Promise<QueryResult>;
-  prefixLines: number;
+  executionPromise: Promise<Execution>;
   startTime: Date;
 }
 
@@ -28,7 +27,7 @@ export class WorkbenchRunningPromises {
   private static readonly promises = new Map<string, WorkbenchRunningPromise>();
 
   static isWorkbenchRunningPromise(x: any): x is WorkbenchRunningPromise {
-    return Boolean(x.promise);
+    return Boolean(x.executionPromise);
   }
 
   static storePromise(id: string, promise: WorkbenchRunningPromise): void {

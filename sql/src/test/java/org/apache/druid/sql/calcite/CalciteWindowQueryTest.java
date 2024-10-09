@@ -70,7 +70,6 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
   private static final ObjectMapper YAML_JACKSON = new DefaultObjectMapper(new YAMLFactory(), "tests");
 
   private static final Map<String, Object> DEFAULT_QUERY_CONTEXT = ImmutableMap.of(
-      PlannerContext.CTX_ENABLE_WINDOW_FNS, true,
       QueryContexts.ENABLE_DEBUG, true,
       QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false
   );
@@ -298,9 +297,31 @@ public class CalciteWindowQueryTest extends BaseCalciteQueryTest
     );
 
     assertEquals(
-        "Encountered a multi value column. Window processing does not support MVDs. "
+        "Encountered a multi value column [v0]. Window processing does not support MVDs. "
         + "Consider using UNNEST or MV_TO_ARRAY.",
         e.getMessage()
+    );
+
+    final DruidException e1 = Assert.assertThrows(
+        DruidException.class,
+        () -> testBuilder()
+            .sql("select cityName, countryName, array_to_mv(array[1,length(cityName)]),\n"
+                 + "row_number() over (partition by  array_to_mv(array[1,length(cityName)]) order by countryName, cityName)\n"
+                 + "from wikipedia\n"
+                 + "where countryName in ('Austria', 'Republic of Korea') and cityName is not null\n"
+                 + "order by 1, 2, 3")
+            .queryContext(ImmutableMap.of(
+                QueryContexts.ENABLE_DEBUG, true,
+                QueryContexts.CTX_SQL_STRINGIFY_ARRAYS, false,
+                PlannerContext.CTX_ENABLE_RAC_TRANSFER_OVER_WIRE, true
+            ))
+            .run()
+    );
+
+    assertEquals(
+        "Encountered a multi value column. Window processing does not support MVDs. "
+        + "Consider using UNNEST or MV_TO_ARRAY.",
+        e1.getMessage()
     );
   }
 

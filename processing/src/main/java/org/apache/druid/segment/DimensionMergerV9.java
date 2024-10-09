@@ -21,6 +21,9 @@ package org.apache.druid.segment;
 
 import org.apache.druid.segment.column.ColumnDescriptor;
 
+import java.io.IOException;
+import java.util.List;
+
 /**
  * Processing related interface
  *
@@ -35,4 +38,13 @@ public interface DimensionMergerV9 extends DimensionMerger
    * @return ColumnDescriptor that IndexMergerV9 will use to build a column.
    */
   ColumnDescriptor makeColumnDescriptor();
+
+  /**
+   * Attaches the {@link DimensionMergerV9} of a "projection" parent column so that stuff like value dictionaries can
+   * be shared between parent and child
+   */
+  default void attachParent(DimensionMergerV9 parent, List<IndexableAdapter> projectionAdapters) throws IOException
+  {
+    // do nothing
+  }
 }

@@ -79,7 +79,8 @@ public class HashPartitionTaskKillTest extends AbstractMultiPhaseParallelIndexin
       null,
       false,
       false,
-      0
+      0,
+      null
   );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
 

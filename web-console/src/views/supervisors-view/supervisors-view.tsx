@@ -843,25 +843,29 @@ export class SupervisorsView extends React.PureComponent<
             accessor: 'stats',
             Cell: ({ value, original }) => {
               if (!value) return;
-              const activeTaskIds: string[] | undefined = deepGet(
+              const activeTasks: SupervisorStatusTask[] | undefined = deepGet(
                 original,
                 'status.payload.activeTasks',
-              )?.map((t: SupervisorStatusTask) => t.id);
+              );
+              const activeTaskIds: string[] | undefined = Array.isArray(activeTasks)
+                ? activeTasks.map((t: SupervisorStatusTask) => t.id)
+                : undefined;
+
               const c = getTotalSupervisorStats(value, statsKey, activeTaskIds);
               const seconds = getRowStatsKeySeconds(statsKey);
-              const totalLabel = `Total over ${statsKey}: `;
+              const totalLabel = `Total (past ${statsKey}): `;
               const bytes = c.processedBytes ? ` (${formatByteRate(c.processedBytes)})` : '';
               return (
                 <div>
                   <div
-                    title={`${totalLabel}${formatInteger(c.processed * seconds)} (${formatBytes(
-                      c.processedBytes * seconds,
-                    )})`}
+                    data-tooltip={`${totalLabel}${formatInteger(
+                      c.processed * seconds,
+                    )} (${formatBytes(c.processedBytes * seconds)})`}
                   >{`Processed: ${formatRate(c.processed)}${bytes}`}</div>
                   {Boolean(c.processedWithError) && (
                     <div
                       className="warning-line"
-                      title={`${totalLabel}${formatInteger(c.processedWithError * seconds)}`}
+                      data-tooltip={`${totalLabel}${formatInteger(c.processedWithError * seconds)}`}
                     >
                       Processed with error: {formatRate(c.processedWithError)}
                     </div>
@@ -869,7 +873,7 @@ export class SupervisorsView extends React.PureComponent<
                   {Boolean(c.thrownAway) && (
                     <div
                       className="warning-line"
-                      title={`${totalLabel}${formatInteger(c.thrownAway * seconds)}`}
+                      data-tooltip={`${totalLabel}${formatInteger(c.thrownAway * seconds)}`}
                     >
                       Thrown away: {formatRate(c.thrownAway)}
                     </div>
@@ -877,7 +881,7 @@ export class SupervisorsView extends React.PureComponent<
                   {Boolean(c.unparseable) && (
                     <div
                       className="warning-line"
-                      title={`${totalLabel}${formatInteger(c.unparseable * seconds)}`}
+                      data-tooltip={`${totalLabel}${formatInteger(c.unparseable * seconds)}`}
                     >
                       Unparseable: {formatRate(c.unparseable)}
                     </div>

@@ -113,7 +113,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
             Cursors.getTimeOrdering(ordering),
             interval,
             filter,
-            cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, false),
+            cursorBuildSpec.getQueryContext().getBoolean(QueryContexts.CURSOR_AUTO_ARRANGE_FILTERS, true),
             metrics
         )
     );
@@ -214,11 +214,9 @@ public class QueryableIndexCursorHolder implements CursorHolder
     }
 
     final Offset baseCursorOffset = offset.clone();
-    final ColumnSelectorFactory columnSelectorFactory = new QueryableIndexColumnSelectorFactory(
-        virtualColumns,
-        Cursors.getTimeOrdering(ordering),
-        baseCursorOffset.getBaseReadableOffset(),
-        columnCache
+    final ColumnSelectorFactory columnSelectorFactory = makeColumnSelectorFactoryForOffset(
+        columnCache,
+        baseCursorOffset
     );
     // filterBundle will only be null if the filter itself is null, otherwise check to see if the filter
     // needs to use a value matcher
@@ -327,7 +325,20 @@ public class QueryableIndexCursorHolder implements CursorHolder
   }
 
 
-  private VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
+  protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
+      ColumnCache columnCache,
+      Offset baseOffset
+  )
+  {
+    return new QueryableIndexColumnSelectorFactory(
+        virtualColumns,
+        Cursors.getTimeOrdering(ordering),
+        baseOffset.getBaseReadableOffset(),
+        columnCache
+    );
+  }
+
+  protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
       ColumnCache columnCache,
       VectorOffset baseOffset
   )

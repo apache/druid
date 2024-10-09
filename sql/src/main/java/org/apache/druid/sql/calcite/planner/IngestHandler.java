@@ -186,7 +186,8 @@ public abstract class IngestHandler extends QueryHandler
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     return handlerContext.engine().resultTypeForInsert(
         typeFactory,
-        rootQueryRel.validatedRowType
+        rootQueryRel.validatedRowType,
+        handlerContext.queryContextMap()
     );
   }
 
@@ -341,7 +342,6 @@ public abstract class IngestHandler extends QueryHandler
     protected static DruidSqlReplace convertQuery(DruidSqlReplace sqlNode)
     {
       SqlNode query = convertSourceQuery(sqlNode);
-
       return DruidSqlReplace.create(
           new SqlInsert(
               sqlNode.getParserPosition(),
