@@ -78,7 +78,7 @@ Calculates the arc cosine (arccosine) of a numeric expression.
 
 <details><summary>Example</summary>
 
-The following example calculates the arc cosine  of `0`.
+The following example calculates the arc cosine of `0`.
 
 ```sql
 SELECT ACOS(0) AS "arc_cosine"
