@@ -13,7 +13,7 @@ expectedOperators:
   - type: "naiveSort"
     columns:
       - column: "cityName"
-        direction: "DESC"
+        direction: "ASC"
       - column: "__time"
         direction: "ASC"
   - type: "naivePartition"
@@ -25,7 +25,7 @@ expectedOperators:
   - type: "naiveSort"
     columns:
       - column: "cityName"
-        direction: "ASC"
+        direction: "DESC"
       - column: "__time"
         direction: "ASC"
   - type: "naivePartition"
@@ -35,11 +35,11 @@ expectedOperators:
       type: "rowNumber"
       outputColumn: "w1"
 expectedResults:
+  - ["Vinnytsya",1442100940306,1,8]
+  - ["Crescent City",1442035449448,2,7]
   - [null,1442019358364,3,1]
   - [null,1442021099146,4,2]
   - [null,1442033539153,5,3]
   - [null,1442095704125,6,4]
   - [null,1442096110867,7,5]
   - [null,1442100368226,8,6]
-  - ["Crescent City",1442035449448,2,7]
-  - ["Vinnytsya",1442100940306,1,8]
