@@ -232,32 +232,17 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     final List<OperatorFactory> operators = originalQuery.getOperators();
     WindowStage currentStage = new WindowStage();
 
-    for (int i = 0; i < operators.size(); i++) {
-      OperatorFactory of = operators.get(i);
-      currentStage.addOperatorFactory(of);
-
-      if (of instanceof WindowOperatorFactory) {
-        // Process consecutive window operators
-        while (i + 1 < operators.size() && operators.get(i + 1) instanceof WindowOperatorFactory) {
-          i++;
-          currentStage.addOperatorFactory(operators.get(i));
-        }
-
-        // Finalize the current stage
+    for (OperatorFactory of : operators) {
+      if (!currentStage.getOperatorFactories().isEmpty() && !currentStage.canAccept(of)) {
         stages.add(currentStage);
         currentStage = new WindowStage();
       }
+      currentStage.addOperatorFactory(of);
     }
 
-    // There shouldn't be any operators left in currentStage. The last operator should always be WindowOperatorFactory.
     if (!currentStage.getOperatorFactories().isEmpty()) {
-      throw new ISE(
-          "Found unexpected operators [%s] present in the list of operators [%s].",
-          currentStage,
-          operators
-      );
+      stages.add(currentStage);
     }
-
     return stages;
   }
 
@@ -393,11 +378,26 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), partitionCount);
     }
 
+    public boolean canAccept(OperatorFactory operatorFactory)
+    {
+      if (operatorFactory instanceof NaiveSortOperatorFactory) {
+        return false;
+      }
+
+      if (operatorFactory instanceof WindowOperatorFactory) {
+        return true;
+      }
+      // If it's a PartitioningOperatorFactory, we can add it to current stage if NaiveSortOperatorFactory is present.
+      return sortOperatorFactory != null;
+    }
+
     @Override
     public String toString()
     {
       return "WindowStage{" +
-             "operatorFactories=" + getOperatorFactories() +
+             "sortOperatorFactory=" + sortOperatorFactory +
+             ", partitioningOperatorFactory=" + partitioningOperatorFactory +
+             ", windowOperatorFactories=" + windowOperatorFactories +
              '}';
     }
   }
