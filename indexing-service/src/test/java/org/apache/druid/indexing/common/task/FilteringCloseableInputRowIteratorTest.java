@@ -26,6 +26,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -36,6 +37,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.io.IOException;
@@ -349,9 +351,48 @@ public class FilteringCloseableInputRowIteratorTest
     Assert.assertEquals(ROWS.size(), rowIngestionMeters.getUnparseable());
   }
 
+  @Test
+  public void testNoInfiniteLoopForExceptionInHasNext()
+  {
+
+    int maxAllowedParseExceptions = 3;
+
+    ParseExceptionHandler exceptionHandler = new ParseExceptionHandler(rowIngestionMeters, false, maxAllowedParseExceptions, 1);
+    ParseExceptionHandler mockedExceptionHandler = Mockito.spy(exceptionHandler);
+    Mockito.doCallRealMethod().when(mockedExceptionHandler);
+
+    // This iterator throws ParseException always in hasNext().
+    final FilteringCloseableInputRowIterator rowIterator = new FilteringCloseableInputRowIterator(
+        new CloseableIterator<InputRow>() {
+            @Override
+            public void close() 
+            {
+            }
+
+            @Override
+            public boolean hasNext() 
+            {
+              throw new ParseException("test", "abcd", "");
+            }
+
+            @Override
+            public InputRow next() 
+            {
+              return null;
+            }
+        },
+        row -> true,
+        rowIngestionMeters, mockedExceptionHandler
+    );
+
+    Assert.assertThrows(RE.class, () -> rowIterator.next());
+    Mockito.verify(mockedExceptionHandler, Mockito.times(maxAllowedParseExceptions + 1)).handle(ArgumentMatchers.any(ParseException.class));
+
+  }
 
   private static InputRow newRow(DateTime timestamp, Object dim1Val, Object dim2Val)
   {
     return new MapBasedInputRow(timestamp, DIMENSIONS, ImmutableMap.of("dim1", dim1Val, "dim2", dim2Val));
   }
 }
+
