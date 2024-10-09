@@ -132,14 +132,23 @@ This section contains detailed release notes separated by areas.
 
 ### Web console
 
+#### Improvments to the stages display
+
+A number of improvements have been made to the query stages visualization
+![new_stages.png](web-console-31-rn-new_stages.png)
+These changes include:
+- Added a graph visualization to illustrate the flow of query stages [#17135](https://github.com/apache/druid/pull/17135)
+- Added a column for CPU counters in the query stages detail view when they are present. Also added tooltips to expose potentially hidden data like CPU time [#17132](https://github.com/apache/druid/pull/17132)
+
+#### Dart
+Added the ability to detect the presense of the Dart engine and to run Dart queries from the console as well as to see currently running Dart queries.
+![dart.png](web-console-31-rn-dart.png)
+[#17147](https://github.com/apache/druid/pull/17147)
+
 #### Copy query results as SQL
-
 You can now copy the results of a query as a Druid SQL statement: 
-
-![](31.0_copy_results_as_sql.png)
-
+![](web-console-31-rn-copy-results-as-sql.png)
 When you copy the results of the pictured query, you get the following query:
-
 ```sql
 SELECT
   CAST("c1" AS VARCHAR) AS "channel",
@@ -159,62 +168,33 @@ FROM (
   ('vi', NULL, 'AQMDAAA6zJMk4ZadSFqHJw==')
 ) AS "t" ("c1", "c2", "c3")
 ```
-
 [#16458](https://github.com/apache/druid/pull/16458)
 
 #### Explore view improvements
-
 You can now configure the Explore view on top of a source query instead of only existing tables.
 You can also point and click to edit the source query, store measures in the source query,
 and return to the state of your view using stateful URLs.
-
 [#17180](https://github.com/apache/druid/pull/17180)
 
 Other changes to the Explore view include the following:
-
+- Added the ability to define expressions and measures on the fly
 - Added the ability to hide all null columns in the record table
-- Added the ability to declare certain parameter values as sticky
 - Added the ability to expand a nested column into is constituent paths
-- Added the ability to explore on top of an arbitrary source query 
-- Fixed dragging of a VARCHAR column to a measure control
-- Fixed filtering on a predefined measure
-- Fixed drag over indicator not clearing
-- Fixed applying WHERE filter in the grouping table
-- Fixed AS "t" was not always added in the grouping table query
-- Fixed AGGREGATE function not being evaluated if it was in an ORDER BY
-
 [#17213](https://github.com/apache/druid/pull/17213) [#17225](https://github.com/apache/druid/pull/17225) [#17234](https://github.com/apache/druid/pull/17234) [#17180](https://github.com/apache/druid/pull/17180)
 
+#### Support Delta lake igestion in the data loaders
+- Added the Delta tile to the data loader for SQL-based batch and classic batch ingestion methods
+[#17160](https://github.com/apache/druid/pull/17160) [#17023](https://github.com/apache/druid/pull/17023)
+
 #### Support Kinesis input format
-
 The web console now supports the Kinesis input format.
-
 [#16850](https://github.com/apache/druid/pull/16850)
 
 #### Other web console improvements
-
-- You can now search for datasources in the **Datasource** view - previously you had to find them manually [#16371](https://github.com/apache/druid/pull/16371)
-- You can now display both raw and formatted JSON in tables, making the data easier to read and troubleshoot [#16632](https://github.com/apache/druid/pull/16632)
-- You can now configure the maximum number of tasks through a menu [#16991](https://github.com/apache/druid/pull/16991)
-- You can now specify the Delta snapshot version in the web console [#17023](https://github.com/apache/druid/pull/17023)
-- Added a column for CPU counters in the query stages detail view when they are present. Also added tool tips to expose potentially hidden data like CPU time [#17132](https://github.com/apache/druid/pull/17132)
-- Added hooks to customize the workbench view [#16749](https://github.com/apache/druid/pull/16749)
-- Added the ability to hide workbench view toolbar in the **Query** view [#16785](https://github.com/apache/druid/pull/16785)
-- Added the ability to submit a suspended supervisor using the SQL data loader [#16696](https://github.com/apache/druid/pull/16696)
-- Added the ability to configure `serverQueryContext` to set the query context [#16868](https://github.com/apache/druid/pull/16868)
+- You can now search for datasources in the segment timeline visualization - previously you had to find them manually [#16371](https://github.com/apache/druid/pull/16371)
+- Showing JSON values (in query results) now display both raw and formatted JSON, making the data easier to read and troubleshoot [#16632](https://github.com/apache/druid/pull/16632)
+- Added the ability to submit a suspended supervisor from the data loader [#16696](https://github.com/apache/druid/pull/16696)
 - Added column mapping information to the explain plan [#16598](https://github.com/apache/druid/pull/16598)
-- Added the ability to initiate handoff for a supervisor [#16586](https://github.com/apache/druid/pull/16586)
-- Added an option to `Use concurrent locks` and moved all insert and replace options to a separate submenu [#16899](https://github.com/apache/druid/pull/16899)
-- Added Delta snapshot version [#17023](https://github.com/apache/druid/pull/17023)
-- Added the Delta tile to the data loader for SQL-based batch and classic batch ingestion methods [#17160](https://github.com/apache/druid/pull/17160)
-- Improved how the web console detects durable storage [#16493](https://github.com/apache/druid/pull/16493)
-- Added a graph visualization to illustrate the flow of query stages [#17135](https://github.com/apache/druid/pull/17135)
-- Made the following web console improvements:
-  - Added titles to action menus
-  - Improved the query-based ingestion counter calculation
-  - Removed the filter clause on `__time`
-  - Fixed scrolling in the `loadRules` editor [#16735](https://github.com/apache/druid/pull/16735)
-- Restored the default WHERE filter to auto-generated SQL queries [#16608](https://github.com/apache/druid/pull/16608)
 - Updated the Web Console to use array mode by default for schema discovery [#17133](https://github.com/apache/druid/pull/17133)
 - Fixed NPE due to null values in numeric columns [#16760](https://github.com/apache/druid/pull/16760)
 
