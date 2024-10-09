@@ -50,6 +50,7 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
           new NestedDataExpressions.JsonKeysExprMacro(),
           new NestedDataExpressions.JsonObjectExprMacro(),
           new NestedDataExpressions.JsonMergeExprMacro(JSON_MAPPER),
+          new NestedDataExpressions.JsonMergeAggrExprMacro(JSON_MAPPER),
           new NestedDataExpressions.JsonValueExprMacro(),
           new NestedDataExpressions.JsonQueryExprMacro(),
           new NestedDataExpressions.JsonQueryArrayExprMacro(),
@@ -111,6 +112,103 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     // decompose because of array equals
     Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, (Object[]) ((Map) eval.value()).get("x"));
     Assert.assertEquals(ImmutableMap.of("a", "hello", "b", "world"), ((Map) eval.value()).get("y"));
+  }
+
+  @Test
+  public void testJsonMergeAggrExpression() throws JsonProcessingException
+  {
+    Expr expr = Parser.parse("json_merge_aggr('ADD','{\"a\":\"x\"}','{\"b\":\"y\"}')", MACRO_TABLE);
+    ExprEval eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":\"x\",\"b\":\"y\"}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('ADD','{\"a\":2}',json_merge_aggr('ADD','{\"a\":3}','{\"a\":4}'))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":9}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('MULTIPLY','{\"a\":2}',json_merge('{\"a\":3}','{\"a\":4}'))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":8}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('ADD','{\"a\":2.1}',json_merge('{\"a\":3.2}','{\"a\":4.3}'))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":6.4}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('ADD','{\"a\":2.1}',json_merge('{\"a\":3}','{\"a\":4}'))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":6.1}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('ADD','{\"a\":{\"b\":2}}','{\"a\":{\"b\":3}}')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":{\"b\":5}}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('ADD','{\"a\":{\"b\":2}}','{\"a\":{\"c\":3}}')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":{\"b\":2,\"c\":3}}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('ADD',json_object('a', 2),json_object('a', 3))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":5}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('ADD',json_object('a', '2'),json_object('a', '3'))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":\"3\"}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('ADD','{\"key\": [1,2]}', '{\"key\": [3,4]}')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"key\":[1,2,3,4]}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('MULTIPLY','{\"key\": [1,2]}', '{\"key\": [3,4]}')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"key\":[1,2,3,4]}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('ADD','{\"key\":[1,2]}', '{\"key\":3}')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"key\":3}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('ADD','[1,2]', '[3,4]')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("[1,2,3,4]", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge_aggr('ADD','[1,2]', '[3,4,5]')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("[1,2,3,4,5]", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+  }
+
+  @Test
+  public void testJsonMergeAggrOverflow() throws JsonProcessingException
+  {
+    Expr.ObjectBinding input1 = InputBindings.forInputSuppliers(
+        new ImmutableMap.Builder<String, InputBindings.InputSupplier<?>>()
+            .put("attr", InputBindings.inputSupplier(ExpressionType.NESTED_DATA, () -> ImmutableMap.of("key", "a", "value", 3)))
+            .build()
+    );
+    Expr.ObjectBinding input2 = InputBindings.forInputSuppliers(
+        new ImmutableMap.Builder<String, InputBindings.InputSupplier<?>>()
+            .put("attr", InputBindings.inputSupplier(ExpressionType.NESTED_DATA, () -> ImmutableMap.of("key", "a", "value", 5)))
+            .build()
+    );
+
+    Expr expr = Parser.parse("json_merge_aggr('ADD', json_object(), json_object(json_value(attr, '$.key'), json_value(attr, '$.value')))", MACRO_TABLE);
+    ExprEval eval = expr.eval(input1);
+    Assert.assertEquals("{\"a\":3}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+    eval = expr.eval(input2);
+    Assert.assertEquals("{\"a\":5}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
   }
 
   @Test

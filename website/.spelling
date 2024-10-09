@@ -386,6 +386,7 @@ json_query
 json_query_array
 json_value
 json_merge
+json_merge_aggr
 karlkfi
 kbps
 kerberos

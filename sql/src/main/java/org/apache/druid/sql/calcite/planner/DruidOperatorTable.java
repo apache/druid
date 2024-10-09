@@ -354,6 +354,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new NestedDataOperatorConversions.JsonValueReturningArrayVarcharOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonObjectOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonMergeOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonMergeAggrOperatorConversion())
                    .add(new NestedDataOperatorConversions.ToJsonStringOperatorConversion())
                    .add(new NestedDataOperatorConversions.ParseJsonOperatorConversion())
                    .add(new NestedDataOperatorConversions.TryParseJsonOperatorConversion())
