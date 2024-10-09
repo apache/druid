@@ -86,19 +86,6 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       VirtualColumns virtualColumns,
       OffsetLimit limit,
       List<ColumnWithDirection> ordering,
-      LinkedHashSet<String> viewableColumns
-  )
-  {
-    this(base, interval, filter, virtualColumns, limit, ordering, viewableColumns, null);
-  }
-
-  public LazilyDecoratedRowsAndColumns(
-      RowsAndColumns base,
-      Interval interval,
-      Filter filter,
-      VirtualColumns virtualColumns,
-      OffsetLimit limit,
-      List<ColumnWithDirection> ordering,
       LinkedHashSet<String> viewableColumns,
       Integer allocatorCapacity
   )
