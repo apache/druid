@@ -149,7 +149,6 @@
     "eslint-plugin-simple-import-sort": "^7.0.0",
     "eslint-plugin-unicorn": "^38.0.0",
     "eslint-plugin-unused-imports": "^2.0.0",
-    "file-loader": "^6.2.0",
     "fs-extra": "^8.1.0",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^27.5.0",
