@@ -267,14 +267,13 @@ Improved lookup performance for queries that use the MSQ task engine by only loa
 #### Other SQL-based ingestion improvements
 
 - Added the ability to use `useConcurrentLocks` in task context to determine task lock type [#17193](https://github.com/apache/druid/pull/17193)
-- Reduced memory usage when transferring sketches between the MSQ task engine controller and worker [#16269](https://github.com/apache/druid/pull/16269)
 - Improved error handling when retrieving Avro schemas from registry [#16684](https://github.com/apache/druid/pull/16684)
 - Fixed issues related to partitioning boundaries in the MSQ task engine's window functions [#16729](https://github.com/apache/druid/pull/16729)
 - Fixed a boost column issue causing quantile sketches to incorrectly estimate the number of output partitions to create [#17141](https://github.com/apache/druid/pull/17141)
 - Fixed an issue with `ScanQueryFrameProcessor` cursor build not adjusting intervals [#17168](https://github.com/apache/druid/pull/17168)
 - Improved worker cancellation for the MSQ task engine to prevent race conditions [#17046](https://github.com/apache/druid/pull/17046)
 - Improved memory management to better support multi-threaded workers [#17057](https://github.com/apache/druid/pull/17057)
-- Reduced memory usage when transferring sketches between the MSQ task engine controller and worker [#16269](https://github.com/apache/druid/pull/16269)
+- Added new format for serialization of sketches between MSQ controller and worker to reduce memory usage [#16269](https://github.com/apache/druid/pull/16269)
 - Improved error handling when retrieving Avro schemas from registry [#16684](https://github.com/apache/druid/pull/16684)
 - Fixed issues related to partitioning boundaries in the MSQ task engine's window functions [#16729](https://github.com/apache/druid/pull/16729)
 - Fixed handling of null bytes that led to a runtime exception for "Invalid value start byte" [#17232](https://github.com/apache/druid/pull/17232)
