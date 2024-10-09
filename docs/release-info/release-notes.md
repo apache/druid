@@ -175,7 +175,7 @@ Other changes to the Explore view include the following:
 - Added the ability to hide all null columns in the record table
 - Added the ability to declare certain parameter values as sticky
 - Added the ability to expand a nested column into is constituent paths
-- Added the ability to explore on top of an aribtary source query 
+- Added the ability to explore on top of an arbitrary source query 
 - Fixed dragging of a VARCHAR column to a measure control
 - Fixed filtering on a predefined measure
 - Fixed drag over indicator not clearing
@@ -197,7 +197,7 @@ The web console now supports the Kinesis input format.
 - You can now display both raw and formatted JSON in tables, making the data easier to read and troubleshoot [#16632](https://github.com/apache/druid/pull/16632)
 - You can now configure the maximum number of tasks through a menu [#16991](https://github.com/apache/druid/pull/16991)
 - You can now specify the Delta snapshot version in the web console [#17023](https://github.com/apache/druid/pull/17023)
-- Added a column for CPU counters in the query stages detail view when they are present. Also added tooltips to expose potentially hidden data like CPU time [#17132](https://github.com/apache/druid/pull/17132)
+- Added a column for CPU counters in the query stages detail view when they are present. Also added tool tips to expose potentially hidden data like CPU time [#17132](https://github.com/apache/druid/pull/17132)
 - Added hooks to customize the workbench view [#16749](https://github.com/apache/druid/pull/16749)
 - Added the ability to hide workbench view toolbar in the **Query** view [#16785](https://github.com/apache/druid/pull/16785)
 - Added the ability to submit a suspended supervisor using the SQL data loader [#16696](https://github.com/apache/druid/pull/16696)
