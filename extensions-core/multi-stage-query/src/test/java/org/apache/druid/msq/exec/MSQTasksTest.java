@@ -134,7 +134,7 @@ public class MSQTasksTest
     final MSQErrorReport controllerReport = MSQTasks.makeErrorReport(
         WORKER_ID,
         WORKER_HOST,
-        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new WorkerRpcFailedFault(WORKER_ID)),
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new WorkerRpcFailedFault(WORKER_ID, null)),
         null
     );
 

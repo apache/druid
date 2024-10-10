@@ -142,7 +142,7 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
       clientFuture = clientFn.apply(client);
     }
     catch (Exception e) {
-      throw new MSQException(e, new WorkerRpcFailedFault(workerTaskId));
+      throw new MSQException(e, new WorkerRpcFailedFault(workerTaskId, e.toString()));
     }
 
     Futures.addCallback(
@@ -158,7 +158,7 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
           @Override
           public void onFailure(Throwable t)
           {
-            retVal.setException(new MSQException(t, new WorkerRpcFailedFault(workerTaskId)));
+            retVal.setException(new MSQException(t, new WorkerRpcFailedFault(workerTaskId, t.toString())));
           }
         },
         MoreExecutors.directExecutor()
