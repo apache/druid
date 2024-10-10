@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.google.common.collect.ImmutableMap;
 import org.apache.datasketches.common.Family;
 import org.apache.datasketches.hll.HllSketch;
+import org.apache.datasketches.kll.KllDoublesSketch;
 import org.apache.datasketches.quantiles.DoublesSketch;
 import org.apache.datasketches.theta.SetOperation;
 import org.apache.datasketches.theta.Union;
@@ -87,6 +88,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * like {@link CursorFactoryProjectionTest} but for sketch aggs
+ */
 @RunWith(Parameterized.class)
 public class DatasketchesProjectionTest extends InitializedNullHandlingTest
 {
@@ -286,7 +290,8 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
                         new HllSketchBuildAggregatorFactory("b_distinct", "b", null, null, null, true, true),
                         new SketchMergeAggregatorFactory("b_distinct_theta", "b", null, null, null, null),
                         new DoublesSketchAggregatorFactory("d_doubles", "d", null, null, null),
-                        new ArrayOfDoublesSketchAggregatorFactory("b_doubles", "b", null, Arrays.asList("c", "d"), null)
+                        new ArrayOfDoublesSketchAggregatorFactory("b_doubles", "b", null, Arrays.asList("c", "d"), null),
+                        new KllDoublesSketchAggregatorFactory("d", "d", null, null)
                     )
                     .build();
     final CursorBuildSpec buildSpec = GroupingEngine.makeCursorBuildSpec(query, null);
@@ -333,7 +338,8 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
                         new HllSketchBuildAggregatorFactory("b_distinct", "b", null, null, null, true, true),
                         new SketchMergeAggregatorFactory("b_distinct_theta", "b", null, null, null, null),
                         new DoublesSketchAggregatorFactory("d_doubles", "d", null, null, null),
-                        new ArrayOfDoublesSketchAggregatorFactory("b_doubles", "b", null, Arrays.asList("c", "d"), null)
+                        new ArrayOfDoublesSketchAggregatorFactory("b_doubles", "b", null, Arrays.asList("c", "d"), null),
+                        new KllDoublesSketchAggregatorFactory("d", "d", null, null)
                     )
                     .setContext(ImmutableMap.of(QueryContexts.NO_PROJECTIONS, true))
                     .build();
@@ -375,6 +381,7 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
     ArrayOfDoublesUpdatableSketch ad1 = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(ThetaUtil.DEFAULT_NOMINAL_ENTRIES)
                                                                                   .setNumberOfValues(2)
                                                                                   .build();
+    KllDoublesSketch kll1 = KllDoublesSketch.newHeapInstance();
     hll1.update("aa");
     hll1.update("bb");
     hll1.update("cc");
@@ -393,12 +400,18 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
     ad1.update("cc", new double[]{2.0, 2.2});
     ad1.update("aa", new double[]{1.0, 1.1});
     ad1.update("dd", new double[]{2.0, 2.2});
+    kll1.update(1.0);
+    kll1.update(1.1);
+    kll1.update(2.2);
+    kll1.update(1.1);
+    kll1.update(2.2);
     HllSketch hll2 = new HllSketch(HllSketch.DEFAULT_LG_K);
     Union theta2 = (Union) SetOperation.builder().build(Family.UNION);
     DoublesSketch d2 = DoublesSketch.builder().setK(DoublesSketchAggregatorFactory.DEFAULT_K).build();
     ArrayOfDoublesUpdatableSketch ad2 = new ArrayOfDoublesUpdatableSketchBuilder().setNominalEntries(ThetaUtil.DEFAULT_NOMINAL_ENTRIES)
                                                                                   .setNumberOfValues(2)
                                                                                   .build();
+    KllDoublesSketch kll2 = KllDoublesSketch.newHeapInstance();
     hll2.update("aa");
     hll2.update("bb");
     theta2.update("aa");
@@ -409,10 +422,13 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
     ad2.update("aa", new double[]{3.0, 3.3});
     ad2.update("aa", new double[]{4.0, 4.4});
     ad2.update("bb", new double[]{5.0, 5.5});
+    kll2.update(3.3);
+    kll2.update(4.4);
+    kll2.update(5.5);
 
     return Arrays.asList(
-        new Object[]{"a", HllSketchHolder.of(hll1), SketchHolder.of(theta1), d1, ad1},
-        new Object[]{"b", HllSketchHolder.of(hll2), SketchHolder.of(theta2), d2, ad2}
+        new Object[]{"a", HllSketchHolder.of(hll1), SketchHolder.of(theta1), d1, ad1, kll1},
+        new Object[]{"b", HllSketchHolder.of(hll2), SketchHolder.of(theta2), d2, ad2, kll2}
     );
 
   }
@@ -455,7 +471,16 @@ public class DatasketchesProjectionTest extends InitializedNullHandlingTest
             0.01
         );
       } else if (signature.getColumnType(i).get().equals(KllSketchModule.DOUBLES_TYPE)) {
-        Assert.assertEquals(expected[i], actual[i]);
+        Assert.assertEquals(
+            ((KllDoublesSketch) expected[i]).getMinItem(),
+            ((KllDoublesSketch) actual[i]).getMinItem(),
+            0.01
+        );
+        Assert.assertEquals(
+            ((KllDoublesSketch) expected[i]).getMaxItem(),
+            ((KllDoublesSketch) actual[i]).getMaxItem(),
+            0.01
+        );
       } else {
         Assert.assertEquals(expected[i], actual[i]);
       }
