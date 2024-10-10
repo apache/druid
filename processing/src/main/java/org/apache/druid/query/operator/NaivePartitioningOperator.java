@@ -19,11 +19,11 @@
 
 package org.apache.druid.query.operator;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 
-import java.io.Closeable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
@@ -48,62 +48,62 @@ public class NaivePartitioningOperator extends AbstractPartitioningOperator
   }
 
   @Override
-  public Closeable goOrContinue(Closeable continuation, Receiver receiver)
+  protected HandleContinuationResult handleContinuation(Receiver receiver, Continuation cont)
   {
-    if (continuation != null) {
-      Continuation cont = (Continuation) continuation;
-
-      if (cont.iter != null) {
-        while (cont.iter.hasNext()) {
-          final Signal signal = receiver.push(cont.iter.next());
-          if (signal != Signal.GO) {
-            return handleNonGoCases(signal, cont.iter, receiver, cont);
-          }
-        }
-
-        if (cont.subContinuation == null) {
-          receiver.completed();
-          return null;
-        }
+    while (cont.iter.hasNext()) {
+      final Signal signal = receiver.push(cont.iter.next());
+      if (signal != Signal.GO) {
+        return handleNonGoCases(signal, cont.iter, receiver, cont);
       }
+    }
+    return HandleContinuationResult.CONTINUE_PROCESSING;
+  }
 
-      continuation = cont.subContinuation;
+  private static class StaticReceiver implements Receiver
+  {
+    Receiver delegate;
+    AtomicReference<Iterator<RowsAndColumns>> iterHolder;
+    List<String> partitionColumns;
+
+    public StaticReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder, List<String> partitionColumns)
+    {
+      this.delegate = delegate;
+      this.iterHolder = iterHolder;
+      this.partitionColumns = partitionColumns;
     }
 
-    AtomicReference<Iterator<RowsAndColumns>> iterHolder = new AtomicReference<>();
+    @Override
+    public Signal push(RowsAndColumns rac)
+    {
+      if (rac == null) {
+        throw DruidException.defensive("Should never get a null rac here.");
+      }
 
-    final Closeable retVal = child.goOrContinue(
-        continuation,
-        new Receiver()
-        {
-          @Override
-          public Signal push(RowsAndColumns rac)
-          {
-            return handlePush(rac, receiver, iterHolder);
-          }
+      Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac, partitionColumns);
 
-          @Override
-          public void completed()
-          {
-            if (iterHolder.get() == null) {
-              receiver.completed();
-            }
-          }
-        }
-    );
+      AtomicReference<Signal> keepItGoing = new AtomicReference<>(Signal.GO);
+      while (keepItGoing.get() == Signal.GO && partitionsIter.hasNext()) {
+        handleKeepItGoing(keepItGoing, partitionsIter, delegate);
+      }
 
-    if (iterHolder.get() != null || retVal != null) {
-      return new Continuation(
-          iterHolder.get(),
-          retVal
-      );
-    } else {
-      return null;
+      if (keepItGoing.get() == Signal.PAUSE && partitionsIter.hasNext()) {
+        iterHolder.set(partitionsIter);
+        return Signal.PAUSE;
+      }
+
+      return keepItGoing.get();
+    }
+
+    @Override
+    public void completed()
+    {
+      if (iterHolder.get() == null) {
+        delegate.completed();
+      }
     }
   }
 
-  @Override
-  protected Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac)
+  protected static Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac, List<String> partitionColumns)
   {
     ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
     if (groupPartitioner == null) {
@@ -112,9 +112,15 @@ public class NaivePartitioningOperator extends AbstractPartitioningOperator
     return groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
   }
 
-  @Override
-  protected void handleKeepItGoing(AtomicReference<Signal> signalRef, Iterator<RowsAndColumns> iterator, Receiver receiver)
+  protected static void handleKeepItGoing(AtomicReference<Signal> signalRef, Iterator<RowsAndColumns> iterator, Receiver receiver)
   {
-    signalRef.set(receiver.push(iterator.next()));
+    RowsAndColumns next = iterator.next();
+    signalRef.set(receiver.push(next));
+  }
+
+  @Override
+  protected Receiver createReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder)
+  {
+    return new StaticReceiver(delegate, iterHolder, partitionColumns);
   }
 }

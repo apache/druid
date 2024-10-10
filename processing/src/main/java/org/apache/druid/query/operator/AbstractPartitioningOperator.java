@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.operator;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
@@ -43,6 +42,79 @@ public abstract class AbstractPartitioningOperator implements Operator
     this.child = child;
   }
 
+  @Override
+  public Closeable goOrContinue(Closeable continuation, Receiver receiver)
+  {
+    if (continuation != null) {
+      Continuation cont = (Continuation) continuation;
+
+      if (cont.iter != null) {
+        HandleContinuationResult handleContinuationResult = handleContinuation(receiver, cont);
+        if (!handleContinuationResult.needToContinueProcessing()) {
+          return handleContinuationResult.getContinuation();
+        }
+
+        if (cont.subContinuation == null) {
+          receiver.completed();
+          return null;
+        }
+      }
+
+      continuation = cont.subContinuation;
+    }
+
+    AtomicReference<Iterator<RowsAndColumns>> iterHolder = new AtomicReference<>();
+
+    final Closeable retVal = child.goOrContinue(
+        continuation,
+        createReceiver(receiver, iterHolder)
+    );
+
+    if (iterHolder.get() != null || retVal != null) {
+      return new Continuation(
+          iterHolder.get(),
+          retVal
+      );
+    } else {
+      return null;
+    }
+  }
+
+  protected abstract HandleContinuationResult handleContinuation(Receiver receiver, Continuation cont);
+
+  protected abstract Receiver createReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder);
+
+  protected HandleContinuationResult handleNonGoCases(Signal signal, Iterator<RowsAndColumns> iter, Receiver receiver, Continuation cont)
+  {
+    switch (signal) {
+      case PAUSE:
+        if (iter.hasNext()) {
+          return HandleContinuationResult.of(cont);
+        }
+
+        if (cont.subContinuation == null) {
+          // We were finished anyway
+          receiver.completed();
+          return HandleContinuationResult.of(null);
+        }
+
+        return HandleContinuationResult.of(new Continuation(null, cont.subContinuation));
+
+      case STOP:
+        receiver.completed();
+        try {
+          cont.close();
+        }
+        catch (IOException e) {
+          throw new RE(e, "Unable to close continuation");
+        }
+        return HandleContinuationResult.of(null);
+
+      default:
+        throw new RE("Unknown signal[%s]", signal);
+    }
+  }
+
   protected static class Continuation implements Closeable
   {
     Iterator<RowsAndColumns> iter;
@@ -63,59 +135,35 @@ public abstract class AbstractPartitioningOperator implements Operator
     }
   }
 
-  protected Signal handlePush(RowsAndColumns rac, Receiver receiver, AtomicReference<Iterator<RowsAndColumns>> iterHolder)
+  /**
+   * This helper class helps us distinguish whether we need to continue processing or not.
+   */
+  public static class HandleContinuationResult
   {
-    if (rac == null) {
-      throw DruidException.defensive("Should never get a null rac here.");
+    private final Closeable continuation;
+    private final boolean continueProcessing;
+
+    public static final HandleContinuationResult CONTINUE_PROCESSING = new HandleContinuationResult(null, true);
+
+    private HandleContinuationResult(Closeable continuation, boolean continueProcessing)
+    {
+      this.continuation = continuation;
+      this.continueProcessing = continueProcessing;
     }
 
-    Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac);
-
-    AtomicReference<Signal> keepItGoing = new AtomicReference<>(Signal.GO);
-    while (keepItGoing.get() == Signal.GO && partitionsIter.hasNext()) {
-      handleKeepItGoing(keepItGoing, partitionsIter, receiver);
+    public static HandleContinuationResult of(Closeable closeable)
+    {
+      return new HandleContinuationResult(closeable, false);
     }
 
-    if (keepItGoing.get() == Signal.PAUSE && partitionsIter.hasNext()) {
-      iterHolder.set(partitionsIter);
-      return Signal.PAUSE;
+    public boolean needToContinueProcessing()
+    {
+      return continueProcessing;
     }
 
-    return keepItGoing.get();
-  }
-
-  protected abstract Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac);
-
-  protected abstract void handleKeepItGoing(AtomicReference<Signal> signalRef, Iterator<RowsAndColumns> iterator, Receiver receiver);
-
-  protected Closeable handleNonGoCases(Signal signal, Iterator<RowsAndColumns> iter, Receiver receiver, Continuation cont)
-  {
-    switch (signal) {
-      case PAUSE:
-        if (iter.hasNext()) {
-          return cont;
-        }
-
-        if (cont.subContinuation == null) {
-          // We were finished anyway
-          receiver.completed();
-          return null;
-        }
-
-        return new Continuation(null, cont.subContinuation);
-
-      case STOP:
-        receiver.completed();
-        try {
-          cont.close();
-        }
-        catch (IOException e) {
-          throw new RE(e, "Unable to close continuation");
-        }
-        return null;
-
-      default:
-        throw new RE("Unknown signal[%s]", signal);
+    public Closeable getContinuation()
+    {
+      return continuation;
     }
   }
 }
