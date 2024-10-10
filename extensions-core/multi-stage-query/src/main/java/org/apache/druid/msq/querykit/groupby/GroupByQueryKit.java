@@ -163,10 +163,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
                        .signature(intermediateSignature)
                        .shuffleSpec(shuffleSpecFactoryPreAggregation.build(intermediateClusterBy, true))
-                       .maxWorkerCount(
-                           dataSourcePlan.isSingleWorker()
-                           ? 1
-                           : queryKitSpec.getMaxWorkerCount(dataSourcePlan.getInputSpecs()))
+                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount(queryKitSpec))
                        .processorFactory(new GroupByPreShuffleFrameProcessorFactory(queryToRun))
     );
 
