@@ -44,7 +44,7 @@ If you're already using this feature, you don't need to take any action.
 
 #### Array ingest mode now defaults to array
 
-MSQ ingestion context flag `arrayIngestMode` now defaults to `array` instead of `mvd`. This means that SQL `VARCHAR ARRAY` types is no longer implicitly translated and stored in `VARCHAR` columns, but is instead stored as `VARCHAR ARRAY`. This change permits other array types such as `BIGINT ARRAY` and `DOUBLE ARRAY` to be inserted with MSQ into their respective array column types instead of failing as they do in `mvd` mode.
+The SQL-based ingestion query context flag `arrayIngestMode` now defaults to `array` instead of `mvd`. This means that SQL `VARCHAR ARRAY` types is no longer implicitly translated and stored in `VARCHAR` columns, but is instead stored as `VARCHAR ARRAY`. This change permits other array types such as `BIGINT ARRAY` and `DOUBLE ARRAY` to be inserted with MSQ task engine into their respective array column types instead of failing as they do in `mvd` mode.
 
 To continue to store multi-value strings, modify any insert/replace queries to wrap the array types with the `ARRAY_TO_MV` operator.
 
@@ -53,8 +53,8 @@ Validation is in place to prevent mixing `VARCHAR` and `VARCHAR ARRAY` columns i
 The `arrayIngestMode` option of `none` has been removed. It was introduced prior to the table validation logic as a means for cluster operators to force query writers to explicitly set `array` or `mvd` on their query contexts, but provides little utility in Druid 31.
 
 See the following topics for more information:
-* [Ingest multi-value dimensions](../querying/multi-value-dimensions.md#sql-based-ingestion) for how to ingest multi-value strings.
-* [Ingest arrays](../querying/arrays.md#sql-based-ingestion) for ingesting arrays.
+* [Ingest multi-value dimensions](https://druid.apache.org/docs/latest/querying/multi-value-dimensions.md#sql-based-ingestion) for how to ingest multi-value strings.
+* [Ingest arrays](https://druid.apache.org/docs/latest/querying/arrays.md#sql-based-ingestion) for ingesting arrays.
 
 [#16789](https://github.com/apache/druid/pull/16789)
 
