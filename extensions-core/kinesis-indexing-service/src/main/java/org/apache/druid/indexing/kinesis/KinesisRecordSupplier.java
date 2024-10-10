@@ -64,6 +64,7 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -262,6 +263,9 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
 
             int recordSize = 0;
             for (UserRecord userRecord : userRecords) {
+              if (compressionFormat != null) {
+                userRecord.setData(CompressionUtils.decompress(userRecord.getData(), compressionFormat));
+              }
               KinesisRecordEntity kinesisRecordEntity = new KinesisRecordEntity(userRecord);
               recordSize += kinesisRecordEntity.getBuffer().array().length;
               data.add(kinesisRecordEntity);
@@ -403,6 +407,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
   private final int recordBufferSizeBytes;
   private final boolean useEarliestSequenceNumber;
   private final boolean useListShards;
+  @Nullable
+  private final CompressionUtils.Format compressionFormat;
 
   private ScheduledExecutorService scheduledExec;
 
@@ -423,7 +429,8 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
       int recordBufferFullWait,
       int maxBytesPerPoll,
       boolean useEarliestSequenceNumber,
-      boolean useListShards
+      boolean useListShards,
+      CompressionUtils.Format compressionFormat
   )
   {
     Preconditions.checkNotNull(amazonKinesis);
@@ -437,6 +444,7 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
     this.useEarliestSequenceNumber = useEarliestSequenceNumber;
     this.useListShards = useListShards;
     this.backgroundFetchEnabled = fetchThreads > 0;
+    this.compressionFormat = compressionFormat;
 
     // The deaggregate function is implemented by the amazon-kinesis-client, whose license was formerly not compatible
     // with Apache. The code here avoids the license issue by using reflection, but is no longer necessary since

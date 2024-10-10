@@ -145,7 +145,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         ioConfig.getEndpoint(),
         ioConfig.getFetchDelayMillis(),
         ioConfig.getAwsAssumedRoleArn(),
-        ioConfig.getAwsExternalId()
+        ioConfig.getAwsExternalId(),
+        ioConfig.getCompressionFormat()
     );
   }
 
@@ -202,7 +203,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         taskTuningConfig.getRecordBufferFullWait(),
         taskTuningConfig.getMaxBytesPerPollOrDefault(),
         ioConfig.isUseEarliestSequenceNumber(),
-        spec.getSpec().getTuningConfig().isUseListShards()
+        spec.getSpec().getTuningConfig().isUseListShards(),
+        spec.getSpec().getIOConfig().getCompressionFormat()
     );
   }
 
