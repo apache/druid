@@ -121,25 +121,7 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
         throw DruidException.defensive("Should never get a null rac here.");
       }
       ensureMaxRowsMaterializedConstraint(rac.numRows(), maxRowsMaterialized);
-      Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac);
-
-      Signal keepItGoing = Signal.GO;
-      while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
-        final RowsAndColumns rowsAndColumns = partitionsIter.next();
-        if (partitionsIter.hasNext()) {
-          keepItGoing = delegate.push(rowsAndColumns);
-        } else {
-          // If it's the last element, save it in previousRac instead of pushing to receiver.
-          previousRacRef.set(rowsAndColumns);
-        }
-      }
-
-      if (keepItGoing == Signal.PAUSE && partitionsIter.hasNext()) {
-        iterHolder.set(partitionsIter);
-        return Signal.PAUSE;
-      }
-
-      return keepItGoing;
+      return super.push(rac);
     }
 
     @Override
@@ -150,6 +132,18 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
         previousRacRef.set(null);
       }
       super.completed();
+    }
+
+    @Override
+    protected Signal pushPartition(RowsAndColumns partition, boolean isLastPartition, Signal previousSignal)
+    {
+      if (isLastPartition) {
+        // If it's the last partition, save it in previousRac instead of pushing to receiver.
+        previousRacRef.set(partition);
+        return previousSignal;
+      } else {
+        return super.pushPartition(partition, isLastPartition, previousSignal);
+      }
     }
 
     @Override

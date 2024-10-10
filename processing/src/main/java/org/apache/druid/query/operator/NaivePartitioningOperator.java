@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.operator;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
@@ -68,28 +67,6 @@ public class NaivePartitioningOperator extends AbstractPartitioningOperator
     )
     {
       super(delegate, iterHolder, partitionColumns);
-    }
-
-    @Override
-    public Signal push(RowsAndColumns rac)
-    {
-      if (rac == null) {
-        throw DruidException.defensive("Should never get a null rac here.");
-      }
-
-      Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac);
-
-      Signal keepItGoing = Signal.GO;
-      while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
-        keepItGoing = delegate.push(partitionsIter.next());
-      }
-
-      if (keepItGoing == Signal.PAUSE && partitionsIter.hasNext()) {
-        iterHolder.set(partitionsIter);
-        return Signal.PAUSE;
-      }
-
-      return keepItGoing;
     }
 
     @Override

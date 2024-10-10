@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.operator;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 
@@ -98,7 +99,27 @@ public abstract class AbstractPartitioningOperator implements Operator
     }
 
     @Override
-    public abstract Signal push(RowsAndColumns rac);
+    public Signal push(RowsAndColumns rac)
+    {
+      if (rac == null) {
+        throw DruidException.defensive("Should never get a null rac here.");
+      }
+
+      Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac);
+
+      Signal keepItGoing = Signal.GO;
+      while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
+        final RowsAndColumns rowsAndColumns = partitionsIter.next();
+        keepItGoing = pushPartition(rowsAndColumns, !partitionsIter.hasNext(), keepItGoing);
+      }
+
+      if (keepItGoing == Signal.PAUSE && partitionsIter.hasNext()) {
+        iterHolder.set(partitionsIter);
+        return Signal.PAUSE;
+      }
+
+      return keepItGoing;
+    }
 
     @Override
     public void completed()
@@ -106,6 +127,11 @@ public abstract class AbstractPartitioningOperator implements Operator
       if (iterHolder.get() == null) {
         delegate.completed();
       }
+    }
+
+    protected Signal pushPartition(RowsAndColumns partition, boolean isLastPartition, Signal previousSignal)
+    {
+      return delegate.push(partition);
     }
 
     protected abstract Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac);
