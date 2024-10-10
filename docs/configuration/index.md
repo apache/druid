@@ -1281,6 +1281,7 @@ This evenly distributes work across your Middle Managers.
 |--------|-----------|-------|
 |`type`|`equalDistribution`|required; must be `equalDistribution`|
 |`affinityConfig`|[`AffinityConfig`](#affinityconfig) object|null (no affinity)|
+|`taskLimits`|[`TaskLimits`](#tasklimits) object|null (no limits)|
 
 ###### `equalDistributionWithCategorySpec`
 
@@ -1292,6 +1293,7 @@ This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 |--------|-----------|-------|
 |`type`|`equalDistributionWithCategorySpec`|required; must be `equalDistributionWithCategorySpec`|
 |`workerCategorySpec`|[`WorkerCategorySpec`](#workercategoryspec) object|null (no worker category spec)|
+|`taskLimits`|[`TaskLimits`](#tasklimits) object|null (no limits)|
 
 The following example shows tasks of type `index_kafka` that default to running on Middle Managers of category `c1`, except for tasks that write to datasource `ds1`, which run on Middle Managers of category `c2`.
 
@@ -1327,6 +1329,7 @@ Middle Managers up to capacity simultaneously, rather than a single Middle Manag
 |--------|-----------|-------|
 |`type`| `fillCapacity`|required; must be `fillCapacity`|
 |`affinityConfig`| [`AffinityConfig`](#affinityconfig) object |null (no affinity)|
+|`taskLimits`|[`TaskLimits`](#tasklimits) object|null (no limits)|
 
 ###### `fillCapacityWithCategorySpec`
 
@@ -1338,6 +1341,7 @@ This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 |--------|-----------|-------|
 |`type`|`fillCapacityWithCategorySpec`.|required; must be `fillCapacityWithCategorySpec`|
 |`workerCategorySpec`|[`WorkerCategorySpec`](#workercategoryspec) object|null (no worker category spec)|
+|`taskLimits`|[`TaskLimits`](#tasklimits) object|null (no limits)|
 
 <a name="javascript-worker-select-strategy"></a>
 
@@ -1386,6 +1390,16 @@ field. If not provided, the default is to not use it at all.
 |--------|-----------|-------|
 |`categoryMap`|A JSON map object mapping a task type String name to a [CategoryConfig](#categoryconfig) object, by which you can specify category config for different task type.|`{}`|
 |`strong`|With weak workerCategorySpec (the default), tasks for a dataSource may be assigned to other Middle Managers if the Middle Managers specified in `categoryMap` are not able to run all pending tasks in the queue for that dataSource. With strong workerCategorySpec, tasks for a dataSource will only ever be assigned to their specified Middle Managers, and will wait in the pending queue if necessary.|false|
+
+###### taskLimits
+
+The `taskLimits` field can be used with the `equalDistribution`, `fillCapacity`, `equalDistributionWithCategorySpec` and `fillCapacityWithCategorySpec` strategies.
+If you don't provide it, it will default to not being used.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`taskLimits`|A map where each key is a task type (`String`), and the corresponding value represents the absolute limit on the number of task slots that tasks of this type can occupy. The value is an `Integer` that is greater than or equal to 0. For example, a value of 5 means that tasks of this type can occupy up to 5 task slots in total. If both absolute and ratio limits are specified for the same task type, the effective limit will be the smaller of the absolute limit and the limit derived from the corresponding ratio. `taskLimits = {"index_parallel": 3, "query_controller": 5}`. In this example, parallel indexing tasks can occupy up to 3 task slots, and query controllers can occupy up to 5 task slots.|`{}`|
+|`taskRatios`|A map where each key is a task type (`String`), and the corresponding value is a `Double` which should be in the range [0, 1], representing the ratio of available task slots that tasks of this type can occupy. This ratio defines the proportion of total task slots a task type can use, calculated as `ratio * totalSlots`. If both absolute and ratio limits are specified for the same task type, the effective limit will be the smaller of the absolute limit and the limit derived from the corresponding ratio. `taskRatios = {"index_parallel": 0.5, "query_controller": 0.25}`. In this example, parallel indexing tasks can occupy up to 50% of the total task slots, and query controllers can occupy up to 25% of the total task slots.|`{}`|
 
 ###### CategoryConfig
 

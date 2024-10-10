@@ -482,10 +482,13 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
     int parallelIndexTaskCapacity = task.getType().equals(ParallelIndexSupervisorTask.TYPE)
                                     ? task.getTaskResource().getRequiredCapacity()
                                     : 0;
+    int taskCapacity = task.getTaskResource().getRequiredCapacity();
+
     return new ImmutableWorkerInfo(
         immutableWorker.getWorker(),
         immutableWorker.getCurrCapacityUsed() + 1,
         immutableWorker.getCurrParallelIndexCapacityUsed() + parallelIndexTaskCapacity,
+        immutableWorker.incrementTypeSpecificCapacity(task.getType(), taskCapacity),
         Sets.union(
             immutableWorker.getAvailabilityGroups(),
             Sets.newHashSet(
