@@ -87,7 +87,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       OffsetLimit limit,
       List<ColumnWithDirection> ordering,
       LinkedHashSet<String> viewableColumns,
-      Integer allocatorCapacity
+      Long allocatorCapacity
   )
   {
     this.base = base;
@@ -97,7 +97,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     this.limit = limit;
     this.ordering = ordering;
     this.viewableColumns = viewableColumns;
-    this.allocatorCapacity = allocatorCapacity != null ? allocatorCapacity : 200 << 20;
+    this.allocatorCapacity = allocatorCapacity != null ? allocatorCapacity.intValue() : 200 << 20;
   }
 
   @Override

@@ -320,7 +320,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
         OffsetLimit.limit(Integer.MAX_VALUE),
         null,
         null,
-        (int) frameWriterFactory.allocatorCapacity()
+        frameWriterFactory.allocatorCapacity()
     );
     return ldrc;
   }
