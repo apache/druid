@@ -777,7 +777,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
         )
     ).andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
     EasyMock.replay(configManager);
-    DruidDataSource dataSource = new DruidDataSource("dataSource1", Collections.emptyMap());
     DataSegment dataSegment = new DataSegment(
         "dataSource1",
         Intervals.of("2010-01-01/P1D"),
@@ -789,9 +788,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
         0x9,
         0
     );
-    dataSource.addSegment(dataSegment);
-    DataSourcesSnapshot dataSourcesSnapshot =
-        new DataSourcesSnapshot(ImmutableMap.of(dataSource.getName(), dataSource.toImmutableDruidDataSource()));
+    DataSourcesSnapshot dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
+        Collections.singleton(dataSegment)
+    );
     EasyMock
         .expect(segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments())
         .andReturn(dataSourcesSnapshot)
@@ -969,9 +968,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Test
   public void testSimulateRunWithEmptyDatasourceCompactionConfigs()
   {
-    DruidDataSource dataSource = new DruidDataSource("dataSource", Collections.emptyMap());
-    DataSourcesSnapshot dataSourcesSnapshot =
-        new DataSourcesSnapshot(ImmutableMap.of(dataSource.getName(), dataSource.toImmutableDruidDataSource()));
+    DataSourcesSnapshot dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(Collections.emptyList());
     EasyMock
         .expect(segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments())
         .andReturn(dataSourcesSnapshot)
@@ -1022,7 +1019,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         .andReturn(Collections.singleton(dataSource.toImmutableDruidDataSource()))
         .anyTimes();
     DataSourcesSnapshot dataSourcesSnapshot =
-        new DataSourcesSnapshot(ImmutableMap.of(dataSource.getName(), dataSource.toImmutableDruidDataSource()));
+        DataSourcesSnapshot.fromUsedSegments(dataSource.getSegments());
     EasyMock
         .expect(segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments())
         .andReturn(dataSourcesSnapshot)
