@@ -4369,7 +4369,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNION_WITH_COMPLEX_OPERAND)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testUnionAllTwoQueriesRightQueryIsJoin(Map<String, Object> queryContext)
