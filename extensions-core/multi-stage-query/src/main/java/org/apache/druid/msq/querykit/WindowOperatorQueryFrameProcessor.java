@@ -96,9 +96,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.outputChannel = outputChannel;
     this.frameWriterFactory = frameWriterFactory;
     this.operatorFactoryList = operatorFactoryList;
-    this.frameRowsAndColsBuilder = new RowsAndColumnsBuilder();
     this.resultRowAndCols = new ArrayList<>();
     this.maxRowsMaterialized = MultiStageQueryContext.getMaxRowsMaterializedInWindow(query.context());
+    this.frameRowsAndColsBuilder = new RowsAndColumnsBuilder(this.maxRowsMaterialized);
 
     this.frameReader = frameReader;
 
@@ -141,7 +141,6 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       final Frame frame = inputChannel.read();
       LazilyDecoratedRowsAndColumns ldrc = convertRowFrameToRowsAndColumns(frame);
       frameRowsAndColsBuilder.add(ldrc);
-      ensureMaxRowsInAWindowConstraint(frameRowsAndColsBuilder.getNumRows());
 
       if (needToProcessBatch()) {
         runAllOpsOnBatch();
@@ -177,7 +176,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       public Closeable goOrContinue(Closeable continuationObject, Receiver receiver)
       {
         RowsAndColumns rac = frameRowsAndColsBuilder.build();
-        ensureMaxRowsInAWindowConstraint(rac.numRows());
+        ensureMaxRowsInAWindowConstraint(rac.numRows(), maxRowsMaterialized);
         receiver.push(rac);
 
         if (inputChannel.isFinished()) {
@@ -326,7 +325,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     return ldrc;
   }
 
-  private void ensureMaxRowsInAWindowConstraint(int numRowsInWindow)
+  private static void ensureMaxRowsInAWindowConstraint(int numRowsInWindow, int maxRowsMaterialized)
   {
     if (numRowsInWindow > maxRowsMaterialized) {
       throw new MSQException(new TooManyRowsInAWindowFault(
@@ -345,17 +344,20 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   {
     private final List<RowsAndColumns> racList;
     private int totalRows;
+    private final int maxRowsMaterialized;
 
-    public RowsAndColumnsBuilder()
+    public RowsAndColumnsBuilder(int maxRowsMaterialized)
     {
       this.racList = new ArrayList<>();
       this.totalRows = 0;
+      this.maxRowsMaterialized = maxRowsMaterialized;
     }
 
     public void add(RowsAndColumns rac)
     {
       racList.add(rac);
       totalRows += rac.numRows();
+      ensureMaxRowsInAWindowConstraint(getNumRows(), maxRowsMaterialized);
     }
 
     public int getNumRows()
