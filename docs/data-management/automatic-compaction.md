@@ -317,28 +317,33 @@ When using the MSQ task engine for auto-compaction, keep the following limitatio
 - Set `rollup`  to `true` if and only if `metricSpec` is not empty or null.
 - You can only partition on string dimensions. However, multi-valued string dimensions are not supported.
 - The `maxTotalRows` config is not supported in `DynamicPartitionsSpec`. Use `maxRowsPerSegment` instead.
+- Segments can only be sorted on `__time` as the first column.
 
 ##### Supported aggregators
 
-Auto-compaction using the MSQ task engine only supports aggregators. Only aggregators where repeated runs of the aggregator on a column produce the same results each time, such as the following `longSum` aggregator:
+Auto-compaction using the MSQ task engine supports only aggregators that satisfy the following properties: 
+a) mergeability: can also be used to combine partial aggregates
+b) idempotency: produce the same results on repeated runs of the aggregator on previously aggregated values in a column
+
+This is exemplified by the following `longSum` aggregator:
 
 ```
 {"name": "added", "type": "longSum", "fieldName": "added"}
 ```
 
-where the input and output column are both `added`.
+where `longSum` being capable of combining partial results satisfies mergeability, while input and output column being the same (`added`) ensures idempotency.
 
-The following are some examples of aggregators that aren't supported, where each run of the aggregator produces different results:
+The following are some examples of aggregators that aren't supported since at least of the required conditions aren't satisfied:
 
-*  `longSum` aggregator where the `added` column rolls up into the `sum_added` column:
+*  `longSum` aggregator where the `added` column rolls up into `sum_added` column discarding the input `added` column, violating idempotency, as subsequent runs would no longer find the `added` column:
     ```
     {"name": "sum_added", "type": "longSum", "fieldName": "added" }
     ```
-* Partial sketches:
+* Partial sketches which cannot themselves be used to combine partial aggregates and need merging aggregators -- such as `HLLSketchMerge` required for `HLLSketchBuild` aggregator below -- violating mergeability:
     ```
-    {"name": added, "type":"HLLSketchMerge", fieldName: added}
+    {"name": added, "type":"HLLSketchBuild", fieldName: added}
     ```
-* Count aggregators since it rolls up into a different count column
+* Count aggregator since it cannot be used to combine partial aggregates and it rolls up into a different `count` column discarding the input column(s), violating both mergeability and idempotency.
     ```
     { "type" : "count", "name" : "count" }
     ```

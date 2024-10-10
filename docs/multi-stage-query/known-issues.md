@@ -80,3 +80,4 @@ The following known issues and limitations affect automatic compaction with the 
 - Set `rollup`  to `true` if and only if `metricSpec` is not empty or null.
 - You can only partition on string dimensions. However, multi-valued string dimensions are not supported.
 - The `maxTotalRows` config is not supported in `DynamicPartitionsSpec`. Use `maxRowsPerSegment` instead.
+- Segments can only be sorted on `__time` as the first column.
