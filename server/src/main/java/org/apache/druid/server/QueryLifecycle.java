@@ -310,7 +310,9 @@ public class QueryLifecycle
     final ResponseContext responseContext = DirectDruidClient.makeResponseContextForQuery();
 
     @SuppressWarnings("unchecked")
-    final Sequence<T> res = QueryPlus.wrap((Query<T>) baseQuery)
+    Query<T> newQuery = SubQueryIdPopulator.populateSubQueryIds((Query<T>) baseQuery);
+
+    final Sequence<T> res = QueryPlus.wrap(newQuery)
                                   .withIdentity(authenticationResult.getIdentity())
                                   .run(texasRanger, responseContext);
 
