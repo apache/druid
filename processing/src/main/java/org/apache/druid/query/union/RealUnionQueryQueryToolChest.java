@@ -47,10 +47,17 @@ import java.util.Optional;
 
 public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, UnionQuery>
 {
+
+public  RealUnionQueryQueryToolChest() {
+int asd=1;
+}
+
+
   public Optional<QueryRunner<RealUnionResult>> executeQuery(QueryToolChestWarehouse warehouse,
       Query<RealUnionResult> query, QuerySegmentWalker clientQuerySegmentWalker)
   {
     RealUnionQueryRunner2 runner = new RealUnionQueryRunner2(warehouse, (UnionQuery) query, clientQuerySegmentWalker);
+    setWarehouse(warehouse);
     return Optional.of(runner);
   }
 

@@ -438,10 +438,10 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     return Optional.empty();
   }
 
-  public <T> boolean canExecuteFully(Query<T> query) {
-
-
-
-    return canPerformSubquery(query);
+  public <T> boolean canExecuteFully(Query<T> query)
+  {
+    DataSource dataSourceFromQuery = query.getDataSource();
+    return (!(dataSourceFromQuery instanceof QueryDataSource)
+        || canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
   }
 }

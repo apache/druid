@@ -28,6 +28,8 @@ import org.apache.druid.segment.Segment;
 public class RealUnionQueryRunnerFactory implements QueryRunnerFactory<RealUnionResult, UnionQuery>
 {
 
+  private static RealUnionQueryQueryToolChest tt;
+
   public RealUnionQueryRunnerFactory(String string)
   {
     int asd=1;
@@ -59,7 +61,10 @@ public class RealUnionQueryRunnerFactory implements QueryRunnerFactory<RealUnion
   @Override
   public QueryToolChest<RealUnionResult, UnionQuery> getToolchest()
   {
-    return new RealUnionQueryQueryToolChest();
+    if (tt == null) {
+      tt = new RealUnionQueryQueryToolChest();
+    }
+    return tt;
   }
 
 }

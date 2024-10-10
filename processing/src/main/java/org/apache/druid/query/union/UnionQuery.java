@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -31,9 +32,11 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.SegmentReference;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -41,6 +44,8 @@ import org.joda.time.Interval;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 public class UnionQuery implements Query<RealUnionResult>
@@ -218,6 +223,77 @@ public class UnionQuery implements Query<RealUnionResult>
 
   public DataSourceAnalysis getDataSourceAnalysis()
   {
-    throw new RuntimeException("FIXME: Unimplemented!");
+    OpagueDataSourceCover ds = new OpagueDataSourceCover(new UnionDataSource(getDataSources()));
+    return new DataSourceAnalysis(ds, null, null, null);
+  }
+
+  private static class OpagueDataSourceCover implements DataSource
+  {
+    private DataSource delegate;
+
+    public OpagueDataSourceCover(DataSource delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public Set<String> getTableNames()
+    {
+      return delegate.getTableNames();
+    }
+
+    @Override
+    public List<DataSource> getChildren()
+    {
+      return delegate.getChildren();
+    }
+
+    @Override
+    public DataSource withChildren(List<DataSource> children)
+    {
+      throw DruidException.defensive().build("Not implemented");
+    }
+
+    @Override
+    public boolean isCacheable(boolean isBroker)
+    {
+      return delegate.isCacheable(isBroker);
+    }
+
+    @Override
+    public boolean isGlobal()
+    {
+      return delegate.isGlobal();
+    }
+
+    @Override
+    public boolean isConcrete()
+    {
+      return delegate.isConcrete();
+    }
+
+    @Override
+    public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc)
+    {
+      throw DruidException.defensive().build("Not implemented");
+    }
+
+    @Override
+    public DataSource withUpdatedDataSource(DataSource newSource)
+    {
+      throw DruidException.defensive().build("Not implemented");
+    }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return delegate.getCacheKey();
+    }
+
+    @Override
+    public DataSourceAnalysis getAnalysis()
+    {
+      throw DruidException.defensive().build("Not implemented");
+    }
   }
 }
