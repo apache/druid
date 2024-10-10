@@ -2125,6 +2125,7 @@ sqlQuery
 successfulSending
 [S]igar
 taskBlackListCleanupPeriod
+taskLimits
 tasklogs
 timeBoundary
 timestampSpec
