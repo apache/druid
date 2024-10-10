@@ -214,7 +214,7 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
         LimitedRowsAndColumns limitedRAC = new LimitedRowsAndColumns(rac, start, end);
 
         final ConcatRowsAndColumns concatRacForFirstPartition = getConcatRacForFirstPartition(previousRacRef.get(), limitedRAC);
-        if (previousRacRef.get() != null && isGlueingNeeded(concatRacForFirstPartition, previousRacRef.get())) {
+        if (isGlueingNeeded(concatRacForFirstPartition)) {
           ensureMaxRowsMaterializedConstraint(concatRacForFirstPartition.numRows(), maxRowsMaterialized);
           previousRacRef.set(null);
           currentIndex++;
@@ -236,25 +236,20 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
 
     /**
      * Determines whether glueing is needed between 2 RACs represented as a ConcatRowsAndColumns, by comparing a row belonging to each RAC.
-     * The rows of different RACs are expected to be present at index1 and index2 respectively in the ConcatRAC. If the columns match, we
-     * can glue the 2 RACs and use the ConcatRAC.
+     * We do this by comparing the first and last rows of the Concat RAC, as they would belong to the two respective RACs.
+     * If the columns match, we can glue the 2 RACs and use the ConcatRAC.
      * @param rac A {@link ConcatRowsAndColumns containing 2 RACs}
-     * @param firstRac The 1st of two RACs present in the Concat RAC
      * @return true if gluing is needed, false otherwise.
      */
-    private boolean isGlueingNeeded(ConcatRowsAndColumns rac, RowsAndColumns firstRac)
+    private boolean isGlueingNeeded(ConcatRowsAndColumns rac)
     {
-      if (firstRac == null) {
-        return false;
-      }
-
       for (String column : partitionColumns) {
         final Column theCol = rac.findColumn(column);
         if (theCol == null) {
           throw new ISE("Partition column [%s] not found in RAC.", column);
         }
         final ColumnAccessor accessor = theCol.toAccessor();
-        int comparison = accessor.compareRows(0, firstRac.numRows());
+        int comparison = accessor.compareRows(0, rac.numRows() - 1);
         if (comparison != 0) {
           return false;
         }
