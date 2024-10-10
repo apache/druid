@@ -196,7 +196,6 @@ public class MSQInsertTest extends MSQTestBase
                     )
                     .setContext(ImmutableMap.<String, Object>builder()
                                             .put("__user", "allowAll")
-                                            .put("enableWindowing", true)
                                             .put("finalize", true)
                                             .put("maxNumTasks", 2)
                                             .put("maxParseExceptions", 0)
