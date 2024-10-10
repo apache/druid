@@ -432,7 +432,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               dryRun
           );
         }
-      } else if (canMaterializeQuery(subQuery)) {
+      } else if (canRunQueryUsingLocalWalker(subQuery) || canRunQueryUsingClusterWalker(subQuery)) {
         // Subquery needs to be inlined. Assign it a subquery id and run it.
 
         final Sequence<?> queryResults;
@@ -515,26 +515,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       );
     }
   }
-
-  private boolean canMaterializeQuery(final Query query)
-  {
-      final DataSource dataSourceFromQuery = query.getDataSource();
-      final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
-      final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-
-      // 1) Must be based on a concrete datasource that is not a table.
-      // 2) Must be based on globally available data (so we have a copy here on the Broker).
-      // 3) If there is an outer query, it must be handleable by the query toolchest (the local walker does not handle
-      //    subqueries on its own).
-      // 1) Must be based on a concrete table (the only shape the Druid cluster can handle).
-      // 2) If there is an outer query, it must be handleable by the query toolchest (the cluster walker does not handle
-      //    subqueries on its own).
-      boolean toolchestCanPerform = !(dataSourceFromQuery instanceof QueryDataSource)
-          || toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery());
-      return toolchestCanPerform && analysis.isConcreteBased()
-          && (dataSourceFromQuery.isGlobal() || analysis.isTableBased());
-
-    }
 
   /**
    * Decorate query runners created by {@link #clusterClient}, adding result caching, result merging, metric
