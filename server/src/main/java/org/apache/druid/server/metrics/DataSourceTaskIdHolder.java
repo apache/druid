@@ -21,17 +21,30 @@ package org.apache.druid.server.metrics;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 
 public class DataSourceTaskIdHolder
 {
   public static final String DATA_SOURCE_BINDING = "druidDataSource";
   public static final String TASK_ID_BINDING = "druidTaskId";
+  public static final String LOOKUPS_TO_LOAD_FOR_TASK = "lookupsToLoadForTask";
+  public static final String BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK = "broadcastDatasourcesToLoadForTask";
+
   @Named(DATA_SOURCE_BINDING)
   @Inject(optional = true)
   String dataSource = null;
   @Named(TASK_ID_BINDING)
   @Inject(optional = true)
   String taskId = null;
+
+  @Named(LOOKUPS_TO_LOAD_FOR_TASK)
+  @Inject(optional = true)
+  LookupLoadingSpec lookupLoadingSpec = LookupLoadingSpec.ALL;
+
+  @Named(BROADCAST_DATASOURCES_TO_LOAD_FOR_TASK)
+  @Inject(optional = true)
+  BroadcastDatasourceLoadingSpec broadcastDatasourceLoadingSpec = BroadcastDatasourceLoadingSpec.ALL;
 
   public String getDataSource()
   {
@@ -41,5 +54,15 @@ public class DataSourceTaskIdHolder
   public String getTaskId()
   {
     return taskId;
+  }
+
+  public LookupLoadingSpec getLookupLoadingSpec()
+  {
+    return lookupLoadingSpec;
+  }
+
+  public BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
+  {
+    return broadcastDatasourceLoadingSpec;
   }
 }

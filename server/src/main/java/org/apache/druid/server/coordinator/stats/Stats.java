@@ -61,6 +61,10 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("overshadowed", "segment/overshadowed/count");
     public static final CoordinatorStat UNNEEDED_ETERNITY_TOMBSTONE
         = CoordinatorStat.toDebugAndEmit("unneededEternityTombstone", "segment/unneededEternityTombstone/count");
+
+    // Values computed in a run
+    public static final CoordinatorStat REPLICATION_THROTTLE_LIMIT
+        = CoordinatorStat.toDebugOnly("replicationThrottleLimit");
   }
 
   public static class SegmentQueue
@@ -71,6 +75,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("bytesToLoad", "segment/loadQueue/size");
     public static final CoordinatorStat NUM_TO_DROP
         = CoordinatorStat.toDebugAndEmit("numToDrop", "segment/dropQueue/count");
+    public static final CoordinatorStat LOAD_RATE_KBPS
+        = CoordinatorStat.toDebugAndEmit("loadRateKbps", "segment/loading/rateKbps");
 
     public static final CoordinatorStat ASSIGNED_ACTIONS
         = CoordinatorStat.toDebugAndEmit("assignedActions", "segment/loadQueue/assigned");
@@ -141,6 +147,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killedSupervisorSpecs", "metadata/kill/supervisor/count");
     public static final CoordinatorStat RULES
         = CoordinatorStat.toDebugAndEmit("killedRules", "metadata/kill/rule/count");
+    public static final CoordinatorStat SEGMENT_SCHEMA
+        = CoordinatorStat.toDebugAndEmit("killSchemas", "metadata/kill/segmentSchema/count");
     public static final CoordinatorStat AUDIT_LOGS
         = CoordinatorStat.toDebugAndEmit("killedAuditLogs", "metadata/kill/audit/count");
     public static final CoordinatorStat DATASOURCES
@@ -166,5 +174,8 @@ public class Stats
     );
     public static final CoordinatorStat COMPUTATION_TIME = CoordinatorStat.toDebugOnly("costComputeTime");
     public static final CoordinatorStat COMPUTATION_COUNT = CoordinatorStat.toDebugOnly("costComputeCount");
+
+    public static final CoordinatorStat COMPUTE_THREADS = CoordinatorStat.toDebugOnly("balancerComputeThreads");
+    public static final CoordinatorStat MAX_TO_MOVE = CoordinatorStat.toDebugOnly("maxToMove");
   }
 }

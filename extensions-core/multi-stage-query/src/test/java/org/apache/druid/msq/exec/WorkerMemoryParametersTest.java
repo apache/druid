@@ -19,139 +19,436 @@
 
 package org.apache.druid.msq.exec;
 
+import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.ints.IntSets;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.frame.key.ClusterBy;
+import org.apache.druid.frame.key.KeyColumn;
+import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.msq.indexing.error.MSQException;
-import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
-import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
+import org.apache.druid.msq.input.InputSlice;
+import org.apache.druid.msq.input.stage.ReadablePartitions;
+import org.apache.druid.msq.input.stage.StageInputSlice;
+import org.apache.druid.msq.kernel.GlobalSortTargetSizeShuffleSpec;
+import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class WorkerMemoryParametersTest
 {
   @Test
-  public void test_oneWorkerInJvm_alone()
+  public void test_1WorkerInJvm_alone_1Thread()
   {
-    Assert.assertEquals(params(335_500_000, 1, 41, 75_000_000), create(1_000_000_000, 1, 1, 1, 0, 0));
-    Assert.assertEquals(params(223_000_000, 2, 13, 75_000_000), create(1_000_000_000, 1, 2, 1, 0, 0));
-    Assert.assertEquals(params(133_000_000, 4, 3, 75_000_000), create(1_000_000_000, 1, 4, 1, 0, 0));
-    Assert.assertEquals(params(73_000_000, 3, 2, 75_000_000), create(1_000_000_000, 1, 8, 1, 0, 0));
-    Assert.assertEquals(params(49_923_076, 2, 2, 75_000_000), create(1_000_000_000, 1, 12, 1, 0, 0));
+    final int numThreads = 1;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
 
-    final MSQException e = Assert.assertThrows(
-        MSQException.class,
-        () -> create(1_000_000_000, 1, 32, 1, 0, 0)
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(973_000_000, frameSize, 1, 874, 97_300_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
-    Assert.assertEquals(new NotEnoughMemoryFault(1_588_044_000, 1_000_000_000, 750_000_000, 1, 32), e.getFault());
-
-    final MSQFault fault = Assert.assertThrows(MSQException.class, () -> create(1_000_000_000, 2, 32, 1, 0, 0))
-                                 .getFault();
-
-    Assert.assertEquals(new NotEnoughMemoryFault(2024045333, 1_000_000_000, 750_000_000, 2, 32), fault);
-
   }
 
   @Test
-  public void test_oneWorkerInJvm_twoHundredWorkersInCluster()
+  public void test_1WorkerInJvm_alone_withBroadcast_1Thread()
   {
-    Assert.assertEquals(params(474_000_000, 1, 83, 150_000_000), create(2_000_000_000, 1, 1, 200, 0, 0));
-    Assert.assertEquals(params(249_000_000, 2, 27, 150_000_000), create(2_000_000_000, 1, 2, 200, 0, 0));
+    final int numThreads = 1;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
 
-    final MSQException e = Assert.assertThrows(
-        MSQException.class,
-        () -> create(1_000_000_000, 1, 4, 200, 0, 0)
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(
+        ReadablePartitions.striped(0, 1, numThreads),
+        ReadablePartitions.striped(0, 1, 1)
     );
+    final IntSet broadcastInputs = IntSets.singleton(1);
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
-    Assert.assertEquals(new TooManyWorkersFault(200, 109), e.getFault());
+    Assert.assertEquals(
+        new WorkerMemoryParameters(673_000_000, frameSize, 1, 604, 67_300_000, 200_000_000),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
+    );
   }
 
   @Test
-  public void test_fourWorkersInJvm_twoHundredWorkersInCluster()
+  public void test_1WorkerInJvm_alone_4Threads()
   {
-    Assert.assertEquals(params(1_014_000_000, 1, 150, 168_750_000), create(9_000_000_000L, 4, 1, 200, 0, 0));
-    Assert.assertEquals(params(811_500_000, 2, 62, 168_750_000), create(9_000_000_000L, 4, 2, 200, 0, 0));
-    Assert.assertEquals(params(558_375_000, 4, 22, 168_750_000), create(9_000_000_000L, 4, 4, 200, 0, 0));
-    Assert.assertEquals(params(305_250_000, 4, 14, 168_750_000), create(9_000_000_000L, 4, 8, 200, 0, 0));
-    Assert.assertEquals(params(102_750_000, 4, 8, 168_750_000), create(9_000_000_000L, 4, 16, 200, 0, 0));
+    final int numThreads = 4;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
 
-    final MSQException e = Assert.assertThrows(
-        MSQException.class,
-        () -> create(8_000_000_000L, 4, 32, 200, 0, 0)
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(892_000_000, frameSize, 4, 199, 89_200_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
-
-    Assert.assertEquals(new TooManyWorkersFault(200, 124), e.getFault());
-
-    // Make sure 124 actually works, and 125 doesn't. (Verify the error message above.)
-    Assert.assertEquals(params(25_000_000, 4, 3, 150_000_000), create(8_000_000_000L, 4, 32, 124, 0, 0));
-
-    final MSQException e2 = Assert.assertThrows(
-        MSQException.class,
-        () -> create(8_000_000_000L, 4, 32, 125, 0, 0)
-    );
-
-    Assert.assertEquals(new TooManyWorkersFault(125, 124), e2.getFault());
   }
 
   @Test
-  public void test_oneWorkerInJvm_smallWorkerCapacity()
+  public void test_1WorkerInJvm_alone_withBroadcast_4Threads()
   {
-    // Supersorter max channels per processer are one less than they are usually to account for extra frames that are required while creating composing output channels
-    Assert.assertEquals(params(41_200_000, 1, 3, 9_600_000), create(128_000_000, 1, 1, 1, 0, 0));
-    Assert.assertEquals(params(26_800_000, 1, 1, 9_600_000), create(128_000_000, 1, 2, 1, 0, 0));
+    final int numThreads = 4;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
 
-    final MSQException e = Assert.assertThrows(
-        MSQException.class,
-        () -> create(1_000_000_000, 1, 32, 1, 0, 0)
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(
+        ReadablePartitions.striped(0, 1, numThreads),
+        ReadablePartitions.striped(0, 1, 1)
     );
-    Assert.assertEquals(new NotEnoughMemoryFault(1_588_044_000, 1_000_000_000, 750_000_000, 1, 32), e.getFault());
+    final IntSet broadcastInputs = IntSets.singleton(1);
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
 
-    final MSQException e2 = Assert.assertThrows(
-        MSQException.class,
-        () -> create(128_000_000, 1, 4, 1, 0, 0)
+    Assert.assertEquals(
+        new WorkerMemoryParameters(592_000_000, frameSize, 4, 132, 59_200_000, 200_000_000),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
-    Assert.assertEquals(new NotEnoughMemoryFault(580_006_666, 12_8000_000, 96_000_000, 1, 4), e2.getFault());
-
-    final MSQFault fault = Assert.assertThrows(MSQException.class, () -> create(1_000_000_000, 2, 32, 1, 0, 0))
-                                 .getFault();
-
-    Assert.assertEquals(new NotEnoughMemoryFault(2024045333, 1_000_000_000, 750_000_000, 2, 32), fault);
   }
 
   @Test
-  public void test_fourWorkersInJvm_twoHundredWorkersInCluster_hashPartitions()
+  public void test_1WorkerInJvm_alone_noStats_4Threads()
   {
-    Assert.assertEquals(params(814_000_000, 1, 150, 168_750_000), create(9_000_000_000L, 4, 1, 200, 200, 0));
-    Assert.assertEquals(params(611_500_000, 2, 62, 168_750_000), create(9_000_000_000L, 4, 2, 200, 200, 0));
-    Assert.assertEquals(params(358_375_000, 4, 22, 168_750_000), create(9_000_000_000L, 4, 4, 200, 200, 0));
-    Assert.assertEquals(params(105_250_000, 4, 14, 168_750_000), create(9_000_000_000L, 4, 8, 200, 200, 0));
+    final int numThreads = 4;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
 
-    final MSQException e = Assert.assertThrows(
-        MSQException.class,
-        () -> create(9_000_000_000L, 4, 16, 200, 200, 0)
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, 4);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = null;
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(892_000_000, frameSize, 4, 222, 0, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
     );
-
-    Assert.assertEquals(new TooManyWorkersFault(200, 138), e.getFault());
-
-    // Make sure 138 actually works, and 139 doesn't. (Verify the error message above.)
-    Assert.assertEquals(params(26_750_000, 4, 8, 168_750_000), create(9_000_000_000L, 4, 16, 138, 138, 0));
-
-    final MSQException e2 = Assert.assertThrows(
-        MSQException.class,
-        () -> create(9_000_000_000L, 4, 16, 139, 139, 0)
-    );
-
-    Assert.assertEquals(new TooManyWorkersFault(139, 138), e2.getFault());
   }
 
   @Test
-  public void test_oneWorkerInJvm_oneByteUsableMemory()
+  public void test_1WorkerInJvm_alone_2ConcurrentStages_4Threads()
   {
+    final int numThreads = 4;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(392_000_000, frameSize, 4, 87, 39_200_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_2ConcurrentStages_4Threads_highHeap()
+  {
+    final int numThreads = 4;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(6_250_000_000L, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(2_392_000_000L, frameSize, 4, 537, 239_200_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_32Threads()
+  {
+    final int numThreads = 32;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(136_000_000, frameSize, 32, 2, 13_600_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_33Threads()
+  {
+    final int numThreads = 33;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(109_000_000, frameSize, 32, 2, 10_900_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_40Threads()
+  {
+    final int numThreads = 40;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
     final MSQException e = Assert.assertThrows(
         MSQException.class,
-        () -> WorkerMemoryParameters.createInstance(1, 1, 1, 32, 1, 1)
+        () -> WorkerMemoryParameters.createInstance(
+            memoryIntrospector,
+            frameSize,
+            slices,
+            broadcastInputs,
+            shuffleSpec,
+            1,
+            1
+        )
     );
 
-    Assert.assertEquals(new NotEnoughMemoryFault(554669334, 1, 1, 1, 1), e.getFault());
+    Assert.assertEquals(
+        new NotEnoughMemoryFault(1_366_250_000, 1_250_000_000, 1_000_000_000, 1, 40, 1, 1),
+        e.getFault()
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_40Threads_slightlyLessMemoryThanError()
+  {
+    // Test with one byte less than the amount of memory recommended in the error message
+    // for test_1WorkerInJvm_alone_40Threads.
+    final int numThreads = 40;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_366_250_000 - 1, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    final MSQException e = Assert.assertThrows(
+        MSQException.class,
+        () -> WorkerMemoryParameters.createInstance(
+            memoryIntrospector,
+            frameSize,
+            slices,
+            broadcastInputs,
+            shuffleSpec,
+            1,
+            1
+        )
+    );
+
+    Assert.assertEquals(
+        new NotEnoughMemoryFault(1_366_250_000, 1_366_249_999, 1_092_999_999, 1, 40, 1, 1),
+        e.getFault()
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_40Threads_memoryFromError()
+  {
+    // Test with the amount of memory recommended in the error message for test_1WorkerInJvm_alone_40Threads.
+    final int numThreads = 40;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_366_250_000, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(13_000_000, frameSize, 1, 2, 10_000_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_40Threads_2ConcurrentStages()
+  {
+    final int numThreads = 40;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(1_250_000_000, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    final MSQException e = Assert.assertThrows(
+        MSQException.class,
+        () -> WorkerMemoryParameters.createInstance(
+            memoryIntrospector,
+            frameSize,
+            slices,
+            broadcastInputs,
+            shuffleSpec,
+            2,
+            1
+        )
+    );
+
+    Assert.assertEquals(
+        new NotEnoughMemoryFault(2_732_500_000L, 1_250_000_000, 1_000_000_000, 1, 40, 1, 2),
+        e.getFault()
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_alone_40Threads_2ConcurrentStages_memoryFromError()
+  {
+    // Test with the amount of memory recommended in the error message from
+    // test_1WorkerInJvm_alone_40Threads_2ConcurrentStages.
+    final int numThreads = 40;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(2_732_500_000L, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 1, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(13_000_000, frameSize, 1, 2, 10_000_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_200WorkersInCluster_4Threads()
+  {
+    final int numThreads = 4;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(2_500_000_000L, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 200, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(1_096_000_000, frameSize, 4, 245, 109_600_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_200WorkersInCluster_4Threads_2OutputPartitions()
+  {
+    final int numThreads = 4;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(2_500_000_000L, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 200, 2));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(1_548_000_000, frameSize, 4, 347, 154_800_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_200WorkersInCluster_2ConcurrentStages_4Threads()
+  {
+    final int numThreads = 4;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(2_500_000_000L, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 200, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(96_000_000, frameSize, 4, 20, 10_000_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
+    );
+  }
+
+  @Test
+  public void test_12WorkersInJvm_200WorkersInCluster_64Threads_4OutputPartitions()
+  {
+    final int numThreads = 64;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(40_000_000_000L, 12, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 200, 4));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(1_762_666_666, frameSize, 64, 23, 176_266_666, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
+    );
+  }
+
+  @Test
+  public void test_12WorkersInJvm_200WorkersInCluster_2ConcurrentStages_64Threads_4OutputPartitions()
+  {
+    final int numThreads = 64;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(40_000_000_000L, 12, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, 200, 4));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(429_333_333, frameSize, 64, 5, 42_933_333, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_MaxWorkersInCluster_2ConcurrentStages_2Threads()
+  {
+    final int numWorkers = Limits.MAX_WORKERS;
+    final int numThreads = 2;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(6_250_000_000L, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, numWorkers, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(448_000_000, frameSize, 2, 200, 44_800_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 2, 1)
+    );
+  }
+
+  @Test
+  public void test_1WorkerInJvm_MaxWorkersInCluster_1Thread()
+  {
+    final int numWorkers = Limits.MAX_WORKERS;
+    final int numThreads = 1;
+    final int frameSize = WorkerMemoryParameters.DEFAULT_FRAME_SIZE;
+
+    final MemoryIntrospectorImpl memoryIntrospector = createMemoryIntrospector(2_500_000_000L, 1, numThreads);
+    final List<InputSlice> slices = makeInputSlices(ReadablePartitions.striped(0, numWorkers, numThreads));
+    final IntSet broadcastInputs = IntSets.emptySet();
+    final ShuffleSpec shuffleSpec = makeSortShuffleSpec();
+
+    Assert.assertEquals(
+        new WorkerMemoryParameters(974_000_000, frameSize, 1, 875, 97_400_000, 0),
+        WorkerMemoryParameters.createInstance(memoryIntrospector, frameSize, slices, broadcastInputs, shuffleSpec, 1, 1)
+    );
   }
 
   @Test
@@ -160,37 +457,28 @@ public class WorkerMemoryParametersTest
     EqualsVerifier.forClass(WorkerMemoryParameters.class).usingGetClass().verify();
   }
 
-  private static WorkerMemoryParameters params(
-      final long processorBundleMemory,
-      final int superSorterMaxActiveProcessors,
-      final int superSorterMaxChannelsPerProcessor,
-      final int partitionStatisticsMaxRetainedBytes
+  private static MemoryIntrospectorImpl createMemoryIntrospector(
+      final long totalMemory,
+      final int numTasksInJvm,
+      final int numProcessingThreads
   )
   {
-    return new WorkerMemoryParameters(
-        processorBundleMemory,
-        superSorterMaxActiveProcessors,
-        superSorterMaxChannelsPerProcessor,
-        partitionStatisticsMaxRetainedBytes
-    );
+    return new MemoryIntrospectorImpl(totalMemory, 0.8, numTasksInJvm, numProcessingThreads, null);
   }
 
-  private static WorkerMemoryParameters create(
-      final long maxMemoryInJvm,
-      final int numWorkersInJvm,
-      final int numProcessingThreadsInJvm,
-      final int numInputWorkers,
-      final int numHashOutputPartitions,
-      final int totalLookUpFootprint
-  )
+  private static List<InputSlice> makeInputSlices(final ReadablePartitions... partitionss)
   {
-    return WorkerMemoryParameters.createInstance(
-        maxMemoryInJvm,
-        numWorkersInJvm,
-        numProcessingThreadsInJvm,
-        numInputWorkers,
-        numHashOutputPartitions,
-        totalLookUpFootprint
+    return Arrays.stream(partitionss)
+                 .map(partitions -> new StageInputSlice(0, partitions, OutputChannelMode.LOCAL_STORAGE))
+                 .collect(Collectors.toList());
+  }
+
+  private static ShuffleSpec makeSortShuffleSpec()
+  {
+    return new GlobalSortTargetSizeShuffleSpec(
+        new ClusterBy(ImmutableList.of(new KeyColumn("foo", KeyOrder.ASCENDING)), 0),
+        1_000_000,
+        false
     );
   }
 }

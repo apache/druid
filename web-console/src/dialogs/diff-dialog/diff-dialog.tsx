@@ -44,43 +44,47 @@ export interface DiffVersion {
 
 export interface DiffDialogProps {
   title?: string;
-  left?: unknown;
-  right?: unknown;
+  onClose(): void;
+
+  // Single value
+  oldValue?: unknown;
+  newValue?: unknown;
+
+  // Versions
   versions?: DiffVersion[];
-  initLeftIndex?: number;
-  initRightIndex?: number;
-  onClose: () => void;
+  initOldIndex?: number;
+  initNewIndex?: number;
 }
 
 export const DiffDialog = React.memo(function DiffDialog(props: DiffDialogProps) {
-  const { title, left, right, versions, initLeftIndex, initRightIndex, onClose } = props;
+  const { title, oldValue, newValue, versions, initOldIndex, initNewIndex, onClose } = props;
 
-  const [leftIndex, setLeftIndex] = useState(initLeftIndex || 0);
-  const [rightIndex, setRightIndex] = useState(initRightIndex || 0);
+  const [leftIndex, setLeftIndex] = useState(initOldIndex || 0);
+  const [rightIndex, setRightIndex] = useState(initNewIndex || 0);
 
-  let leftValue: string;
-  let rightValue: string;
+  let oldValueString: string;
+  let newValueString: string;
   if (Array.isArray(versions)) {
     if (versions.length) {
-      const leftVersion = versions[leftIndex].value;
-      const rightVersion = versions[rightIndex].value;
-      if (typeof leftVersion === 'string' && typeof rightVersion === 'string') {
-        leftValue = leftVersion;
-        rightValue = rightVersion;
+      const oldVersionValue = versions[leftIndex].value;
+      const newVersionValue = versions[rightIndex].value;
+      if (typeof oldVersionValue === 'string' && typeof newVersionValue === 'string') {
+        oldValueString = oldVersionValue;
+        newValueString = newVersionValue;
       } else {
-        leftValue = JSONBig.stringify(leftVersion, undefined, 2);
-        rightValue = JSONBig.stringify(rightVersion, undefined, 2);
+        oldValueString = JSONBig.stringify(oldVersionValue, undefined, 2);
+        newValueString = JSONBig.stringify(newVersionValue, undefined, 2);
       }
     } else {
-      leftValue = rightValue = 'Nothing to diff';
+      oldValueString = newValueString = 'Nothing to diff';
     }
   } else {
-    if (typeof left === 'string' && typeof right === 'string') {
-      leftValue = left;
-      rightValue = right;
+    if (typeof oldValue === 'string' && typeof newValue === 'string') {
+      oldValueString = oldValue;
+      newValueString = newValue;
     } else {
-      leftValue = JSONBig.stringify(left, undefined, 2);
-      rightValue = JSONBig.stringify(right, undefined, 2);
+      oldValueString = JSONBig.stringify(oldValue, undefined, 2);
+      newValueString = JSONBig.stringify(newValue, undefined, 2);
     }
   }
 
@@ -121,8 +125,8 @@ export const DiffDialog = React.memo(function DiffDialog(props: DiffDialogProps)
         )}
         <div className="diff-container">
           <ReactDiffViewer
-            oldValue={leftValue}
-            newValue={rightValue}
+            oldValue={oldValueString}
+            newValue={newValueString}
             splitView
             useDarkTheme
             styles={REACT_DIFF_STYLES}

@@ -171,7 +171,7 @@ public abstract class AbstractIndexerTest
 
   public static InputStream getResourceAsStream(String resource)
   {
-    return ITRealtimeIndexTaskTest.class.getResourceAsStream(resource);
+    return ITCompactionTaskTest.class.getResourceAsStream(resource);
   }
 
   public static List<String> listResources(String dir) throws IOException

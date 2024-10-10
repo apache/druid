@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import org.apache.druid.server.compaction.CompactionStatistics;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -28,25 +29,17 @@ public class AutoCompactionSnapshotTest
   public void testAutoCompactionSnapshotBuilder()
   {
     final String expectedDataSource = "data";
-    final AutoCompactionSnapshot.AutoCompactionScheduleStatus expectedStatus = AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING;
-    AutoCompactionSnapshot.Builder builder = new AutoCompactionSnapshot.Builder(expectedDataSource, expectedStatus);
+    final String expectedMessage = "message";
+    final AutoCompactionSnapshot.Builder builder = AutoCompactionSnapshot.builder(expectedDataSource);
 
-    // Increment every stats twice
+    // Increment every stat twice
     for (int i = 0; i < 2; i++) {
-      builder.incrementIntervalCountSkipped(13);
-      builder.incrementBytesSkipped(13);
-      builder.incrementSegmentCountSkipped(13);
-
-      builder.incrementIntervalCountCompacted(13);
-      builder.incrementBytesCompacted(13);
-      builder.incrementSegmentCountCompacted(13);
-
-      builder.incrementIntervalCountAwaitingCompaction(13);
-      builder.incrementBytesAwaitingCompaction(13);
-      builder.incrementSegmentCountAwaitingCompaction(13);
+      builder.incrementSkippedStats(CompactionStatistics.create(13, 13, 13));
+      builder.incrementWaitingStats(CompactionStatistics.create(13, 13, 13));
+      builder.incrementCompactedStats(CompactionStatistics.create(13, 13, 13));
     }
 
-    AutoCompactionSnapshot actual = builder.build();
+    final AutoCompactionSnapshot actual = builder.withMessage(expectedMessage).build();
 
     Assert.assertNotNull(actual);
     Assert.assertEquals(26, actual.getSegmentCountSkipped());
@@ -60,10 +53,12 @@ public class AutoCompactionSnapshotTest
     Assert.assertEquals(26, actual.getSegmentCountAwaitingCompaction());
     Assert.assertEquals(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING, actual.getScheduleStatus());
     Assert.assertEquals(expectedDataSource, actual.getDataSource());
+    Assert.assertEquals(expectedMessage, actual.getMessage());
 
     AutoCompactionSnapshot expected = new AutoCompactionSnapshot(
         expectedDataSource,
         AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING,
+        expectedMessage,
         26,
         26,
         26,

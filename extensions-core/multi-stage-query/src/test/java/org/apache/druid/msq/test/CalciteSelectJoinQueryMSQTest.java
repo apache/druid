@@ -19,23 +19,15 @@
 
 package org.apache.druid.msq.test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Injector;
-import com.google.inject.Module;
-import org.apache.calcite.rel.RelRoot;
-import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.run.EngineFeature;
-import org.apache.druid.sql.calcite.run.QueryMaker;
-import org.apache.druid.sql.calcite.run.SqlEngine;
+import java.util.Map;
 
 /**
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
@@ -47,16 +39,17 @@ public class CalciteSelectJoinQueryMSQTest
    */
   public static class BroadcastTest extends Base
   {
-    public BroadcastTest()
-    {
-      super(JoinAlgorithm.BROADCAST);
-    }
-
     @Override
     protected QueryTestBuilder testBuilder()
     {
       return super.testBuilder()
                   .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
+    }
+
+    @Override
+    protected JoinAlgorithm joinAlgorithm()
+    {
+      return JoinAlgorithm.BROADCAST;
     }
   }
 
@@ -65,9 +58,10 @@ public class CalciteSelectJoinQueryMSQTest
    */
   public static class SortMergeTest extends Base
   {
-    public SortMergeTest()
+    @Override
+    public boolean isSortBasedJoin()
     {
-      super(JoinAlgorithm.SORT_MERGE);
+      return true;
     }
 
     @Override
@@ -78,69 +72,27 @@ public class CalciteSelectJoinQueryMSQTest
       return super.testBuilder()
                   .verifyNativeQueries(xs -> false);
     }
+
+    @Override
+    protected JoinAlgorithm joinAlgorithm()
+    {
+      return JoinAlgorithm.SORT_MERGE;
+    }
   }
 
+  @SqlTestFrameworkConfig.ComponentSupplier(StandardMSQComponentSupplier.class)
   public abstract static class Base extends CalciteJoinQueryTest
   {
-    private final JoinAlgorithm joinAlgorithm;
-
-    protected Base(final JoinAlgorithm joinAlgorithm)
-    {
-      this.joinAlgorithm = joinAlgorithm;
-    }
-
-    @Override
-    public boolean isSortBasedJoin()
-    {
-      return joinAlgorithm == JoinAlgorithm.SORT_MERGE;
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      super.configureGuice(builder);
-      builder.addModules(
-          CalciteMSQTestsHelper.fetchModules(this::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
-      );
-    }
-
-    @Override
-    public SqlEngine createEngine(
-        QueryLifecycleFactory qlf,
-        ObjectMapper queryJsonMapper,
-        Injector injector
-    )
-    {
-      final WorkerMemoryParameters workerMemoryParameters =
-          WorkerMemoryParameters.createInstance(WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50, 2, 10, 2, 0, 0);
-      final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
-          queryJsonMapper,
-          injector,
-          new MSQTestTaskActionClient(queryJsonMapper, injector),
-          workerMemoryParameters,
-          ImmutableList.of()
-      );
-      return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper)
-      {
-        @Override
-        public boolean featureAvailable(EngineFeature feature)
-        {
-          return super.featureAvailable(feature);
-        }
-
-        @Override
-        public QueryMaker buildQueryMakerForSelect(RelRoot relRoot, PlannerContext plannerContext)
-        {
-          plannerContext.queryContextMap().put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm.toString());
-          return super.buildQueryMakerForSelect(relRoot, plannerContext);
-        }
-      };
-    }
+    protected abstract JoinAlgorithm joinAlgorithm();
 
     @Override
     protected QueryTestBuilder testBuilder()
     {
-      return new QueryTestBuilder(new CalciteTestConfig(true))
+      Map<String, Object> defaultCtx = ImmutableMap.<String, Object>builder()
+          .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+          .put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, joinAlgorithm().toString())
+          .build();
+      return new QueryTestBuilder(new CalciteTestConfig(defaultCtx, true))
           .addCustomRunner(
               new ExtractResultsFactory(
                   () -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))

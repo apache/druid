@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.http.catalog;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.curator.shaded.com.google.common.collect.ImmutableMap;
 import org.apache.druid.catalog.CatalogException;
 import org.apache.druid.catalog.http.TableEditRequest;
@@ -34,10 +36,12 @@ import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
+import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.catalog.storage.CatalogStorage;
 import org.apache.druid.catalog.storage.CatalogTests;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.junit.After;
 import org.junit.Before;
@@ -56,6 +60,7 @@ import static org.junit.Assert.assertThrows;
 
 public class EditorTest
 {
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
@@ -326,7 +331,6 @@ public class EditorTest
     // Can't test an empty property set: no table type allows empty
     // properties.
 
-    // Remove a required property
     Map<String, Object> updates = new HashMap<>();
     updates.put(DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, null);
     cmd = new UpdateProperties(updates);
@@ -373,6 +377,37 @@ public class EditorTest
     assertEquals(
         expected,
         doEdit(tableName, cmd).spec().properties()
+    );
+
+    // Add a DESC cluster key - should fail
+    Map<String, Object> updates1 = new HashMap<>();
+    updates1.put(DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", true)));
+
+    assertThrows(
+        CatalogException.class,
+        () -> new TableEditor(
+            catalog,
+            table.id(),
+            new UpdateProperties(updates1)
+        ).go()
+    );
+
+    // Add a ASC cluster key - should succeed
+    updates = new HashMap<>();
+    updates.put(DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", false)));
+    cmd = new UpdateProperties(updates);
+    expected = ImmutableMap.of(
+        DatasourceDefn.SEGMENT_GRANULARITY_PROPERTY, "PT1H",
+        DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", false))
+    );
+    Map<String, Object> actual = doEdit(tableName, cmd).spec().properties();
+    actual.put(
+        DatasourceDefn.CLUSTER_KEYS_PROPERTY,
+        MAPPER.convertValue(actual.get(DatasourceDefn.CLUSTER_KEYS_PROPERTY), ClusterKeySpec.CLUSTER_KEY_LIST_TYPE_REF)
+    );
+    assertEquals(
+        expected,
+        actual
     );
   }
 

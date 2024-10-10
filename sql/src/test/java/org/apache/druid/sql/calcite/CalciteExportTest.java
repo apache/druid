@@ -34,6 +34,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ForbiddenException;
+import org.apache.druid.sql.calcite.CalciteExportTest.ExportComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.destination.ExportDestination;
@@ -51,48 +52,57 @@ import org.junit.jupiter.api.Test;
 import java.util.Collections;
 import java.util.List;
 
+@SqlTestFrameworkConfig.ComponentSupplier(ExportComponentSupplier.class)
 public class CalciteExportTest extends CalciteIngestionDmlTest
 {
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  protected static class ExportComponentSupplier extends IngestionDmlComponentSupplier
   {
-    super.configureGuice(builder);
-    builder.addModule(
-        new DruidModule()
-        {
-          @Override
-          public void configure(Binder binder)
-          {
-          }
-
-          @Override
-          public List<? extends Module> getJacksonModules()
-          {
-            return ImmutableList.of(
-                new SimpleModule(StorageConnectorProvider.class.getSimpleName()).registerSubtypes(
-                    new NamedType(LocalFileExportStorageProvider.class, CalciteTests.FORBIDDEN_DESTINATION)
-                )
-            );
-          }
-        });
-    builder.addModule(new DruidModule()
+    public ExportComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      @Override
-      public List<? extends Module> getJacksonModules()
-      {
-        return ImmutableList.of(
-            new SimpleModule(StorageConnector.class.getSimpleName())
-                .registerSubtypes(LocalFileStorageConnectorProvider.class)
-                .registerSubtypes(LocalFileExportStorageProvider.class)
-        );
-      }
+      super(tempFolderProducer);
+    }
 
-      @Override
-      public void configure(Binder binder)
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(
+          new DruidModule()
+          {
+            @Override
+            public void configure(Binder binder)
+            {
+            }
+
+            @Override
+            public List<? extends Module> getJacksonModules()
+            {
+              return ImmutableList.of(
+                  new SimpleModule(StorageConnectorProvider.class.getSimpleName()).registerSubtypes(
+                      new NamedType(LocalFileExportStorageProvider.class, CalciteTests.FORBIDDEN_DESTINATION)
+                  )
+              );
+            }
+          });
+      builder.addModule(new DruidModule()
       {
-        binder.bind(StorageConfig.class).toInstance(new StorageConfig("/tmp/export"));
-      }
-    });
+        @Override
+        public List<? extends Module> getJacksonModules()
+        {
+          return ImmutableList.of(
+              new SimpleModule(StorageConnector.class.getSimpleName())
+                  .registerSubtypes(LocalFileStorageConnectorProvider.class)
+                  .registerSubtypes(LocalFileExportStorageProvider.class)
+          );
+        }
+
+        @Override
+        public void configure(Binder binder)
+        {
+          binder.bind(StorageConfig.class).toInstance(new StorageConfig("/tmp/export"));
+        }
+      });
+    }
   }
 
   // Disabled until replace supports external destinations. To be enabled after that point.
@@ -113,7 +123,6 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("dim2")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         )
         .expectResources(dataSourceRead("foo"), externalWrite(LocalFileExportStorageProvider.TYPE_NAME))
@@ -188,7 +197,6 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("dim2")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         )
         .expectResources(dataSourceRead("foo"), externalWrite(LocalFileStorageConnectorProvider.TYPE_NAME))
@@ -214,7 +222,6 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                 .filters(equality("dim2", "val", ColumnType.STRING))
                 .columns("dim2")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectResources(dataSourceRead("foo"), externalWrite(LocalFileStorageConnectorProvider.TYPE_NAME))
@@ -241,7 +248,6 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                 .filters(equality("dim2", "val", ColumnType.STRING))
                 .columns("dim2")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectResources(dataSourceRead("foo"), externalWrite(LocalFileStorageConnectorProvider.TYPE_NAME))
@@ -296,7 +302,6 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("dim2")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         )
         .expectResources(dataSourceRead("foo"), dataSourceWrite("csv"))

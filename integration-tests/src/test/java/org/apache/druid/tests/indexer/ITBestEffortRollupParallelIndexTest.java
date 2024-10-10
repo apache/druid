@@ -38,7 +38,7 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.util.function.Function;
 
-@Test(groups = TestNGGroup.BATCH_INDEX)
+@Test(groups = {TestNGGroup.BATCH_INDEX})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTest
 {
@@ -137,7 +137,7 @@ public class ITBestEffortRollupParallelIndexTest extends AbstractITBatchIndexTes
           new Pair<>(false, false)
       );
 
-      // with DruidInputSource instead of IngestSegmentFirehose
+      // with DruidInputSource
       doReindexTest(
           INDEX_DATASOURCE,
           INDEX_DRUID_INPUT_SOURCE_DATASOURCE,

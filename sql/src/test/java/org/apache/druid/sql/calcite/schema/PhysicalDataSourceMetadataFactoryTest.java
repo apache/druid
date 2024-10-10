@@ -27,7 +27,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.easymock.EasyMock;
@@ -52,7 +52,7 @@ public class PhysicalDataSourceMetadataFactoryTest
   {
     segmentDataSourceNames = Sets.newConcurrentHashSet();
     joinableDataSourceNames = Sets.newConcurrentHashSet();
-    segmentManager = new SegmentManager(EasyMock.createMock(SegmentLoader.class))
+    segmentManager = new SegmentManager(EasyMock.createMock(SegmentCacheManager.class))
     {
       @Override
       public Set<String> getDataSourceNames()

@@ -266,12 +266,6 @@ public class CoordinatorDynamicConfig
     return maxKillTaskSlots;
   }
 
-  @JsonIgnore
-  public boolean isKillUnusedSegmentsInAllDataSources()
-  {
-    return specificDataSourcesToKillUnusedSegmentsIn.isEmpty();
-  }
-
   @JsonProperty("killPendingSegmentsSkipList")
   public Set<String> getDataSourcesToNotKillStalePendingSegmentsIn()
   {

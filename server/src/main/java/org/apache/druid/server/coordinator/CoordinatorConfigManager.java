@@ -31,7 +31,7 @@ import java.util.function.UnaryOperator;
 
 /**
  * Manager to fetch and update dynamic configs {@link CoordinatorDynamicConfig}
- * and {@link CoordinatorCompactionConfig}.
+ * and {@link DruidCompactionConfig}.
  */
 public class CoordinatorConfigManager
 {
@@ -71,12 +71,12 @@ public class CoordinatorConfigManager
     );
   }
 
-  public CoordinatorCompactionConfig getCurrentCompactionConfig()
+  public DruidCompactionConfig getCurrentCompactionConfig()
   {
-    CoordinatorCompactionConfig config = jacksonConfigManager.watch(
-        CoordinatorCompactionConfig.CONFIG_KEY,
-        CoordinatorCompactionConfig.class,
-        CoordinatorCompactionConfig.empty()
+    DruidCompactionConfig config = jacksonConfigManager.watch(
+        DruidCompactionConfig.CONFIG_KEY,
+        DruidCompactionConfig.class,
+        DruidCompactionConfig.empty()
     ).get();
 
     return Preconditions.checkNotNull(config, "Got null config from watcher?!");
@@ -91,7 +91,7 @@ public class CoordinatorConfigManager
    * or if the update was successful.
    */
   public ConfigManager.SetResult getAndUpdateCompactionConfig(
-      UnaryOperator<CoordinatorCompactionConfig> operator,
+      UnaryOperator<DruidCompactionConfig> operator,
       AuditInfo auditInfo
   )
   {
@@ -102,16 +102,16 @@ public class CoordinatorConfigManager
         tablesConfig.getConfigTable(),
         MetadataStorageConnector.CONFIG_TABLE_KEY_COLUMN,
         MetadataStorageConnector.CONFIG_TABLE_VALUE_COLUMN,
-        CoordinatorCompactionConfig.CONFIG_KEY
+        DruidCompactionConfig.CONFIG_KEY
     );
-    CoordinatorCompactionConfig current = convertBytesToCompactionConfig(currentBytes);
-    CoordinatorCompactionConfig updated = operator.apply(current);
+    DruidCompactionConfig current = convertBytesToCompactionConfig(currentBytes);
+    DruidCompactionConfig updated = operator.apply(current);
 
     if (current.equals(updated)) {
       return ConfigManager.SetResult.ok();
     } else {
       return jacksonConfigManager.set(
-          CoordinatorCompactionConfig.CONFIG_KEY,
+          DruidCompactionConfig.CONFIG_KEY,
           currentBytes,
           updated,
           auditInfo
@@ -119,12 +119,12 @@ public class CoordinatorConfigManager
     }
   }
 
-  public CoordinatorCompactionConfig convertBytesToCompactionConfig(byte[] bytes)
+  public DruidCompactionConfig convertBytesToCompactionConfig(byte[] bytes)
   {
     return jacksonConfigManager.convertByteToConfig(
         bytes,
-        CoordinatorCompactionConfig.class,
-        CoordinatorCompactionConfig.empty()
+        DruidCompactionConfig.class,
+        DruidCompactionConfig.empty()
     );
   }
 }

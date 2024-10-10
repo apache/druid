@@ -47,8 +47,8 @@ import java.util.stream.Collectors;
 
 public class TestSegmentMetadataQueryWalker extends SegmentMetadataQuerySegmentWalker
 {
-  private QueryRunnerFactoryConglomerate conglomerate;
-  private Map<SegmentDescriptor, Pair<QueryableIndex, DataSegment>> queryableIndexMap;
+  private final QueryRunnerFactoryConglomerate conglomerate;
+  private final Map<SegmentDescriptor, Pair<QueryableIndex, DataSegment>> queryableIndexMap;
 
   public TestSegmentMetadataQueryWalker(
       CoordinatorServerView serverView,

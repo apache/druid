@@ -29,7 +29,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.UUID;
 
-@Test(groups = TestNGGroup.INPUT_SOURCE)
+@Test(groups = {TestNGGroup.INPUT_SOURCE})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITHttpInputSourceTest extends AbstractITBatchIndexTest
 {

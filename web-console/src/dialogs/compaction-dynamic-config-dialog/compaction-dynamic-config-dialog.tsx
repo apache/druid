@@ -86,7 +86,7 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
   async function saveConfig() {
     if (!dynamicConfig) return;
     try {
-      // This API is terrible. https://druid.apache.org/docs/latest/operations/api-reference.html#automatic-compaction-configuration
+      // This API is terrible. https://druid.apache.org/docs/latest/operations/api-reference#automatic-compaction-configuration
       await Api.instance.post(
         `/druid/coordinator/v1/config/compaction/taskslots?ratio=${
           dynamicConfig.compactionTaskSlotRatio ?? DEFAULT_RATIO
@@ -124,7 +124,7 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
               <ExternalLink
                 href={`${getLink(
                   'DOCS',
-                )}/operations/api-reference.html#automatic-compaction-configuration`}
+                )}/operations/api-reference#automatic-compaction-configuration`}
               >
                 documentation
               </ExternalLink>

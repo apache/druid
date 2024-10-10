@@ -45,10 +45,11 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.utils.CloseableUtils;
 import org.hamcrest.CoreMatchers;
@@ -116,9 +117,9 @@ public class FrameProcessorExecutorTest
     {
       // 3 input files blasted to 2 outputs (2 copies of the data), then muxed to one file.
 
-      final IncrementalIndexStorageAdapter adapter =
-          new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
-      final List<File> inFiles = writeToNFiles(adapter, 3);
+      final IncrementalIndex index = TestIndex.getIncrementalTestIndex();
+      final IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+      final List<File> inFiles = writeToNFiles(cursorFactory, 3);
       final File outFile = temporaryFolder.newFile();
 
       final BlockingQueueFrameChannel memoryChannel1 = BlockingQueueFrameChannel.minimal();
@@ -144,14 +145,14 @@ public class FrameProcessorExecutorTest
       final ListenableFuture<Long> blasterFuture = exec.runFully(blaster, null);
       final ListenableFuture<Long> muxerFuture = exec.runFully(muxer, null);
 
-      Assert.assertEquals(adapter.getNumRows(), (long) blasterFuture.get());
-      Assert.assertEquals(adapter.getNumRows() * 2, (long) muxerFuture.get());
+      Assert.assertEquals(index.numRows(), (long) blasterFuture.get());
+      Assert.assertEquals(index.numRows() * 2, (long) muxerFuture.get());
 
       Assert.assertEquals(
-          adapter.getNumRows() * 2,
+          index.numRows() * 2,
           FrameTestUtil.readRowsFromFrameChannel(
               new ReadableFileFrameChannel(FrameFile.open(outFile, null)),
-              FrameReader.create(adapter.getRowSignature())
+              FrameReader.create(cursorFactory.getRowSignature())
           ).toList().size()
       );
     }
@@ -180,9 +181,9 @@ public class FrameProcessorExecutorTest
     @Test
     public void test_runFully_errors() throws Exception
     {
-      final IncrementalIndexStorageAdapter adapter =
-          new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
-      final File inFile = Iterables.getOnlyElement(writeToNFiles(adapter, 1));
+      final IncrementalIndexCursorFactory cursorFactory =
+          new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
+      final File inFile = Iterables.getOnlyElement(writeToNFiles(cursorFactory, 1));
       final ReadableFrameChannel inChannel = openFileChannel(inFile);
       final BlockingQueueFrameChannel outChannel = BlockingQueueFrameChannel.minimal();
 
@@ -221,6 +222,7 @@ public class FrameProcessorExecutorTest
       final SettableFuture<Object> future = SettableFuture.create();
       final String cancellationId = "xyzzy";
 
+      exec.registerCancellationId(cancellationId);
       Assert.assertSame(future, exec.registerCancelableFuture(future, false, cancellationId));
       exec.cancel(cancellationId);
 
@@ -235,6 +237,8 @@ public class FrameProcessorExecutorTest
     {
       final SleepyFrameProcessor processor = new SleepyFrameProcessor();
       final String cancellationId = "xyzzy";
+
+      exec.registerCancellationId(cancellationId);
       final ListenableFuture<Long> future = exec.runFully(processor, cancellationId);
 
       processor.awaitRun();
@@ -253,6 +257,8 @@ public class FrameProcessorExecutorTest
     {
       final SleepyFrameProcessor processor = new SleepyFrameProcessor();
       final String cancellationId = "xyzzy";
+
+      exec.registerCancellationId(cancellationId);
       final ListenableFuture<Long> future = exec.runFully(processor, cancellationId);
 
       processor.awaitRun();
@@ -274,7 +280,7 @@ public class FrameProcessorExecutorTest
       // Doesn't matter what's in this frame.
       final Frame frame =
           Iterables.getOnlyElement(
-              FrameSequenceBuilder.fromAdapter(new QueryableIndexStorageAdapter(TestIndex.getMMappedTestIndex()))
+              FrameSequenceBuilder.fromCursorFactory(new QueryableIndexCursorFactory(TestIndex.getMMappedTestIndex()))
                                   .frameType(FrameType.ROW_BASED)
                                   .frames()
                                   .toList()
@@ -313,6 +319,8 @@ public class FrameProcessorExecutorTest
 
       // Start up all systems at once.
       for (final String systemId : systemGeneratorsMap.keySet()) {
+        exec.registerCancellationId(systemId);
+
         for (InfiniteFrameProcessor generator : systemGeneratorsMap.get(systemId)) {
           processorFutureMap.put(generator, exec.runFully(generator, systemId));
         }
@@ -390,6 +398,22 @@ public class FrameProcessorExecutorTest
       // Just making sure no error is thrown when we refer to a nonexistent cancellationId.
       exec.cancel("nonexistent");
     }
+
+    @Test
+    public void test_runFully_nonexistentCancellationId()
+    {
+      final SleepyFrameProcessor processor = new SleepyFrameProcessor();
+      final String cancellationId = "xyzzy";
+
+      // Don't registerCancellationId(cancellationId).
+      final ListenableFuture<Long> future = exec.runFully(processor, cancellationId);
+
+      // Future should be immediately canceled, without running the processor.
+      Assert.assertTrue(future.isDone());
+      Assert.assertTrue(future.isCancelled());
+      Assert.assertFalse(processor.didGetInterrupt());
+      Assert.assertFalse(processor.didCleanup());
+    }
   }
 
   public abstract static class BaseFrameProcessorExecutorTestSuite extends InitializedNullHandlingTest
@@ -398,7 +422,7 @@ public class FrameProcessorExecutorTest
     public final TemporaryFolder temporaryFolder = new TemporaryFolder();
     public final int numThreads;
 
-    FrameProcessorExecutor exec;
+    protected FrameProcessorExecutor exec;
 
     public BaseFrameProcessorExecutorTestSuite(int numThreads)
     {
@@ -427,7 +451,7 @@ public class FrameProcessorExecutorTest
       }
     }
 
-    List<File> writeToNFiles(final StorageAdapter adapter, final int numFiles) throws IOException
+    List<File> writeToNFiles(final CursorFactory cursorFactory, final int numFiles) throws IOException
     {
       final List<File> files = new ArrayList<>();
       final List<FrameFileWriter> writers = new ArrayList<>();
@@ -465,7 +489,7 @@ public class FrameProcessorExecutorTest
         };
 
         FrameSequenceBuilder
-            .fromAdapter(adapter)
+            .fromCursorFactory(cursorFactory)
             .frameType(FrameType.ROW_BASED)
             .allocator(ArenaMemoryAllocator.createOnHeap(1_000_000))
             .maxRowsPerFrame(3)

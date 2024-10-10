@@ -242,45 +242,102 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
-  public List<DataSegmentPlus> retrieveSegmentsById(String datasource, Set<String> segmentIds)
+  public List<DataSegmentPlus> retrieveSegmentsById(
+      String datasource,
+      Set<String> segmentIds
+  )
   {
     final List<List<String>> partitionedSegmentIds
         = Lists.partition(new ArrayList<>(segmentIds), 100);
 
     final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
     for (List<String> partition : partitionedSegmentIds) {
-      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition));
+      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, false));
     }
     return fetchedSegments;
   }
 
-  private List<DataSegmentPlus> retrieveSegmentBatchById(String datasource, List<String> segmentIds)
+  public List<DataSegmentPlus> retrieveSegmentsWithSchemaById(
+      String datasource,
+      Set<String> segmentIds
+  )
+  {
+    final List<List<String>> partitionedSegmentIds
+        = Lists.partition(new ArrayList<>(segmentIds), 100);
+
+    final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
+    for (List<String> partition : partitionedSegmentIds) {
+      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, true));
+    }
+    return fetchedSegments;
+  }
+
+  private List<DataSegmentPlus> retrieveSegmentBatchById(
+      String datasource,
+      List<String> segmentIds,
+      boolean includeSchemaInfo
+  )
   {
     if (segmentIds.isEmpty()) {
       return Collections.emptyList();
     }
 
-    final Query<Map<String, Object>> query = handle.createQuery(
-        StringUtils.format(
-            "SELECT payload, used FROM %s WHERE dataSource = :dataSource %s",
-            dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
-        )
-    );
+    ResultIterator<DataSegmentPlus> resultIterator;
+    if (includeSchemaInfo) {
+      final Query<Map<String, Object>> query = handle.createQuery(
+          StringUtils.format(
+              "SELECT payload, used, schema_fingerprint, num_rows, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
+              dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
+          )
+      );
 
-    bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
+      bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
 
-    ResultIterator<DataSegmentPlus> resultIterator = query
-        .bind("dataSource", datasource)
-        .setFetchSize(connector.getStreamingFetchSize())
-        .map(
-            (index, r, ctx) -> new DataSegmentPlus(
-                JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
-                null,
-                null,
-                r.getBoolean(2)
-            )
-        )
-        .iterator();
+      resultIterator = query
+          .bind("dataSource", datasource)
+          .setFetchSize(connector.getStreamingFetchSize())
+          .map(
+              (index, r, ctx) -> {
+                String schemaFingerprint = (String) r.getObject(3);
+                Long numRows = (Long) r.getObject(4);
+                return new DataSegmentPlus(
+                    JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+                    null,
+                    null,
+                    r.getBoolean(2),
+                    schemaFingerprint,
+                    numRows,
+                    r.getString(5)
+                );
+              }
+          )
+          .iterator();
+    } else {
+      final Query<Map<String, Object>> query = handle.createQuery(
+          StringUtils.format(
+              "SELECT payload, used, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
+              dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
+          )
+      );
+
+      bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
+
+      resultIterator = query
+          .bind("dataSource", datasource)
+          .setFetchSize(connector.getStreamingFetchSize())
+          .map(
+              (index, r, ctx) -> new DataSegmentPlus(
+                  JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+                  null,
+                  null,
+                  r.getBoolean(2),
+                  null,
+                  null,
+                  r.getString(3)
+              )
+          )
+          .iterator();
+    }
 
     return Lists.newArrayList(resultIterator);
   }
@@ -807,6 +864,9 @@ public class SqlSegmentsMetadataQuery
             JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
             DateTimes.of(r.getString(2)),
             DateTimes.of(r.getString(3)),
+            null,
+            null,
+            null,
             null
         ))
         .iterator();
@@ -898,7 +958,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @implNote JDBI 3.x has better support for binding {@code IN} clauses directly.
    */
-  private static String getParameterizedInConditionForColumn(final String columnName, final List<String> values)
+  static String getParameterizedInConditionForColumn(final String columnName, final List<String> values)
   {
     if (values == null) {
       return "";
@@ -923,7 +983,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @see #getParameterizedInConditionForColumn(String, List)
    */
-  private static void bindColumnValuesToQueryWithInCondition(
+  static void bindColumnValuesToQueryWithInCondition(
       final String columnName,
       final List<String> values,
       final SQLStatement<?> query

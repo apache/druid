@@ -55,4 +55,10 @@ public class DruidWindow extends Window implements DruidLogicalNode
   {
     return planner.getCostFactory().makeCost(mq.getRowCount(this), 0, 0);
   }
+
+  @Override
+  public Window copy(List<RexLiteral> constants)
+  {
+    return new DruidWindow(getCluster(), traitSet, hints, input, constants, rowType, groups);
+  }
 }

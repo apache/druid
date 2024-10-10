@@ -26,7 +26,6 @@ import { getLink } from '../../links';
 export interface CoordinatorDynamicConfig {
   maxSegmentsToMove?: number;
   balancerComputeThreads?: number;
-  killAllDataSources?: boolean;
   killDataSourceWhitelist?: string[];
   killTaskSlotRatio?: number;
   maxKillTaskSlots?: number;

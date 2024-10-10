@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -65,7 +65,6 @@ const taskTableColumns: string[] = [
   'Created time',
   'Duration',
   'Location',
-  ACTION_COLUMN_LABEL,
 ];
 
 interface TaskQueryResultRow {
@@ -310,7 +309,9 @@ ORDER BY
           this.taskQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to kill task '${killTaskId}'?`}</p>
+        <p>
+          Are you sure you want to kill task <Tag minimal>{killTaskId}</Tag>?
+        </p>
       </AsyncActionDialog>
     );
   }
@@ -413,8 +414,11 @@ ORDER BY
             }),
             Cell: row => {
               if (row.aggregated) return '';
-              const { status } = row.original;
-              const errorMsg = row.original.error_msg;
+              const { status, error_msg } = row.original;
+              const errorMsg =
+                error_msg && !TASK_CANCELED_ERROR_MESSAGES.includes(error_msg)
+                  ? error_msg
+                  : undefined;
               return (
                 <TableFilterableCell
                   field="status"
@@ -422,10 +426,10 @@ ORDER BY
                   filters={filters}
                   onFiltersChange={onFiltersChange}
                 >
-                  <span title={errorMsg}>
+                  <span data-tooltip={errorMsg}>
                     <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
                     {status}
-                    {errorMsg && !TASK_CANCELED_ERROR_MESSAGES.includes(errorMsg) && (
+                    {errorMsg && (
                       <a onClick={() => this.setState({ alertErrorMsg: errorMsg })}>&nbsp;?</a>
                     )}
                   </span>
@@ -494,6 +498,7 @@ ORDER BY
             accessor: 'task_id',
             width: ACTION_COLUMN_WIDTH,
             filterable: false,
+            sortable: false,
             Cell: row => {
               if (row.aggregated) return '';
               const id = row.value;
@@ -503,11 +508,11 @@ ORDER BY
                 <ActionCell
                   onDetail={() => this.onTaskDetail(row.original)}
                   actions={this.getTaskActions(id, datasource, status, type, true)}
+                  menuTitle={id}
                 />
               );
             },
             Aggregated: () => '',
-            show: visibleColumns.shown(ACTION_COLUMN_LABEL),
           },
         ]}
       />

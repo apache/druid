@@ -23,6 +23,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 import org.apache.druid.segment.column.CapabilitiesBasedFormat;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnFormat;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.BitmapValues;
 import org.apache.druid.segment.data.CloseableIndexed;
 import org.apache.druid.segment.nested.FieldTypeInfo;
@@ -45,7 +46,12 @@ public interface IndexableAdapter
 
   int getNumRows();
 
-  List<String> getDimensionNames();
+  /**
+   * Returns names of dimension columns.
+   *
+   * @param includeTime whether to include {@link ColumnHolder#TIME_COLUMN_NAME}.
+   */
+  List<String> getDimensionNames(boolean includeTime);
 
   List<String> getMetricNames();
 
@@ -57,6 +63,8 @@ public interface IndexableAdapter
   NestedColumnMergable getNestedColumnMergeables(String column);
 
   TransformableRowIterator getRows();
+
+  IndexableAdapter getProjectionAdapter(String projection);
 
   BitmapValues getBitmapValues(String dimension, int dictId);
 

@@ -21,7 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
@@ -56,14 +56,9 @@ public class KillAuditLogTest
   @Test
   public void testRunSkipIfLastRunLessThanPeriod()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(new Duration("PT5s"))
-        .withCoordianatorAuditKillPeriod(new Duration(Long.MAX_VALUE))
-        .withCoordinatorAuditKillDurationToRetain(new Duration("PT1S"))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
-    killAuditLog = new KillAuditLog(druidCoordinatorConfig, mockAuditManager);
+    final MetadataCleanupConfig config
+        = new MetadataCleanupConfig(true, new Duration(Long.MAX_VALUE), new Duration("PT1S"));
+    killAuditLog = new KillAuditLog(config, mockAuditManager);
     killAuditLog.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verifyNoInteractions(mockAuditManager);
   }
@@ -71,58 +66,11 @@ public class KillAuditLogTest
   @Test
   public void testRunNotSkipIfLastRunMoreThanPeriod()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(new Duration("PT5s"))
-        .withCoordianatorAuditKillPeriod(new Duration("PT6S"))
-        .withCoordinatorAuditKillDurationToRetain(new Duration("PT1S"))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
-    killAuditLog = new KillAuditLog(druidCoordinatorConfig, mockAuditManager);
+    final MetadataCleanupConfig config
+        = new MetadataCleanupConfig(true, new Duration("PT6S"), new Duration("PT1S"));
+    killAuditLog = new KillAuditLog(config, mockAuditManager);
     killAuditLog.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockAuditManager).removeAuditLogsOlderThan(ArgumentMatchers.anyLong());
     Assert.assertTrue(runStats.hasStat(Stats.Kill.AUDIT_LOGS));
-  }
-
-  @Test
-  public void testConstructorFailIfInvalidPeriod()
-  {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(new Duration("PT5s"))
-        .withCoordianatorAuditKillPeriod(new Duration("PT3S"))
-        .withCoordinatorAuditKillDurationToRetain(new Duration("PT1S"))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
-
-    final IllegalArgumentException exception = Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> killAuditLog = new KillAuditLog(druidCoordinatorConfig, mockAuditManager)
-    );
-    Assert.assertEquals(
-        "[druid.coordinator.kill.audit.period] must be greater than"
-        + " [druid.coordinator.period.metadataStoreManagementPeriod]",
-        exception.getMessage()
-    );
-  }
-
-  @Test
-  public void testConstructorFailIfInvalidRetainDuration()
-  {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
-        .withCoordianatorAuditKillPeriod(new Duration("PT6S"))
-        .withCoordinatorAuditKillDurationToRetain(new Duration("PT-1S"))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
-    final IllegalArgumentException exception = Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> killAuditLog = new KillAuditLog(druidCoordinatorConfig, mockAuditManager)
-    );
-    Assert.assertEquals(
-        "[druid.coordinator.kill.audit.durationToRetain] must be 0 milliseconds or higher",
-        exception.getMessage()
-    );
   }
 }

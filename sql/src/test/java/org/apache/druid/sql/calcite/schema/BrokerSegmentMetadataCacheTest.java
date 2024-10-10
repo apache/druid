@@ -37,6 +37,7 @@ import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -53,12 +54,13 @@ import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
 import org.apache.druid.segment.metadata.AvailableSegmentMetadata;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryLifecycle;
@@ -73,11 +75,14 @@ import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.sql.calcite.table.DatasourceTable;
 import org.apache.druid.sql.calcite.table.DruidTable;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.TestTimelineServerView;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.easymock.EasyMock;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -100,9 +105,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCommon
+public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTestBase
 {
-  private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create("PT1S");
+  private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT =
+      BrokerSegmentMetadataCacheConfig.create("PT1S");
+
   // Timeout to allow (rapid) debugging, while not blocking tests with errors.
   private static final int WAIT_TIMEOUT_SECS = 6;
   private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
@@ -145,7 +152,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        coordinatorClient
+        coordinatorClient,
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -180,7 +188,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -212,10 +221,10 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
   @Test
   public void testCoordinatorReturnsAllDSSchema() throws InterruptedException
   {
-    final RowSignature dataSource1RowSignature = new QueryableIndexStorageAdapter(index1).getRowSignature();
-    final RowSignature dataSource2RowSignature = new QueryableIndexStorageAdapter(index2).getRowSignature();
-    final RowSignature someDataSourceRowSignature = new QueryableIndexStorageAdapter(indexAuto1).getRowSignature();
-    final RowSignature foo3RowSignature = new QueryableIndexStorageAdapter(indexAuto2).getRowSignature();
+    final RowSignature dataSource1RowSignature = new QueryableIndexCursorFactory(index1).getRowSignature();
+    final RowSignature dataSource2RowSignature = new QueryableIndexCursorFactory(index2).getRowSignature();
+    final RowSignature someDataSourceRowSignature = new QueryableIndexCursorFactory(indexAuto1).getRowSignature();
+    final RowSignature foo3RowSignature = new QueryableIndexCursorFactory(indexAuto2).getRowSignature();
 
     NoopCoordinatorClient coordinatorClient = new NoopCoordinatorClient() {
       @Override
@@ -242,7 +251,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        coordinatorClient
+        coordinatorClient,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     schema.start();
@@ -263,9 +273,9 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
   @Test
   public void testCoordinatorReturnsFewDSSchema() throws InterruptedException
   {
-    final RowSignature dataSource1RowSignature = new QueryableIndexStorageAdapter(index1).getRowSignature();
-    final RowSignature dataSource2RowSignature = new QueryableIndexStorageAdapter(index2).getRowSignature();
-    final RowSignature someDataSourceRowSignature = new QueryableIndexStorageAdapter(indexAuto1).getRowSignature();
+    final RowSignature dataSource1RowSignature = new QueryableIndexCursorFactory(index1).getRowSignature();
+    final RowSignature dataSource2RowSignature = new QueryableIndexCursorFactory(index2).getRowSignature();
+    final RowSignature someDataSourceRowSignature = new QueryableIndexCursorFactory(indexAuto1).getRowSignature();
 
     NoopCoordinatorClient coordinatorClient = new NoopCoordinatorClient() {
       @Override
@@ -305,7 +315,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        coordinatorClient
+        coordinatorClient,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     EasyMock.replay(factoryMock, lifecycleMock);
@@ -325,6 +336,9 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     ArgumentCaptor<Set<String>> argumentCaptor = ArgumentCaptor.forClass(Set.class);
     CoordinatorClient coordinatorClient = Mockito.mock(CoordinatorClient.class);
     Mockito.when(coordinatorClient.fetchDataSourceInformation(argumentCaptor.capture())).thenReturn(Futures.immediateFuture(null));
+
+    Set<String> datsources = Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE, "xyz", "coldDS");
+    Mockito.when(coordinatorClient.fetchDataSourcesWithUsedSegments()).thenReturn(Futures.immediateFuture(datsources));
     BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
         CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
         serverView,
@@ -333,13 +347,14 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        coordinatorClient
+        coordinatorClient,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     schema.start();
     schema.awaitInitialization();
 
-    Assert.assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE), argumentCaptor.getValue());
+    Assert.assertEquals(datsources, argumentCaptor.getValue());
 
     refreshLatch = new CountDownLatch(1);
     serverView.addSegment(newSegment("xyz", 0), ServerType.HISTORICAL);
@@ -347,7 +362,87 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
     refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS);
 
     // verify that previously refreshed are included in the last coordinator poll
-    Assert.assertEquals(Sets.newHashSet(DATASOURCE1, DATASOURCE2, DATASOURCE3, SOME_DATASOURCE, "xyz"), argumentCaptor.getValue());
+    Assert.assertEquals(datsources, argumentCaptor.getValue());
+  }
+
+  @Test
+  public void testRefreshOnEachCycleCentralizedDatasourceSchemaEnabled() throws InterruptedException
+  {
+    CentralizedDatasourceSchemaConfig config = CentralizedDatasourceSchemaConfig.create();
+    config.setEnabled(true);
+
+    serverView = new TestTimelineServerView(walker.getSegments(), Collections.emptyList());
+    druidServers = serverView.getDruidServers();
+
+    BrokerSegmentMetadataCacheConfig metadataCacheConfig = BrokerSegmentMetadataCacheConfig.create("PT1S");
+    metadataCacheConfig.setMetadataRefreshPeriod(Period.parse("PT0.001S"));
+    BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        config
+    ) {
+      @Override
+      public void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild)
+          throws IOException
+      {
+        super.refresh(segmentsToRefresh, dataSourcesToRebuild);
+        refreshLatch.countDown();
+      }
+    };
+
+    // refresh should be executed more than once, with the feature disabled refresh should be executed only once
+    refreshLatch = new CountDownLatch(3);
+    schema.start();
+    schema.awaitInitialization();
+
+    refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS);
+
+    Assert.assertEquals(0, refreshLatch.getCount());
+  }
+
+  @Test
+  public void testRefreshOnEachCycleCentralizedDatasourceSchemaDisabled() throws InterruptedException
+  {
+    BrokerSegmentMetadataCacheConfig metadataCacheConfig = BrokerSegmentMetadataCacheConfig.create("PT1S");
+    metadataCacheConfig.setMetadataRefreshPeriod(Period.parse("PT0.001S"));
+
+    serverView = new TestTimelineServerView(walker.getSegments(), Collections.emptyList());
+    druidServers = serverView.getDruidServers();
+
+    BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        CalciteTests.createMockQueryLifecycleFactory(walker, conglomerate),
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        new InternalQueryConfig(),
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
+    ) {
+      @Override
+      public void refresh(Set<SegmentId> segmentsToRefresh, Set<String> dataSourcesToRebuild)
+          throws IOException
+      {
+        super.refresh(segmentsToRefresh, dataSourcesToRebuild);
+        refreshLatch.countDown();
+      }
+    };
+
+    // refresh should be executed only once
+    refreshLatch = new CountDownLatch(3);
+    schema.start();
+    schema.awaitInitialization();
+
+    refreshLatch.await(WAIT_TIMEOUT_SECS, TimeUnit.SECONDS);
+
+    Assert.assertEquals(2, refreshLatch.getCount());
   }
 
   @Test
@@ -598,7 +693,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -913,7 +1009,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         internalQueryConfig,
         new NoopServiceEmitter(),
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     Map<String, Object> queryContext = ImmutableMap.of(
@@ -977,7 +1074,8 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
         new InternalQueryConfig(),
         emitter,
         new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
-        new NoopCoordinatorClient()
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
     )
     {
       @Override
@@ -1015,5 +1113,136 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheCo
   {
     buildSchemaMarkAndTableLatch();
     serverView.invokeSegmentSchemasAnnouncedDummy();
+  }
+
+  @Test
+  public void testNoDatasourceSchemaWhenNoSegmentMetadata() throws InterruptedException, IOException
+  {
+    BrokerSegmentMetadataCacheConfig config = new BrokerSegmentMetadataCacheConfig();
+    config.setDisableSegmentMetadataQueries(true);
+
+    BrokerSegmentMetadataCache schema = buildSchemaMarkAndTableLatch(
+        config,
+        new NoopCoordinatorClient()
+    );
+
+    schema.start();
+    schema.awaitInitialization();
+
+    List<DataSegment> segments = schema.getSegmentMetadataSnapshot().values()
+                                .stream()
+                                .map(AvailableSegmentMetadata::getSegment)
+                                .collect(Collectors.toList());
+
+    schema.refresh(segments.stream().map(DataSegment::getId).collect(Collectors.toSet()), Collections.singleton("foo"));
+
+    Assert.assertNull(schema.getDatasource("foo"));
+  }
+
+  @Test
+  public void testTombstoneSegmentIsNotRefreshed() throws IOException
+  {
+    String brokerInternalQueryConfigJson = "{\"context\": { \"priority\": 5} }";
+
+    TestHelper.makeJsonMapper();
+    InternalQueryConfig internalQueryConfig = MAPPER.readValue(
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(brokerInternalQueryConfigJson, InternalQueryConfig.class)
+        ),
+        InternalQueryConfig.class
+    );
+
+    QueryLifecycleFactory factoryMock = EasyMock.createMock(QueryLifecycleFactory.class);
+    QueryLifecycle lifecycleMock = EasyMock.createMock(QueryLifecycle.class);
+
+    BrokerSegmentMetadataCache schema = new BrokerSegmentMetadataCache(
+        factoryMock,
+        serverView,
+        SEGMENT_CACHE_CONFIG_DEFAULT,
+        new NoopEscalator(),
+        internalQueryConfig,
+        new NoopServiceEmitter(),
+        new PhysicalDatasourceMetadataFactory(globalTableJoinable, segmentManager),
+        new NoopCoordinatorClient(),
+        CentralizedDatasourceSchemaConfig.create()
+    );
+
+    Map<String, Object> queryContext = ImmutableMap.of(
+        QueryContexts.PRIORITY_KEY, 5,
+        QueryContexts.BROKER_PARALLEL_MERGE_KEY, false
+    );
+
+    DataSegment segment = newSegment("test", 0);
+    DataSegment tombstone = DataSegment.builder()
+                                       .dataSource("test")
+                                       .interval(Intervals.of("2012-01-01/2012-01-02"))
+                                       .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
+                                       .shardSpec(new TombstoneShardSpec())
+                                       .loadSpec(Collections.singletonMap(
+                                           "type",
+                                           DataSegment.TOMBSTONE_LOADSPEC_TYPE
+                                       ))
+                                       .size(0)
+                                       .build();
+
+    final ImmutableDruidServer historicalServer = druidServers.stream()
+                                                     .filter(s -> s.getType().equals(ServerType.HISTORICAL))
+                                                     .findAny()
+                                                     .orElse(null);
+
+    Assert.assertNotNull(historicalServer);
+    final DruidServerMetadata historicalServerMetadata = historicalServer.getMetadata();
+
+    schema.addSegment(historicalServerMetadata, segment);
+    schema.addSegment(historicalServerMetadata, tombstone);
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+
+    List<SegmentId> segmentIterable = ImmutableList.of(segment.getId(), tombstone.getId());
+
+    SegmentMetadataQuery expectedMetadataQuery = new SegmentMetadataQuery(
+        new TableDataSource(segment.getDataSource()),
+        new MultipleSpecificSegmentSpec(
+            segmentIterable.stream()
+                           .filter(id -> !id.equals(tombstone.getId()))
+                           .map(SegmentId::toDescriptor)
+                           .collect(Collectors.toList())
+        ),
+        new AllColumnIncluderator(),
+        false,
+        queryContext,
+        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        false,
+        null,
+        null
+    );
+
+    EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
+    EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK))
+            .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
+
+    EasyMock.replay(factoryMock, lifecycleMock);
+
+    Set<SegmentId> segmentsToRefresh = new HashSet<>();
+    segmentsToRefresh.add(segment.getId());
+    schema.refresh(segmentsToRefresh, Collections.singleton("test"));
+
+    // verify that metadata is not issued for tombstone segment
+    EasyMock.verify(factoryMock, lifecycleMock);
+
+    // Verify that datasource schema building logic doesn't mark the tombstone segment for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+
+    AvailableSegmentMetadata availableSegmentMetadata = schema.getAvailableSegmentMetadata("test", tombstone.getId());
+    Assert.assertNotNull(availableSegmentMetadata);
+    // fetching metadata for tombstone segment shouldn't mark it for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
+
+    Set<AvailableSegmentMetadata> metadatas = new HashSet<>();
+    schema.iterateSegmentMetadata().forEachRemaining(metadatas::add);
+
+    Assert.assertEquals(1, metadatas.stream().filter(metadata -> metadata.getSegment().isTombstone()).count());
+
+    // iterating over entire metadata doesn't cause tombstone to be marked for refresh
+    Assert.assertFalse(schema.getSegmentsNeedingRefresh().contains(tombstone.getId()));
   }
 }

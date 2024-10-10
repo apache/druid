@@ -37,7 +37,6 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.error.QueryExceptionCompat;
 import org.apache.druid.frame.channel.FrameChannelSequence;
-import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -48,6 +47,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -131,7 +131,7 @@ public class SqlStatementResource
 
   @Inject
   public SqlStatementResource(
-      final @MSQ SqlStatementFactory msqSqlStatementFactory,
+      final @MultiStageQuery SqlStatementFactory msqSqlStatementFactory,
       final ObjectMapper jsonMapper,
       final OverlordClient overlordClient,
       final @MultiStageQuery StorageConnector storageConnector,
@@ -231,7 +231,9 @@ public class SqlStatementResource
   @Path("/{id}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetStatus(
-      @PathParam("id") final String queryId, @Context final HttpServletRequest req
+      @PathParam("id") final String queryId,
+      @QueryParam("detail") boolean detail,
+      @Context final HttpServletRequest req
   )
   {
     try {
@@ -242,7 +244,8 @@ public class SqlStatementResource
           queryId,
           authenticationResult,
           true,
-          Action.READ
+          Action.READ,
+          detail
       );
 
       if (sqlStatementResult.isPresent()) {
@@ -369,7 +372,8 @@ public class SqlStatementResource
           queryId,
           authenticationResult,
           false,
-          Action.WRITE
+          Action.WRITE,
+          false
       );
       if (sqlStatementResult.isPresent()) {
         switch (sqlStatementResult.get().getState()) {
@@ -479,7 +483,7 @@ public class SqlStatementResource
     }
     String taskId = String.valueOf(firstRow[0]);
 
-    Optional<SqlStatementResult> statementResult = getStatementStatus(taskId, authenticationResult, true, Action.READ);
+    Optional<SqlStatementResult> statementResult = getStatementStatus(taskId, authenticationResult, true, Action.READ, false);
 
     if (statementResult.isPresent()) {
       return Response.status(Response.Status.OK).entity(statementResult.get()).build();
@@ -540,27 +544,9 @@ public class SqlStatementResource
       List<Object[]> results = null;
       if (isSelectQuery) {
         results = new ArrayList<>();
-        Yielder<Object[]> yielder = null;
         if (msqTaskReportPayload.getResults() != null) {
-          yielder = msqTaskReportPayload.getResults().getResultYielder();
+          results = msqTaskReportPayload.getResults().getResults();
         }
-        try {
-          while (yielder != null && !yielder.isDone()) {
-            results.add(yielder.get());
-            yielder = yielder.next(null);
-          }
-        }
-        finally {
-          if (yielder != null) {
-            try {
-              yielder.close();
-            }
-            catch (IOException e) {
-              log.warn(e, StringUtils.format("Unable to close yielder for query[%s]", queryId));
-            }
-          }
-        }
-
       }
 
       return Optional.of(
@@ -583,7 +569,8 @@ public class SqlStatementResource
       String queryId,
       AuthenticationResult authenticationResult,
       boolean withResults,
-      Action forAction
+      Action forAction,
+      boolean detail
   ) throws DruidException
   {
     TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId), queryId);
@@ -600,14 +587,29 @@ public class SqlStatementResource
     MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(queryId, authenticationResult, forAction);
     SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
+    MSQTaskReportPayload taskReportPayload = null;
+    if (detail || SqlStatementState.FAILED == sqlStatementState) {
+      try {
+        taskReportPayload = SqlStatementResourceHelper.getPayload(
+            contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
+        );
+      }
+      catch (DruidException e) {
+        if (!e.getErrorCode().equals("notFound") && !e.getMessage().contains("Unable to contact overlord")) {
+          throw e;
+        }
+      }
+    }
+
     if (SqlStatementState.FAILED == sqlStatementState) {
       return SqlStatementResourceHelper.getExceptionPayload(
           queryId,
           taskResponse,
           statusPlus,
           sqlStatementState,
-          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId),
-          jsonMapper
+          taskReportPayload,
+          jsonMapper,
+          detail
       );
     } else {
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
@@ -623,7 +625,10 @@ public class SqlStatementResource
               sqlStatementState,
               msqControllerTask.getQuerySpec().getDestination()
           ).orElse(null) : null,
-          null
+          null,
+          SqlStatementResourceHelper.getQueryStagesReport(taskReportPayload),
+          SqlStatementResourceHelper.getQueryCounters(taskReportPayload),
+          SqlStatementResourceHelper.getQueryWarningDetails(taskReportPayload)
       ));
     }
   }
@@ -739,10 +744,10 @@ public class SqlStatementResource
           contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
       );
 
-      if (msqTaskReportPayload.getResults().getResultYielder() == null) {
+      if (msqTaskReportPayload.getResults().getResults() == null) {
         results = Optional.empty();
       } else {
-        results = Optional.of(msqTaskReportPayload.getResults().getResultYielder());
+        results = Optional.of(Yielders.each(Sequences.simple(msqTaskReportPayload.getResults().getResults())));
       }
 
     } else if (msqControllerTask.getQuerySpec().getDestination() instanceof DurableStorageMSQDestination) {
@@ -801,12 +806,17 @@ public class SqlStatementResource
                                   }
                                 })
                                 .collect(Collectors.toList()))
-                   .flatMap(frame -> SqlStatementResourceHelper.getResultSequence(
-                                msqControllerTask,
-                                finalStage,
-                                frame,
-                                jsonMapper
-                            )
+                   .flatMap(frame ->
+                                SqlStatementResourceHelper.getResultSequence(
+                                    frame,
+                                    finalStage.getFrameReader(),
+                                    msqControllerTask.getQuerySpec().getColumnMappings(),
+                                    new ResultsContext(
+                                        msqControllerTask.getSqlTypeNames(),
+                                        msqControllerTask.getSqlResultsContext()
+                                    ),
+                                    jsonMapper
+                                )
                    )
                    .withBaggage(closer)));
 

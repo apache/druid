@@ -1,35 +1,58 @@
 {
-  "docs": {
-    "Getting started": [
-      "design/index",
-      "tutorials/index",
+  "docs": [
+    "design/index",
+    {"type": "category",
+    "label": "Getting started",
+    "link": {
+      "type": "doc",
+      "id": "tutorials/index"
+    },
+    "items":[
       "operations/single-server",
-      "tutorials/cluster"
-    ],
-    "Tutorials": [
-      "tutorials/tutorial-msq-extern",
-      "tutorials/tutorial-kafka",
-      "tutorials/tutorial-batch-hadoop",
-      "tutorials/tutorial-query",
-      "tutorials/tutorial-rollup",
-      "tutorials/tutorial-sketches-theta",
-      "tutorials/tutorial-retention",
-      "tutorials/tutorial-append-data",
-      "tutorials/tutorial-update-data",
-      "tutorials/tutorial-compaction",
-      "tutorials/tutorial-delete-data",
-      "tutorials/tutorial-ingestion-spec",
-      "tutorials/tutorial-transform-spec",
-      "tutorials/tutorial-msq-convert-spec",
       "tutorials/docker",
-      "tutorials/tutorial-kerberos-hadoop",
-      "tutorials/tutorial-sql-query-view",
-      "tutorials/tutorial-sql-null",
-      "tutorials/tutorial-unnest-arrays",
-      "tutorials/tutorial-query-deep-storage",
-      "tutorials/tutorial-jdbc"
-    ],
-    "Design": [
+      "tutorials/cluster",
+      {"type": "category",
+      "label": "Ingestion tutorials",
+      "items": [
+        "tutorials/tutorial-msq-extern",
+        "tutorials/tutorial-kafka",
+        "tutorials/tutorial-rollup",
+        "tutorials/tutorial-ingestion-spec",
+        "tutorials/tutorial-transform",
+        "tutorials/tutorial-msq-convert-spec"
+              ]},
+      {"type": "category",
+       "label": "Data management tutorials",
+       "items": [
+        "tutorials/tutorial-retention",
+        "tutorials/tutorial-append-data",
+        "tutorials/tutorial-update-data",
+        "tutorials/tutorial-compaction",
+        "tutorials/tutorial-delete-data",
+        "tutorials/tutorial-latest-by"]
+       },
+      {"type": "category",
+        "label": "Querying tutorials",
+        "items": [  
+          "tutorials/tutorial-query",
+          "tutorials/tutorial-sql-query-view",
+          "tutorials/tutorial-unnest-arrays",
+          "tutorials/tutorial-query-deep-storage",
+          "tutorials/tutorial-latest-by"]
+      },
+    "tutorials/tutorial-sketches-theta",
+    "tutorials/tutorial-jdbc",
+    {"type": "category",
+    "label": "Hadoop tutorials",
+    "items": [  
+      "tutorials/tutorial-batch-hadoop",
+      "tutorials/tutorial-kerberos-hadoop"]
+    }]
+}
+    ,
+    {"type": "category",
+    "label":"Design",
+    "items": [
       "design/architecture",
       {
         "type": "category",
@@ -50,9 +73,14 @@
       "design/deep-storage",
       "design/metadata-storage",
       "design/zookeeper"
-    ],
-    "Ingestion": [
-      "ingestion/index",
+    ]},
+    {"type": "category",
+    "label": "Ingestion",
+    "link": {
+      "type": "doc",
+      "id": "ingestion/index"
+    },
+    "items":[
       {
         "type": "category",
         "label": "Ingestion concepts",
@@ -99,9 +127,15 @@
       "ingestion/schema-design",
       "ingestion/concurrent-append-replace",
       "ingestion/faq"
-    ],
-    "Data management": [
-      "data-management/index",
+    ]
+    },
+    {"type":"category",
+    "label": "Data management" ,
+    "link": {
+      "type": "doc",
+      "id": "data-management/index"
+    },
+    "items": [
       "data-management/update",
       "data-management/delete",
       "data-management/schema-changes",
@@ -117,8 +151,11 @@
            "data-management/manual-compaction"
          ]
        }
-    ],
-    "Querying": [
+    ]},
+    {
+      "type":"category",
+      "label": "Querying",
+      "items": [
       {
         "type": "category",
         "label": "Druid SQL",
@@ -150,7 +187,16 @@
         "items": [
           "querying/datasource",
           "querying/joins",
-          "querying/lookups",
+          {"type": "category",
+          "label": "Lookups",
+           "link": {
+           "type": "doc",
+           "id": "querying/lookups"
+           },
+           "items":[
+            "querying/lookups-cached-global",
+            "querying/kafka-extraction-namespace"
+           ]},
           "querying/multi-value-dimensions",
           "querying/arrays",
           "querying/nested-columns",
@@ -160,7 +206,6 @@
           "querying/query-context"
         ]
       },
-
       {
         "type": "category",
         "label": "Native query types",
@@ -193,9 +238,14 @@
           "querying/geo"
         ]
       }
-    ],
-    "API reference":[
-      "api-reference/api-reference",
+    ]},
+    { "type": "category",
+    "label": "API reference",
+    "link": {
+      "type": "doc",
+      "id": "api-reference/api-reference"
+    },
+    "items":[
       {
         "type": "category",
         "label": "HTTP APIs",
@@ -221,14 +271,24 @@
           "api-reference/sql-jdbc"
         ]
       }
-
-    ],
-    "Configuration": [
-      "configuration/index",
+    ]
+    },
+    {"type":"category",
+    "label":"Configuration",
+    "link": {
+      "type": "doc",
+      "id": "configuration/index"
+    },
+    "items":[
       "configuration/extensions",
       "configuration/logging"
-    ],
-    "Operations": [
+    ]
+  },
+    {
+      "type":"category",
+    "label": "Operations",
+    "items":[
+      "api-reference/automatic-compaction-api",
       "operations/web-console",
       "operations/java",
       "operations/durable-storage",
@@ -283,22 +343,45 @@
           "operations/use_sbt_to_build_fat_jar"
         ]
       }
-    ],
-    "Development": [
-      "development/overview",
+    ]},
+    {
+      "type":"category",
+      "label": "Development",
+      "link": {
+        "type": "doc",
+        "id": "development/overview"
+      },
+      "items": [
       "development/modules",
       "development/javascript",
       "development/build",
       "development/versioning",
       "development/contribute-to-docs",
       "development/experimental"
-    ],
-    "Misc": [
-      "misc/papers-and-talks"
-    ],
-    "Release info": [
-      "release-info/release-notes",
-      "release-info/upgrade-notes"
     ]
-  }
+  },
+  {"type":"category",
+  "label": "Release info",
+  "items":
+  [
+    "release-info/release-notes",
+    "release-info/upgrade-notes",
+    {
+      "type": "category",
+      "label": "Migration guides",
+      "link": {
+        "type": "doc",
+        "id": "release-info/migration-guide"
+      },
+      "items": [
+        "release-info/migr-mvd-array",
+        "release-info/migr-front-coded-dict",
+        "release-info/migr-subquery-limit",
+        "release-info/migr-ansi-sql-null"
+        
+      ]
+    }
+  ]},
+  "misc/papers-and-talks"
+  ]
 }

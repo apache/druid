@@ -56,9 +56,10 @@ public class KllFloatsSketchToHistogramPostAggregatorTest
         null
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    KllFloatsSketchToHistogramPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new KllSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        KllFloatsSketchToHistogramPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

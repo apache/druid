@@ -65,6 +65,18 @@ public class ExportMSQDestination implements MSQDestination
   }
 
   @Override
+  public long getRowsInTaskReport()
+  {
+    return 0;
+  }
+
+  @Override
+  public MSQSelectDestination toSelectDestination()
+  {
+    return MSQSelectDestination.EXPORT;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

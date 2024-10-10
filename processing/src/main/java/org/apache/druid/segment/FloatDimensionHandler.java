@@ -72,11 +72,12 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
   @Override
   public DimensionIndexer<Float, Float, Float> makeIndexer(boolean useMaxMemoryEstimates)
   {
-    return new FloatDimensionIndexer();
+    return new FloatDimensionIndexer(dimensionName);
   }
 
   @Override
   public DimensionMergerV9 makeMerger(
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
@@ -85,7 +86,7 @@ public class FloatDimensionHandler implements DimensionHandler<Float, Float, Flo
   )
   {
     return new FloatDimensionMergerV9(
-        dimensionName,
+        outputName,
         indexSpec,
         segmentWriteOutMedium
     );

@@ -33,7 +33,7 @@ make sure it has `/master/` in the URL.
 
 ##### Installing Java and Maven
 
-- JDK 8, 8u92+ or JDK 11. See our [Java documentation](../operations/java.md) for information about obtaining a JDK.
+- See our [Java documentation](../operations/java.md) for information about obtaining a supported JDK
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
 
 ##### Other dependencies

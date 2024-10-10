@@ -22,10 +22,10 @@ FROM $DRUID_RELEASE
 
 WORKDIR /opt/druid/extensions/mysql-metadata-storage
 
-ARG MYSQL_URL=https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.49/mysql-connector-java-5.1.49.jar
-ARG MYSQL_JAR=mysql-connector-java-5.1.49.jar
-# https://repo1.maven.org/maven2/mysql/mysql-connector-java/5.1.49/mysql-connector-java-5.1.49.jar.sha1
-ARG MYSQL_SHA=cf76d2e4c9c3782a85c15c87bec5772b34ffd0e5
+ARG MYSQL_URL=https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.2.0/mysql-connector-j-8.2.0.jar
+ARG MYSQL_JAR=mysql-connector-j-8.2.0.jar
+# https://repo1.maven.org/maven2/com/mysql/mysql-connector-j/8.2.0/mysql-connector-j-8.2.0.jar.sha1
+ARG MYSQL_SHA=56d34aea30915904b1c883f1cfae731dd2df6029
 
 RUN wget -q ${MYSQL_URL} \
  && echo "${MYSQL_SHA}  ${MYSQL_JAR}" | sha1sum -c \

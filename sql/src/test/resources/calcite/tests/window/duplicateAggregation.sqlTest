@@ -1,0 +1,10 @@
+type: "operatorValidation"
+
+sql: |
+  select
+    rank() over (order by count(*) desc),
+    rank() over (order by count(*) desc)
+  from wikipedia
+
+expectedResults:
+  - [1,1]

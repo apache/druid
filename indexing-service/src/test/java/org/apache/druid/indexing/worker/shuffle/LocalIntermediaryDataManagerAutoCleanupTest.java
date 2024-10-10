@@ -67,7 +67,6 @@ public class LocalIntermediaryDataManagerAutoCleanupTest
   {
     this.taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)))
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     this.overlordClient = new NoopOverlordClient()
     {

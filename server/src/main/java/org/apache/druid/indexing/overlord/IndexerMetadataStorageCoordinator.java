@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.PartialShardSpec;
@@ -38,32 +39,15 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * Handles metadata transactions performed by the Overlord.
  */
 public interface IndexerMetadataStorageCoordinator
 {
   /**
-   * Retrieve all published segments which may include any data in the interval and are marked as used from the
-   * metadata store.
-   *
-   * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
-   * the collection only once.
-   *
-   * @param dataSource The data source to query
-   * @param interval   The interval for which all applicable and used segmented are requested.
-   * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
-   *                   visibility is considered within the specified interval: that is, a segment which is visible
-   *                   outside of the specified interval, but overshadowed within the specified interval will not be
-   *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
-   *                   {@link Segments}.
-   * @return The DataSegments which include data in the requested interval. These segments may contain data outside the
-   *         requested interval.
-   *
-   * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
-   * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
-   * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
-   * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
+   * Retrieves all published segments that have partial or complete overlap with
+   * the given interval and are marked as used.
    */
-  default Collection<DataSegment> retrieveUsedSegmentsForInterval(
+  default Set<DataSegment> retrieveUsedSegmentsForInterval(
       String dataSource,
       Interval interval,
       Segments visibility
@@ -73,21 +57,16 @@ public interface IndexerMetadataStorageCoordinator
   }
 
   /**
-   * Retrieve all published used segments in the data source from the metadata store.
+   * Retrieves all published used segments for the given data source.
    *
-   * @param dataSource The data source to query
-   *
-   * @return all segments belonging to the given data source
-   * @see #retrieveUsedSegmentsForInterval(String, Interval, Segments) similar to this method but also accepts data
-   * interval.
+   * @see #retrieveUsedSegmentsForInterval(String, Interval, Segments)
    */
-  Collection<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility);
+  Set<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility);
 
   /**
-   *
    * Retrieve all published segments which are marked as used and the created_date of these segments belonging to the
    * given data source and list of intervals from the metadata store.
-   *
+   * <p>
    * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
    * parameter. The returned collection may include overshadowed segments and their created_dates, as if {@link
    * Segments#INCLUDING_OVERSHADOWED} was passed. It's the responsibility of the caller to filter out overshadowed ones
@@ -98,32 +77,16 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return The DataSegments and the related created_date of segments
    */
-  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals);
+  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(
+      String dataSource,
+      List<Interval> intervals
+  );
 
   /**
-   * Retrieve all published segments which may include any data in the given intervals and are marked as used from the
-   * metadata store.
-   * <p>
-   * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
-   * the collection only once.
-   * </p>
-   *
-   * @param dataSource The data source to query
-   * @param intervals  The intervals for which all applicable and used segments are requested.
-   * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
-   *                   visibility is considered within the specified intervals: that is, a segment which is visible
-   *                   outside of the specified intervals, but overshadowed on the specified intervals will not be
-   *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
-   *                   {@link Segments}.
-   * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
-   *         requested intervals.
-   *
-   * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
-   * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
-   * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
-   * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
+   * Retrieves all published segments that have partial or complete overlap with
+   * the given intervals and are marked as used.
    */
-  Collection<DataSegment> retrieveUsedSegmentsForIntervals(
+  Set<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
       Segments visibility
@@ -179,6 +142,12 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
+   * Retrieves segments for the given IDs, regardless of their visibility
+   * (visible, overshadowed or unused).
+   */
+  Set<DataSegment> retrieveSegmentsById(String dataSource, Set<String> segmentIds);
+
+  /**
    * Mark as unused segments which include ONLY data within the given interval.
    *
    * @param dataSource The data source the segments belong to
@@ -189,14 +158,15 @@ public interface IndexerMetadataStorageCoordinator
   int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval);
 
   /**
-   * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
-   * with identifiers already in the metadata storage will not be added).
+   * Attempts to insert a set of segments and corresponding schema to the metadata storage.
+   * Returns the set of segments actually added (segments with identifiers already in the metadata storage will not be added).
    *
    * @param segments set of segments to add
+   * @param segmentSchemaMapping segment schema information to add
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> commitSegments(Set<DataSegment> segments) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments, @Nullable SegmentSchemaMapping segmentSchemaMapping);
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -278,8 +248,8 @@ public interface IndexerMetadataStorageCoordinator
   int deletePendingSegments(String dataSource);
 
   /**
-   * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
-   * with identifiers already in the metadata storage will not be added).
+   * Attempts to insert a set of segments and corresponding schema to the metadata storage.
+   * Returns the set of segments actually added (segments with identifiers already in the metadata storage will not be added).
    * <p/>
    * If startMetadata and endMetadata are set, this insertion will be atomic with a compare-and-swap on dataSource
    * commit metadata.
@@ -294,6 +264,7 @@ public interface IndexerMetadataStorageCoordinator
    * @param endMetadata    dataSource metadata post-insert will have this endMetadata merged in with
    *                       {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
    *                       involve a metadata transaction
+   * @param segmentSchemaMapping segment schema information to persist.
    *
    * @return segment publish result indicating transaction success or failure, and set of segments actually published.
    * This method must only return a failure code if it is sure that the transaction did not happen. If it is not sure,
@@ -305,12 +276,14 @@ public interface IndexerMetadataStorageCoordinator
   SegmentPublishResult commitSegmentsAndMetadata(
       Set<DataSegment> segments,
       @Nullable DataSourceMetadata startMetadata,
-      @Nullable DataSourceMetadata endMetadata
-  ) throws IOException;
+      @Nullable DataSourceMetadata endMetadata,
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
+  );
 
   /**
-   * Commits segments created by an APPEND task. This method also handles segment
-   * upgrade scenarios that may result from concurrent append and replace.
+   * Commits segments and corresponding schema created by an APPEND task.
+   * This method also handles segment upgrade scenarios that may result
+   * from concurrent append and replace.
    * <ul>
    * <li>If a REPLACE task committed a segment that overlaps with any of the
    * appendSegments while this APPEND task was in progress, the appendSegments
@@ -325,11 +298,13 @@ public interface IndexerMetadataStorageCoordinator
    * @param appendSegmentToReplaceLock Map from append segment to the currently
    *                                   active REPLACE lock (if any) covering it
    * @param taskAllocatorId            allocator id of the task committing the segments to be appended
+   * @param segmentSchemaMapping       schema of append segments
    */
   SegmentPublishResult commitAppendSegments(
       Set<DataSegment> appendSegments,
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
-      String taskAllocatorId
+      String taskAllocatorId,
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
   /**
@@ -345,12 +320,14 @@ public interface IndexerMetadataStorageCoordinator
       Map<DataSegment, ReplaceTaskLock> appendSegmentToReplaceLock,
       DataSourceMetadata startMetadata,
       DataSourceMetadata endMetadata,
-      String taskGroup
+      String taskGroup,
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
   /**
-   * Commits segments created by a REPLACE task. This method also handles the
-   * segment upgrade scenarios that may result from concurrent append and replace.
+   * Commits segments and corresponding schema created by a REPLACE task.
+   * This method also handles the segment upgrade scenarios that may result
+   * from concurrent append and replace.
    * <ul>
    * <li>If an APPEND task committed a segment to an interval locked by this task,
    * the append segment is upgraded to the version of the corresponding lock.
@@ -361,10 +338,12 @@ public interface IndexerMetadataStorageCoordinator
    * @param replaceSegments        All segments created by a REPLACE task that
    *                               must be committed in a single transaction.
    * @param locksHeldByReplaceTask All active non-revoked REPLACE locks held by the task
+   * @param segmentSchemaMapping  Segment schema to add.
    */
   SegmentPublishResult commitReplaceSegments(
       Set<DataSegment> replaceSegments,
-      Set<ReplaceTaskLock> locksHeldByReplaceTask
+      Set<ReplaceTaskLock> locksHeldByReplaceTask,
+      @Nullable SegmentSchemaMapping segmentSchemaMapping
   );
 
   /**
@@ -378,9 +357,9 @@ public interface IndexerMetadataStorageCoordinator
    * </ul>
    *
    * @param replaceSegments Segments being committed by a REPLACE task
-   * @return Map from originally allocated pending segment to its new upgraded ID.
+   * @return List of inserted pending segment records
    */
-  Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradePendingSegmentsOverlappingWith(
+  List<PendingSegmentRecord> upgradePendingSegmentsOverlappingWith(
       Set<DataSegment> replaceSegments
   );
 
@@ -481,10 +460,11 @@ public interface IndexerMetadataStorageCoordinator
 
   /**
    * Delete pending segment for a give task group after all the tasks belonging to it have completed.
+   * @param datasource datasource of the task
    * @param taskAllocatorId task id / task group / replica group for an appending task
    * @return number of pending segments deleted from the metadata store
    */
-  int deletePendingSegmentsForTaskGroup(String taskAllocatorId);
+  int deletePendingSegmentsForTaskAllocatorId(String datasource, String taskAllocatorId);
 
   /**
    * Fetches all the pending segments of the datasource that overlap with a given interval.
@@ -493,4 +473,21 @@ public interface IndexerMetadataStorageCoordinator
    * @return List of pending segment records
    */
   List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval);
+
+  /**
+   * Map from a segment ID to the segment ID from which it was upgraded
+   * There should be no entry in the map for an original non-upgraded segment
+   * @param dataSource data source
+   * @param segmentIds ids of segments
+   */
+  Map<String, String> retrieveUpgradedFromSegmentIds(String dataSource, Set<String> segmentIds);
+
+  /**
+   * Map from a segment ID to a set containing
+   * 1) all segment IDs that were upgraded from it AND are still present in the metadata store
+   * 2) the segment ID itself if and only if it is still present in the metadata store
+   * @param dataSource data source
+   * @param segmentIds ids of the first segments which had the corresponding load spec
+   */
+  Map<String, Set<String>> retrieveUpgradedToSegmentIds(String dataSource, Set<String> segmentIds);
 }

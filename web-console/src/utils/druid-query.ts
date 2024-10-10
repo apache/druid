@@ -17,13 +17,13 @@
  */
 
 import { C } from '@druid-toolkit/query';
-import type { AxiosResponse } from 'axios';
+import type { AxiosResponse, CancelToken } from 'axios';
 import axios from 'axios';
 
 import { Api } from '../singletons';
 
 import type { RowColumn } from './general';
-import { assemble } from './general';
+import { assemble, lookupBy } from './general';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
 
@@ -329,10 +329,26 @@ export async function queryDruidRune(runeQuery: Record<string, any>): Promise<an
   return runeResultResp.data;
 }
 
-export async function queryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]> {
+export async function queryDruidSql<T = any>(
+  sqlQueryPayload: Record<string, any>,
+  cancelToken?: CancelToken,
+): Promise<T[]> {
   let sqlResultResp: AxiosResponse;
   try {
-    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload);
+    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload, { cancelToken });
+  } catch (e) {
+    throw new Error(getDruidErrorMessage(e));
+  }
+  return sqlResultResp.data;
+}
+
+export async function queryDruidSqlDart<T = any>(
+  sqlQueryPayload: Record<string, any>,
+  cancelToken?: CancelToken,
+): Promise<T[]> {
+  let sqlResultResp: AxiosResponse;
+  try {
+    sqlResultResp = await Api.instance.post('/druid/v2/sql/dart', sqlQueryPayload, { cancelToken });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -342,10 +358,24 @@ export async function queryDruidSql<T = any>(sqlQueryPayload: Record<string, any
 export interface QueryExplanation {
   query: any;
   signature: { name: string; type: string }[];
+  columnMappings: {
+    queryColumn: string;
+    outputColumn: string;
+  }[];
 }
 
-export function formatSignature(queryExplanation: QueryExplanation): string {
-  return queryExplanation.signature
-    .map(({ name, type }) => `${C.optionalQuotes(name)}::${type}`)
+export function formatColumnMappingsAndSignature(queryExplanation: QueryExplanation): string {
+  const columnNameToType = lookupBy(
+    queryExplanation.signature,
+    c => c.name,
+    c => c.type,
+  );
+  return queryExplanation.columnMappings
+    .map(({ queryColumn, outputColumn }) => {
+      const type = columnNameToType[queryColumn];
+      return `${C.optionalQuotes(queryColumn)}${type ? `::${type}` : ''}→${C.optionalQuotes(
+        outputColumn,
+      )}`;
+    })
     .join(', ');
 }

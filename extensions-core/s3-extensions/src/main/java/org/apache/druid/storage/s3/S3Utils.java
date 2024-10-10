@@ -92,6 +92,10 @@ public class S3Utils
       } else if (e instanceof SdkClientException && e.getMessage().contains("Unable to execute HTTP request")) {
         // This is likely due to a temporary DNS issue and can be retried.
         return true;
+      } else if (e instanceof SdkClientException && e.getMessage().contains("Unable to find a region via the region provider chain")) {
+        // This can happen sometimes when AWS isn't able to obtain the credentials for some service:
+        // https://github.com/aws/aws-sdk-java/issues/2285
+        return true;
       } else if (e instanceof AmazonClientException) {
         return AWSClientUtil.isClientExceptionRecoverable((AmazonClientException) e);
       } else {
@@ -101,8 +105,8 @@ public class S3Utils
   };
 
   /**
-   * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
-   * found, etc) are not retried.
+   * Retries S3 operations that fail intermittently (due to io-related exceptions, during obtaining credentials, etc).
+   * Service-level exceptions (access denied, file not found, etc) are not retried.
    */
   public static <T> T retryS3Operation(Task<T> f) throws Exception
   {
@@ -110,8 +114,9 @@ public class S3Utils
   }
 
   /**
-   * Retries S3 operations that fail due to io-related exceptions. Service-level exceptions (access denied, file not
-   * found, etc) are not retried. Also provide a way to set maxRetries that can be useful, i.e. for testing.
+   * Retries S3 operations that fail intermittently (due to io-related exceptions, during obtaining credentials, etc).
+   * Service-level exceptions (access denied, file not found, etc) are not retried.
+   * Also provide a way to set maxRetries that can be useful, i.e. for testing.
    */
   public static <T> T retryS3Operation(Task<T> f, int maxRetries) throws Exception
   {
@@ -374,7 +379,7 @@ public class S3Utils
   {
     final Protocol protocolFromClientConfig = parseProtocol(clientConfig.getProtocol());
     final String endpointUrl = endpointConfig.getUrl();
-    if (org.apache.commons.lang.StringUtils.isNotEmpty(endpointUrl)) {
+    if (org.apache.commons.lang3.StringUtils.isNotEmpty(endpointUrl)) {
       //noinspection ConstantConditions
       final URI uri = URIs.parse(endpointUrl, protocolFromClientConfig.toString());
       final Protocol protocol = parseProtocol(uri.getScheme());
@@ -389,16 +394,16 @@ public class S3Utils
 
   public static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
   {
-    if (org.apache.commons.lang.StringUtils.isNotEmpty(proxyConfig.getHost())) {
+    if (org.apache.commons.lang3.StringUtils.isNotEmpty(proxyConfig.getHost())) {
       conf.setProxyHost(proxyConfig.getHost());
     }
     if (proxyConfig.getPort() != -1) {
       conf.setProxyPort(proxyConfig.getPort());
     }
-    if (org.apache.commons.lang.StringUtils.isNotEmpty(proxyConfig.getUsername())) {
+    if (org.apache.commons.lang3.StringUtils.isNotEmpty(proxyConfig.getUsername())) {
       conf.setProxyUsername(proxyConfig.getUsername());
     }
-    if (org.apache.commons.lang.StringUtils.isNotEmpty(proxyConfig.getPassword())) {
+    if (org.apache.commons.lang3.StringUtils.isNotEmpty(proxyConfig.getPassword())) {
       conf.setProxyPassword(proxyConfig.getPassword());
     }
     return conf;

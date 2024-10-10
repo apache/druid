@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.storage.derby.DerbyConnector;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.jupiter.api.extension.AfterAllCallback;
@@ -42,19 +43,29 @@ public class TestDerbyConnector extends DerbyConnector
 
   public TestDerbyConnector(
       Supplier<MetadataStorageConnectorConfig> config,
+      Supplier<MetadataStorageTablesConfig> dbTables,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+  )
+  {
+    this(config, dbTables, "jdbc:derby:memory:druidTest" + dbSafeUUID(), centralizedDatasourceSchemaConfig);
+  }
+
+  public TestDerbyConnector(
+      Supplier<MetadataStorageConnectorConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables
   )
   {
-    this(config, dbTables, "jdbc:derby:memory:druidTest" + dbSafeUUID());
+    this(config, dbTables, "jdbc:derby:memory:druidTest" + dbSafeUUID(), CentralizedDatasourceSchemaConfig.create());
   }
 
   protected TestDerbyConnector(
       Supplier<MetadataStorageConnectorConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
-      String jdbcUri
+      String jdbcUri,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
-    super(new NoopMetadataStorageProvider().get(), config, dbTables, new DBI(jdbcUri + ";create=true"));
+    super(new NoopMetadataStorageProvider().get(), config, dbTables, new DBI(jdbcUri + ";create=true"), centralizedDatasourceSchemaConfig);
     this.jdbcUri = jdbcUri;
   }
 
@@ -85,21 +96,28 @@ public class TestDerbyConnector extends DerbyConnector
     private TestDerbyConnector connector;
     private final Supplier<MetadataStorageTablesConfig> dbTables;
     private final MetadataStorageConnectorConfig connectorConfig;
+    private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
     public DerbyConnectorRule()
     {
       this("druidTest" + dbSafeUUID());
     }
 
+    public DerbyConnectorRule(CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig)
+    {
+      this(Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("druidTest" + dbSafeUUID())), centralizedDatasourceSchemaConfig);
+    }
+
     private DerbyConnectorRule(
         final String defaultBase
     )
     {
-      this(Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(defaultBase)));
+      this(Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(defaultBase)), CentralizedDatasourceSchemaConfig.create());
     }
 
     public DerbyConnectorRule(
-        Supplier<MetadataStorageTablesConfig> dbTables
+        Supplier<MetadataStorageTablesConfig> dbTables,
+        CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
     )
     {
       this.dbTables = dbTables;
@@ -111,12 +129,13 @@ public class TestDerbyConnector extends DerbyConnector
           return connector.getJdbcUri();
         }
       };
+      this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     }
 
     @Override
     protected void before()
     {
-      connector = new TestDerbyConnector(Suppliers.ofInstance(connectorConfig), dbTables);
+      connector = new TestDerbyConnector(Suppliers.ofInstance(connectorConfig), dbTables, centralizedDatasourceSchemaConfig);
       connector.getDBI().open().close(); // create db
     }
 

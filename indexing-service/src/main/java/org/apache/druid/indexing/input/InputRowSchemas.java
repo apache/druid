@@ -79,7 +79,7 @@ public class InputRowSchemas
     final Set<String> transformOutputNames =
         transformSpec.getTransforms().stream().map(Transform::getName).collect(Collectors.toSet());
 
-    if (dimensionsSpec.hasCustomDimensions()) {
+    if (dimensionsSpec.hasFixedDimensions()) {
       // We need an inclusion-based filter.
       final Set<String> inclusions = new HashSet<>();
 

@@ -91,7 +91,7 @@ Tuning the cluster so that each Historical can accept 50 queries and 10 non-quer
 #### Segment Cache Size
 
 For better query performance, do not allocate segment data to a Historical in excess of the system free memory. The Historical uses free system memory to cache segments.
-For more detail, see [Loading and serving segments from cache](../design/historical/#loading-and-serving-segments-from-cache)
+For more detail, see [Loading and serving segments from cache](../design/historical.md#loading-and-serving-segments-from-cache).
 
 Druid uses the `druid.segmentCache.locations` to calculate the total segment data size assigned to a Historical. For rare use cases, you can override this behavior with `druid.server.maxSize` property.
 
@@ -176,29 +176,29 @@ To estimate total memory usage of the Broker under these guidelines:
 - Heap: allocated heap size
 - Direct Memory: `(druid.processing.numMergeBuffers + 1) * druid.processing.buffer.sizeBytes`
 
-### MiddleManager
+### Middle Manager
 
-The MiddleManager is a lightweight task controller/manager that launches Task processes, which perform ingestion work.
+The Middle Manager is a lightweight task controller/manager that launches Task processes, which perform ingestion work.
 
-#### MiddleManager heap sizing
+#### Middle Manager heap sizing
 
-The MiddleManager itself does not require much resources, you can set the heap to ~128MiB generally.
+The Middle Manager itself does not require much resources, you can set the heap to ~128MiB generally.
 
 #### SSD storage
 
-We recommend using SSDs for storage on the MiddleManagers, as the Tasks launched by MiddleManagers handle segment data stored on disk.
+We recommend using SSDs for storage on the Middle Managers, as the Tasks launched by Middle Managers handle segment data stored on disk.
 
 #### Task Count
 
-The number of tasks a MiddleManager can launch is controlled by the `druid.worker.capacity` setting.
+The number of tasks a Middle Manager can launch is controlled by the `druid.worker.capacity` setting.
 
 The number of workers needed in your cluster depends on how many concurrent ingestion tasks you need to run for your use cases. The number of workers that can be launched on a given machine depends on the size of resources allocated per worker and available system resources.
 
-You can allocate more MiddleManager machines to your cluster to add task capacity.
+You can allocate more Middle Manager machines to your cluster to add task capacity.
 
 #### Task configurations
 
-The following section below describes configuration for Tasks launched by the MiddleManager. The Tasks can be queried and perform ingestion workloads, so they require more resources than the MM.
+The following section below describes configuration for Tasks launched by the Middle Manager. The Tasks can be queried and perform ingestion workloads, so they require more resources than the MM.
 
 ##### Task heap sizing
 
@@ -249,7 +249,7 @@ To estimate total memory usage of a Task under these guidelines:
 - Heap: `1GiB + (2 * total size of lookup maps)`
 - Direct Memory: `(druid.processing.numThreads + druid.processing.numMergeBuffers + 1) * druid.processing.buffer.sizeBytes`
 
-The total memory usage of the MiddleManager + Tasks:
+The total memory usage of the Middle Manager + Tasks:
 
 `MM heap size + druid.worker.capacity * (single task memory usage)`
 
@@ -435,7 +435,7 @@ Additionally, for large JVM heaps, here are a few Garbage Collection efficiency 
 
 
 - Mount /tmp on tmpfs. See [The Four Month Bug: JVM statistics cause garbage collection pauses](http://www.evanjones.ca/jvm-mmap-pause.html).
-- On Disk-IO intensive processes (e.g., Historical and MiddleManager), GC and Druid logs should be written to a different disk than where data is written.
+- On Disk-IO intensive processes (e.g., Historical and Middle Manager), GC and Druid logs should be written to a different disk than where data is written.
 - Disable [Transparent Huge Pages](https://www.kernel.org/doc/html/latest/admin-guide/mm/transhuge.html).
 - Try disabling biased locking by using `-XX:-UseBiasedLocking` JVM flag. See [Logging Stop-the-world Pauses in JVM](https://dzone.com/articles/logging-stop-world-pauses-jvm).
 
@@ -447,7 +447,7 @@ We recommend using UTC timezone for all your events and across your hosts, not j
 
 #### SSDs
 
-SSDs are highly recommended for Historical, MiddleManager, and Indexer processes if you are not running a cluster that is entirely in memory. SSDs can greatly mitigate the time required to page data in and out of memory.
+SSDs are highly recommended for Historical, Middle Manager, and Indexer processes if you are not running a cluster that is entirely in memory. SSDs can greatly mitigate the time required to page data in and out of memory.
 
 #### JBOD vs RAID
 
@@ -455,11 +455,11 @@ Historical processes store large number of segments on Disk and support specifyi
 
 #### Swap space
 
-We recommend _not_ using swap space for Historical, MiddleManager, and Indexer processes since due to the large number of memory mapped segment files can lead to poor and unpredictable performance.
+We recommend _not_ using swap space for Historical, Middle Manager, and Indexer processes since due to the large number of memory mapped segment files can lead to poor and unpredictable performance.
 
 #### Linux limits
 
-For Historical, MiddleManager, and Indexer processes (and for really large clusters, Broker processes), you might need to adjust some Linux system limits to account for a large number of open files, a large number of network connections, or a large number of memory mapped files.
+For Historical, Middle Manager, and Indexer processes (and for really large clusters, Broker processes), you might need to adjust some Linux system limits to account for a large number of open files, a large number of network connections, or a large number of memory mapped files.
 
 ##### ulimit
 
@@ -467,4 +467,4 @@ The limit on the number of open files can be set permanently by editing `/etc/se
 
 ##### max_map_count
 
-Historical processes and to a lesser extent, MiddleManager and Indexer processes memory map segment files, so depending on the number of segments per server, `/proc/sys/vm/max_map_count` might also need to be adjusted. Depending on the variant of Linux, this might be done via `sysctl` by placing a file in `/etc/sysctl.d/` that sets `vm.max_map_count`.
+Historical processes and to a lesser extent, Middle Manager and Indexer processes memory map segment files, so depending on the number of segments per server, `/proc/sys/vm/max_map_count` might also need to be adjusted. Depending on the variant of Linux, this might be done via `sysctl` by placing a file in `/etc/sysctl.d/` that sets `vm.max_map_count`.

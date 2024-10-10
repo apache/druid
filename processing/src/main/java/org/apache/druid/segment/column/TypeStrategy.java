@@ -19,7 +19,9 @@
 
 package org.apache.druid.segment.column;
 
+import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -63,7 +65,7 @@ import java.util.Comparator;
  * {@code Comparator<Number>}.  So, we fall back to effectively erasing the generic type and having them all be
  * {@code Comparator<Object>}.
  */
-public interface TypeStrategy<T> extends Comparator<Object>
+public interface TypeStrategy<T> extends Comparator<Object>, Hash.Strategy<T>
 {
   /**
    * Estimate the size in bytes that writing this value to memory would require. This method is not required to be
@@ -85,9 +87,13 @@ public interface TypeStrategy<T> extends Comparator<Object>
   T read(ByteBuffer buffer);
 
   /**
-   * Whether the {@link #read} methods return an object that may retain a reference to the provided {@link ByteBuffer}.
-   * If a reference is sometimes retained, this method returns true. It returns false if, and only if, a reference
-   * is *never* retained.
+   * Whether the {@link #read} methods return an object that may retain a reference to the underlying memory of the
+   * provided {@link ByteBuffer}. If a reference is sometimes retained, this method returns true. It returns false if,
+   * and only if, a reference is *never* retained.
+   * <p>
+   * If this method returns true, and the caller does not control the lifecycle of the underlying memory or cannot
+   * ensure that it will not change over the lifetime of the returned object, callers should copy the memory to a new
+   * location that they do control the lifecycle of and will be available for the duration of the returned object.
    */
   boolean readRetainsBufferReference();
 
@@ -169,5 +175,60 @@ public interface TypeStrategy<T> extends Comparator<Object>
   default T fromBytes(byte[] value)
   {
     throw new IllegalStateException("Not supported");
+  }
+
+  /**
+   * Whether the type is groupable or not. This is always true for all the primitive types, arrays, and nested arrays
+   * therefore the SQL and the native layer might ignore this flag for those types. For complex types, this flag can be
+   * true or false, depending on whether the semantics and implementation of the type naturally leads to groupability
+   * or not. For example, it makes sense for JSON columns to be groupable, however there is little sense in grouping
+   * sketches (before finalizing).
+   * <p>
+   * If a type is groupable, following statements MUST hold:
+   * <p>
+   * a. {@link #equals(Object, Object)} must be implemented. It should return true if and only if two objects are equal
+   *    and can be grouped together.
+   * <p>
+   * b. {@link #hashCode(Object)} must be implemented, and must be consistent with equals. It should return a hashCode
+   *    for the given object. For two objects that are equal, it must return the same hash value. For two objects that are
+   *    not equal, it can return the same hash value (or not). A conscious effort must be made to minimise collisions between
+   *    the hash values of two non-equal objects for faster grouping.
+   * <p>
+   * c. {@link #compare(Object, Object)} must be consistent with equals. Apart from abiding by the definition of
+   *    {@link Comparator#compare}, it must not return 0 for two objects that are not equals, and converse must also hold,
+   *    i.e. if the value returned by compare is not zero, then the arguments must not be equal.
+   * <p>
+   * d. {@link #getClazz()} should return the Java class for the dimension represented by the type. This will be used by the
+   *    mapper to deserialize the object during tasks like broker-historical interaction and spilling to the disk.
+   */
+  default boolean groupable()
+  {
+    return false;
+  }
+
+  /**
+   * @see #groupable()
+   */
+  @Override
+  default int hashCode(T o)
+  {
+    throw DruidException.defensive("Not implemented. Check groupable() first");
+  }
+
+  /**
+   * @see #groupable()
+   */
+  @Override
+  default boolean equals(T a, T b)
+  {
+    throw DruidException.defensive("Not implemented. Check groupable() first");
+  }
+
+  /**
+   * @see #groupable()
+   */
+  default Class<?> getClazz()
+  {
+    throw DruidException.defensive("Not implemented. Check groupable() first");
   }
 }

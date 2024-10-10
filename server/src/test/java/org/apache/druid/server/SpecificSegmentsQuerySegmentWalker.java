@@ -36,6 +36,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
+import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.LookupSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
@@ -44,9 +45,11 @@ import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
@@ -87,6 +90,12 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
         {
           return Optional.empty();
         }
+
+        @Override
+        public String getCanonicalLookupName(String lookupName)
+        {
+          return lookupName;
+        }
       };
 
   public static SpecificSegmentsQuerySegmentWalker createWalker(
@@ -125,11 +134,13 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                 conglomerate,
                 segmentWrangler,
                 joinableFactoryWrapper,
-                scheduler
+                scheduler,
+                new NoopServiceEmitter()
             ),
             conglomerate,
             joinableFactoryWrapper.getJoinableFactory(),
-            new ServerConfig()
+            new ServerConfig(),
+            new NoopServiceEmitter()
         )
     );
   }
@@ -194,6 +205,11 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   public SpecificSegmentsQuerySegmentWalker add(final DataSegment descriptor, final QueryableIndex index)
   {
     return add(descriptor, new QueryableIndexSegment(index, descriptor.getId()));
+  }
+
+  public SpecificSegmentsQuerySegmentWalker add(final DataSegment descriptor, final IncrementalIndex index)
+  {
+    return add(descriptor, new IncrementalIndexSegment(index, descriptor.getId()));
   }
 
   public List<DataSegment> getSegments()

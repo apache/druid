@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { AnchorButton, Button, Intent, Menu, MenuItem, Position } from '@blueprintjs/core';
+import { AnchorButton, Button, Intent, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 import ReactTable from 'react-table';
 
@@ -82,9 +81,11 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
 
   const numTotalRows = destination?.numTotalRows;
 
-  function getPageUrl(pageIndex: number) {
+  function getResultUrl(pageIndex: number) {
     return UrlBaser.base(
-      `/druid/v2/sql/statements/${id}/results?page=${pageIndex}&resultFormat=${desiredResultFormat}`,
+      `/druid/v2/sql/statements/${id}/results?${
+        pageIndex < 0 ? '' : `page=${pageIndex}&`
+      }resultFormat=${desiredResultFormat}`,
     );
   }
 
@@ -94,13 +95,10 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
     return `${id}_page_${pageNumberString}_of_${numPagesString}.${desiredExtension}`;
   }
 
-  async function downloadAllPages() {
+  async function downloadAllData() {
     if (!pages) return;
-    const numPages = pages.length;
-    for (let i = 0; i < pages.length; i++) {
-      downloadUrl(getPageUrl(i), getPageFilename(i, numPages));
-      await wait(100);
-    }
+    downloadUrl(getResultUrl(-1), `${id}_all_data.${desiredExtension}`);
+    await wait(100);
   }
 
   const numPages = pages.length;
@@ -113,7 +111,7 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
       </p>
       <p>
         Format when downloading:{' '}
-        <Popover2
+        <Popover
           minimal
           position={Position.BOTTOM_LEFT}
           content={
@@ -134,13 +132,13 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             text={RESULT_FORMAT_LABEL[desiredResultFormat]}
             rightIcon={IconNames.CARET_DOWN}
           />
-        </Popover2>{' '}
+        </Popover>{' '}
         {pages.length > 1 && (
           <Button
             intent={Intent.PRIMARY}
             icon={IconNames.DOWNLOAD}
-            text={`Download all data (${pluralIfNeeded(numPages, 'file')})`}
-            onClick={() => void downloadAllPages()}
+            text="Download all data (concatenated)"
+            onClick={() => void downloadAllData()}
           />
         )}
       </p>
@@ -178,14 +176,14 @@ export const DestinationPagesPane = React.memo(function DestinationPagesPane(
             Header: '',
             id: 'download',
             accessor: 'id',
-            width: 300,
+            width: 130,
             Cell: ({ value }) => (
               <AnchorButton
                 className="download-button"
                 icon={IconNames.DOWNLOAD}
                 text="Download"
                 minimal
-                href={getPageUrl(value)}
+                href={getResultUrl(value)}
                 download={getPageFilename(value, numPages)}
               />
             ),

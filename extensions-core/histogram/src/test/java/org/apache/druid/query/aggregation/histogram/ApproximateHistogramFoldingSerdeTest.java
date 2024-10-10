@@ -21,6 +21,7 @@ package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.junit.Assert;
 import org.junit.Test;
@@ -74,6 +75,15 @@ public class ApproximateHistogramFoldingSerdeTest
         extractor.extractValue(row, "numberValue")
     );
   }
+
+  @Test
+  public void testReadRetainsBufferReference()
+  {
+    final ApproximateHistogramFoldingSerde serde = new ApproximateHistogramFoldingSerde();
+    final ObjectStrategy<ApproximateHistogram> strategy = serde.getObjectStrategy();
+    Assert.assertFalse(strategy.readRetainsBufferReference());
+  }
+
 
   public static ApproximateHistogram makeHistogram(final float... floats)
   {

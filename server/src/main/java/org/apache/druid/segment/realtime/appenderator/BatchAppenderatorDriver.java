@@ -28,6 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.loading.DataSegmentKiller;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
@@ -60,20 +61,16 @@ import java.util.stream.Collectors;
 public class BatchAppenderatorDriver extends BaseAppenderatorDriver
 {
   /**
-   * Create a driver.
-   *
-   * @param appenderator       appenderator
-   * @param segmentAllocator   segment allocator
-   * @param usedSegmentChecker used segment checker
+   * Creates a driver for batch ingestion.
    */
   public BatchAppenderatorDriver(
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
-      UsedSegmentChecker usedSegmentChecker,
+      PublishedSegmentRetriever segmentRetriever,
       DataSegmentKiller dataSegmentKiller
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
+    super(appenderator, segmentAllocator, segmentRetriever, dataSegmentKiller);
   }
 
   @Nullable
@@ -202,7 +199,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
       @Nullable final Set<DataSegment> segmentsToBeOverwritten,
       @Nullable final Set<DataSegment> tombstones,
       final TransactionalSegmentPublisher publisher,
-      final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction
+      final Function<Set<DataSegment>, Set<DataSegment>> outputSegmentsAnnotateFunction,
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
     final Map<String, SegmentsForSequence> snapshot;
@@ -226,7 +224,8 @@ public class BatchAppenderatorDriver extends BaseAppenderatorDriver
                     )
                 )
                 .collect(Collectors.toList()),
-            null
+            null,
+            segmentSchemaMapping
         ),
         publisher,
         outputSegmentsAnnotateFunction

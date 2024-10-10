@@ -42,20 +42,24 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.msq.counters.ChannelCounters;
+import org.apache.druid.query.OrderBy;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.Metadata;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.loading.DataSegmentPusher;
+import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -140,10 +144,15 @@ public class TaskDataSegmentProviderTest
     }
 
     cacheDir = temporaryFolder.newFolder();
+    final SegmentLoaderConfig loaderConfig = new SegmentLoaderConfig().withLocations(
+        ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
+    );
+    final List<StorageLocation> locations = loaderConfig.toStorageLocations();
     cacheManager = new SegmentLocalCacheManager(
-        new SegmentLoaderConfig().withLocations(
-            ImmutableList.of(new StorageLocationConfig(cacheDir, 10_000_000_000L, null))
-        ),
+        locations,
+        loaderConfig,
+        new LeastBytesUsedStorageLocationSelectorStrategy(locations),
+        TestIndex.INDEX_IO,
         jsonMapper
     );
 
@@ -178,7 +187,7 @@ public class TaskDataSegmentProviderTest
     for (int i = 0; i < iterations; i++) {
       final int expectedSegmentNumber = i % NUM_SEGMENTS;
       final DataSegment segment = segments.get(expectedSegmentNumber);
-      final ListenableFuture<Supplier<ResourceHolder<Segment>>> f =
+      final ListenableFuture<Supplier<ResourceHolder<CompleteSegment>>> f =
           exec.submit(() -> provider.fetchSegment(segment.getId(), new ChannelCounters(), false));
 
       testFutures.add(
@@ -186,8 +195,8 @@ public class TaskDataSegmentProviderTest
               f,
               holderSupplier -> {
                 try {
-                  final ResourceHolder<Segment> holder = holderSupplier.get();
-                  Assert.assertEquals(segment.getId(), holder.get().getId());
+                  final ResourceHolder<CompleteSegment> holder = holderSupplier.get();
+                  Assert.assertEquals(segment.getId(), holder.get().getSegment().getId());
 
                   final String expectedStorageDir = DataSegmentPusher.getDefaultStorageDir(segment, false);
                   final File expectedFile = new File(
@@ -324,6 +333,12 @@ public class TaskDataSegmentProviderTest
     public ColumnHolder getColumnHolder(String columnName)
     {
       return null;
+    }
+
+    @Override
+    public List<OrderBy> getOrdering()
+    {
+      return Collections.emptyList();
     }
 
     @Override

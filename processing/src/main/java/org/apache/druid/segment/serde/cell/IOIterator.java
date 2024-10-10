@@ -22,6 +22,12 @@ package org.apache.druid.segment.serde.cell;
 import java.io.Closeable;
 import java.io.IOException;
 
+/**
+ * An Iterator-like interface that is intentionally not extending Iterator.  This is because it is Closeable
+ * and we never want to lose track of the fact that the object needs to be closed.
+ *
+ * @param <T>
+ */
 public interface IOIterator<T> extends Closeable
 {
   boolean hasNext() throws IOException;

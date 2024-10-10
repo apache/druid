@@ -25,7 +25,8 @@ import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.MapJoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -62,8 +63,9 @@ public class DruidSchemaNoDataInitTest extends CalciteTestBase
           new NoopServiceEmitter(),
           new PhysicalDatasourceMetadataFactory(
               new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
-              new SegmentManager(EasyMock.createMock(SegmentLoader.class))),
-          null
+              new SegmentManager(EasyMock.createMock(SegmentLocalCacheManager.class))),
+          null,
+          CentralizedDatasourceSchemaConfig.create()
       );
 
       cache.start();

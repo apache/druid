@@ -38,6 +38,9 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
 
+  @JacksonInject
+  S3UploadManager s3UploadManager;
+
   @JsonCreator
   public S3StorageConnectorProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
@@ -53,6 +56,6 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   @Override
   public StorageConnector get()
   {
-    return new S3StorageConnector(this, s3);
+    return new S3StorageConnector(this, s3, s3UploadManager);
   }
 }

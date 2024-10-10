@@ -35,8 +35,11 @@ import org.apache.druid.segment.filter.LikeFilter;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFilter
@@ -44,7 +47,6 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
   // Regex matching characters that are definitely okay to include unescaped in a regex.
   // Leads to excessively paranoid escaping, although shouldn't affect runtime beyond compiling the regex.
   private static final Pattern DEFINITELY_FINE = Pattern.compile("[\\w\\d\\s-]");
-  private static final String WILDCARD = ".*";
 
   private final String dimension;
   private final String pattern;
@@ -73,7 +75,7 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     if (escape != null && escape.length() != 1) {
       throw new IllegalArgumentException("Escape must be null or a single character");
     } else {
-      this.escapeChar = (escape == null || escape.isEmpty()) ? null : escape.charAt(0);
+      this.escapeChar = escape == null ? null : escape.charAt(0);
     }
 
     this.likeMatcher = LikeMatcher.from(pattern, this.escapeChar);
@@ -214,8 +216,8 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     // Prefix that matching strings are known to start with. May be empty.
     private final String prefix;
 
-    // Regex pattern that describes matching strings.
-    private final Pattern pattern;
+    // Regex patterns that describes matching strings.
+    private final List<Pattern> pattern;
 
     private final String likePattern;
 
@@ -223,7 +225,7 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
         final String likePattern,
         final SuffixMatch suffixMatch,
         final String prefix,
-        final Pattern pattern
+        final List<Pattern> pattern
     )
     {
       this.likePattern = likePattern;
@@ -238,7 +240,10 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     )
     {
       final StringBuilder prefix = new StringBuilder();
-      final StringBuilder regex = new StringBuilder();
+      // Splits the input on % to leave only eagerly-matchable sub-patterns. This is to avoid catastrophic backtracking:
+      // https://www.rexegg.com/regex-explosive-quantifiers.html#remote
+      final List<Pattern> pattern = new ArrayList<>();
+      final StringBuilder regex = new StringBuilder("^");
       boolean escaping = false;
       boolean inPrefix = true;
       SuffixMatch suffixMatch = SuffixMatch.MATCH_EMPTY;
@@ -251,11 +256,16 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
           if (suffixMatch == SuffixMatch.MATCH_EMPTY) {
             suffixMatch = SuffixMatch.MATCH_ANY;
           }
-          regex.append(WILDCARD);
+          if (regex.length() > 0) {
+            if (regex.length() > 1 || regex.charAt(0) != '^') {
+              pattern.add(Pattern.compile(regex.toString(), Pattern.DOTALL));
+            }
+            regex.setLength(0);
+          }
         } else if (c == '_' && !escaping) {
           inPrefix = false;
           suffixMatch = SuffixMatch.MATCH_PATTERN;
-          regex.append(".");
+          regex.append('.');
         } else {
           if (inPrefix) {
             prefix.append(c);
@@ -267,7 +277,14 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
         }
       }
 
-      return new LikeMatcher(likePattern, suffixMatch, prefix.toString(), Pattern.compile(regex.toString(), Pattern.DOTALL));
+      if (likePattern.isEmpty()) {
+        pattern.add(Pattern.compile("^$"));
+      } else if (regex.length() > 0) {
+        regex.append('$');
+        pattern.add(Pattern.compile(regex.toString(), Pattern.DOTALL));
+      }
+
+      return new LikeMatcher(likePattern, suffixMatch, prefix.toString(), pattern);
     }
 
     private static void addPatternCharacter(final StringBuilder patternBuilder, final char c)
@@ -284,13 +301,31 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
       return matches(s, pattern);
     }
 
-    private static DruidPredicateMatch matches(@Nullable final String s, Pattern pattern)
+    private static DruidPredicateMatch matches(@Nullable final String s, List<Pattern> pattern)
     {
       String val = NullHandling.nullToEmptyIfNeeded(s);
       if (val == null) {
         return DruidPredicateMatch.UNKNOWN;
       }
-      return DruidPredicateMatch.of(pattern.matcher(val).matches());
+
+      if (pattern.size() == 1) {
+        // Most common case is a single pattern: a% => ^a, %z => z$, %m% => m
+        return DruidPredicateMatch.of(pattern.get(0).matcher(val).find());
+      }
+
+      int offset = 0;
+
+      for (Pattern part : pattern) {
+        Matcher matcher = part.matcher(val);
+
+        if (!matcher.find(offset)) {
+          return DruidPredicateMatch.FALSE;
+        }
+
+        offset = matcher.end();
+      }
+
+      return DruidPredicateMatch.TRUE;
     }
 
     /**
@@ -325,12 +360,18 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     }
 
     @VisibleForTesting
+    String describeCompilation()
+    {
+      return likePattern + " => " + prefix + ":" + pattern;
+    }
+
+    @VisibleForTesting
     static class PatternDruidPredicateFactory implements DruidPredicateFactory
     {
       private final ExtractionFn extractionFn;
-      private final Pattern pattern;
+      private final List<Pattern> pattern;
 
-      PatternDruidPredicateFactory(ExtractionFn extractionFn, Pattern pattern)
+      PatternDruidPredicateFactory(ExtractionFn extractionFn, List<Pattern> pattern)
       {
         this.extractionFn = extractionFn;
         this.pattern = pattern;

@@ -37,6 +37,7 @@ public class ExpressionProcessingConfig
   // Coerce 'null', '[]', and '[null]' into '[null]' for backwards compat with 0.22 and earlier
   public static final String HOMOGENIZE_NULL_MULTIVALUE_STRING_ARRAYS =
       "druid.expressions.homogenizeNullMultiValueStringArrays";
+  public static final String ALLOW_VECTORIZE_FALLBACK = "druid.expressions.allowVectorizeFallback";
 
   @JsonProperty("useStrictBooleans")
   private final boolean useStrictBooleans;
@@ -47,11 +48,15 @@ public class ExpressionProcessingConfig
   @JsonProperty("homogenizeNullMultiValueStringArrays")
   private final boolean homogenizeNullMultiValueStringArrays;
 
+  @JsonProperty("allowVectorizeFallback")
+  private final boolean allowVectorizeFallback;
+
   @JsonCreator
   public ExpressionProcessingConfig(
       @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans,
       @JsonProperty("processArraysAsMultiValueStrings") @Nullable Boolean processArraysAsMultiValueStrings,
-      @JsonProperty("homogenizeNullMultiValueStringArrays") @Nullable Boolean homogenizeNullMultiValueStringArrays
+      @JsonProperty("homogenizeNullMultiValueStringArrays") @Nullable Boolean homogenizeNullMultiValueStringArrays,
+      @JsonProperty("allowVectorizeFallback") @Nullable Boolean allowVectorizeFallback
   )
   {
     this.useStrictBooleans = getWithPropertyFallback(
@@ -66,6 +71,10 @@ public class ExpressionProcessingConfig
     this.homogenizeNullMultiValueStringArrays = getWithPropertyFallbackFalse(
         homogenizeNullMultiValueStringArrays,
         HOMOGENIZE_NULL_MULTIVALUE_STRING_ARRAYS
+    );
+    this.allowVectorizeFallback = getWithPropertyFallbackFalse(
+        allowVectorizeFallback,
+        ALLOW_VECTORIZE_FALLBACK
     );
     String version = ExpressionProcessingConfig.class.getPackage().getImplementationVersion();
     if (version == null || version.contains("SNAPSHOT")) {
@@ -93,6 +102,11 @@ public class ExpressionProcessingConfig
   public boolean isHomogenizeNullMultiValueStringArrays()
   {
     return homogenizeNullMultiValueStringArrays;
+  }
+
+  public boolean allowVectorizeFallback()
+  {
+    return allowVectorizeFallback;
   }
 
   private static boolean getWithPropertyFallbackFalse(@Nullable Boolean value, String property)

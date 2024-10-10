@@ -82,12 +82,6 @@ public class TimeChunkLockTryAcquireAction implements TaskAction<TaskLock>
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return false;
-  }
-
-  @Override
   public String toString()
   {
     return "TimeChunkLockTryAcquireAction{" +

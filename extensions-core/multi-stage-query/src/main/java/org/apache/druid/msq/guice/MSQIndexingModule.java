@@ -20,20 +20,20 @@
 package org.apache.druid.msq.guice;
 
 import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Provides;
-import org.apache.druid.discovery.NodeRole;
-import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshotsSerializer;
+import org.apache.druid.msq.counters.CpuCounter;
+import org.apache.druid.msq.counters.CpuCounters;
+import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
 import org.apache.druid.msq.counters.SuperSorterProgressTrackerCounter;
 import org.apache.druid.msq.counters.WarningCounters;
+import org.apache.druid.msq.indexing.MSQCompactionRunner;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
@@ -63,7 +63,9 @@ import org.apache.druid.msq.indexing.error.TooManyClusteredByColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyInputFilesFault;
 import org.apache.druid.msq.indexing.error.TooManyPartitionsFault;
+import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
+import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
@@ -94,11 +96,9 @@ import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
 import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
-import org.apache.druid.query.DruidProcessingConfig;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Module that adds {@link MSQControllerTask}, {@link MSQWorkerTask}, and dependencies.
@@ -132,7 +132,9 @@ public class MSQIndexingModule implements DruidModule
       TooManyColumnsFault.class,
       TooManyInputFilesFault.class,
       TooManyPartitionsFault.class,
+      TooManyRowsInAWindowFault.class,
       TooManyRowsWithSameKeyFault.class,
+      TooManySegmentsInTimeChunkFault.class,
       TooManyWarningsFault.class,
       TooManyWorkersFault.class,
       TooManyAttemptsForJob.class,
@@ -176,6 +178,9 @@ public class MSQIndexingModule implements DruidModule
         SuperSorterProgressTrackerCounter.Snapshot.class,
         WarningCounters.Snapshot.class,
         SegmentGenerationProgressCounter.Snapshot.class,
+        CpuCounters.Snapshot.class,
+        CpuCounter.Snapshot.class,
+        NilQueryCounterSnapshot.class,
 
         // InputSpec classes
         ExternalInputSpec.class,
@@ -197,6 +202,8 @@ public class MSQIndexingModule implements DruidModule
         NilInputSource.class
     );
 
+    module.registerSubtypes(new NamedType(MSQCompactionRunner.class, MSQCompactionRunner.TYPE));
+
     FAULT_CLASSES.forEach(module::registerSubtypes);
     module.addSerializer(new CounterSnapshotsSerializer());
     return Collections.singletonList(module);
@@ -205,18 +212,5 @@ public class MSQIndexingModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-  }
-
-  @Provides
-  @LazySingleton
-  public Bouncer makeBouncer(final DruidProcessingConfig processingConfig, @Self Set<NodeRole> nodeRoles)
-  {
-    if (nodeRoles.contains(NodeRole.PEON) && !nodeRoles.contains(NodeRole.INDEXER)) {
-      // CliPeon -> use only one thread regardless of configured # of processing threads. This matches the expected
-      // resource usage pattern for CliPeon-based tasks (one task / one working thread per JVM).
-      return new Bouncer(1);
-    } else {
-      return new Bouncer(processingConfig.getNumThreads());
-    }
   }
 }

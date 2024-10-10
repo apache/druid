@@ -243,7 +243,7 @@ public class UnloadUnusedSegmentsTest
     Set<DataSegment> usedSegments = ImmutableSet.of(segment2);
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc())
+        .builder()
         .withDruidCluster(
             DruidCluster
                 .builder()
@@ -261,10 +261,9 @@ public class UnloadUnusedSegmentsTest
         )
         .withUsedSegments(usedSegments)
         .withBroadcastDatasources(Collections.singleton(broadcastDatasource))
-        .withDatabaseRuleManager(databaseRuleManager)
         .build();
 
-    params = new UnloadUnusedSegments(loadQueueManager).run(params);
+    params = new UnloadUnusedSegments(loadQueueManager, databaseRuleManager::getRulesWithDefault).run(params);
     CoordinatorRunStats stats = params.getCoordinatorStats();
 
     // We drop segment1 and broadcast1 from all servers, realtimeSegment is not dropped by the indexer

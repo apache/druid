@@ -34,6 +34,7 @@ import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -51,7 +52,7 @@ import java.util.EnumSet;
 
 /**
  * Value to dictionary id lookup, backed with memory mapped dictionaries populated lazily by the supplied
- * @link DictionaryWriter}.
+ * {@link DictionaryWriter}.
  */
 public final class DictionaryIdLookup implements Closeable
 {
@@ -99,42 +100,33 @@ public final class DictionaryIdLookup implements Closeable
     this.arrayDictionaryWriter = arrayDictionaryWriter;
   }
 
+  public int[] getArrayValue(int id)
+  {
+    ensureArrayDictionaryLoaded();
+    return arrayDictionary.get(id - arrayOffset());
+  }
+
+  @Nullable
+  public Object getDictionaryValue(int id)
+  {
+    ensureStringDictionaryLoaded();
+    ensureLongDictionaryLoaded();
+    ensureDoubleDictionaryLoaded();
+    ensureArrayDictionaryLoaded();
+    if (id < longOffset()) {
+      return StringUtils.fromUtf8Nullable(stringDictionary.get(id));
+    } else if (id < doubleOffset()) {
+      return longDictionary.get(id - longOffset());
+    } else if (id < arrayOffset()) {
+      return doubleDictionary.get(id - doubleOffset());
+    } else {
+      return arrayDictionary.get(id - arrayOffset());
+    }
+  }
+
   public int lookupString(@Nullable String value)
   {
-    if (stringDictionary == null) {
-      // GenericIndexed v2 can write to multiple files if the dictionary is larger than 2gb, so we use a smooshfile
-      // for strings because of this. if other type dictionary writers could potentially use multiple internal files
-      // in the future, we should transition them to using this approach as well (or build a combination smoosher and
-      // mapper so that we can have a mutable smoosh)
-      File stringSmoosh = FileUtils.createTempDirInLocation(tempBasePath, StringUtils.urlEncode(name) + "__stringTempSmoosh");
-      stringDictionaryFile = stringSmoosh.toPath();
-      final String fileName = NestedCommonFormatColumnSerializer.getInternalFileName(
-          name,
-          NestedCommonFormatColumnSerializer.STRING_DICTIONARY_FILE_NAME
-      );
-
-      try (
-          final FileSmoosher smoosher = new FileSmoosher(stringSmoosh);
-          final SmooshedWriter writer = smoosher.addWithSmooshedWriter(
-              fileName,
-              stringDictionaryWriter.getSerializedSize()
-          )
-      ) {
-        stringDictionaryWriter.writeTo(writer, smoosher);
-        writer.close();
-        smoosher.close();
-        stringBufferMapper = SmooshedFileMapper.load(stringSmoosh);
-        final ByteBuffer stringBuffer = stringBufferMapper.mapFile(fileName);
-        stringDictionary = StringEncodingStrategies.getStringDictionarySupplier(
-            stringBufferMapper,
-            stringBuffer,
-            ByteOrder.nativeOrder()
-        ).get();
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
+    ensureStringDictionaryLoaded();
     final byte[] bytes = StringUtils.toUtf8Nullable(value);
     final int index = stringDictionary.indexOf(bytes == null ? null : ByteBuffer.wrap(bytes));
     if (index < 0) {
@@ -145,13 +137,7 @@ public final class DictionaryIdLookup implements Closeable
 
   public int lookupLong(@Nullable Long value)
   {
-    if (longDictionary == null) {
-      longDictionaryFile = makeTempFile(name + NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME);
-      longBuffer = mapWriter(longDictionaryFile, longDictionaryWriter);
-      longDictionary = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES).get();
-      // reset position
-      longBuffer.position(0);
-    }
+    ensureLongDictionaryLoaded();
     final int index = longDictionary.indexOf(value);
     if (index < 0) {
       throw DruidException.defensive("Value not found in column[%s] long dictionary", name);
@@ -161,18 +147,7 @@ public final class DictionaryIdLookup implements Closeable
 
   public int lookupDouble(@Nullable Double value)
   {
-    if (doubleDictionary == null) {
-      doubleDictionaryFile = makeTempFile(name + NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME);
-      doubleBuffer = mapWriter(doubleDictionaryFile, doubleDictionaryWriter);
-      doubleDictionary = FixedIndexed.read(
-          doubleBuffer,
-          TypeStrategies.DOUBLE,
-          ByteOrder.nativeOrder(),
-          Double.BYTES
-      ).get();
-      // reset position
-      doubleBuffer.position(0);
-    }
+    ensureDoubleDictionaryLoaded();
     final int index = doubleDictionary.indexOf(value);
     if (index < 0) {
       throw DruidException.defensive("Value not found in column[%s] double dictionary", name);
@@ -182,13 +157,7 @@ public final class DictionaryIdLookup implements Closeable
 
   public int lookupArray(@Nullable int[] value)
   {
-    if (arrayDictionary == null) {
-      arrayDictionaryFile = makeTempFile(name + NestedCommonFormatColumnSerializer.ARRAY_DICTIONARY_FILE_NAME);
-      arrayBuffer = mapWriter(arrayDictionaryFile, arrayDictionaryWriter);
-      arrayDictionary = FrontCodedIntArrayIndexed.read(arrayBuffer, ByteOrder.nativeOrder()).get();
-      // reset position
-      arrayBuffer.position(0);
-    }
+    ensureArrayDictionaryLoaded();
     final int index = arrayDictionary.indexOf(value);
     if (index < 0) {
       throw DruidException.defensive("Value not found in column[%s] array dictionary", name);
@@ -254,6 +223,82 @@ public final class DictionaryIdLookup implements Closeable
   private int arrayOffset()
   {
     return doubleOffset() + (doubleDictionaryWriter != null ? doubleDictionaryWriter.getCardinality() : 0);
+  }
+
+  private void ensureStringDictionaryLoaded()
+  {
+    if (stringDictionary == null) {
+      // GenericIndexed v2 can write to multiple files if the dictionary is larger than 2gb, so we use a smooshfile
+      // for strings because of this. if other type dictionary writers could potentially use multiple internal files
+      // in the future, we should transition them to using this approach as well (or build a combination smoosher and
+      // mapper so that we can have a mutable smoosh)
+      File stringSmoosh = FileUtils.createTempDirInLocation(tempBasePath, StringUtils.urlEncode(name) + "__stringTempSmoosh");
+      stringDictionaryFile = stringSmoosh.toPath();
+      final String fileName = ColumnSerializerUtils.getInternalFileName(
+          name,
+          ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
+      );
+
+      try (
+          final FileSmoosher smoosher = new FileSmoosher(stringSmoosh);
+          final SmooshedWriter writer = smoosher.addWithSmooshedWriter(
+              fileName,
+              stringDictionaryWriter.getSerializedSize()
+          )
+      ) {
+        stringDictionaryWriter.writeTo(writer, smoosher);
+        writer.close();
+        smoosher.close();
+        stringBufferMapper = SmooshedFileMapper.load(stringSmoosh);
+        final ByteBuffer stringBuffer = stringBufferMapper.mapFile(fileName);
+        stringDictionary = StringEncodingStrategies.getStringDictionarySupplier(
+            stringBufferMapper,
+            stringBuffer,
+            ByteOrder.nativeOrder()
+        ).get();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  private void ensureLongDictionaryLoaded()
+  {
+    if (longDictionary == null) {
+      longDictionaryFile = makeTempFile(name + ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
+      longBuffer = mapWriter(longDictionaryFile, longDictionaryWriter);
+      longDictionary = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES).get();
+      // reset position
+      longBuffer.position(0);
+    }
+  }
+
+  private void ensureDoubleDictionaryLoaded()
+  {
+    if (doubleDictionary == null) {
+      doubleDictionaryFile = makeTempFile(name + ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
+      doubleBuffer = mapWriter(doubleDictionaryFile, doubleDictionaryWriter);
+      doubleDictionary = FixedIndexed.read(
+          doubleBuffer,
+          TypeStrategies.DOUBLE,
+          ByteOrder.nativeOrder(),
+          Double.BYTES
+      ).get();
+      // reset position
+      doubleBuffer.position(0);
+    }
+  }
+
+  private void ensureArrayDictionaryLoaded()
+  {
+    if (arrayDictionary == null && arrayDictionaryWriter != null) {
+      arrayDictionaryFile = makeTempFile(name + ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME);
+      arrayBuffer = mapWriter(arrayDictionaryFile, arrayDictionaryWriter);
+      arrayDictionary = FrontCodedIntArrayIndexed.read(arrayBuffer, ByteOrder.nativeOrder()).get();
+      // reset position
+      arrayBuffer.position(0);
+    }
   }
 
   private Path makeTempFile(String name)
@@ -361,5 +406,29 @@ public final class DictionaryIdLookup implements Closeable
         return Ints.checkedCast(numBytesWritten);
       }
     };
+  }
+
+  public int getStringCardinality()
+  {
+    ensureStringDictionaryLoaded();
+    return stringDictionary == null ? 0 : stringDictionary.size();
+  }
+
+  public int getLongCardinality()
+  {
+    ensureLongDictionaryLoaded();
+    return longDictionary == null ? 0 : longDictionary.size();
+  }
+
+  public int getDoubleCardinality()
+  {
+    ensureDoubleDictionaryLoaded();
+    return doubleDictionary == null ? 0 : doubleDictionary.size();
+  }
+
+  public int getArrayCardinality()
+  {
+    ensureArrayDictionaryLoaded();
+    return arrayDictionary == null ? 0 : arrayDictionary.size();
   }
 }

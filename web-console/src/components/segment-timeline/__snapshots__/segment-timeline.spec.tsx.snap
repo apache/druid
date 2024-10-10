@@ -2,7 +2,7 @@
 
 exports[`SegmentTimeline matches snapshot 1`] = `
 <div
-  class="segment-timeline app-view"
+  class="segment-timeline"
 >
   <div>
     <div
@@ -43,151 +43,143 @@ exports[`SegmentTimeline matches snapshot 1`] = `
     class="side-control"
   >
     <div
-      class="bp4-form-group"
-    >
-      <div
-        class="bp4-form-content"
-      >
-        <div>
-          <label
-            class="bp4-control bp4-radio"
-          >
-            <input
-              checked=""
-              name="Blueprint4.RadioGroup-0"
-              type="radio"
-              value="sizeData"
-            />
-            <span
-              class="bp4-control-indicator"
-            />
-            Total size
-          </label>
-          <label
-            class="bp4-control bp4-radio"
-          >
-            <input
-              name="Blueprint4.RadioGroup-0"
-              type="radio"
-              value="countData"
-            />
-            <span
-              class="bp4-control-indicator"
-            />
-            Segment count
-          </label>
-        </div>
-      </div>
-    </div>
-    <div
-      class="bp4-form-group"
+      class="bp5-form-group"
     >
       <label
-        class="bp4-label"
+        class="bp5-label"
       >
-        Datasource
+        Show
          
         <span
-          class="bp4-text-muted"
+          class="bp5-text-muted"
         />
       </label>
       <div
-        class="bp4-form-content"
+        class="bp5-form-content"
       >
         <div
-          class="bp4-html-select bp4-fill"
+          class="bp5-segmented-control bp5-fill"
         >
-          <select>
-            <option
-              value="all"
-            >
-              Show all
-            </option>
-          </select>
-          <span
-            class="bp4-icon bp4-icon-double-caret-vertical"
-            icon="double-caret-vertical"
+          <button
+            class="bp5-button"
+            type="button"
           >
-            <svg
-              aria-labelledby="iconTitle-0"
-              data-icon="double-caret-vertical"
-              height="16"
-              role="img"
-              viewBox="0 0 16 16"
-              width="16"
+            <span
+              class="bp5-button-text"
             >
-              <title
-                id="iconTitle-0"
-              >
-                Open dropdown
-              </title>
-              <path
-                d="M5 7h6a1.003 1.003 0 00.71-1.71l-3-3C8.53 2.11 8.28 2 8 2s-.53.11-.71.29l-3 3A1.003 1.003 0 005 7zm6 2H5a1.003 1.003 0 00-.71 1.71l3 3c.18.18.43.29.71.29s.53-.11.71-.29l3-3A1.003 1.003 0 0011 9z"
-                fill-rule="evenodd"
-              />
-            </svg>
-          </span>
+              Total size
+            </span>
+          </button>
+          <button
+            class="bp5-button bp5-minimal"
+            type="button"
+          >
+            <span
+              class="bp5-button-text"
+            >
+              Segment count
+            </span>
+          </button>
         </div>
       </div>
     </div>
     <div
-      class="bp4-form-group"
+      class="bp5-form-group"
     >
       <label
-        class="bp4-label"
+        class="bp5-label"
       >
         Interval
          
         <span
-          class="bp4-text-muted"
+          class="bp5-text-muted"
         />
       </label>
       <div
-        class="bp4-form-content"
+        class="bp5-form-content"
       >
-        <span
-          aria-haspopup="true"
-          class="date-range-selector bp4-popover2-target"
+        <div
+          aria-expanded="false"
+          aria-haspopup="menu"
+          class="bp5-control-group bp5-date-range-input bp5-popover-target bp5-fill"
         >
           <div
-            class="bp4-input-group bp4-read-only"
+            class="bp5-input-group bp5-fill"
           >
             <input
-              class="bp4-input"
-              readonly=""
-              style="padding-right: 0px;"
+              aria-disabled="false"
+              autocomplete="off"
+              class="bp5-input"
+              placeholder="Start date"
               type="text"
-              value="2021-03-09 ➔ 2021-06-09"
+              value="2021-03-09"
             />
-            <span
-              class="bp4-input-action"
-            >
-              <button
-                class="bp4-button bp4-minimal"
-                type="button"
-              >
-                <span
-                  aria-hidden="true"
-                  class="bp4-icon bp4-icon-calendar"
-                  icon="calendar"
-                >
-                  <svg
-                    data-icon="calendar"
-                    height="16"
-                    role="img"
-                    viewBox="0 0 16 16"
-                    width="16"
-                  >
-                    <path
-                      d="M11 3c.6 0 1-.5 1-1V1c0-.6-.4-1-1-1s-1 .4-1 1v1c0 .5.4 1 1 1zm3-2h-1v1c0 1.1-.9 2-2 2s-2-.9-2-2V1H6v1c0 1.1-.9 2-2 2s-2-.9-2-2V1H1c-.6 0-1 .5-1 1v12c0 .6.4 1 1 1h13c.6 0 1-.4 1-1V2c0-.6-.5-1-1-1zM5 13H2v-3h3v3zm0-4H2V6h3v3zm4 4H6v-3h3v3zm0-4H6V6h3v3zm4 4h-3v-3h3v3zm0-4h-3V6h3v3zM4 3c.6 0 1-.5 1-1V1c0-.6-.4-1-1-1S3 .4 3 1v1c0 .5.4 1 1 1z"
-                      fill-rule="evenodd"
-                    />
-                  </svg>
-                </span>
-              </button>
-            </span>
           </div>
-        </span>
+          <div
+            class="bp5-input-group bp5-fill"
+          >
+            <input
+              aria-disabled="false"
+              autocomplete="off"
+              class="bp5-input"
+              placeholder="End date"
+              type="text"
+              value="2021-06-09"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="bp5-form-group"
+    >
+      <label
+        class="bp5-label"
+      >
+        Datasource
+         
+        <span
+          class="bp5-text-muted"
+        />
+      </label>
+      <div
+        class="bp5-form-content"
+      >
+        <div
+          aria-controls="listbox-1"
+          aria-expanded="false"
+          aria-haspopup="listbox"
+          class="bp5-popover-target bp5-fill"
+          role="combobox"
+        >
+          <button
+            class="bp5-button bp5-fill"
+            type="button"
+          >
+            <span
+              class="bp5-button-text"
+            >
+              Show all
+            </span>
+            <span
+              aria-hidden="true"
+              class="bp5-icon bp5-icon-caret-down"
+            >
+              <svg
+                data-icon="caret-down"
+                height="16"
+                role="img"
+                viewBox="0 0 16 16"
+                width="16"
+              >
+                <path
+                  d="M12 6.5c0-.28-.22-.5-.5-.5h-7a.495.495 0 00-.37.83l3.5 4c.09.1.22.17.37.17s.28-.07.37-.17l3.5-4c.08-.09.13-.2.13-.33z"
+                  fill-rule="evenodd"
+                />
+              </svg>
+            </span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

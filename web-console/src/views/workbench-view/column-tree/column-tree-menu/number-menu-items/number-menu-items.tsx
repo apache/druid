@@ -82,10 +82,13 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
           text={prettyPrintSql(ex)}
           onClick={() => {
             onQueryChange(
-              parsedQuery.addSelect(ex.as(alias), {
-                insertIndex: 'last-grouping',
-                addToGroupBy: 'end',
-              }),
+              parsedQuery.addSelect(
+                ex.applyIf(alias, e => e.as(String(alias))),
+                {
+                  insertIndex: 'last-grouping',
+                  addToGroupBy: 'end',
+                },
+              ),
               true,
             );
           }}

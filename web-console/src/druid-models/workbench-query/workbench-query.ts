@@ -18,6 +18,7 @@
 
 import type {
   QueryParameter,
+  QueryPayload,
   SqlClusteredByClause,
   SqlExpression,
   SqlPartitionedByClause,
@@ -35,7 +36,7 @@ import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
 
 import type { RowColumn } from '../../utils';
-import { deleteKeys } from '../../utils';
+import { caseInsensitiveEquals, deleteKeys } from '../../utils';
 import type { DruidEngine } from '../druid-engine/druid-engine';
 import { validDruidEngine } from '../druid-engine/druid-engine';
 import type { LastExecution } from '../execution/execution';
@@ -150,11 +151,12 @@ export class WorkbenchQuery {
     return WorkbenchQuery.enabledQueryEngines;
   }
 
-  static fromEffectiveQueryAndContext(queryString: string, context: QueryContext): WorkbenchQuery {
+  static fromTaskQueryAndContext(queryString: string, context: QueryContext): WorkbenchQuery {
     const noSqlOuterLimit = typeof context['sqlOuterLimit'] === 'undefined';
-    const cleanContext = deleteKeys(context, ['sqlOuterLimit']);
+    const cleanContext = deleteKeys(context, ['sqlOuterLimit', '__resultFormat']);
 
     let retQuery = WorkbenchQuery.blank()
+      .changeEngine('sql-msq-task')
       .changeQueryString(queryString)
       .changeQueryContext(cleanContext);
 
@@ -446,7 +448,7 @@ export class WorkbenchQuery {
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {
     engine: DruidEngine;
-    query: Record<string, any>;
+    query: QueryPayload;
     prefixLines: number;
     cancelQueryId?: string;
   } {
@@ -478,7 +480,7 @@ export class WorkbenchQuery {
       };
     }
 
-    let apiQuery: Record<string, any> = {};
+    let apiQuery: QueryPayload;
     if (this.isJsonLike()) {
       try {
         apiQuery = Hjson.parse(queryString);
@@ -511,7 +513,11 @@ export class WorkbenchQuery {
     }
 
     const ingestQuery = this.isIngestQuery();
-    if (!unlimited && !ingestQuery && queryContext.selectDestination !== 'durableStorage') {
+    if (
+      !unlimited &&
+      !ingestQuery &&
+      !caseInsensitiveEquals(queryContext.selectDestination, 'durableStorage')
+    ) {
       apiQuery.context ||= {};
       apiQuery.context.sqlOuterLimit = 1001;
     }
@@ -522,7 +528,7 @@ export class WorkbenchQuery {
     };
 
     let cancelQueryId: string | undefined;
-    if (engine === 'sql-native') {
+    if (engine === 'sql-native' || engine === 'sql-msq-dart') {
       cancelQueryId = apiQuery.context.sqlQueryId;
       if (!cancelQueryId) {
         // If the sqlQueryId is not explicitly set on the context generate one, so it is possible to cancel the query.
@@ -542,6 +548,10 @@ export class WorkbenchQuery {
 
     if (engine === 'sql-native' || engine === 'sql-msq-task') {
       apiQuery.context.sqlStringifyArrays ??= false;
+    }
+
+    if (engine === 'sql-msq-dart') {
+      apiQuery.context.fullReport ??= true;
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {

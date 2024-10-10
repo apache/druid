@@ -80,7 +80,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  */
-public class MemcachedCacheTest
+public class MemcachedCacheTest extends CacheTestBase<MemcachedCache>
 {
   private static final Logger log = new Logger(MemcachedCacheTest.class);
   private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
@@ -93,7 +93,7 @@ public class MemcachedCacheTest
       return false;
     }
   };
-  private MemcachedCache cache;
+
   private final MemcachedCacheConfig memcachedCacheConfig = new MemcachedCacheConfig()
   {
     @Override

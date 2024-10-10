@@ -17,7 +17,7 @@
  */
 
 import type { IconName, Intent } from '@blueprintjs/core';
-import { Menu, MenuItem } from '@blueprintjs/core';
+import { Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import type { JSX } from 'react';
 import React from 'react';
 
@@ -29,10 +29,14 @@ export interface BasicAction {
   disabledReason?: string;
 }
 
-export function basicActionsToMenu(basicActions: BasicAction[]): JSX.Element | undefined {
+export function basicActionsToMenu(
+  basicActions: BasicAction[],
+  title?: string,
+): JSX.Element | undefined {
   if (!basicActions.length) return;
   return (
     <Menu>
+      {title && <MenuDivider title={title} />}
       {basicActions.map(({ icon, title, intent, onAction, disabledReason }, i) => (
         <MenuItem
           key={i}
@@ -41,7 +45,7 @@ export function basicActionsToMenu(basicActions: BasicAction[]): JSX.Element | u
           intent={intent}
           onClick={onAction}
           disabled={Boolean(disabledReason)}
-          title={disabledReason}
+          data-super-title={disabledReason}
         />
       ))}
     </Menu>

@@ -20,19 +20,19 @@
 package org.apache.druid.frame.write;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.hash.Hashing;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.key.ByteRowKeyComparatorTest;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.nested.StructuredData;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -266,13 +266,32 @@ public class FrameWriterTestData
   );
   //CHECKSTYLE.ON: Regexp
 
-  public static final Dataset<HyperLogLogCollector> TEST_COMPLEX = new Dataset<>(
+  public static final Dataset<HyperLogLogCollector> TEST_COMPLEX_HLL = new Dataset<>(
       HyperUniquesAggregatorFactory.TYPE,
       Arrays.asList(
           null,
-          makeHllCollector(null),
-          makeHllCollector("foo")
+          ByteRowKeyComparatorTest.makeHllCollector(1),
+          ByteRowKeyComparatorTest.makeHllCollector(10),
+          ByteRowKeyComparatorTest.makeHllCollector(50)
       )
+  );
+
+  // Sortedness of structured data depends on the hash value computed for the objects inside.
+  public static final Dataset<StructuredData> TEST_COMPLEX_NESTED = new Dataset<>(
+      ColumnType.NESTED_DATA,
+      Stream.of(
+          null,
+          StructuredData.create("foo"),
+          StructuredData.create("bar"),
+          StructuredData.create(ImmutableMap.of("a", 100, "b", 200)),
+          StructuredData.create(ImmutableMap.of("a", 100, "b", ImmutableList.of("x", "y"))),
+          StructuredData.create(ImmutableMap.of("a", 100, "b", ImmutableMap.of("x", "y"))),
+          StructuredData.wrap(100.1D),
+          StructuredData.wrap(ImmutableList.of("p", "q", "r")),
+          StructuredData.wrap(100),
+          StructuredData.wrap(ImmutableList.of("p", "q", "r")),
+          StructuredData.wrap(1000)
+      ).sorted(Comparators.naturalNullsFirst()).collect(Collectors.toList())
   );
 
   /**
@@ -289,19 +308,9 @@ public class FrameWriterTestData
                    .add(TEST_ARRAYS_LONG)
                    .add(TEST_ARRAYS_FLOAT)
                    .add(TEST_ARRAYS_DOUBLE)
-                   .add(TEST_COMPLEX)
+                   .add(TEST_COMPLEX_HLL)
+                   .add(TEST_COMPLEX_NESTED)
                    .build();
-
-  private static HyperLogLogCollector makeHllCollector(@Nullable final String value)
-  {
-    final HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
-
-    if (value != null) {
-      collector.add(Hashing.murmur3_128().hashBytes(StringUtils.toUtf8(value)).asBytes());
-    }
-
-    return collector;
-  }
 
   public static class Dataset<T>
   {

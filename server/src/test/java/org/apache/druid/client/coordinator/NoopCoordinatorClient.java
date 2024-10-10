@@ -20,6 +20,7 @@
 package org.apache.druid.client.coordinator;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.BootstrapSegmentsResponse;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.ServiceRetryPolicy;
@@ -63,9 +64,21 @@ public class NoopCoordinatorClient implements CoordinatorClient
   }
 
   @Override
+  public ListenableFuture<BootstrapSegmentsResponse> fetchBootstrapSegments()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public CoordinatorClient withRetryPolicy(ServiceRetryPolicy retryPolicy)
   {
     // Ignore retryPolicy for the test client.
     return this;
+  }
+
+  @Override
+  public ListenableFuture<Set<String>> fetchDataSourcesWithUsedSegments()
+  {
+    throw new UnsupportedOperationException();
   }
 }

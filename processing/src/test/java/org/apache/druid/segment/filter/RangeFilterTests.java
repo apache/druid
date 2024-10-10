@@ -41,8 +41,8 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.RangeFilter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -117,7 +117,7 @@ public class RangeFilterTests
     public RangeFilterTest(
         String testName,
         IndexBuilder indexBuilder,
-        Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+        Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
         boolean cnf,
         boolean optimize
     )
@@ -893,6 +893,21 @@ public class RangeFilterTests
           NullHandling.replaceWithDefault() && canTestNumericNullsAsDefaultValues
           ? ImmutableList.of("0", "3", "7")
           : ImmutableList.of("0")
+      );
+
+      assertFilterMatches(
+          new RangeFilter(
+              "vd0-nvl-2",
+              ColumnType.DOUBLE,
+              0.0,
+              null,
+              true,
+              false,
+              null
+          ),
+          NullHandling.replaceWithDefault()
+          ? ImmutableList.of("1", "3", "4", "5", "6")
+          : ImmutableList.of("1", "2", "3", "4", "5", "6", "7")
       );
 
       if (NullHandling.sqlCompatible() || canTestNumericNullsAsDefaultValues) {

@@ -52,7 +52,7 @@ public class ActionsTestTask extends CommandQueueTask
 {
   private final TaskActionClient client;
   private final AtomicInteger sequenceId = new AtomicInteger(0);
-  private final Map<SegmentId, SegmentId> announcedSegmentsToParentSegments = new HashMap<>();
+  private final Map<SegmentId, String> announcedSegmentsToParentSegments = new HashMap<>();
 
   public ActionsTestTask(String datasource, String groupId, TaskActionClientFactory factory)
   {
@@ -78,11 +78,11 @@ public class ActionsTestTask extends CommandQueueTask
   public SegmentPublishResult commitReplaceSegments(DataSegment... segments)
   {
     return runAction(
-        SegmentTransactionalReplaceAction.create(Sets.newHashSet(segments))
+        SegmentTransactionalReplaceAction.create(Sets.newHashSet(segments), null)
     );
   }
 
-  public Map<SegmentId, SegmentId> getAnnouncedSegmentsToParentSegments()
+  public Map<SegmentId, String> getAnnouncedSegmentsToParentSegments()
   {
     return announcedSegmentsToParentSegments;
   }
@@ -90,7 +90,7 @@ public class ActionsTestTask extends CommandQueueTask
   public SegmentPublishResult commitAppendSegments(DataSegment... segments)
   {
     SegmentPublishResult publishResult = runAction(
-        SegmentTransactionalAppendAction.forSegments(Sets.newHashSet(segments))
+        SegmentTransactionalAppendAction.forSegments(Sets.newHashSet(segments), null)
     );
     for (DataSegment segment : publishResult.getSegments()) {
       announcedSegmentsToParentSegments.remove(segment.getId());
@@ -114,7 +114,7 @@ public class ActionsTestTask extends CommandQueueTask
             TaskLockType.APPEND
         )
     );
-    announcedSegmentsToParentSegments.put(pendingSegment.asSegmentId(), pendingSegment.asSegmentId());
+    announcedSegmentsToParentSegments.put(pendingSegment.asSegmentId(), pendingSegment.asSegmentId().toString());
     return pendingSegment;
   }
 

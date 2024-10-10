@@ -45,6 +45,7 @@ import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -58,7 +59,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -429,14 +429,14 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     QueryableIndex mockIndex = EasyMock.createMock(QueryableIndex.class);
     EasyMock.expect(mockIndex.getNumRows()).andReturn(100).atLeastOnce();
     EasyMock.expect(mockIndex.getColumnNames()).andReturn(Collections.singletonList("x")).atLeastOnce();
-    EasyMock.expect(mockIndex.getAvailableDimensions())
-            .andReturn(new ListIndexed<>(Collections.singletonList("x")))
-            .atLeastOnce();
     EasyMock.expect(mockIndex.getColumnCapabilities(ColumnHolder.TIME_COLUMN_NAME))
             .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.LONG))
             .atLeastOnce();
     EasyMock.expect(mockIndex.getColumnCapabilities("x"))
             .andReturn(ColumnCapabilitiesImpl.createDefault().setType(ColumnType.UNKNOWN_COMPLEX))
+            .atLeastOnce();
+    EasyMock.expect(mockIndex.getOrdering())
+            .andReturn(Cursors.ascendingTimeOrder())
             .atLeastOnce();
 
     ColumnHolder holder = EasyMock.createMock(ColumnHolder.class);

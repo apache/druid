@@ -39,13 +39,21 @@ import java.util.Objects;
 public class DoubleDimensionIndexer implements DimensionIndexer<Double, Double, Double>
 {
   public static final Comparator<Double> DOUBLE_COMPARATOR = Comparators.naturalNullsFirst();
-
+  private final String dimensionName;
   private volatile boolean hasNulls = false;
 
-  @Override
-  public EncodedKeyComponent<Double> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public DoubleDimensionIndexer(String dimensionName)
   {
-    Double d = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions);
+    this.dimensionName = dimensionName;
+  }
+
+  @Override
+  public EncodedKeyComponent<Double> processRowValsToUnsortedEncodedKeyComponent(
+      @Nullable Object dimValues,
+      boolean reportParseExceptions
+  )
+  {
+    Double d = DimensionHandlerUtils.convertObjectToDouble(dimValues, reportParseExceptions, dimensionName);
     if (d == null) {
       hasNulls = NullHandling.sqlCompatible();
     }

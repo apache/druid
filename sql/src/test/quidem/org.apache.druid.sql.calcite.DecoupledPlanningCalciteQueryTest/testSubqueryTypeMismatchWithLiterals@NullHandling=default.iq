@@ -1,0 +1,110 @@
+# testSubqueryTypeMismatchWithLiterals@NullHandling=default case-crc:e7079756
+# quidem testcase reason: AGGREGATE_REMOVE_NOT_FIRED
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT 
+  dim1,
+  SUM(CASE WHEN sum_l1 = 0 THEN 1 ELSE 0 END) AS outer_l1
+from (
+  select 
+    dim1,
+    SUM(l1) as sum_l1
+  from numfoo
+  group by dim1
+)
+group by 1;
++------+----------+
+| dim1 | outer_l1 |
++------+----------+
+|      |        0 |
+| 1    |        1 |
+| 10.1 |        0 |
+| 2    |        1 |
+| abc  |        1 |
+| def  |        1 |
++------+----------+
+(6 rows)
+
+!ok
+LogicalAggregate(group=[{0}], outer_l1=[COUNT() FILTER $1])
+  LogicalProject(dim1=[$0], $f2=[=($1, 0)])
+    LogicalAggregate(group=[{1}], sum_l1=[SUM($11)])
+      LogicalTableScan(table=[[druid, numfoo]])
+
+!logicalPlan
+DruidAggregate(group=[{0}], outer_l1=[COUNT() FILTER $1], druid=[logical])
+  DruidProject(dim1=[$0], $f2=[=($1, 0)], druid=[logical])
+    DruidAggregate(group=[{1}], sum_l1=[SUM($11)], druid=[logical])
+      DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "numfoo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "dim1",
+        "outputName" : "_d0",
+        "outputType" : "STRING"
+      } ],
+      "aggregations" : [ {
+        "type" : "longSum",
+        "name" : "a0",
+        "fieldName" : "l1"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "_d0",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "_a0"
+    },
+    "filter" : {
+      "type" : "selector",
+      "dimension" : "a0",
+      "value" : "0"
+    },
+    "name" : "_a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan

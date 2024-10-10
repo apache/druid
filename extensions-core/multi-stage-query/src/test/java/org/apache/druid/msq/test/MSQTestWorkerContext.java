@@ -21,60 +21,71 @@ package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import org.apache.druid.collections.StupidPool;
 import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.indexer.report.TaskReport;
-import org.apache.druid.indexer.report.TaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerClient;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
+import org.apache.druid.msq.exec.ProcessingBuffers;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
-import org.apache.druid.msq.indexing.IndexerFrameContext;
-import org.apache.druid.msq.indexing.IndexerWorkerContext;
+import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.querykit.DataSegmentProvider;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
+import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.incremental.NoopRowIngestionMeters;
+import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.loading.DataSegmentPusher;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.security.AuthTestUtils;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 public class MSQTestWorkerContext implements WorkerContext
 {
+  private final String workerId;
   private final Controller controller;
   private final ObjectMapper mapper;
   private final Injector injector;
   private final Map<String, Worker> inMemoryWorkers;
   private final File file = FileUtils.createTempDir();
   private final WorkerMemoryParameters workerMemoryParameters;
+  private final WorkerStorageParameters workerStorageParameters;
 
   public MSQTestWorkerContext(
+      String workerId,
       Map<String, Worker> inMemoryWorkers,
       Controller controller,
       ObjectMapper mapper,
       Injector injector,
-      WorkerMemoryParameters workerMemoryParameters
+      WorkerMemoryParameters workerMemoryParameters,
+      WorkerStorageParameters workerStorageParameters
   )
   {
+    this.workerId = workerId;
     this.inMemoryWorkers = inMemoryWorkers;
     this.controller = controller;
     this.mapper = mapper;
     this.injector = injector;
     this.workerMemoryParameters = workerMemoryParameters;
+    this.workerStorageParameters = workerStorageParameters;
+  }
+
+  @Override
+  public String queryId()
+  {
+    return controller.queryId();
   }
 
   @Override
@@ -96,7 +107,13 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public ControllerClient makeControllerClient(String controllerId)
+  public String workerId()
+  {
+    return workerId;
+  }
+
+  @Override
+  public ControllerClient makeControllerClient()
   {
     return new MSQTestControllerClient(controller);
   }
@@ -114,55 +131,9 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public FrameContext frameContext(QueryDefinition queryDef, int stageNumber)
+  public FrameContext frameContext(WorkOrder workOrder)
   {
-    IndexIO indexIO = new IndexIO(mapper, ColumnConfig.DEFAULT);
-    IndexMergerV9 indexMerger = new IndexMergerV9(
-        mapper,
-        indexIO,
-        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-        true
-    );
-    final TaskReportFileWriter reportFileWriter = new TaskReportFileWriter()
-    {
-      @Override
-      public void write(String taskId, TaskReport.ReportMap reports)
-      {
-
-      }
-
-      @Override
-      public void setObjectMapper(ObjectMapper objectMapper)
-      {
-
-      }
-    };
-
-    return new IndexerFrameContext(
-        new IndexerWorkerContext(
-            new TaskToolbox.Builder()
-                .segmentPusher(injector.getInstance(DataSegmentPusher.class))
-                .segmentAnnouncer(injector.getInstance(DataSegmentAnnouncer.class))
-                .jsonMapper(mapper)
-                .taskWorkDir(tempDir())
-                .indexIO(indexIO)
-                .indexMergerV9(indexMerger)
-                .taskReportFileWriter(reportFileWriter)
-                .authorizerMapper(AuthTestUtils.TEST_AUTHORIZER_MAPPER)
-                .chatHandlerProvider(new NoopChatHandlerProvider())
-                .rowIngestionMetersFactory(NoopRowIngestionMeters::new)
-                .build(),
-            injector,
-            indexIO,
-            null,
-            null,
-            null
-        ),
-        indexIO,
-        injector.getInstance(DataSegmentProvider.class),
-        injector.getInstance(DataServerQueryHandlerFactory.class),
-        workerMemoryParameters
-    );
+    return new FrameContextImpl(new File(tempDir(), workOrder.getStageDefinition().getId().toString()));
   }
 
   @Override
@@ -178,14 +149,128 @@ public class MSQTestWorkerContext implements WorkerContext
   }
 
   @Override
-  public Bouncer processorBouncer()
+  public int maxConcurrentStages()
   {
-    return injector.getInstance(Bouncer.class);
+    return 1;
   }
 
   @Override
   public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
   {
     return injector.getInstance(DataServerQueryHandlerFactory.class);
+  }
+
+  @Override
+  public boolean includeAllCounters()
+  {
+    return true;
+  }
+
+  class FrameContextImpl implements FrameContext
+  {
+    private final File tempDir;
+
+    public FrameContextImpl(File tempDir)
+    {
+      this.tempDir = tempDir;
+    }
+
+    @Override
+    public SegmentWrangler segmentWrangler()
+    {
+      return injector.getInstance(SegmentWrangler.class);
+    }
+
+    @Override
+    public GroupingEngine groupingEngine()
+    {
+      return injector.getInstance(GroupingEngine.class);
+    }
+
+    @Override
+    public RowIngestionMeters rowIngestionMeters()
+    {
+      return new NoopRowIngestionMeters();
+    }
+
+    @Override
+    public DataSegmentProvider dataSegmentProvider()
+    {
+      return injector.getInstance(DataSegmentProvider.class);
+    }
+
+    @Override
+    public DataServerQueryHandlerFactory dataServerQueryHandlerFactory()
+    {
+      return injector.getInstance(DataServerQueryHandlerFactory.class);
+    }
+
+    @Override
+    public File tempDir()
+    {
+      return new File(tempDir, "tmp");
+    }
+
+    @Override
+    public ObjectMapper jsonMapper()
+    {
+      return mapper;
+    }
+
+    @Override
+    public IndexIO indexIO()
+    {
+      return new IndexIO(mapper, ColumnConfig.DEFAULT);
+    }
+
+    @Override
+    public File persistDir()
+    {
+      return new File(tempDir, "persist");
+    }
+
+    @Override
+    public DataSegmentPusher segmentPusher()
+    {
+      return injector.getInstance(DataSegmentPusher.class);
+    }
+
+    @Override
+    public IndexMergerV9 indexMerger()
+    {
+      return new IndexMergerV9(
+          mapper,
+          indexIO(),
+          OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+          true
+      );
+    }
+
+    @Override
+    public ProcessingBuffers processingBuffers()
+    {
+      return new ProcessingBuffers(
+          new StupidPool<>("testProcessing", () -> ByteBuffer.allocate(1_000_000)),
+          new Bouncer(1)
+      );
+    }
+
+    @Override
+    public WorkerMemoryParameters memoryParameters()
+    {
+      return workerMemoryParameters;
+    }
+
+    @Override
+    public WorkerStorageParameters storageParameters()
+    {
+      return workerStorageParameters;
+    }
+
+    @Override
+    public void close()
+    {
+
+    }
   }
 }

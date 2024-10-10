@@ -21,7 +21,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.mutable.MutableObject;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.SplittableInputSource;
@@ -35,6 +34,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.batch.parallel.TaskMonitor.SubTaskCompleteEvent;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.BuildingNumberedShardSpec;
@@ -101,6 +101,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
 
   private final ParallelIndexIngestionSpec ingestionSchema;
   private final SplittableInputSource<?> baseInputSource;
+  private CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   SinglePhaseParallelIndexTaskRunner(
       TaskToolbox toolbox,
@@ -108,7 +109,8 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
       String groupId,
       String baseSubtaskSpecName,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context
+      Map<String, Object> context,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     super(
@@ -121,6 +123,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
     );
     this.ingestionSchema = ingestionSchema;
     this.baseInputSource = (SplittableInputSource) ingestionSchema.getIOConfig().getNonNullInputSource(toolbox);
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
   }
 
   @VisibleForTesting
@@ -129,10 +132,11 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
       String taskId,
       String groupId,
       ParallelIndexIngestionSpec ingestionSchema,
-      Map<String, Object> context
+      Map<String, Object> context,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
-    this(toolbox, taskId, groupId, taskId, ingestionSchema, context);
+    this(toolbox, taskId, groupId, taskId, ingestionSchema, context, centralizedDatasourceSchemaConfig);
   }
 
   @Override
@@ -169,9 +173,7 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
   @VisibleForTesting
   SubTaskSpec<SinglePhaseSubTask> newTaskSpec(InputSplit split)
   {
-    final FirehoseFactory firehoseFactory;
     final InputSource inputSource;
-    firehoseFactory = null;
     inputSource = baseInputSource.withSplit(split);
 
     final Map<String, Object> subtaskContext = new HashMap<>(getContext());
@@ -182,7 +184,6 @@ public class SinglePhaseParallelIndexTaskRunner extends ParallelIndexPhaseRunner
         new ParallelIndexIngestionSpec(
             ingestionSchema.getDataSchema(),
             new ParallelIndexIOConfig(
-                firehoseFactory,
                 inputSource,
                 ingestionSchema.getIOConfig().getInputFormat(),
                 ingestionSchema.getIOConfig().isAppendToExisting(),

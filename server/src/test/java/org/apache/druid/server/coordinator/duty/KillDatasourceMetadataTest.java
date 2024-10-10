@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.Duration;
@@ -61,14 +61,9 @@ public class KillDatasourceMetadataTest
   @Test
   public void testRunSkipIfLastRunLessThanPeriod()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
-        .withCoordinatorDatasourceKillPeriod(new Duration(Long.MAX_VALUE))
-        .withCoordinatorDatasourceKillDurationToRetain(new Duration("PT1S"))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
-    killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
+    final MetadataCleanupConfig config
+        = new MetadataCleanupConfig(true, new Duration(Long.MAX_VALUE), new Duration("PT1S"));
+    killDatasourceMetadata = new KillDatasourceMetadata(config, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
     killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verifyNoInteractions(mockIndexerMetadataStorageCoordinator);
     Mockito.verifyNoInteractions(mockMetadataSupervisorManager);
@@ -79,15 +74,10 @@ public class KillDatasourceMetadataTest
   {
     Mockito.when(mockDruidCoordinatorRuntimeParams.getCoordinatorStats()).thenReturn(runStats);
 
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
-        .withCoordinatorDatasourceKillPeriod(new Duration("PT6S"))
-        .withCoordinatorDatasourceKillDurationToRetain(new Duration("PT1S"))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
+    final MetadataCleanupConfig config
+        = new MetadataCleanupConfig(true, new Duration("PT6S"), new Duration("PT1S"));
     killDatasourceMetadata = new KillDatasourceMetadata(
-        druidCoordinatorConfig,
+        config,
         mockIndexerMetadataStorageCoordinator,
         mockMetadataSupervisorManager
     );
@@ -97,66 +87,11 @@ public class KillDatasourceMetadataTest
   }
 
   @Test
-  public void testConstructorFailIfInvalidPeriod()
-  {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
-        .withCoordinatorDatasourceKillPeriod(new Duration("PT3S"))
-        .withCoordinatorDatasourceKillDurationToRetain(new Duration("PT1S"))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
-
-    final IllegalArgumentException exception = Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> killDatasourceMetadata = new KillDatasourceMetadata(
-            druidCoordinatorConfig,
-            mockIndexerMetadataStorageCoordinator,
-            mockMetadataSupervisorManager
-        )
-    );
-    Assert.assertEquals(
-        "[druid.coordinator.kill.datasource.period] must be greater than"
-        + " [druid.coordinator.period.metadataStoreManagementPeriod]",
-        exception.getMessage()
-    );
-  }
-
-  @Test
-  public void testConstructorFailIfInvalidRetainDuration()
-  {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
-        .withCoordinatorDatasourceKillPeriod(new Duration("PT6S"))
-        .withCoordinatorDatasourceKillDurationToRetain(new Duration("PT-1S"))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
-    final IllegalArgumentException exception = Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> killDatasourceMetadata = new KillDatasourceMetadata(
-            druidCoordinatorConfig,
-            mockIndexerMetadataStorageCoordinator,
-            mockMetadataSupervisorManager
-        )
-    );
-    Assert.assertEquals(
-        "[druid.coordinator.kill.datasource.durationToRetain] must be 0 milliseconds or higher",
-        exception.getMessage()
-    );
-  }
-
-  @Test
   public void testRunWithEmptyFilterExcludedDatasource()
   {
-    TestDruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withMetadataStoreManagementPeriod(new Duration("PT5S"))
-        .withCoordinatorDatasourceKillPeriod(new Duration("PT6S"))
-        .withCoordinatorDatasourceKillDurationToRetain(new Duration("PT1S"))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
-    killDatasourceMetadata = new KillDatasourceMetadata(druidCoordinatorConfig, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
+    final MetadataCleanupConfig config
+        = new MetadataCleanupConfig(true, new Duration("PT6S"), new Duration("PT1S"));
+    killDatasourceMetadata = new KillDatasourceMetadata(config, mockIndexerMetadataStorageCoordinator, mockMetadataSupervisorManager);
     killDatasourceMetadata.run(mockDruidCoordinatorRuntimeParams);
     Mockito.verify(mockIndexerMetadataStorageCoordinator).removeDataSourceMetadataOlderThan(ArgumentMatchers.anyLong(), ArgumentMatchers.eq(ImmutableSet.of()));
     Assert.assertTrue(runStats.hasStat(Stats.Kill.DATASOURCES));

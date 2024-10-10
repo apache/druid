@@ -47,9 +47,10 @@ public class SketchToStringPostAggregatorTest
         new FieldAccessPostAggregator("field", "sketch")
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    SketchToStringPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new SketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        SketchToStringPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

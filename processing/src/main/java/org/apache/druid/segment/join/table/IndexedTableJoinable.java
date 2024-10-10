@@ -77,7 +77,6 @@ public class IndexedTableJoinable implements Joinable
       final ColumnSelectorFactory leftColumnSelectorFactory,
       final JoinConditionAnalysis condition,
       final boolean remainderNeeded,
-      boolean descending,
       Closer closer
   )
   {
@@ -86,7 +85,6 @@ public class IndexedTableJoinable implements Joinable
         leftColumnSelectorFactory,
         condition,
         remainderNeeded,
-        descending,
         closer
     );
   }

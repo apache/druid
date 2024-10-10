@@ -19,6 +19,7 @@
 
 package org.apache.druid.testsEx.catalog;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.catalog.http.TableEditRequest.DropColumns;
 import org.apache.druid.catalog.http.TableEditRequest.HideColumns;
@@ -28,6 +29,7 @@ import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.TableId;
 import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.TableSpec;
+import org.apache.druid.catalog.model.table.ClusterKeySpec;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.java.util.common.ISE;
@@ -100,6 +102,17 @@ public class ITCatalogRestTest
     // Malformed table name
     {
       final TableMetadata table = TableBuilder.datasource(" foo ", "P1D")
+          .build();
+      assertThrows(
+          Exception.class,
+          () -> client.createTable(table, false)
+      );
+    }
+
+    // DESC cluster keys not supported
+    {
+      final TableMetadata table = TableBuilder.datasource("foo", "P1D")
+          .property(DatasourceDefn.CLUSTER_KEYS_PROPERTY, ImmutableList.of(new ClusterKeySpec("clusterKeyA", true)))
           .build();
       assertThrows(
           Exception.class,

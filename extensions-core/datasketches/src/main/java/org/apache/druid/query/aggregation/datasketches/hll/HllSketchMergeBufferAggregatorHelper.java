@@ -142,7 +142,7 @@ public class HllSketchMergeBufferAggregatorHelper
     }
   }
 
-  public void close()
+  public void clear()
   {
     unions.clear();
     memCache.clear();

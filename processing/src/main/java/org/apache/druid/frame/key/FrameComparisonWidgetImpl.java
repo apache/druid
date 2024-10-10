@@ -19,8 +19,10 @@
 
 package org.apache.druid.frame.key;
 
+import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.field.FieldReader;
@@ -30,8 +32,12 @@ import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.serde.ComplexMetricSerde;
+import org.apache.druid.segment.serde.ComplexMetrics;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.List;
 
 /**
@@ -40,16 +46,57 @@ import java.util.List;
  * Comparison logic in this class is very similar to {@link RowKeyComparator}, but is different because it works
  * on Frames instead of byte[].
  */
+@NotThreadSafe
 public class FrameComparisonWidgetImpl implements FrameComparisonWidget
 {
+
+  /**
+   * Frame for comparison
+   */
   private final Frame frame;
+
+  /**
+   * Row signature of the frame
+   */
   private final RowSignature signature;
+
+  /**
+   * Row offset region of the frame
+   */
   private final Memory rowOffsetRegion;
+
+  /**
+   * Data region of the frame
+   */
   private final Memory dataRegion;
+
+  /**
+   * Number of fields in the key column
+   */
   private final int keyFieldCount;
+
+  /**
+   * Field readers for the key
+   */
   private final List<FieldReader> keyFieldReaders;
+
+  /**
+   * Starting position of the first field in the row
+   */
   private final int firstFieldPosition;
-  private final int[] ascDescRunLengths;
+
+  /**
+   * Run lengths created for comparing the key columns
+   */
+  private final RowKeyComparisonRunLengths rowKeyComparisonRunLengths;
+
+  /**
+   * Pre-computed array of ComplexMetricSerde corresponding to the computed run-lengths. If the run length entry is
+   * byte-comparable, the corresponding serde is null, and if it's not byte comparable, the corresponding serde isn't null
+   * (since only complex columns are not byte comparable)
+   */
+  private final ComplexMetricSerde[] complexMetricSerdes;
+  private final ColumnType[] columnTypes;
 
   private FrameComparisonWidgetImpl(
       final Frame frame,
@@ -58,7 +105,9 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
       final Memory dataRegion,
       final List<FieldReader> keyFieldReaders,
       final int firstFieldPosition,
-      final int[] ascDescRunLengths
+      final RowKeyComparisonRunLengths rowKeyComparisonRunLengths,
+      final ComplexMetricSerde[] complexMetricSerdes,
+      final ColumnType[] columnTypes
   )
   {
     this.frame = frame;
@@ -68,7 +117,9 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     this.keyFieldCount = keyFieldReaders.size();
     this.keyFieldReaders = keyFieldReaders;
     this.firstFieldPosition = firstFieldPosition;
-    this.ascDescRunLengths = ascDescRunLengths;
+    this.rowKeyComparisonRunLengths = rowKeyComparisonRunLengths;
+    this.complexMetricSerdes = complexMetricSerdes;
+    this.columnTypes = columnTypes;
   }
 
   /**
@@ -95,6 +146,41 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
       throw new ISE("Mismatched lengths for keyColumnReaders and keyColumns");
     }
 
+    final RowKeyComparisonRunLengths rowKeyComparisonRunLengths = RowKeyComparisonRunLengths.create(keyColumns, signature);
+    final RunLengthEntry[] runLengthEntries = rowKeyComparisonRunLengths.getRunLengthEntries();
+    final ComplexMetricSerde[] complexMetricSerdes = new ComplexMetricSerde[runLengthEntries.length];
+    final ColumnType[] columnTypes = new ColumnType[runLengthEntries.length];
+
+    int fieldsSeenSoFar = 0;
+    for (int i = 0; i < runLengthEntries.length; ++i) {
+      // If the run length entry isn't byte comparable, it most definitely is a complex type
+      if (runLengthEntries[i].isByteComparable()) {
+        complexMetricSerdes[i] = null;
+        columnTypes[i] = null;
+      } else {
+        final String columnName = keyColumns.get(fieldsSeenSoFar).columnName();
+        final ColumnType columnType = signature.getColumnType(columnName).orElse(null);
+        if (columnType == null) {
+          throw DruidException.defensive(
+              "Cannot compare on the byte incomparable column [%s] without knowing it's type",
+              columnName
+          );
+        }
+        final String complexTypeName = columnType.getComplexTypeName();
+        if (complexTypeName == null) {
+          throw DruidException.defensive("Expected complex type name for column [%s] for comparison", columnName);
+        }
+        complexMetricSerdes[i] = Preconditions.checkNotNull(
+            ComplexMetrics.getSerdeForType(complexTypeName),
+            "Cannot find serde for column [%s] of type [%s]",
+            columnName,
+            complexTypeName
+        );
+        columnTypes[i] = columnType;
+      }
+      fieldsSeenSoFar += runLengthEntries[i].getRunLength();
+    }
+
     return new FrameComparisonWidgetImpl(
         FrameType.ROW_BASED.ensureType(frame),
         signature,
@@ -102,10 +188,15 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
         frame.region(RowBasedFrameWriter.ROW_DATA_REGION),
         keyColumnReaders,
         ByteRowKeyComparator.computeFirstFieldPosition(signature.size()),
-        ByteRowKeyComparator.computeAscDescRunLengths(keyColumns)
+        rowKeyComparisonRunLengths,
+        complexMetricSerdes,
+        columnTypes
     );
   }
 
+  /**
+   * Creates {@link RowKey} from a row in the frame. See the layout of the {@link RowKey}
+   */
   @Override
   public RowKey readKey(int row)
   {
@@ -121,6 +212,7 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     final long keyLength = keyEndInRow - firstFieldPosition;
     final byte[] keyBytes = new byte[Ints.checkedCast(keyFieldPointersEndInRow + keyEndInRow - firstFieldPosition)];
 
+    // Length of the portion of the header which isn't included in the rowKey
     final int headerSizeAdjustment = (signature.size() - keyFieldCount) * Integer.BYTES;
     for (int i = 0; i < keyFieldCount; i++) {
       final int fieldEndPosition = dataRegion.getInt(rowPosition + ((long) Integer.BYTES * i));
@@ -178,41 +270,56 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     final long rowPosition = getRowPositionInDataRegion(row);
 
     long comparableBytesStartPositionInRow = firstFieldPosition;
-    int keyComparableBytesStartPosition = Integer.BYTES * keyFieldCount;
+    int comparableBytesStartPositionInKey = Integer.BYTES * keyFieldCount;
 
-    boolean ascending = true;
-    int field = 0;
+    // Number of fields compared till now, which is equivalent to the index of the field to compare next
+    int fieldsComparedTillNow = 0;
 
-    for (int numFields : ascDescRunLengths) {
-      if (numFields > 0) {
-        final int nextField = field + numFields;
-        final long comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
-        final int keyComparableBytesEndPosition = RowKeyReader.fieldEndPosition(keyArray, nextField - 1);
+    for (int i = 0; i < rowKeyComparisonRunLengths.getRunLengthEntries().length; ++i) {
 
-        final long comparableBytesLength = comparableBytesEndPositionInRow - comparableBytesStartPositionInRow;
-        final int keyComparableBytesLength = keyComparableBytesEndPosition - keyComparableBytesStartPosition;
+      final RunLengthEntry runLengthEntry = rowKeyComparisonRunLengths.getRunLengthEntries()[i];
 
-        int cmp = FrameReaderUtils.compareMemoryToByteArrayUnsigned(
-            dataRegion,
-            rowPosition + comparableBytesStartPositionInRow,
-            comparableBytesLength,
-            keyArray,
-            keyComparableBytesStartPosition,
-            keyComparableBytesLength
-        );
-
-        if (cmp != 0) {
-          return ascending ? cmp : -cmp;
-        }
-
-        field += numFields;
-        comparableBytesStartPositionInRow += comparableBytesLength;
-        keyComparableBytesStartPosition += keyComparableBytesLength;
+      if (runLengthEntry.getRunLength() <= 0) {
+        // Defensive check
+        continue;
       }
 
-      ascending = !ascending;
-    }
+      // Index of the next field that will get considered. Excludes the current field that we are comparing right now
+      final int nextField = fieldsComparedTillNow + runLengthEntry.getRunLength();
+      final int comparableBytesEndPositionInKey = RowKeyReader.fieldEndPosition(keyArray, nextField - 1);
+      final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
 
+      final int cmp;
+
+      if (!runLengthEntry.isByteComparable()) {
+        // Only complex types are not byte comparable. Nested arrays aren't supported in MSQ
+        assert runLengthEntry.getRunLength() == 1;
+        cmp = FrameReaderUtils.compareComplexTypes(
+            dataRegion,
+            rowPosition + comparableBytesStartPositionInRow,
+            keyArray,
+            comparableBytesStartPositionInKey,
+            columnTypes[i],
+            complexMetricSerdes[i]
+        );
+      } else {
+        cmp = FrameReaderUtils.compareMemoryToByteArrayUnsigned(
+            dataRegion,
+            rowPosition + comparableBytesStartPositionInRow,
+            comparableBytesEndPositionInRow - comparableBytesStartPositionInRow,
+            keyArray,
+            comparableBytesStartPositionInKey,
+            comparableBytesEndPositionInKey - comparableBytesStartPositionInKey
+        );
+      }
+
+      if (cmp != 0) {
+        return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
+      }
+      fieldsComparedTillNow = nextField;
+      comparableBytesStartPositionInRow = comparableBytesEndPositionInRow;
+      comparableBytesStartPositionInKey = comparableBytesEndPositionInKey;
+    }
     return 0;
   }
 
@@ -230,39 +337,52 @@ public class FrameComparisonWidgetImpl implements FrameComparisonWidget
     int comparableBytesStartPositionInRow = firstFieldPosition;
     int otherComparableBytesStartPositionInRow = otherWidgetImpl.firstFieldPosition;
 
-    boolean ascending = true;
-    int field = 0;
+    // Number of fields compared till now, which is equivalent to the index of the field to compare next
+    int fieldsComparedTillNow = 0;
 
-    for (int numFields : ascDescRunLengths) {
-      if (numFields > 0) {
-        final int nextField = field + numFields;
-        final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
-        final int otherComparableBytesEndPositionInRow =
-            otherWidgetImpl.getFieldEndPositionInRow(otherRowPosition, nextField - 1);
-
-        final int comparableBytesLength = comparableBytesEndPositionInRow - comparableBytesStartPositionInRow;
-        final int otherComparableBytesLength =
-            otherComparableBytesEndPositionInRow - otherComparableBytesStartPositionInRow;
-
-        int cmp = FrameReaderUtils.compareMemoryUnsigned(
-            dataRegion,
-            rowPosition + comparableBytesStartPositionInRow,
-            comparableBytesLength,
-            otherWidgetImpl.getDataRegion(),
-            otherRowPosition + otherComparableBytesStartPositionInRow,
-            otherComparableBytesLength
-        );
-
-        if (cmp != 0) {
-          return ascending ? cmp : -cmp;
-        }
-
-        field += numFields;
-        comparableBytesStartPositionInRow += comparableBytesLength;
-        otherComparableBytesStartPositionInRow += otherComparableBytesLength;
+    for (int i = 0; i < rowKeyComparisonRunLengths.getRunLengthEntries().length; ++i) {
+      final RunLengthEntry runLengthEntry = rowKeyComparisonRunLengths.getRunLengthEntries()[i];
+      if (runLengthEntry.getRunLength() <= 0) {
+        // Defensive check
+        continue;
       }
 
-      ascending = !ascending;
+      final int nextField = fieldsComparedTillNow + runLengthEntry.getRunLength();
+      final int comparableBytesEndPositionInRow = getFieldEndPositionInRow(rowPosition, nextField - 1);
+      final int otherComparableBytesEndPositionInRow = otherWidgetImpl.getFieldEndPositionInRow(otherRowPosition, nextField - 1);
+
+      final int cmp;
+
+      if (!runLengthEntry.isByteComparable()) {
+        // Only complex types are not byte comparable. Nested arrays aren't supported in MSQ
+        assert runLengthEntry.getRunLength() == 1;
+
+        cmp = FrameReaderUtils.compareComplexTypes(
+            dataRegion,
+            rowPosition + comparableBytesStartPositionInRow,
+            otherWidgetImpl.dataRegion,
+            otherRowPosition + otherComparableBytesStartPositionInRow,
+            columnTypes[i],
+            complexMetricSerdes[i]
+        );
+      } else {
+        cmp = FrameReaderUtils.compareMemoryUnsigned(
+            dataRegion,
+            rowPosition + comparableBytesStartPositionInRow,
+            comparableBytesEndPositionInRow - comparableBytesStartPositionInRow,
+            otherWidgetImpl.getDataRegion(),
+            otherRowPosition + otherComparableBytesStartPositionInRow,
+            otherComparableBytesEndPositionInRow - otherComparableBytesStartPositionInRow
+        );
+      }
+
+      if (cmp != 0) {
+        return runLengthEntry.getOrder() == KeyOrder.ASCENDING ? cmp : -cmp;
+      }
+
+      fieldsComparedTillNow = nextField;
+      comparableBytesStartPositionInRow = comparableBytesEndPositionInRow;
+      otherComparableBytesStartPositionInRow = otherComparableBytesEndPositionInRow;
     }
 
     return 0;

@@ -107,9 +107,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
           <p>
             Edit the overlord dynamic configuration at runtime. For more information please refer to
             the{' '}
-            <ExternalLink
-              href={`${getLink('DOCS')}/configuration/index.html#overlord-dynamic-configuration`}
-            >
+            <ExternalLink href={`${getLink('DOCS')}/configuration/#overlord-dynamic-configuration`}>
               documentation
             </ExternalLink>
             .

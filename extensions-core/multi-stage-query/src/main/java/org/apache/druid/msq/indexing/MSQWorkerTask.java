@@ -32,12 +32,14 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
-import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.exec.MSQTasks;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerContext;
 import org.apache.druid.msq.exec.WorkerImpl;
+import org.apache.druid.msq.indexing.error.MSQException;
+import org.apache.druid.msq.indexing.error.MSQFaultUtils;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.annotation.Nonnull;
@@ -46,9 +48,10 @@ import java.util.Objects;
 import java.util.Set;
 
 @JsonTypeName(MSQWorkerTask.TYPE)
-public class MSQWorkerTask extends AbstractTask implements PendingSegmentAllocatingTask
+public class MSQWorkerTask extends AbstractTask
 {
   public static final String TYPE = "query_worker";
+  private static final Logger log = new Logger(MSQWorkerTask.class);
 
   private final String controllerTaskId;
   private final int workerNumber;
@@ -127,31 +130,31 @@ public class MSQWorkerTask extends AbstractTask implements PendingSegmentAllocat
   }
 
   @Override
-  public String getTaskAllocatorId()
-  {
-    return getControllerTaskId();
-  }
-
-
-  @Override
   public boolean isReady(final TaskActionClient taskActionClient)
   {
     return true;
   }
 
   @Override
-  public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
+  public TaskStatus runTask(final TaskToolbox toolbox)
   {
-    final WorkerContext context = IndexerWorkerContext.createProductionInstance(toolbox, injector);
+    final WorkerContext context = IndexerWorkerContext.createProductionInstance(this, toolbox, injector);
     worker = new WorkerImpl(this, context);
-    return worker.run();
+
+    try {
+      worker.run();
+      return TaskStatus.success(context.workerId());
+    }
+    catch (MSQException e) {
+      return TaskStatus.failure(context.workerId(), MSQFaultUtils.generateMessageWithErrorCode(e.getFault()));
+    }
   }
 
   @Override
   public void stopGracefully(TaskConfig taskConfig)
   {
     if (worker != null) {
-      worker.stopGracefully();
+      worker.stop();
     }
   }
 

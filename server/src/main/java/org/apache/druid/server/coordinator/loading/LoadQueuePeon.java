@@ -25,8 +25,7 @@ import org.apache.druid.timeline.DataSegment;
 import java.util.Set;
 
 /**
- * This interface exists only to support configurable load queue management via curator or http. Once HttpLoadQueuePeon
- * has been verified enough in production, CuratorLoadQueuePeon and this interface would be removed.
+ * Supports load queue management.
  */
 @Deprecated
 public interface LoadQueuePeon
@@ -54,6 +53,8 @@ public interface LoadQueuePeon
   void dropSegment(DataSegment segment, LoadPeonCallback callback);
 
   long getSizeOfSegmentsToLoad();
+
+  long getLoadRateKbps();
 
   CoordinatorRunStats getAndResetStats();
 

@@ -61,7 +61,11 @@ public class ConfigManager
   private volatile PollingCallable poller;
 
   @Inject
-  public ConfigManager(MetadataStorageConnector dbConnector, Supplier<MetadataStorageTablesConfig> dbTables, Supplier<ConfigManagerConfig> config)
+  public ConfigManager(
+      MetadataStorageConnector dbConnector,
+      Supplier<MetadataStorageTablesConfig> dbTables,
+      Supplier<ConfigManagerConfig> config
+  )
   {
     this.dbConnector = dbConnector;
     this.config = config;

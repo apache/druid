@@ -28,6 +28,7 @@ import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
+import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
@@ -40,9 +41,8 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
-import org.apache.druid.indexing.common.RetryPolicyConfig;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
@@ -55,14 +55,16 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.joda.time.Duration;
@@ -71,6 +73,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Map;
 
 public class ClientCompactionTaskQuerySerdeTest
 {
@@ -78,61 +81,116 @@ public class ClientCompactionTaskQuerySerdeTest
       new TestUtils().getRowIngestionMetersFactory();
   private static final CoordinatorClient COORDINATOR_CLIENT = new NoopCoordinatorClient();
   private static final AppenderatorsManager APPENDERATORS_MANAGER = new TestAppenderatorsManager();
+  private static final ObjectMapper MAPPER = setupInjectablesInObjectMapper(new DefaultObjectMapper());
+
+  private static final IndexSpec INDEX_SPEC = IndexSpec.builder()
+                                                       .withDimensionCompression(CompressionStrategy.LZ4)
+                                                       .withMetricCompression(CompressionStrategy.LZF)
+                                                       .withLongEncoding(LongEncodingStrategy.LONGS)
+                                                       .build();
+  private static final IndexSpec INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS = IndexSpec.builder()
+                                                                                 .withDimensionCompression(CompressionStrategy.LZ4)
+                                                                                 .withMetricCompression(CompressionStrategy.UNCOMPRESSED)
+                                                                                 .withLongEncoding(LongEncodingStrategy.AUTO)
+                                                                                 .build();
+  private static final ClientCompactionTaskGranularitySpec CLIENT_COMPACTION_TASK_GRANULARITY_SPEC =
+      new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true);
+  private static final AggregatorFactory[] METRICS_SPEC = new AggregatorFactory[] {new CountAggregatorFactory("cnt")};
+  private static final ClientCompactionTaskTransformSpec CLIENT_COMPACTION_TASK_TRANSFORM_SPEC =
+      new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null));
+  private static final DynamicPartitionsSpec DYNAMIC_PARTITIONS_SPEC = new DynamicPartitionsSpec(100, 30000L);
+  private static final SegmentsSplitHintSpec SEGMENTS_SPLIT_HINT_SPEC = new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10);
 
   @Test
   public void testClientCompactionTaskQueryToCompactionTask() throws IOException
   {
-    final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
-    final ClientCompactionTaskQuery query = new ClientCompactionTaskQuery(
-        "id",
-        "datasource",
-        new ClientCompactionIOConfig(
-            new ClientCompactionIntervalSpec(
-                Intervals.of("2019/2020"),
-                "testSha256OfSortedSegmentIds"
-            ),
-            true
+    final ClientCompactionTaskQuery query = createCompactionTaskQuery("id", CLIENT_COMPACTION_TASK_TRANSFORM_SPEC);
+
+    final byte[] json = MAPPER.writeValueAsBytes(query);
+    final CompactionTask task = (CompactionTask) MAPPER.readValue(json, Task.class);
+
+    assertQueryToTask(query, task);
+  }
+
+  @Test
+  public void testClientCompactionTaskQueryToCompactionTaskWithoutTransformSpec() throws IOException
+  {
+    final ClientCompactionTaskQuery query = createCompactionTaskQuery("id", null);
+
+    final byte[] json = MAPPER.writeValueAsBytes(query);
+    final CompactionTask task = (CompactionTask) MAPPER.readValue(json, Task.class);
+
+    // Verify that CompactionTask has added new parameters into the context because transformSpec was null.
+    Assert.assertNotEquals(query.getContext(), task.getContext());
+    query.getContext().put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
+    assertQueryToTask(query, task);
+  }
+
+  @Test
+  public void testCompactionTaskToClientCompactionTaskQuery() throws IOException
+  {
+    final CompactionTask task = createCompactionTask(CLIENT_COMPACTION_TASK_TRANSFORM_SPEC);
+
+    final ClientCompactionTaskQuery expected = createCompactionTaskQuery(task.getId(), CLIENT_COMPACTION_TASK_TRANSFORM_SPEC);
+
+    final byte[] json = MAPPER.writeValueAsBytes(task);
+    final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
+
+    Assert.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void testCompactionTaskToClientCompactionTaskQueryWithoutTransformSpec() throws IOException
+  {
+    final CompactionTask task = createCompactionTask(null);
+
+    final ClientCompactionTaskQuery expected = createCompactionTaskQuery(task.getId(), null);
+
+    final byte[] json = MAPPER.writeValueAsBytes(task);
+    final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) MAPPER.readValue(json, ClientTaskQuery.class);
+
+    // Verify that CompactionTask has added new parameters into the context
+    Assert.assertNotEquals(expected, actual);
+
+    expected.getContext().put(LookupLoadingSpec.CTX_LOOKUP_LOADING_MODE, LookupLoadingSpec.Mode.NONE.toString());
+    Assert.assertEquals(expected, actual);
+  }
+
+  private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
+  {
+    final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
+    objectMapper.setAnnotationIntrospectors(
+        new AnnotationIntrospectorPair(
+            guiceIntrospector,
+            objectMapper.getSerializationConfig().getAnnotationIntrospector()
         ),
-        new ClientCompactionTaskQueryTuningConfig(
-            null,
-            null,
-            40000,
-            2000L,
-            null,
-            new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
-            new DynamicPartitionsSpec(100, 30000L),
-            IndexSpec.builder()
-                     .withDimensionCompression(CompressionStrategy.LZ4)
-                     .withMetricCompression(CompressionStrategy.LZF)
-                     .withLongEncoding(LongEncodingStrategy.LONGS)
-                     .build(),
-            IndexSpec.builder()
-                     .withDimensionCompression(CompressionStrategy.LZ4)
-                     .withMetricCompression(CompressionStrategy.UNCOMPRESSED)
-                     .withLongEncoding(LongEncodingStrategy.AUTO)
-                     .build(),
-            2,
-            1000L,
-            TmpFileSegmentWriteOutMediumFactory.instance(),
-            100,
-            5,
-            1000L,
-            new Duration(3000L),
-            7,
-            1000,
-            100,
-            2
-        ),
-        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
-        new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
-        new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
-        ImmutableMap.of("key", "value")
+        new AnnotationIntrospectorPair(
+            guiceIntrospector,
+            objectMapper.getDeserializationConfig().getAnnotationIntrospector()
+        )
     );
+    GuiceInjectableValues injectableValues = new GuiceInjectableValues(
+        GuiceInjectors.makeStartupInjectorWithModules(
+            ImmutableList.of(
+                binder -> {
+                  binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
+                  binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
+                  binder.bind(RowIngestionMetersFactory.class).toInstance(ROW_INGESTION_METERS_FACTORY);
+                  binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
+                  binder.bind(SegmentCacheManagerFactory.class).toInstance(new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper));
+                  binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
+                  binder.bind(OverlordClient.class).toInstance(new NoopOverlordClient());
+                }
+            )
+        )
+    );
+    objectMapper.setInjectableValues(injectableValues);
+    objectMapper.registerSubtypes(new NamedType(ParallelIndexTuningConfig.class, "index_parallel"));
+    return objectMapper;
+  }
 
-    final byte[] json = mapper.writeValueAsBytes(query);
-    final CompactionTask task = (CompactionTask) mapper.readValue(json, Task.class);
-
+  private void assertQueryToTask(ClientCompactionTaskQuery query, CompactionTask task)
+  {
     Assert.assertEquals(query.getId(), task.getId());
     Assert.assertEquals(query.getDataSource(), task.getDataSource());
     Assert.assertTrue(task.getIoConfig().getInputSpec() instanceof CompactionIntervalSpec);
@@ -226,8 +284,8 @@ public class ClientCompactionTaskQuerySerdeTest
         task.getDimensionsSpec().getDimensions()
     );
     Assert.assertEquals(
-        query.getTransformSpec().getFilter(),
-        task.getTransformSpec().getFilter()
+        query.getTransformSpec(),
+        task.getTransformSpec()
     );
     Assert.assertArrayEquals(
         query.getMetricsSpec(),
@@ -235,81 +293,15 @@ public class ClientCompactionTaskQuerySerdeTest
     );
   }
 
-  @Test
-  public void testCompactionTaskToClientCompactionTaskQuery() throws IOException
+  private ClientCompactionTaskQuery createCompactionTaskQuery(String id, ClientCompactionTaskTransformSpec transformSpec)
   {
-    final ObjectMapper mapper = setupInjectablesInObjectMapper(new DefaultObjectMapper());
-    final CompactionTask.Builder builder = new CompactionTask.Builder(
-        "datasource",
-        new SegmentCacheManagerFactory(mapper),
-        new RetryPolicyFactory(new RetryPolicyConfig())
-    );
-    final CompactionTask task = builder
-        .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
-        .tuningConfig(
-            new ParallelIndexTuningConfig(
-                null,
-                null,
-                new OnheapIncrementalIndex.Spec(true),
-                40000,
-                2000L,
-                null,
-                null,
-                null,
-                new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
-                new DynamicPartitionsSpec(100, 30000L),
-                IndexSpec.builder()
-                         .withDimensionCompression(CompressionStrategy.LZ4)
-                         .withMetricCompression(CompressionStrategy.LZF)
-                         .withLongEncoding(LongEncodingStrategy.LONGS)
-                         .build(),
-                IndexSpec.builder()
-                         .withDimensionCompression(CompressionStrategy.LZ4)
-                         .withMetricCompression(CompressionStrategy.UNCOMPRESSED)
-                         .withLongEncoding(LongEncodingStrategy.AUTO)
-                         .build(),
-                2,
-                null,
-                null,
-                1000L,
-                TmpFileSegmentWriteOutMediumFactory.instance(),
-                null,
-                100,
-                5,
-                1000L,
-                new Duration(3000L),
-                7,
-                1000,
-                100,
-                null,
-                null,
-                null,
-                2,
-                null,
-                null,
-                null
-            )
-        )
-        .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true))
-        .dimensionsSpec(
-            DimensionsSpec.builder()
-                          .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")))
-                          .setDimensionExclusions(ImmutableList.of("__time", "val"))
-                          .build()
-        )
-        .metricsSpec(new AggregatorFactory[] {new CountAggregatorFactory("cnt")})
-        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
-        .build();
-
-    final ClientCompactionTaskQuery expected = new ClientCompactionTaskQuery(
-        task.getId(),
+    Map<String, Object> context = new HashMap<>();
+    context.put("key", "value");
+    return new ClientCompactionTaskQuery(
+        id,
         "datasource",
         new ClientCompactionIOConfig(
-            new ClientCompactionIntervalSpec(
-                Intervals.of("2019/2020"),
-                "testSha256OfSortedSegmentIds"
-            ),
-            true
+            new ClientCompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true
         ),
         new ClientCompactionTaskQueryTuningConfig(
             100,
@@ -317,18 +309,10 @@ public class ClientCompactionTaskQuerySerdeTest
             40000,
             2000L,
             30000L,
-            new SegmentsSplitHintSpec(new HumanReadableBytes(100000L), 10),
-            new DynamicPartitionsSpec(100, 30000L),
-            IndexSpec.builder()
-                     .withDimensionCompression(CompressionStrategy.LZ4)
-                     .withMetricCompression(CompressionStrategy.LZF)
-                     .withLongEncoding(LongEncodingStrategy.LONGS)
-                     .build(),
-            IndexSpec.builder()
-                     .withDimensionCompression(CompressionStrategy.LZ4)
-                     .withMetricCompression(CompressionStrategy.UNCOMPRESSED)
-                     .withLongEncoding(LongEncodingStrategy.AUTO)
-                     .build(),
+            SEGMENTS_SPLIT_HINT_SPEC,
+            DYNAMIC_PARTITIONS_SPEC,
+            INDEX_SPEC,
+            INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS,
             2,
             1000L,
             TmpFileSegmentWriteOutMediumFactory.instance(),
@@ -341,49 +325,56 @@ public class ClientCompactionTaskQuerySerdeTest
             100,
             2
         ),
-        new ClientCompactionTaskGranularitySpec(Granularities.DAY, Granularities.HOUR, true),
+        CLIENT_COMPACTION_TASK_GRANULARITY_SPEC,
         new ClientCompactionTaskDimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
-        new AggregatorFactory[] {new CountAggregatorFactory("cnt")},
-        new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
-        new HashMap<>()
+        METRICS_SPEC,
+        transformSpec,
+        context,
+        new ClientCompactionRunnerInfo(CompactionEngine.NATIVE)
     );
-
-    final byte[] json = mapper.writeValueAsBytes(task);
-    final ClientCompactionTaskQuery actual = (ClientCompactionTaskQuery) mapper.readValue(json, ClientTaskQuery.class);
-
-    Assert.assertEquals(expected, actual);
   }
 
-  private static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
+  private CompactionTask createCompactionTask(ClientCompactionTaskTransformSpec transformSpec)
   {
-    final GuiceAnnotationIntrospector guiceIntrospector = new GuiceAnnotationIntrospector();
-    objectMapper.setAnnotationIntrospectors(
-        new AnnotationIntrospectorPair(
-            guiceIntrospector,
-            objectMapper.getSerializationConfig().getAnnotationIntrospector()
-        ),
-        new AnnotationIntrospectorPair(
-            guiceIntrospector,
-            objectMapper.getDeserializationConfig().getAnnotationIntrospector()
+    CompactionTask.Builder compactionTaskBuilder = new CompactionTask.Builder(
+        "datasource",
+        new SegmentCacheManagerFactory(TestIndex.INDEX_IO, MAPPER)
+    )
+        .inputSpec(new CompactionIntervalSpec(Intervals.of("2019/2020"), "testSha256OfSortedSegmentIds"), true)
+        .tuningConfig(
+            TuningConfigBuilder
+                .forParallelIndexTask()
+                .withAppendableIndexSpec(new OnheapIncrementalIndex.Spec(true))
+                .withMaxRowsInMemory(40000)
+                .withMaxBytesInMemory(2000L)
+                .withSplitHintSpec(SEGMENTS_SPLIT_HINT_SPEC)
+                .withPartitionsSpec(DYNAMIC_PARTITIONS_SPEC)
+                .withIndexSpec(INDEX_SPEC)
+                .withIndexSpecForIntermediatePersists(INDEX_SPEC_FOR_INTERMEDIATE_PERSISTS)
+                .withMaxPendingPersists(2)
+                .withPushTimeout(1000L)
+                .withSegmentWriteOutMediumFactory(TmpFileSegmentWriteOutMediumFactory.instance())
+                .withMaxNumConcurrentSubTasks(100)
+                .withMaxRetry(5)
+                .withTaskStatusCheckPeriodMs(1000L)
+                .withChatHandlerTimeout(new Duration(3000L))
+                .withChatHandlerNumRetries(7)
+                .withMaxNumSegmentsToMerge(1000)
+                .withTotalNumMergeTasks(100)
+                .withMaxColumnsToMerge(2)
+                .build()
         )
-    );
-    GuiceInjectableValues injectableValues = new GuiceInjectableValues(
-        GuiceInjectors.makeStartupInjectorWithModules(
-            ImmutableList.of(
-                binder -> {
-                  binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
-                  binder.bind(ChatHandlerProvider.class).toInstance(new NoopChatHandlerProvider());
-                  binder.bind(RowIngestionMetersFactory.class).toInstance(ROW_INGESTION_METERS_FACTORY);
-                  binder.bind(CoordinatorClient.class).toInstance(COORDINATOR_CLIENT);
-                  binder.bind(SegmentCacheManagerFactory.class).toInstance(new SegmentCacheManagerFactory(objectMapper));
-                  binder.bind(AppenderatorsManager.class).toInstance(APPENDERATORS_MANAGER);
-                  binder.bind(OverlordClient.class).toInstance(new NoopOverlordClient());
-                }
-            )
+        .granularitySpec(CLIENT_COMPACTION_TASK_GRANULARITY_SPEC)
+        .dimensionsSpec(
+            DimensionsSpec.builder()
+                          .setDimensions(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim")))
+                          .setDimensionExclusions(ImmutableList.of("__time", "val"))
+                          .build()
         )
-    );
-    objectMapper.setInjectableValues(injectableValues);
-    objectMapper.registerSubtypes(new NamedType(ParallelIndexTuningConfig.class, "index_parallel"));
-    return objectMapper;
+        .metricsSpec(METRICS_SPEC)
+        .transformSpec(transformSpec)
+        .context(ImmutableMap.of("key", "value"));
+
+    return compactionTaskBuilder.build();
   }
 }

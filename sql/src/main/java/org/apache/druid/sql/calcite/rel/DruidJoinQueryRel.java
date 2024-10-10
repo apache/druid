@@ -423,7 +423,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
              && DruidRels.druidTableIfLeafRel(right).filter(table -> table.getDataSource().isGlobal()).isPresent());
   }
 
-  static Set<String> findExistingJoinPrefixes(DataSource... dataSources)
+  public static Set<String> findExistingJoinPrefixes(DataSource... dataSources)
   {
     final ArrayList<DataSource> copy = new ArrayList<>(Arrays.asList(dataSources));
 
@@ -442,7 +442,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
    * Returns a Pair of "rightPrefix" (for JoinDataSource) and the signature of rows that will result from
    * applying that prefix.
    */
-  static Pair<String, RowSignature> computeJoinRowSignature(
+  public static Pair<String, RowSignature> computeJoinRowSignature(
       final RowSignature leftSignature,
       final RowSignature rightSignature,
       final Set<String> prefixes

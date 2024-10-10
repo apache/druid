@@ -263,7 +263,6 @@ public class CoordinatorDynamicConfigTest
         false,
         null
     );
-    Assert.assertTrue(config.isKillUnusedSegmentsInAllDataSources());
     Assert.assertTrue(config.getSpecificDataSourcesToKillUnusedSegmentsIn().isEmpty());
   }
 
@@ -290,7 +289,6 @@ public class CoordinatorDynamicConfigTest
         false,
         null
     );
-    Assert.assertFalse(config.isKillUnusedSegmentsInAllDataSources());
     Assert.assertEquals(ImmutableSet.of("test1"), config.getSpecificDataSourcesToKillUnusedSegmentsIn());
   }
 
@@ -469,60 +467,6 @@ public class CoordinatorDynamicConfigTest
   }
 
   @Test
-  public void testSerdeWithKillAllDataSources() throws Exception
-  {
-    String jsonStr = "{\n"
-                     + "  \"millisToWaitBeforeDeleting\": 1,\n"
-                     + "  \"mergeBytesLimit\": 1,\n"
-                     + "  \"mergeSegmentsLimit\" : 1,\n"
-                     + "  \"maxSegmentsToMove\": 1,\n"
-                     + "  \"replicantLifetime\": 1,\n"
-                     + "  \"replicationThrottleLimit\": 1,\n"
-                     + "  \"balancerComputeThreads\": 2, \n"
-                     + "  \"killAllDataSources\": true,\n"
-                     + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
-                     + "}\n";
-
-    CoordinatorDynamicConfig actual = mapper.readValue(
-        mapper.writeValueAsString(
-            mapper.readValue(jsonStr, CoordinatorDynamicConfig.class)
-        ),
-        CoordinatorDynamicConfig.class
-    );
-
-    assertConfig(
-        actual,
-        1,
-        1,
-        1,
-        1,
-        1,
-        1,
-        2,
-        ImmutableSet.of(),
-        0.1,
-        Integer.MAX_VALUE,
-        true,
-        1,
-        ImmutableSet.of(),
-        false,
-        false
-    );
-
-    // killAllDataSources is a config in versions 0.22.x and older and is no longer used.
-    // This used to be an invalid config, but as of 0.23.0 the killAllDataSources flag no longer exsist,
-    // so this is a valid config
-    jsonStr = "{\n"
-              + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
-              + "  \"killAllDataSources\": true\n"
-              + "}\n";
-    actual = mapper.readValue(jsonStr, CoordinatorDynamicConfig.class);
-
-    Assert.assertFalse(actual.isKillUnusedSegmentsInAllDataSources());
-    Assert.assertEquals(2, actual.getSpecificDataSourcesToKillUnusedSegmentsIn().size());
-  }
-
-  @Test
   public void testDeserializeWithoutMaxSegmentsInNodeLoadingQueue() throws Exception
   {
     String jsonStr = "{\n"
@@ -532,8 +476,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
-                     + "  \"balancerComputeThreads\": 2, \n"
-                     + "  \"killAllDataSources\": true\n"
+                     + "  \"balancerComputeThreads\": 2\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -691,7 +634,6 @@ public class CoordinatorDynamicConfigTest
         expectedSpecificDataSourcesToKillUnusedSegmentsIn,
         config.getSpecificDataSourcesToKillUnusedSegmentsIn()
     );
-    Assert.assertEquals(expectedKillUnusedSegmentsInAllDataSources, config.isKillUnusedSegmentsInAllDataSources());
     Assert.assertEquals(expectedKillTaskSlotRatio, config.getKillTaskSlotRatio(), 0.001);
     Assert.assertEquals((int) expectedMaxKillTaskSlots, config.getMaxKillTaskSlots());
     Assert.assertEquals(expectedMaxSegmentsInNodeLoadingQueue, config.getMaxSegmentsInNodeLoadingQueue());

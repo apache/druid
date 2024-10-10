@@ -33,6 +33,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.bloom.BloomFilterAggregatorFactory;
+import org.apache.druid.query.aggregation.bloom.sql.BloomFilterSqlAggregatorTest.BloomFilterSqlAggComponentSupplier;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -49,8 +50,11 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -58,53 +62,62 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+@SqlTestFrameworkConfig.ComponentSupplier(BloomFilterSqlAggComponentSupplier.class)
 public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 {
   private static final int TEST_NUM_ENTRIES = 1000;
 
   private static final String DATA_SOURCE = "numfoo";
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
+  public static class BloomFilterSqlAggComponentSupplier extends StandardComponentSupplier
   {
-    super.configureGuice(builder);
-    builder.addModule(new BloomFilterExtensionModule());
-  }
+    public BloomFilterSqlAggComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
 
-  @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-      final QueryRunnerFactoryConglomerate conglomerate,
-      final JoinableFactoryWrapper joinableFactory,
-      final Injector injector
-  )
-  {
-    final QueryableIndex index =
-        IndexBuilder.create()
-                    .tmpDir(newTempFolder())
-                    .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-                    .schema(
-                        new IncrementalIndexSchema.Builder()
-                            .withMetrics(
-                                new CountAggregatorFactory("cnt"),
-                                new DoubleSumAggregatorFactory("m1", "m1")
-                            )
-                            .withDimensionsSpec(TestDataBuilder.INDEX_SCHEMA_NUMERIC_DIMS.getDimensionsSpec())
-                            .withRollup(false)
-                            .build()
-                    )
-                    .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
-                    .buildMMappedIndex();
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+      builder.addModule(new BloomFilterExtensionModule());
+    }
 
-    return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
-        DataSegment.builder()
-                   .dataSource(DATA_SOURCE)
-                   .interval(index.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        index
-    );
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        final QueryRunnerFactoryConglomerate conglomerate,
+        final JoinableFactoryWrapper joinableFactory,
+        final Injector injector
+    )
+    {
+      final QueryableIndex index =
+          IndexBuilder.create()
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt"),
+                                  new DoubleSumAggregatorFactory("m1", "m1")
+                              )
+                              .withDimensionsSpec(TestDataBuilder.INDEX_SCHEMA_NUMERIC_DIMS.getDimensionsSpec())
+                              .withRollup(false)
+                              .build()
+                      )
+                      .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
+                      .buildMMappedIndex();
+
+      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+          DataSegment.builder()
+                     .dataSource(DATA_SOURCE)
+                     .interval(index.getDataInterval())
+                     .version("1")
+                     .shardSpec(new LinearShardSpec(0))
+                     .size(0)
+                     .build(),
+          index
+      );
+    }
   }
 
   @Test
@@ -135,7 +148,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(
                       ImmutableList.of(
                           new BloomFilterAggregatorFactory(
-                              "a0:agg",
+                              "a0",
                               new DefaultDimensionSpec("dim1", "a0:dim1"),
                               TEST_NUM_ENTRIES
                           )
@@ -194,12 +207,12 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
               .aggregators(
                   ImmutableList.of(
                       new BloomFilterAggregatorFactory(
-                          "a0:agg",
+                          "a0",
                           new DefaultDimensionSpec("dim1", "a0:dim1"),
                           TEST_NUM_ENTRIES
                       ),
                       new BloomFilterAggregatorFactory(
-                          "a1:agg",
+                          "a1",
                           new DefaultDimensionSpec("dim2", "a1:dim2"),
                           TEST_NUM_ENTRIES
                       )
@@ -245,7 +258,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(
                       ImmutableList.of(
                           new BloomFilterAggregatorFactory(
-                              "a0:agg",
+                              "a0",
                               new ExtractionDimensionSpec(
                                   "dim1",
                                   "a0:dim1",
@@ -295,7 +308,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(
                       ImmutableList.of(
                           new BloomFilterAggregatorFactory(
-                              "a0:agg",
+                              "a0",
                               new DefaultDimensionSpec("l1", "a0:l1", ColumnType.LONG),
                               TEST_NUM_ENTRIES
                           )
@@ -348,7 +361,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(
                       ImmutableList.of(
                           new BloomFilterAggregatorFactory(
-                              "a0:agg",
+                              "a0",
                               new DefaultDimensionSpec("v0", "a0:v0"),
                               TEST_NUM_ENTRIES
                           )
@@ -402,7 +415,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(
                       ImmutableList.of(
                           new BloomFilterAggregatorFactory(
-                              "a0:agg",
+                              "a0",
                               new DefaultDimensionSpec("v0", "a0:v0"),
                               TEST_NUM_ENTRIES
                           )
@@ -456,7 +469,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(
                       ImmutableList.of(
                           new BloomFilterAggregatorFactory(
-                              "a0:agg",
+                              "a0",
                               new DefaultDimensionSpec("v0", "a0:v0"),
                               TEST_NUM_ENTRIES
                           )
@@ -495,12 +508,12 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .aggregators(
                       ImmutableList.of(
                           new BloomFilterAggregatorFactory(
-                              "a0:agg",
+                              "a0",
                               new DefaultDimensionSpec("dim1", "a0:dim1"),
                               TEST_NUM_ENTRIES
                           ),
                           new BloomFilterAggregatorFactory(
-                              "a1:agg",
+                              "a1",
                               new DefaultDimensionSpec("l1", "a1:l1", ColumnType.LONG),
                               TEST_NUM_ENTRIES
                           )
@@ -546,7 +559,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                             aggregators(
                                 new FilteredAggregatorFactory(
                                     new BloomFilterAggregatorFactory(
-                                        "a0:agg",
+                                        "a0",
                                         new DefaultDimensionSpec("dim1", "a0:dim1"),
                                         TEST_NUM_ENTRIES
                                     ),
@@ -554,7 +567,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                                 ),
                                 new FilteredAggregatorFactory(
                                     new BloomFilterAggregatorFactory(
-                                        "a1:agg",
+                                        "a1",
                                         new DefaultDimensionSpec("l1", "a1:l1", ColumnType.LONG),
                                         TEST_NUM_ENTRIES
                                     ),

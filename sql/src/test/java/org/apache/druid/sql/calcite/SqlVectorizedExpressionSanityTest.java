@@ -49,6 +49,7 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -152,7 +153,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         new CalciteRulesManager(ImmutableSet.of()),
         joinableFactoryWrapper,
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
   }
 
@@ -178,10 +180,10 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   @Test
   public void testQuery()
   {
-    sanityTestVectorizedSqlQueries(PLANNER_FACTORY, query);
+    sanityTestVectorizedSqlQueries(ENGINE, PLANNER_FACTORY, query);
   }
 
-  public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
+  public static void sanityTestVectorizedSqlQueries(SqlEngine engine, PlannerFactory plannerFactory, String query)
   {
     final Map<String, Object> vector = ImmutableMap.of(
             QueryContexts.VECTORIZE_KEY, "force",
@@ -193,8 +195,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     );
 
     try (
-        final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(ENGINE, query, vector);
-        final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(ENGINE, query, nonvector)
+        final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(engine, query, vector);
+        final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(engine, query, nonvector)
     ) {
       final PlannerResult vectorPlan = vectorPlanner.plan();
       final PlannerResult nonVectorPlan = nonVectorPlanner.plan();

@@ -176,6 +176,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     sh.setInitParameter("maxConnections", Integer.toString(httpClientConfig.getNumConnections()));
     sh.setInitParameter("idleTimeout", Long.toString(httpClientConfig.getReadTimeout().getMillis()));
     sh.setInitParameter("timeout", Long.toString(httpClientConfig.getReadTimeout().getMillis()));
+    sh.setInitParameter("requestBufferSize", Integer.toString(httpClientConfig.getRequestBuffersize()));
 
     return sh;
   }

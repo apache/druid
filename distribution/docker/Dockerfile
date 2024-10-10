@@ -94,7 +94,7 @@ RUN --mount=type=bind,from=builder,source=/opt,target=/builder/opt \
  mkdir -p /opt/druid/var /opt/shared \
  && cp -r /builder/opt/druid /opt/ \
  && /deduplicate_jars.sh /opt/druid \
- && chown -R druid:druid /opt/druid \
+ && chown -R druid:druid /opt/druid /opt/shared \
  && chmod 775 /opt/druid/var /opt/shared
 
 USER druid

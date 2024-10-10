@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Code, Dialog, Tab, Tabs } from '@blueprintjs/core';
+import { Button, Callout, Classes, Dialog, Tab, Tabs, TabsExpander, Tag } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
@@ -113,11 +113,11 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
                   }
                 />
               ))}
-              <Tabs.Expander />
+              <TabsExpander />
             </Tabs>
           ) : (
             <div>
-              There is no compaction history for <Code>{datasource}</Code>.
+              There is no compaction history for <Tag minimal>{datasource}</Tag>.
             </div>
           )
         ) : historyState.loading ? (
@@ -135,8 +135,8 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
         <DiffDialog
           title="Compaction config diff"
           versions={historyData.map(s => ({ label: s.auditTime, value: s.compactionConfig }))}
-          initLeftIndex={diffIndex + 1}
-          initRightIndex={diffIndex}
+          initOldIndex={diffIndex + 1}
+          initNewIndex={diffIndex}
           onClose={() => setDiffIndex(-1)}
         />
       )}

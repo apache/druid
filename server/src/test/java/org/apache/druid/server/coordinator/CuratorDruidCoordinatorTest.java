@@ -131,13 +131,6 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
     curator.create().creatingParentsIfNeeded().forPath(DESTINATION_LOAD_PATH);
 
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    DruidCoordinatorConfig druidCoordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-        .withCoordinatorStartDelay(new Duration(COORDINATOR_START_DELAY))
-        .withCoordinatorPeriod(new Duration(COORDINATOR_PERIOD))
-        .withCoordinatorKillPeriod(new Duration(COORDINATOR_PERIOD))
-        .withCoordinatorKillMaxSegments(10)
-        .withCoordinatorKillIgnoreDurationToRetain(false)
-        .build();
     sourceLoadQueueChildrenCache = new PathChildrenCache(
         curator,
         SOURCE_LOAD_PATH,
@@ -158,7 +151,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         objectMapper,
         peonExec,
         callbackExec,
-        druidCoordinatorConfig
+        Duration.standardMinutes(15)
     );
     destinationLoadQueuePeon = new CuratorLoadQueuePeon(
         curator,
@@ -166,7 +159,7 @@ public class CuratorDruidCoordinatorTest extends CuratorTestBase
         objectMapper,
         peonExec,
         callbackExec,
-        druidCoordinatorConfig
+        Duration.standardMinutes(15)
     );
   }
 

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { sum } from 'd3-array';
 import React from 'react';
@@ -24,6 +24,7 @@ import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
+  type TableColumnSelectorColumn,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
@@ -59,7 +60,7 @@ import type { BasicAction } from '../../utils/basic-action';
 
 import './services-view.scss';
 
-const tableColumns: Record<CapabilitiesMode, string[]> = {
+const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[]> = {
   'full': [
     'Service',
     'Type',
@@ -71,7 +72,6 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Usage',
     'Start time',
     'Detail',
-    ACTION_COLUMN_LABEL,
   ],
   'no-sql': [
     'Service',
@@ -83,7 +83,6 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Max size',
     'Usage',
     'Detail',
-    ACTION_COLUMN_LABEL,
   ],
   'no-proxy': [
     'Service',
@@ -646,18 +645,19 @@ ORDER BY
           },
           {
             Header: ACTION_COLUMN_LABEL,
-            show: capabilities.hasOverlordAccess() && visibleColumns.shown(ACTION_COLUMN_LABEL),
+            show: capabilities.hasOverlordAccess(),
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
             accessor: row => row.workerInfo,
             filterable: false,
+            sortable: false,
             Cell: ({ value, aggregated }) => {
               if (aggregated) return '';
               if (!value) return null;
               const { worker } = value;
               const disabled = worker.version === '';
               const workerActions = this.getWorkerActions(worker.host, disabled);
-              return <ActionCell actions={workerActions} />;
+              return <ActionCell actions={workerActions} menuTitle={worker.host} />;
             },
             Aggregated: () => '',
           },
@@ -700,8 +700,16 @@ ORDER BY
           return resp.data;
         }}
         confirmButtonText="Disable worker"
-        successText="Worker has been disabled"
-        failText="Could not disable worker"
+        successText={
+          <>
+            Worker <Tag minimal>{middleManagerDisableWorkerHost}</Tag> has been disabled
+          </>
+        }
+        failText={
+          <>
+            Could not disable worker <Tag minimal>{middleManagerDisableWorkerHost}</Tag>
+          </>
+        }
         intent={Intent.DANGER}
         onClose={() => {
           this.setState({ middleManagerDisableWorkerHost: undefined });
@@ -797,7 +805,7 @@ ORDER BY
           />
           {this.renderBulkServicesActions()}
           <TableColumnSelector
-            columns={tableColumns[capabilities.getMode()]}
+            columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
                 visibleColumns: prevState.visibleColumns.toggle(column),

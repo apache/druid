@@ -6,15 +6,14 @@ exports[`SegmentsCard matches snapshot 1`] = `
   href="#segments"
 >
   <div
-    class="bp4-card bp4-interactive bp4-elevation-1"
+    class="bp5-card bp5-elevation-1 bp5-interactive"
   >
     <h5
-      class="bp4-heading"
+      class="bp5-heading"
     >
       <span
         aria-hidden="true"
-        class="bp4-icon bp4-icon-stacked-chart"
-        icon="stacked-chart"
+        class="bp5-icon bp5-icon-stacked-chart"
       >
         <svg
           data-icon="stacked-chart"

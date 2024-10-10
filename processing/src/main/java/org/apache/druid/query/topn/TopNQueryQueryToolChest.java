@@ -20,6 +20,7 @@
 package org.apache.druid.query.topn;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -28,7 +29,6 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.segment.FrameCursorUtils;
 import org.apache.druid.frame.write.FrameWriterFactory;
@@ -65,9 +65,9 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.RowSignature;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -124,7 +124,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   {
     final ResultMergeQueryRunner<Result<TopNResultValue>> delegateRunner = new ResultMergeQueryRunner<>(
         runner,
-        query -> ResultGranularTimestampComparator.create(query.getGranularity(), query.isDescending()),
+        query -> ResultGranularTimestampComparator.create(query.getGranularity(), false),
         query -> {
           TopNQuery topNQuery = (TopNQuery) query;
           return new TopNBinaryFn(
@@ -269,9 +269,18 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return TYPE_REFERENCE;
   }
 
+  @Nullable
+  @Override
+  public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(TopNQuery query)
+  {
+    return getCacheStrategy(query, null);
+  }
 
   @Override
-  public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(final TopNQuery query)
+  public CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> getCacheStrategy(
+      final TopNQuery query,
+      @Nullable final ObjectMapper objectMapper
+  )
   {
     return new CacheStrategy<Result<TopNResultValue>, Object, TopNQuery>()
     {
@@ -508,12 +517,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public RowSignature resultArraySignature(TopNQuery query)
   {
-    return RowSignature.builder()
-                       .addTimeColumn()
-                       .addDimensions(Collections.singletonList(query.getDimensionSpec()))
-                       .addAggregators(query.getAggregatorSpecs(), RowSignature.Finalization.UNKNOWN)
-                       .addPostAggregators(query.getPostAggregatorSpecs())
-                       .build();
+    return query.getResultSignature(RowSignature.Finalization.UNKNOWN);
   }
 
   @Override
@@ -559,7 +563,10 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       boolean useNestedForUnknownTypes
   )
   {
-    final RowSignature rowSignature = resultArraySignature(query);
+    final RowSignature rowSignature = query.getResultSignature(
+        query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
+    );
+
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature
@@ -570,8 +577,9 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     RowSignature modifiedRowSignature = useNestedForUnknownTypes
                                         ? FrameWriterUtils.replaceUnknownTypesWithNestedColumns(rowSignature)
                                         : rowSignature;
-    FrameWriterFactory frameWriterFactory = FrameWriters.makeFrameWriterFactory(
-        FrameType.COLUMNAR,
+    FrameCursorUtils.throwIfColumnsHaveUnknownType(modifiedRowSignature);
+
+    FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
         memoryAllocatorFactory,
         rowSignature,
         new ArrayList<>()

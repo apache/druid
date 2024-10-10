@@ -116,7 +116,6 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryScheduler;
-import org.apache.druid.server.ServerTestHelper;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -1753,7 +1752,7 @@ public class CachingClusteredClientTest
             partitions,
             partitionDimensions,
             partitionFunction,
-            ServerTestHelper.MAPPER
+            TestHelper.makeJsonMapper()
         ),
         null,
         9,

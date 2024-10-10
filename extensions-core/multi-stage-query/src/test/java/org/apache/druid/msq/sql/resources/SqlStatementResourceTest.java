@@ -37,8 +37,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
@@ -99,6 +97,7 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -125,7 +124,6 @@ public class SqlStatementResourceTest extends MSQTestBase
 
 
   private static final Query<?> QUERY = new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                                                     .legacy(false)
                                                                      .intervals(new MultipleIntervalSegmentSpec(
                                                                          Collections.singletonList(Intervals.of(
                                                                              "2011-04-01T00:00:00.000Z/2011-04-03T00:00:00.000Z"))))
@@ -201,6 +199,8 @@ public class SqlStatementResourceTest extends MSQTestBase
                  "test",
                  Granularities.DAY,
                  null,
+                 null,
+                 null,
                  null
              ))
              .tuningConfig(
@@ -247,8 +247,8 @@ public class SqlStatementResourceTest extends MSQTestBase
               ImmutableMap.of(),
               ImmutableMap.of(),
               ImmutableMap.of(0, 1),
-              ImmutableMap.of(0, 1)
-
+              ImmutableMap.of(0, 1),
+              ImmutableMap.of()
           ),
           CounterSnapshotsTree.fromMap(ImmutableMap.of(
               0,
@@ -287,9 +287,7 @@ public class SqlStatementResourceTest extends MSQTestBase
                   SqlTypeName.VARCHAR,
                   SqlTypeName.VARCHAR
               ),
-              Yielders.each(
-                  Sequences.simple(
-                      RESULT_ROWS)),
+              RESULT_ROWS,
               null
           )
       )
@@ -312,6 +310,7 @@ public class SqlStatementResourceTest extends MSQTestBase
           ),
           MSQStagesReport.create(
               MSQTaskReportTest.QUERY_DEFINITION,
+              ImmutableMap.of(),
               ImmutableMap.of(),
               ImmutableMap.of(),
               ImmutableMap.of(),
@@ -453,7 +452,11 @@ public class SqlStatementResourceTest extends MSQTestBase
            )));
 
 
-    Mockito.when(indexingServiceClient.taskReportAsMap(FINISHED_SELECT_MSQ_QUERY))
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(FINISHED_SELECT_MSQ_QUERY)))
+           .thenAnswer(inv -> Futures.immediateFuture(TaskReport.buildTaskReports(selectTaskReport.get())));
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(ACCEPTED_SELECT_MSQ_QUERY)))
+           .thenAnswer(inv -> Futures.immediateFuture(TaskReport.buildTaskReports(selectTaskReport.get())));
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(RUNNING_SELECT_MSQ_QUERY)))
            .thenAnswer(inv -> Futures.immediateFuture(TaskReport.buildTaskReports(selectTaskReport.get())));
 
     Mockito.when(indexingServiceClient.taskStatus(ArgumentMatchers.eq(ERRORED_SELECT_MSQ_QUERY)))
@@ -588,6 +591,10 @@ public class SqlStatementResourceTest extends MSQTestBase
 
     Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(FINISHED_INSERT_MSQ_QUERY)))
            .thenReturn(Futures.immediateFuture(TaskReport.buildTaskReports(MSQ_INSERT_TASK_REPORT)));
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(ACCEPTED_INSERT_MSQ_TASK)))
+           .thenReturn(Futures.immediateFuture(TaskReport.buildTaskReports(MSQ_INSERT_TASK_REPORT)));
+    Mockito.when(indexingServiceClient.taskReportAsMap(ArgumentMatchers.eq(RUNNING_INSERT_MSQ_QUERY)))
+           .thenReturn(Futures.immediateFuture(TaskReport.buildTaskReports(MSQ_INSERT_TASK_REPORT)));
 
     Mockito.when(indexingServiceClient.taskPayload(FINISHED_INSERT_MSQ_QUERY))
            .thenReturn(Futures.immediateFuture(new TaskPayloadResponse(
@@ -694,9 +701,9 @@ public class SqlStatementResourceTest extends MSQTestBase
   @Test
   public void testMSQSelectAcceptedQuery()
   {
-    Response response = resource.doGetStatus(ACCEPTED_SELECT_MSQ_QUERY, makeOkRequest());
+    Response response = resource.doGetStatus(ACCEPTED_SELECT_MSQ_QUERY, false, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    Assert.assertEquals(
+    assertSqlStatementResult(
         new SqlStatementResult(
             ACCEPTED_SELECT_MSQ_QUERY,
             SqlStatementState.ACCEPTED,
@@ -706,7 +713,7 @@ public class SqlStatementResourceTest extends MSQTestBase
             null,
             null
         ),
-        response.getEntity()
+        (SqlStatementResult) response.getEntity()
     );
 
     assertExceptionMessage(
@@ -728,9 +735,9 @@ public class SqlStatementResourceTest extends MSQTestBase
   public void testMSQSelectRunningQuery()
   {
 
-    Response response = resource.doGetStatus(RUNNING_SELECT_MSQ_QUERY, makeOkRequest());
+    Response response = resource.doGetStatus(RUNNING_SELECT_MSQ_QUERY, false, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    Assert.assertEquals(
+    assertSqlStatementResult(
         new SqlStatementResult(
             RUNNING_SELECT_MSQ_QUERY,
             SqlStatementState.RUNNING,
@@ -740,7 +747,7 @@ public class SqlStatementResourceTest extends MSQTestBase
             null,
             null
         ),
-        response.getEntity()
+        (SqlStatementResult) response.getEntity()
     );
 
     assertExceptionMessage(
@@ -759,9 +766,39 @@ public class SqlStatementResourceTest extends MSQTestBase
   }
 
   @Test
+  public void testMSQSelectRunningQueryWithDetail()
+  {
+    Response response = resource.doGetStatus(RUNNING_SELECT_MSQ_QUERY, true, makeOkRequest());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+    SqlStatementResult expectedSqlStatementResult = new SqlStatementResult(
+        RUNNING_SELECT_MSQ_QUERY,
+        SqlStatementState.RUNNING,
+        CREATED_TIME,
+        COL_NAME_AND_TYPES,
+        null,
+        null,
+        null,
+        selectTaskReport.get().getPayload().getStages(),
+        selectTaskReport.get().getPayload().getCounters(),
+        new ArrayList<>(selectTaskReport.get().getPayload().getStatus().getWarningReports())
+    );
+
+    assertSqlStatementResult(
+        expectedSqlStatementResult,
+        (SqlStatementResult) response.getEntity()
+    );
+
+    Assert.assertEquals(
+        Response.Status.ACCEPTED.getStatusCode(),
+        resource.deleteQuery(RUNNING_SELECT_MSQ_QUERY, makeOkRequest()).getStatus()
+    );
+  }
+
+  @Test
   public void testFinishedSelectMSQQuery() throws Exception
   {
-    Response response = resource.doGetStatus(FINISHED_SELECT_MSQ_QUERY, makeOkRequest());
+    Response response = resource.doGetStatus(FINISHED_SELECT_MSQ_QUERY, false, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
     Assert.assertEquals(objectMapper.writeValueAsString(new SqlStatementResult(
         FINISHED_SELECT_MSQ_QUERY,
@@ -829,7 +866,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   public void testFailedMSQQuery()
   {
     for (String queryID : ImmutableList.of(ERRORED_SELECT_MSQ_QUERY, ERRORED_INSERT_MSQ_QUERY)) {
-      assertExceptionMessage(resource.doGetStatus(queryID, makeOkRequest()), FAILURE_MSG, Response.Status.OK);
+      assertExceptionMessage(resource.doGetStatus(queryID, false, makeOkRequest()), FAILURE_MSG, Response.Status.OK);
       assertExceptionMessage(
           resource.doGetResults(queryID, 0L, null, makeOkRequest()),
           StringUtils.format(
@@ -849,9 +886,9 @@ public class SqlStatementResourceTest extends MSQTestBase
   @Test
   public void testFinishedInsertMSQQuery()
   {
-    Response response = resource.doGetStatus(FINISHED_INSERT_MSQ_QUERY, makeOkRequest());
+    Response response = resource.doGetStatus(FINISHED_INSERT_MSQ_QUERY, false, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    Assert.assertEquals(new SqlStatementResult(
+    assertSqlStatementResult(new SqlStatementResult(
         FINISHED_INSERT_MSQ_QUERY,
         SqlStatementState.SUCCESS,
         CREATED_TIME,
@@ -859,7 +896,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         100L,
         new ResultSetInformation(null, null, null, "test", null, null),
         null
-    ), response.getEntity());
+    ), (SqlStatementResult) response.getEntity());
 
     Assert.assertEquals(
         Response.Status.OK.getStatusCode(),
@@ -880,7 +917,7 @@ public class SqlStatementResourceTest extends MSQTestBase
   public void testNonMSQTasks()
   {
     for (String queryID : ImmutableList.of(RUNNING_NON_MSQ_TASK, FAILED_NON_MSQ_TASK, FINISHED_NON_MSQ_TASK)) {
-      assertNotFound(resource.doGetStatus(queryID, makeOkRequest()), queryID);
+      assertNotFound(resource.doGetStatus(queryID, false, makeOkRequest()), queryID);
       assertNotFound(resource.doGetResults(queryID, 0L, null, makeOkRequest()), queryID);
       assertNotFound(resource.deleteQuery(queryID, makeOkRequest()), queryID);
     }
@@ -889,9 +926,9 @@ public class SqlStatementResourceTest extends MSQTestBase
   @Test
   public void testMSQInsertAcceptedQuery()
   {
-    Response response = resource.doGetStatus(ACCEPTED_INSERT_MSQ_TASK, makeOkRequest());
+    Response response = resource.doGetStatus(ACCEPTED_INSERT_MSQ_TASK, false, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    Assert.assertEquals(
+    assertSqlStatementResult(
         new SqlStatementResult(
             ACCEPTED_INSERT_MSQ_TASK,
             SqlStatementState.ACCEPTED,
@@ -901,7 +938,7 @@ public class SqlStatementResourceTest extends MSQTestBase
             null,
             null
         ),
-        response.getEntity()
+        (SqlStatementResult) response.getEntity()
     );
 
     assertExceptionMessage(
@@ -922,9 +959,9 @@ public class SqlStatementResourceTest extends MSQTestBase
   @Test
   public void testMSQInsertRunningQuery()
   {
-    Response response = resource.doGetStatus(RUNNING_INSERT_MSQ_QUERY, makeOkRequest());
+    Response response = resource.doGetStatus(RUNNING_INSERT_MSQ_QUERY, false, makeOkRequest());
     Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
-    Assert.assertEquals(
+    assertSqlStatementResult(
         new SqlStatementResult(
             RUNNING_INSERT_MSQ_QUERY,
             SqlStatementState.RUNNING,
@@ -934,7 +971,7 @@ public class SqlStatementResourceTest extends MSQTestBase
             null,
             null
         ),
-        response.getEntity()
+        (SqlStatementResult) response.getEntity()
     );
 
     assertExceptionMessage(
@@ -959,6 +996,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         Response.Status.OK.getStatusCode(),
         resource.doGetStatus(
             RUNNING_SELECT_MSQ_QUERY,
+            false,
             makeExpectedReq(makeAuthResultForUser(SUPERUSER))
         ).getStatus()
     );
@@ -988,6 +1026,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         Response.Status.FORBIDDEN.getStatusCode(),
         resource.doGetStatus(
             RUNNING_SELECT_MSQ_QUERY,
+            false,
             makeExpectedReq(differentUserAuthResult)
         ).getStatus()
     );
@@ -1017,6 +1056,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         Response.Status.OK.getStatusCode(),
         resource.doGetStatus(
             RUNNING_SELECT_MSQ_QUERY,
+            false,
             makeExpectedReq(differentUserAuthResult)
         ).getStatus()
     );
@@ -1046,6 +1086,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         Response.Status.FORBIDDEN.getStatusCode(),
         resource.doGetStatus(
             RUNNING_SELECT_MSQ_QUERY,
+            false,
             makeExpectedReq(differentUserAuthResult)
         ).getStatus()
     );
@@ -1075,6 +1116,7 @@ public class SqlStatementResourceTest extends MSQTestBase
         Response.Status.OK.getStatusCode(),
         resource.doGetStatus(
             RUNNING_SELECT_MSQ_QUERY,
+            false,
             makeExpectedReq(differentUserAuthResult)
         ).getStatus()
     );
@@ -1111,7 +1153,7 @@ public class SqlStatementResourceTest extends MSQTestBase
 
     Assert.assertEquals(
         Response.Status.NOT_FOUND.getStatusCode(),
-        resource.doGetStatus(taskIdNotFound, makeOkRequest()).getStatus()
+        resource.doGetStatus(taskIdNotFound, false, makeOkRequest()).getStatus()
     );
     Assert.assertEquals(
         Response.Status.NOT_FOUND.getStatusCode(),
@@ -1127,5 +1169,29 @@ public class SqlStatementResourceTest extends MSQTestBase
   public void testIsEnabled()
   {
     Assert.assertEquals(Response.Status.OK.getStatusCode(), resource.isEnabled(makeOkRequest()).getStatus());
+  }
+
+  private void assertSqlStatementResult(SqlStatementResult expected, SqlStatementResult actual)
+  {
+    Assert.assertEquals(expected.getQueryId(), actual.getQueryId());
+    Assert.assertEquals(expected.getCreatedAt(), actual.getCreatedAt());
+    Assert.assertEquals(expected.getSqlRowSignature(), actual.getSqlRowSignature());
+    Assert.assertEquals(expected.getDurationMs(), actual.getDurationMs());
+    Assert.assertEquals(expected.getStages(), actual.getStages());
+    Assert.assertEquals(expected.getState(), actual.getState());
+    Assert.assertEquals(expected.getWarnings(), actual.getWarnings());
+    Assert.assertEquals(expected.getResultSetInformation(), actual.getResultSetInformation());
+
+    if (actual.getCounters() == null || expected.getCounters() == null) {
+      Assert.assertEquals(expected.getCounters(), actual.getCounters());
+    } else {
+      Assert.assertEquals(expected.getCounters().toString(), actual.getCounters().toString());
+    }
+
+    if (actual.getErrorResponse() == null || expected.getErrorResponse() == null) {
+      Assert.assertEquals(expected.getErrorResponse(), actual.getErrorResponse());
+    } else {
+      Assert.assertEquals(expected.getErrorResponse().getAsMap(), actual.getErrorResponse().getAsMap());
+    }
   }
 }

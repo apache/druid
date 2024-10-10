@@ -22,7 +22,6 @@ package org.apache.druid.indexer.report;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import javax.annotation.Nullable;
 import java.util.Objects;
 
 public class KillTaskReport implements TaskReport
@@ -85,18 +84,15 @@ public class KillTaskReport implements TaskReport
   {
     private final int numSegmentsKilled;
     private final int numBatchesProcessed;
-    private final Integer numSegmentsMarkedAsUnused;
 
     @JsonCreator
     public Stats(
         @JsonProperty("numSegmentsKilled") int numSegmentsKilled,
-        @JsonProperty("numBatchesProcessed") int numBatchesProcessed,
-        @JsonProperty("numSegmentsMarkedAsUnused") @Nullable Integer numSegmentsMarkedAsUnused
+        @JsonProperty("numBatchesProcessed") int numBatchesProcessed
     )
     {
       this.numSegmentsKilled = numSegmentsKilled;
       this.numBatchesProcessed = numBatchesProcessed;
-      this.numSegmentsMarkedAsUnused = numSegmentsMarkedAsUnused;
     }
 
     @JsonProperty
@@ -111,13 +107,6 @@ public class KillTaskReport implements TaskReport
       return numBatchesProcessed;
     }
 
-    @Nullable
-    @JsonProperty
-    public Integer getNumSegmentsMarkedAsUnused()
-    {
-      return numSegmentsMarkedAsUnused;
-    }
-
     @Override
     public boolean equals(Object o)
     {
@@ -129,14 +118,13 @@ public class KillTaskReport implements TaskReport
       }
       Stats that = (Stats) o;
       return numSegmentsKilled == that.numSegmentsKilled
-             && numBatchesProcessed == that.numBatchesProcessed
-             && Objects.equals(this.numSegmentsMarkedAsUnused, that.numSegmentsMarkedAsUnused);
+             && numBatchesProcessed == that.numBatchesProcessed;
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(numSegmentsKilled, numBatchesProcessed, numSegmentsMarkedAsUnused);
+      return Objects.hash(numSegmentsKilled, numBatchesProcessed);
     }
 
     @Override
@@ -145,7 +133,6 @@ public class KillTaskReport implements TaskReport
       return "Stats{" +
              "numSegmentsKilled=" + numSegmentsKilled +
              ", numBatchesProcessed=" + numBatchesProcessed +
-             ", numSegmentsMarkedAsUnused=" + numSegmentsMarkedAsUnused +
              '}';
     }
   }

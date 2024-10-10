@@ -37,12 +37,18 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.IndexingServiceCondition;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TestIndexTask;
 import org.apache.druid.indexing.common.TestTasks;
 import org.apache.druid.indexing.common.TestUtils;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import org.apache.druid.indexing.overlord.setup.DefaultWorkerBehaviorConfig;
+import org.apache.druid.indexing.overlord.setup.EqualDistributionWorkerSelectStrategy;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.DateTimes;
@@ -72,6 +78,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Future;
@@ -148,6 +155,7 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(3, remoteTaskRunner.getIdleTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(0, remoteTaskRunner.getUsedTaskSlotCount().get(WorkerConfig.DEFAULT_CATEGORY).longValue());
     Assert.assertEquals(3, remoteTaskRunner.getTotalCapacity());
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacityWithAutoscale());
     Assert.assertEquals(0, remoteTaskRunner.getUsedCapacity());
 
 
@@ -601,6 +609,46 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(
         taskStatus.getErrorMsg().startsWith("The worker that this task is assigned did not start it in timeout")
     );
+  }
+
+  @Test
+  public void testGetMaximumCapacity_noWorkerConfig()
+  {
+    httpClient = EasyMock.createMock(HttpClient.class);
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(
+        new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD),
+        new TestProvisioningStrategy<>(),
+        httpClient,
+        null
+    );
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacityWithAutoscale());
+  }
+
+  @Test
+  public void testGetMaximumCapacity_noAutoScaler()
+  {
+    httpClient = EasyMock.createMock(HttpClient.class);
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(
+        new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD),
+        new TestProvisioningStrategy<>(),
+        httpClient,
+        new DefaultWorkerBehaviorConfig(new EqualDistributionWorkerSelectStrategy(null), null)
+    );
+    Assert.assertEquals(-1, remoteTaskRunner.getMaximumCapacityWithAutoscale());
+  }
+
+  @Test
+  public void testGetMaximumCapacity_withAutoScaler()
+  {
+    httpClient = EasyMock.createMock(HttpClient.class);
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(
+        new TestRemoteTaskRunnerConfig(TIMEOUT_PERIOD),
+        new TestProvisioningStrategy<>(),
+        httpClient,
+        DefaultWorkerBehaviorConfig.defaultConfig()
+    );
+    // Default autoscaler has max workers of 0
+    Assert.assertEquals(0, remoteTaskRunner.getMaximumCapacityWithAutoscale());
   }
 
   private void doSetup() throws Exception
@@ -1068,7 +1116,7 @@ public class RemoteTaskRunnerTest
     EasyMock.expect(worker.getHost()).andReturn("host").atLeastOnce();
     EasyMock.replay(worker);
     ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
-    Capture<EmittingLogger.EmittingAlertBuilder> capturedArgument = Capture.newInstance();
+    Capture<EmittingLogger.LoggingAlertBuilder> capturedArgument = Capture.newInstance();
     emitter.emit(EasyMock.capture(capturedArgument));
     EasyMock.expectLastCall().atLeastOnce();
     EmittingLogger.registerEmitter(emitter);
@@ -1143,6 +1191,48 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(
         "http://dummy:9000/druid/worker/v1/chat/task%20id%20with%20spaces/liveReports",
         capturedRequest.getValue().getUrl().toString()
+    );
+  }
+
+  @Test
+  public void testBuildPublishAction()
+  {
+    TestIndexTask task = new TestIndexTask(
+        "test_index1",
+        new TaskResource("test_index1", 1),
+        "foo",
+        TaskStatus.success("test_index1"),
+        jsonMapper
+    );
+
+    Assert.assertEquals(
+        SegmentTransactionalAppendAction.class,
+        task.buildPublishActionForTest(
+            Collections.emptySet(),
+            Collections.emptySet(),
+            null,
+            TaskLockType.APPEND
+        ).getClass()
+    );
+
+    Assert.assertEquals(
+        SegmentTransactionalReplaceAction.class,
+        task.buildPublishActionForTest(
+            Collections.emptySet(),
+            Collections.emptySet(),
+            null,
+            TaskLockType.REPLACE
+        ).getClass()
+    );
+
+    Assert.assertEquals(
+        SegmentTransactionalInsertAction.class,
+        task.buildPublishActionForTest(
+            Collections.emptySet(),
+            Collections.emptySet(),
+            null,
+            TaskLockType.EXCLUSIVE
+        ).getClass()
     );
   }
 }

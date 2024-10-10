@@ -204,7 +204,15 @@ public class ServerSideEncryptingAmazonS3
         throw new ISE("S3StorageConfig cannot be null!");
       }
 
-      return new ServerSideEncryptingAmazonS3(amazonS3ClientBuilder.build(), s3StorageConfig.getServerSideEncryption());
+      AmazonS3 amazonS3Client;
+      try {
+        amazonS3Client = S3Utils.retryS3Operation(() -> amazonS3ClientBuilder.build());
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+
+      return new ServerSideEncryptingAmazonS3(amazonS3Client, s3StorageConfig.getServerSideEncryption());
     }
   }
 }

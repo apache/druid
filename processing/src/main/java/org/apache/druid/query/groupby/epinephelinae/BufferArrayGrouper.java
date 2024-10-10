@@ -269,6 +269,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   {
     // Clear the entire usedFlagBuffer
     usedFlagMemory.clear();
+    aggregators.reset();
   }
 
   @Override
@@ -280,7 +281,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
   @Override
   public void close()
   {
-    aggregators.close();
+    aggregators.reset();
   }
 
   @Override

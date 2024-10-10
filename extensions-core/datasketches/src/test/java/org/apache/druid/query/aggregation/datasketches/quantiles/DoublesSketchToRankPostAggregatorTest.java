@@ -49,9 +49,10 @@ public class DoublesSketchToRankPostAggregatorTest
         0
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    DoublesSketchToRankPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new DoublesSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        DoublesSketchToRankPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

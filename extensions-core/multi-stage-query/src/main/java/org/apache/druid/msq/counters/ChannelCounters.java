@@ -55,7 +55,12 @@ public class ChannelCounters implements QueryCounter
 
   public void incrementRowCount()
   {
-    add(NO_PARTITION, 1, 0, 0, 0);
+    incrementRowCount(NO_PARTITION);
+  }
+
+  public void incrementRowCount(int partition)
+  {
+    add(partition, 1, 0, 0, 0);
   }
 
   public void incrementBytes(long bytes)

@@ -73,7 +73,6 @@ public abstract class CalciteTestBase
     casetempPath = FileUtils.createTempDirInLocation(rootTempPath, methodName).toPath();
   }
 
-
   public File newTempFolder()
   {
     return newTempFolder(null);
@@ -93,24 +92,6 @@ public abstract class CalciteTestBase
       throw new RuntimeException(e);
     }
   }
-
-  // FIXME remove
-  public TempFolderOverTempDir temXMEXAXISporaryFolder = new TempFolderOverTempDir();
-
-  public class TempFolderOverTempDir
-  {
-
-    public File newFolder()
-    {
-      return newTempFolder("unknown");
-    }
-
-    public File newFolder(String string)
-    {
-      return newTempFolder(string);
-    }
-  }
-
 
   /**
    * @deprecated prefer to make {@link DruidExpression} directly to ensure expression tests accurately test the full

@@ -45,7 +45,6 @@ public class DeltaInputSourceReader implements InputSourceReader
   public DeltaInputSourceReader(
       Iterator<io.delta.kernel.utils.CloseableIterator<FilteredColumnarBatch>> filteredColumnarBatchIterators,
       InputRowSchema inputRowSchema
-
   )
   {
     this.filteredColumnarBatchIterators = filteredColumnarBatchIterators;
@@ -120,7 +119,8 @@ public class DeltaInputSourceReader implements InputSourceReader
             filteredColumnarBatchIterators.next();
 
         while (filteredBatchIterator.hasNext()) {
-          currentBatch = filteredBatchIterator.next().getRows();
+          final FilteredColumnarBatch nextBatch = filteredBatchIterator.next();
+          currentBatch = nextBatch.getRows();
           if (currentBatch.hasNext()) {
             return true;
           }

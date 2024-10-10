@@ -19,6 +19,8 @@
 
 package org.apache.druid.metadata;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
@@ -38,7 +40,10 @@ import java.sql.ResultSet;
  * <li>  id -> id (Unique identifier for pending segment) <li/>
  * <li>  sequence_name -> sequenceName (sequence name used for segment allocation) <li/>
  * <li>  sequence_prev_id -> sequencePrevId (previous segment id used for segment allocation) <li/>
- * <li>  upgraded_from_segment_id -> upgradedFromSegmentId (Id of the root segment from which this was upgraded) <li/>
+ * <li>  upgraded_from_segment_id -> upgradedFromSegmentId
+ * (ID of the segment which was upgraded to create the current segment.
+ * If the former was itself created as a result of an upgrade, then this ID
+ * must refer to the original non-upgraded segment in the hierarchy.) <li/>
  * <li>  task_allocator_id -> taskAllocatorId (Associates a task / task group / replica group with the pending segment) <li/>
  * </ul>
  */
@@ -50,12 +55,13 @@ public class PendingSegmentRecord
   private final String upgradedFromSegmentId;
   private final String taskAllocatorId;
 
+  @JsonCreator
   public PendingSegmentRecord(
-      SegmentIdWithShardSpec id,
-      String sequenceName,
-      String sequencePrevId,
-      @Nullable String upgradedFromSegmentId,
-      @Nullable String taskAllocatorId
+      @JsonProperty("id") SegmentIdWithShardSpec id,
+      @JsonProperty("sequenceName") String sequenceName,
+      @JsonProperty("sequencePrevId") String sequencePrevId,
+      @JsonProperty("upgradedFromSegmentId") @Nullable String upgradedFromSegmentId,
+      @JsonProperty("taskAllocatorId") @Nullable String taskAllocatorId
   )
   {
     this.id = id;
@@ -65,16 +71,19 @@ public class PendingSegmentRecord
     this.taskAllocatorId = taskAllocatorId;
   }
 
+  @JsonProperty
   public SegmentIdWithShardSpec getId()
   {
     return id;
   }
 
+  @JsonProperty
   public String getSequenceName()
   {
     return sequenceName;
   }
 
+  @JsonProperty
   public String getSequencePrevId()
   {
     return sequencePrevId;
@@ -85,6 +94,7 @@ public class PendingSegmentRecord
    * Can be null for pending segments allocated before this column was added or for segments that have not been upgraded.
    */
   @Nullable
+  @JsonProperty
   public String getUpgradedFromSegmentId()
   {
     return upgradedFromSegmentId;
@@ -95,6 +105,7 @@ public class PendingSegmentRecord
    * Can be null for pending segments allocated before this column was added.
    */
   @Nullable
+  @JsonProperty
   public String getTaskAllocatorId()
   {
     return taskAllocatorId;

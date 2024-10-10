@@ -68,7 +68,6 @@ public class LoggingRequestLogger implements RequestLogger
           MDC.put("hasFilters", Boolean.toString(query.hasFilters()));
           MDC.put("remoteAddr", requestLogLine.getRemoteAddr());
           MDC.put("duration", query.getDuration().toString());
-          MDC.put("descending", Boolean.toString(query.isDescending()));
           if (setContextMDC) {
             final Iterable<Map.Entry<String, Object>> entries = query.getContext() == null
                                                                 ? ImmutableList.of()

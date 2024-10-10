@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import { T } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
@@ -68,17 +67,6 @@ interface RecentQueryEntry {
   createdTime: string;
   duration: number;
   errorMessage?: string;
-}
-
-function formatDetail(entry: RecentQueryEntry): string | undefined {
-  const lines: string[] = [];
-  if (entry.datasource !== Execution.INLINE_DATASOURCE_MARKER) {
-    lines.push(`Datasource: ${entry.datasource}`);
-  }
-  if (entry.errorMessage) {
-    lines.push(entry.errorMessage);
-  }
-  return lines.length ? lines.join('\n\n') : undefined;
 }
 
 export interface RecentQueryTaskPanelProps {
@@ -174,7 +162,7 @@ LIMIT 100`,
                     }
 
                     onNewTab(
-                      WorkbenchQuery.fromEffectiveQueryAndContext(
+                      WorkbenchQuery.fromTaskQueryAndContext(
                         execution.sqlQuery,
                         execution.queryContext,
                       ).changeLastExecution({ engine: 'sql-msq-task', id: w.taskId }),
@@ -227,13 +215,17 @@ LIMIT 100`,
 
             const [icon, color] = statusToIconAndColor(w.taskStatus);
             return (
-              <Popover2 className="work-entry" key={w.taskId} position="left" content={menu}>
-                <div title={formatDetail(w)} onDoubleClick={() => onExecutionDetails(w.taskId)}>
+              <Popover className="work-entry" key={w.taskId} position="left" content={menu}>
+                <div
+                  data-tooltip={w.errorMessage}
+                  onDoubleClick={() => onExecutionDetails(w.taskId)}
+                >
                   <div className="line1">
                     <Icon
                       className={'status-icon ' + w.taskStatus.toLowerCase()}
                       icon={icon}
                       style={{ color }}
+                      data-tooltip={`Task status: ${w.taskStatus}`}
                     />
                     <div className="timing">
                       {prettyFormatIsoDate(w.createdTime) +
@@ -260,7 +252,7 @@ LIMIT 100`,
                     </div>
                   </div>
                 </div>
-              </Popover2>
+              </Popover>
             );
           })}
         </div>

@@ -2,31 +2,31 @@
 
 exports[`IntervalInput matches snapshot 1`] = `
 <div
-  class="bp4-input-group bp4-intent-primary"
+  class="bp5-input-group bp5-intent-primary"
 >
   <input
-    class="bp4-input"
+    class="bp5-input"
     placeholder="2010-01-01/2020-01-01"
     style="padding-right: 0px;"
     type="text"
     value="2010-01-01/2020-01-01"
   />
   <span
-    class="bp4-input-action"
+    class="bp5-input-action"
   >
     <div>
       <span
-        aria-haspopup="true"
-        class="bp4-popover2-target"
+        class="bp5-popover-target"
       >
         <button
-          class="bp4-button"
+          aria-expanded="false"
+          aria-haspopup="menu"
+          class="bp5-button"
           type="button"
         >
           <span
             aria-hidden="true"
-            class="bp4-icon bp4-icon-calendar"
-            icon="calendar"
+            class="bp5-icon bp5-icon-calendar"
           >
             <svg
               data-icon="calendar"

@@ -33,7 +33,6 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -51,7 +50,7 @@ public class RetrieveSegmentsActionsTest
   private static Set<DataSegment> expectedUsedSegments;
 
   @BeforeClass
-  public static void setup() throws IOException
+  public static void setup()
   {
     task = NoopTask.create();
 
@@ -65,7 +64,7 @@ public class RetrieveSegmentsActionsTest
     expectedUnusedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), UNUSED_V1));
 
     actionTestKit.getMetadataStorageCoordinator()
-                 .commitSegments(expectedUnusedSegments);
+                 .commitSegments(expectedUnusedSegments, null);
 
     expectedUnusedSegments.forEach(s -> actionTestKit.getTaskLockbox().unlock(task, s.getInterval()));
 
@@ -75,7 +74,7 @@ public class RetrieveSegmentsActionsTest
     expectedUsedSegments.add(createSegment(Intervals.of("2017-10-07/2017-10-08"), "2"));
 
     actionTestKit.getMetadataStorageCoordinator()
-                 .commitSegments(expectedUsedSegments);
+                 .commitSegments(expectedUsedSegments, null);
 
     expectedUsedSegments.forEach(s -> actionTestKit.getTaskLockbox().unlock(task, s.getInterval()));
 

@@ -31,11 +31,10 @@ Apache Druid Extension to enable using Kubernetes API Server for node discovery 
 
 To use this extension please make sure to  [include](../../configuration/extensions.md#loading-extensions) `druid-kubernetes-extensions` in the extensions load list.
 
-This extension works together with HTTP based segment and task management in Druid. Consequently, following configurations must be set on all Druid nodes.
+This extension works together with HTTP-based segment and task management in Druid. Consequently, following configurations must be set on all Druid nodes.
 
 `druid.zk.service.enabled=false`
 `druid.serverview.type=http`
-`druid.coordinator.loadqueuepeon.type=http`
 `druid.indexer.runner.type=httpRemote`
 `druid.discovery.type=k8s`
 
@@ -55,7 +54,7 @@ Additionally, this extension has following configuration.
 
 ### Gotchas
 
-- Label/Annotation path in each pod spec MUST EXIST, which is easily satisfied if there is at least one label/annotation in the pod spec already. This limitation may be removed in future.
+- Label/Annotation path in each pod spec MUST EXIST, which is easily satisfied if there is at least one label/annotation in the pod spec already. 
 - All Druid Pods belonging to one Druid cluster must be inside same kubernetes namespace.
 - All Druid Pods need permissions to be able to add labels to self-pod, List and Watch other Pods, create and read ConfigMap for leader election. Assuming, "default" service account is used by Druid pods, you might need to add following or something similar Kubernetes Role and Role Binding.
 

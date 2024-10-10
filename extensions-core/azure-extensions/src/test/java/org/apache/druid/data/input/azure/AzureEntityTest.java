@@ -28,13 +28,15 @@ import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class AzureEntityTest extends EasyMockSupport
 {
@@ -49,8 +51,6 @@ public class AzureEntityTest extends EasyMockSupport
   private CloudObjectLocation location;
   private AzureByteSourceFactory byteSourceFactory;
   private AzureByteSource byteSource;
-
-  private AzureEntity azureEntity;
   private AzureStorage azureStorage;
 
   static {
@@ -62,7 +62,7 @@ public class AzureEntityTest extends EasyMockSupport
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     location = createMock(CloudObjectLocation.class);
@@ -80,13 +80,12 @@ public class AzureEntityTest extends EasyMockSupport
     EasyMock.expect(location.toUri(AzureInputSource.SCHEME)).andReturn(ENTITY_URI);
     replayAll();
 
-    azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
+    final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
 
     URI actualUri = azureEntity.getUri();
-    Assert.assertEquals(ENTITY_URI, actualUri);
+    assertEquals(ENTITY_URI, actualUri);
 
     verifyAll();
-
   }
 
   @Test
@@ -95,20 +94,19 @@ public class AzureEntityTest extends EasyMockSupport
     EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
     replayAll();
 
-    azureEntity = new AzureEntity(
+    final AzureEntity azureEntity = new AzureEntity(
         new CloudObjectLocation(STORAGE_ACCOUNT_NAME, CONTAINER_NAME + "/" + BLOB_NAME),
         azureStorage,
         AzureStorageAccountInputSource.SCHEME,
         byteSourceFactory
     );
 
-    Assert.assertEquals(
+    assertEquals(
         URI.create(AzureStorageAccountInputSource.SCHEME + "://" + STORAGE_ACCOUNT_NAME + "/" + CONTAINER_NAME + "/" + BLOB_NAME),
         azureEntity.getUri()
     );
 
     verifyAll();
-
   }
 
   @Test
@@ -120,10 +118,10 @@ public class AzureEntityTest extends EasyMockSupport
     EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
     replayAll();
 
-    azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
+    final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
 
     InputStream actualInputStream = azureEntity.readFrom(0);
-    Assert.assertSame(INPUT_STREAM, actualInputStream);
+    assertSame(INPUT_STREAM, actualInputStream);
   }
 
   @Test
@@ -135,10 +133,10 @@ public class AzureEntityTest extends EasyMockSupport
     EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
     replayAll();
 
-    azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
+    final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
 
     InputStream actualInputStream = azureEntity.readFrom(OFFSET);
-    Assert.assertSame(INPUT_STREAM, actualInputStream);
+    assertSame(INPUT_STREAM, actualInputStream);
   }
 
   @Test
@@ -151,7 +149,7 @@ public class AzureEntityTest extends EasyMockSupport
       EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
       replayAll();
 
-      azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
+      final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
       azureEntity.readFrom(OFFSET);
     }
     catch (IOException e) {
@@ -167,10 +165,10 @@ public class AzureEntityTest extends EasyMockSupport
     EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
     replayAll();
 
-    azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
+    final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
     String actualPath = azureEntity.getPath();
 
-    Assert.assertEquals(BLOB_NAME, actualPath);
+    assertEquals(BLOB_NAME, actualPath);
     verifyAll();
   }
 
@@ -180,20 +178,18 @@ public class AzureEntityTest extends EasyMockSupport
     EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
     replayAll();
 
-    azureEntity = new AzureEntity(
+    final AzureEntity azureEntity = new AzureEntity(
         new CloudObjectLocation(STORAGE_ACCOUNT_NAME, CONTAINER_NAME + "/" + BLOB_NAME),
         azureStorage,
         AzureStorageAccountInputSource.SCHEME,
         byteSourceFactory
     );
 
-    Assert.assertEquals(
-        CONTAINER_NAME + "/" + BLOB_NAME,
-        azureEntity.getPath()
-    );
+    assertEquals(CONTAINER_NAME + "/" + BLOB_NAME, azureEntity.getPath());
 
     verifyAll();
   }
+
   @Test
   public void test_getRetryCondition_returnsExpectedRetryCondition()
   {
@@ -202,8 +198,8 @@ public class AzureEntityTest extends EasyMockSupport
     EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
     replayAll();
 
-    azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
+    final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
     Predicate<Throwable> actualRetryCondition = azureEntity.getRetryCondition();
-    Assert.assertSame(AzureUtils.AZURE_RETRY, actualRetryCondition);
+    assertSame(AzureUtils.AZURE_RETRY, actualRetryCondition);
   }
 }

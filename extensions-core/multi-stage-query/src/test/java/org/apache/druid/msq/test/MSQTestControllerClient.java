@@ -55,6 +55,12 @@ public class MSQTestControllerClient implements ControllerClient
   }
 
   @Override
+  public void postDoneReadingInput(StageId stageId, int workerNumber)
+  {
+    controller.doneReadingInput(stageId.getStageNumber(), workerNumber);
+  }
+
+  @Override
   public void postCounters(String workerId, CounterSnapshotsTree snapshotsTree)
   {
     if (snapshotsTree != null) {
@@ -69,7 +75,7 @@ public class MSQTestControllerClient implements ControllerClient
   }
 
   @Override
-  public void postWorkerError(String workerId, MSQErrorReport errorWrapper)
+  public void postWorkerError(MSQErrorReport errorWrapper)
   {
     controller.workerError(errorWrapper);
   }
@@ -81,9 +87,9 @@ public class MSQTestControllerClient implements ControllerClient
   }
 
   @Override
-  public List<String> getTaskList()
+  public List<String> getWorkerIds()
   {
-    return controller.getTaskIds();
+    return controller.getWorkerIds();
   }
 
   @Override

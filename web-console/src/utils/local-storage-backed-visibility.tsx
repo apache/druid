@@ -65,7 +65,7 @@ export class LocalStorageBackedVisibility {
     return new LocalStorageBackedVisibility(this.key, defaultHidden, newVisibility);
   }
 
-  public shown(value: string): boolean {
-    return this.visibility[value] ?? !this.defaultHidden.includes(value);
+  public shown(...values: string[]): boolean {
+    return values.some(value => this.visibility[value] ?? !this.defaultHidden.includes(value));
   }
 }

@@ -93,7 +93,7 @@ public class ComposingOutputChannelFactoryTest extends OutputChannelFactoryTest
     writableFrameChannel.write(new FrameWithPartition(frame, 1));
     writableFrameChannel.close();
 
-    verifySingleFrameReadableChannel(channel.getReadableChannel(), sourceAdapter);
+    verifySingleFrameReadableChannel(channel.getReadableChannel(), sourceCursorFactory);
   }
 
 

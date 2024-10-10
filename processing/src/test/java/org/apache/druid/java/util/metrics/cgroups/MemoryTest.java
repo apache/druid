@@ -57,6 +57,8 @@ public class MemoryTest
     FileUtils.mkdirp(memoryDir);
     TestUtils.copyResource("/memory.stat", new File(memoryDir, "memory.stat"));
     TestUtils.copyResource("/memory.numa_stat", new File(memoryDir, "memory.numa_stat"));
+    TestUtils.copyResource("/memory.usage_in_bytes", new File(memoryDir, "memory.usage_in_bytes"));
+    TestUtils.copyResource("/memory.limit_in_bytes", new File(memoryDir, "memory.limit_in_bytes"));
   }
 
   @Test
@@ -65,7 +67,7 @@ public class MemoryTest
     final Memory memory = new Memory((cgroup) -> {
       throw new RuntimeException("shouldContinue");
     });
-    final Memory.MemoryStat stat = memory.snapshot();
+    final Memory.MemoryStat stat = memory.snapshot("memory.usage_in_bytes", "memory.limit_in_bytes");
     Assert.assertEquals(ImmutableMap.of(), stat.getNumaMemoryStats());
     Assert.assertEquals(ImmutableMap.of(), stat.getMemoryStats());
   }
@@ -74,7 +76,11 @@ public class MemoryTest
   public void testSimpleSnapshot()
   {
     final Memory memory = new Memory(discoverer);
-    final Memory.MemoryStat stat = memory.snapshot();
+    final Memory.MemoryStat stat = memory.snapshot("memory.usage_in_bytes", "memory.limit_in_bytes");
+
+    Assert.assertEquals(5000000, stat.getUsage());
+    Assert.assertEquals(8000000, stat.getLimit());
+
     final Map<String, Long> expectedMemoryStats = new HashMap<>();
     expectedMemoryStats.put("inactive_anon", 0L);
     expectedMemoryStats.put("total_pgfault", 13137L);

@@ -55,7 +55,9 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.DruidNode;
@@ -74,7 +76,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -83,7 +84,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -109,8 +109,6 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
   private static final Interval JAN_23 = Intervals.of("2023-01/2023-02");
   private static final Interval FIRST_OF_JAN_23 = Intervals.of("2023-01-01/2023-01-02");
 
-  private static final String WIKI = "wiki";
-
   private TaskQueue taskQueue;
   private TaskActionClientFactory taskActionClientFactory;
   private TaskActionClient dummyTaskActionClient;
@@ -122,18 +120,17 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
   private final AtomicInteger groupId = new AtomicInteger(0);
   private final SupervisorManager supervisorManager = EasyMock.mock(SupervisorManager.class);
   private Capture<String> supervisorId;
-  private Capture<SegmentIdWithShardSpec> oldPendingSegment;
-  private Capture<SegmentIdWithShardSpec> newPendingSegment;
+  private Capture<PendingSegmentRecord> pendingSegment;
   private Map<String, Map<Interval, Set<Object>>> versionToIntervalToLoadSpecs;
-  private Map<SegmentId, Object> parentSegmentToLoadSpec;
+  private Map<String, Object> parentSegmentToLoadSpec;
 
   @Override
   @Before
   public void setUpIngestionTestBase() throws IOException
   {
     EasyMock.reset(supervisorManager);
-    EasyMock.expect(supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(WIKI))
-            .andReturn(Optional.of(WIKI)).anyTimes();
+    EasyMock.expect(supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(TestDataSource.WIKI))
+            .andReturn(Optional.of(TestDataSource.WIKI)).anyTimes();
     super.setUpIngestionTestBase();
     final TaskConfig taskConfig = new TaskConfigBuilder().build();
     taskActionClientFactory = createActionClientFactory();
@@ -153,7 +150,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     );
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, new Period(0L), null, null, null),
+        new TaskQueueConfig(null, new Period(0L), null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         taskRunner,
@@ -169,12 +166,10 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     groupId.set(0);
     appendTask = createAndStartTask();
     supervisorId = Capture.newInstance(CaptureType.ALL);
-    oldPendingSegment = Capture.newInstance(CaptureType.ALL);
-    newPendingSegment = Capture.newInstance(CaptureType.ALL);
-    EasyMock.expect(supervisorManager.registerNewVersionOfPendingSegmentOnSupervisor(
+    pendingSegment = Capture.newInstance(CaptureType.ALL);
+    EasyMock.expect(supervisorManager.registerUpgradedPendingSegmentOnSupervisor(
         EasyMock.capture(supervisorId),
-        EasyMock.capture(oldPendingSegment),
-        EasyMock.capture(newPendingSegment)
+        EasyMock.capture(pendingSegment)
     )).andReturn(true).anyTimes();
     replaceTask = createAndStartTask();
     EasyMock.replay(supervisorManager);
@@ -682,20 +677,6 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     verifyIntervalHasVisibleSegments(JAN_23, segmentV10, segmentV11, segmentV12);
   }
 
-
-  @Nullable
-  private DataSegment findSegmentWith(String version, Map<String, Object> loadSpec, Set<DataSegment> segments)
-  {
-    for (DataSegment segment : segments) {
-      if (version.equals(segment.getVersion())
-          && Objects.equals(segment.getLoadSpec(), loadSpec)) {
-        return segment;
-      }
-    }
-
-    return null;
-  }
-
   private static DataSegment asSegment(SegmentIdWithShardSpec pendingSegment)
   {
     final SegmentId id = pendingSegment.asSegmentId();
@@ -726,8 +707,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     try {
       Collection<DataSegment> allUsedSegments = dummyTaskActionClient.submit(
           new RetrieveUsedSegmentsAction(
-              WIKI,
-              null,
+              TestDataSource.WIKI,
               ImmutableList.of(interval),
               visibility
           )
@@ -736,23 +716,6 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     }
     catch (IOException e) {
       throw new ISE(e, "Error while fetching used segments in interval[%s]", interval);
-    }
-  }
-
-  private void verifyInputSegments(Task task, Interval interval, DataSegment... expectedSegments)
-  {
-    try {
-      final TaskActionClient taskActionClient = taskActionClientFactory.create(task);
-      Collection<DataSegment> allUsedSegments = taskActionClient.submit(
-          new RetrieveUsedSegmentsAction(
-              WIKI,
-              Collections.singletonList(interval)
-          )
-      );
-      Assert.assertEquals(Sets.newHashSet(expectedSegments), Sets.newHashSet(allUsedSegments));
-    }
-    catch (IOException e) {
-      throw new ISE(e, "Error while fetching segments to replace in interval[%s]", interval);
     }
   }
 
@@ -777,9 +740,9 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
 
   private DataSegment createSegment(Interval interval, String version)
   {
-    SegmentId id = SegmentId.of(WIKI, interval, version, null);
+    SegmentId id = SegmentId.of(TestDataSource.WIKI, interval, version, null);
     return DataSegment.builder()
-                      .dataSource(WIKI)
+                      .dataSource(TestDataSource.WIKI)
                       .interval(interval)
                       .version(version)
                       .loadSpec(Collections.singletonMap(id.toString(), id.toString()))
@@ -789,7 +752,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
 
   private ActionsTestTask createAndStartTask()
   {
-    ActionsTestTask task = new ActionsTestTask(WIKI, "test_" + groupId.incrementAndGet(), taskActionClientFactory);
+    ActionsTestTask task = new ActionsTestTask(TestDataSource.WIKI, "test_" + groupId.incrementAndGet(), taskActionClientFactory);
     taskQueue.add(task);
     runningTasks.add(task);
     return task;
@@ -799,11 +762,10 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
   {
     replaceTask.commitReplaceSegments(dataSegments);
     for (int i = 0; i < supervisorId.getValues().size(); i++) {
-      announceUpgradedPendingSegment(oldPendingSegment.getValues().get(i), newPendingSegment.getValues().get(i));
+      announceUpgradedPendingSegment(pendingSegment.getValues().get(i));
     }
     supervisorId.reset();
-    oldPendingSegment.reset();
-    newPendingSegment.reset();
+    pendingSegment.reset();
     replaceTask.finishRunAndGetStatus();
   }
 
@@ -812,19 +774,16 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     SegmentPublishResult result = appendTask.commitAppendSegments(dataSegments);
     result.getSegments().forEach(this::unannounceUpgradedPendingSegment);
     for (DataSegment segment : dataSegments) {
-      parentSegmentToLoadSpec.put(segment.getId(), Iterables.getOnlyElement(segment.getLoadSpec().values()));
+      parentSegmentToLoadSpec.put(segment.getId().toString(), Iterables.getOnlyElement(segment.getLoadSpec().values()));
     }
     appendTask.finishRunAndGetStatus();
     return result;
   }
 
-  private void announceUpgradedPendingSegment(
-      SegmentIdWithShardSpec oldPendingSegment,
-      SegmentIdWithShardSpec newPendingSegment
-  )
+  private void announceUpgradedPendingSegment(PendingSegmentRecord pendingSegment)
   {
     appendTask.getAnnouncedSegmentsToParentSegments()
-              .put(newPendingSegment.asSegmentId(), oldPendingSegment.asSegmentId());
+              .put(pendingSegment.getId().asSegmentId(), pendingSegment.getUpgradedFromSegmentId());
   }
 
   private void unannounceUpgradedPendingSegment(
@@ -849,7 +808,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
       loadSpecs.add(loadSpec);
     }
 
-    for (Map.Entry<SegmentId, SegmentId> entry : appendTask.getAnnouncedSegmentsToParentSegments().entrySet()) {
+    for (Map.Entry<SegmentId, String> entry : appendTask.getAnnouncedSegmentsToParentSegments().entrySet()) {
       final String version = entry.getKey().getVersion();
       final Interval interval = entry.getKey().getInterval();
       final Object loadSpec = parentSegmentToLoadSpec.get(entry.getValue());
@@ -867,8 +826,7 @@ public class ConcurrentReplaceAndStreamingAppendTest extends IngestionTestBase
     try {
       return dummyTaskActionClient.submit(
           new RetrieveUsedSegmentsAction(
-              WIKI,
-              null,
+              TestDataSource.WIKI,
               ImmutableList.of(Intervals.ETERNITY),
               Segments.INCLUDING_OVERSHADOWED
           )

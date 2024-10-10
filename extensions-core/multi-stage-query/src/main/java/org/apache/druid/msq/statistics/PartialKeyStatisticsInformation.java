@@ -22,6 +22,7 @@ package org.apache.druid.msq.statistics;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -63,5 +64,36 @@ public class PartialKeyStatisticsInformation
   public double getBytesRetained()
   {
     return bytesRetained;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    PartialKeyStatisticsInformation that = (PartialKeyStatisticsInformation) o;
+    return multipleValues == that.multipleValues
+           && Double.compare(bytesRetained, that.bytesRetained) == 0
+           && Objects.equals(timeSegments, that.timeSegments);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(timeSegments, multipleValues, bytesRetained);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "PartialKeyStatisticsInformation{" +
+           "timeSegments=" + timeSegments +
+           ", multipleValues=" + multipleValues +
+           ", bytesRetained=" + bytesRetained +
+           '}';
   }
 }

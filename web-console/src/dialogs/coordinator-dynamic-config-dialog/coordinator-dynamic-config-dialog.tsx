@@ -107,9 +107,7 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
           <p>
             Edit the coordinator dynamic configuration on the fly. For more information please refer
             to the{' '}
-            <ExternalLink
-              href={`${getLink('DOCS')}/configuration/index.html#dynamic-configuration`}
-            >
+            <ExternalLink href={`${getLink('DOCS')}/configuration/#dynamic-configuration`}>
               documentation
             </ExternalLink>
             .

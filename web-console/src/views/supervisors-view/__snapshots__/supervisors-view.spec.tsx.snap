@@ -13,51 +13,47 @@ exports[`SupervisorsView matches snapshot 1`] = `
     />
     <React.Fragment>
       <Memo(MoreButton)>
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="application"
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="View SQL query for table"
         />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="manually-entered-data"
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="Submit JSON supervisor"
         />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="play"
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="Resume all supervisors"
         />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="pause"
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="Suspend all supervisors"
         />
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="cross"
@@ -65,7 +61,6 @@ exports[`SupervisorsView matches snapshot 1`] = `
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="Terminate all supervisors"
         />
@@ -78,8 +73,23 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "Type",
           "Topic/Stream",
           "Status",
-          "Running tasks",
-          "Actions",
+          "Configured tasks",
+          {
+            "label": "status API",
+            "text": "Running tasks",
+          },
+          {
+            "label": "status API",
+            "text": "Aggregate lag",
+          },
+          {
+            "label": "stats API",
+            "text": "Stats",
+          },
+          {
+            "label": "status API",
+            "text": "Recent errors",
+          },
         ]
       }
       onChange={[Function]}
@@ -155,37 +165,149 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "accessor": "supervisor_id",
           "id": "supervisor_id",
           "show": true,
-          "width": 300,
+          "width": 280,
         },
         {
           "Cell": [Function],
           "Header": "Type",
           "accessor": "type",
           "show": true,
-          "width": 100,
+          "width": 80,
         },
         {
           "Cell": [Function],
           "Header": "Topic/Stream",
           "accessor": "source",
           "show": true,
-          "width": 300,
+          "width": 200,
         },
         {
           "Cell": [Function],
           "Header": "Status",
           "accessor": "detailed_state",
-          "id": "status",
+          "id": "detailed_state",
           "show": true,
-          "width": 250,
+          "width": 150,
+        },
+        {
+          "Cell": [Function],
+          "Header": "Configured tasks",
+          "accessor": "spec",
+          "className": "padded",
+          "filterable": false,
+          "id": "configured_tasks",
+          "show": true,
+          "sortable": false,
+          "width": 130,
         },
         {
           "Cell": [Function],
           "Header": "Running tasks",
-          "accessor": "running_tasks",
+          "accessor": "status.payload",
           "filterable": false,
           "id": "running_tasks",
           "show": true,
+          "sortable": false,
+          "width": 150,
+        },
+        {
+          "Cell": [Function],
+          "Header": "Aggregate lag",
+          "accessor": "status.payload.aggregateLag",
+          "className": "padded",
+          "filterable": false,
+          "show": true,
+          "sortable": false,
+          "width": 200,
+        },
+        {
+          "Cell": [Function],
+          "Header": <React.Fragment>
+            Stats
+            <br />
+            <Blueprint5.Popover
+              boundary="clippingParents"
+              captureDismiss={false}
+              content={
+                <Blueprint5.Menu>
+                  <Blueprint5.MenuItem
+                    active={false}
+                    disabled={false}
+                    icon="circle"
+                    multiline={false}
+                    onClick={[Function]}
+                    popoverProps={{}}
+                    shouldDismissPopover={true}
+                    text="Rate over past 1 minute"
+                  />
+                  <Blueprint5.MenuItem
+                    active={false}
+                    disabled={false}
+                    icon="tick-circle"
+                    multiline={false}
+                    onClick={[Function]}
+                    popoverProps={{}}
+                    shouldDismissPopover={true}
+                    text="Rate over past 5 minutes"
+                  />
+                  <Blueprint5.MenuItem
+                    active={false}
+                    disabled={false}
+                    icon="circle"
+                    multiline={false}
+                    onClick={[Function]}
+                    popoverProps={{}}
+                    shouldDismissPopover={true}
+                    text="Rate over past 15 minutes"
+                  />
+                </Blueprint5.Menu>
+              }
+              defaultIsOpen={false}
+              disabled={false}
+              fill={false}
+              hasBackdrop={false}
+              hoverCloseDelay={300}
+              hoverOpenDelay={150}
+              inheritDarkTheme={true}
+              interactionKind="click"
+              matchTargetWidth={false}
+              minimal={false}
+              openOnTargetFocus={true}
+              position="bottom"
+              positioningStrategy="absolute"
+              shouldReturnFocusOnClose={false}
+              targetTagName="span"
+              transitionDuration={300}
+              usePortal={true}
+            >
+              <i
+                className="title-button"
+              >
+                Rate over past 5 minutes
+                 
+                <Blueprint5.Icon
+                  autoLoad={true}
+                  icon="caret-down"
+                  tagName="span"
+                />
+              </i>
+            </Blueprint5.Popover>
+          </React.Fragment>,
+          "accessor": "stats",
+          "className": "padded",
+          "filterable": false,
+          "id": "stats",
+          "show": true,
+          "sortable": false,
+          "width": 300,
+        },
+        {
+          "Cell": [Function],
+          "Header": "Recent errors",
+          "accessor": "status.payload.recentErrors",
+          "filterable": false,
+          "show": true,
+          "sortable": false,
           "width": 150,
         },
         {
@@ -194,7 +316,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
           "accessor": "supervisor_id",
           "filterable": false,
           "id": "actions",
-          "show": true,
+          "sortable": false,
           "width": 70,
         },
       ]
@@ -244,13 +366,14 @@ exports[`SupervisorsView matches snapshot 1`] = `
     getTrProps={[Function]}
     groupedByPivotKey="_groupedByPivot"
     indexKey="_index"
-    loading={true}
+    loading={false}
     loadingText="Loading..."
+    manual={true}
     multiSort={true}
     nestingLevelKey="_nestingLevel"
     nextText="Next"
     noDataText=""
-    ofText="of"
+    ofText=""
     onFetchData={[Function]}
     onFilteredChange={[Function]}
     originalKey="_original"
@@ -263,6 +386,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
       ]
     }
     pageText="Page"
+    pages={10000000}
     pivotDefaults={{}}
     pivotIDKey="_pivotID"
     pivotValKey="_pivotVal"
@@ -271,7 +395,7 @@ exports[`SupervisorsView matches snapshot 1`] = `
     resolveData={[Function]}
     rowsSelectorText="rows per page"
     rowsText="rows"
-    showPageJump={true}
+    showPageJump={false}
     showPageSizeOptions={true}
     showPagination={false}
     showPaginationBottom={true}

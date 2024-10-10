@@ -31,7 +31,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -147,7 +147,8 @@ public class NestedDataTestUtils
       null,
       false,
       false,
-      0
+      0,
+      null
   );
 
   public static final TransformSpec SIMPLE_DATA_TSV_TRANSFORM = new TransformSpec(
@@ -166,7 +167,7 @@ public class NestedDataTestUtils
 
   static {
     JSON_MAPPER = TestHelper.makeJsonMapper();
-    JSON_MAPPER.registerModules(NestedDataModule.getJacksonModulesList());
+    JSON_MAPPER.registerModules(BuiltInTypesModule.getJacksonModulesList());
   }
 
   public static List<Segment> createSimpleSegmentsTsv(

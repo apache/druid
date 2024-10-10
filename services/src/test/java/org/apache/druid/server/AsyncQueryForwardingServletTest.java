@@ -481,6 +481,12 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       {
         return Optional.empty();
       }
+
+      @Override
+      public String getCanonicalLookupName(String lookupName)
+      {
+        return lookupName;
+      }
     }
 
     final TimeseriesQuery query =

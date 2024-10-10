@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Icon } from '@blueprintjs/core';
+import { Icon, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
 import { SqlAlias, SqlFunction, SqlStar } from '@druid-toolkit/query';
 import classNames from 'classnames';
@@ -103,7 +102,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
     );
   }
 
-  const numericColumnBraces = getNumericColumnBraces(queryResult);
+  const numericColumnBraces = getNumericColumnBraces(queryResult, undefined, undefined);
   return (
     <div className="preview-table">
       <ReactTable
@@ -139,7 +138,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
             Header() {
               return (
                 <div className="header-wrapper" onClick={() => onEditColumn(i)}>
-                  <div className="output-name" title={columnToSummary(column)}>
+                  <div className="output-name" data-tooltip={columnToSummary(column)}>
                     {icon && <Icon className="type-icon" icon={icon} size={12} />}
                     {h}
                     {hasFilterOnHeader(h, i) && (
@@ -158,7 +157,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
               const value = row.value;
               return (
                 <div>
-                  <Popover2 content={<Deferred content={() => getCellMenu(column, i, value)} />}>
+                  <Popover content={<Deferred content={() => getCellMenu(column, i, value)} />}>
                     {numericColumnBraces[i] ? (
                       <BracedText
                         className="table-padding"
@@ -169,7 +168,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
                     ) : (
                       <TableCell value={value} unlimited />
                     )}
-                  </Popover2>
+                  </Popover>
                 </div>
               );
             },

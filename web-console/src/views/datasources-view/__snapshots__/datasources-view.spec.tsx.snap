@@ -13,7 +13,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
     />
     <Memo(MoreButton)
       altExtra={
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={false}
           icon="compressed"
@@ -22,42 +22,39 @@ exports[`DatasourcesView matches snapshot 1`] = `
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="Force compaction run"
         />
       }
     >
-      <Blueprint4.MenuItem
+      <Blueprint5.MenuItem
         active={false}
         disabled={true}
         icon="application"
         multiline={false}
         onClick={[Function]}
         popoverProps={{}}
-        selected={false}
         shouldDismissPopover={true}
         text="View SQL query for table"
       />
-      <Blueprint4.MenuItem
+      <Blueprint5.MenuItem
         active={false}
         disabled={false}
         icon="edit"
         multiline={false}
         onClick={[Function]}
         popoverProps={{}}
-        selected={false}
         shouldDismissPopover={true}
         text="Edit default retention rules"
       />
     </Memo(MoreButton)>
-    <Blueprint4.Switch
+    <Blueprint5.Switch
       checked={false}
       disabled={false}
       label="Show unused"
       onChange={[Function]}
     />
-    <Blueprint4.Switch
+    <Blueprint5.Switch
       checked={false}
       disabled={false}
       label="Show segment timeline"
@@ -70,18 +67,35 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "Availability",
           "Historical load/drop queues",
           "Total data size",
-          "Running tasks",
+          {
+            "label": "sys.tasks",
+            "text": "Running tasks",
+          },
           "Segment rows",
           "Segment size",
-          "Segment granularity",
+          {
+            "label": "𝑓(sys.segments)",
+            "text": "Segment granularity",
+          },
           "Total rows",
           "Avg. row size",
           "Replicated size",
-          "Compaction",
-          "% Compacted",
-          "Left to be compacted",
-          "Retention",
-          "Actions",
+          {
+            "label": "compaction API",
+            "text": "Compaction",
+          },
+          {
+            "label": "compaction API",
+            "text": "% Compacted",
+          },
+          {
+            "label": "compaction API",
+            "text": "Left to be compacted",
+          },
+          {
+            "label": "rules API",
+            "text": "Retention",
+          },
         ]
       }
       onChange={[Function]}
@@ -338,7 +352,7 @@ exports[`DatasourcesView matches snapshot 1`] = `
           "accessor": "datasource",
           "filterable": false,
           "id": "actions",
-          "show": true,
+          "sortable": false,
           "width": 70,
         },
       ]

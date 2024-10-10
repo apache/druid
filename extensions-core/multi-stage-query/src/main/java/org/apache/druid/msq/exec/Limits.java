@@ -24,7 +24,7 @@ public class Limits
   /**
    * Maximum number of columns that can appear in a frame signature.
    * <p>
-   * Somewhat less than {@link WorkerMemoryParameters#STANDARD_FRAME_SIZE} divided by typical minimum column size:
+   * Somewhat less than {@link WorkerMemoryParameters#DEFAULT_FRAME_SIZE} divided by typical minimum column size:
    * {@link org.apache.druid.frame.allocation.AppendableMemory#DEFAULT_INITIAL_ALLOCATION_SIZE}.
    */
   public static final int MAX_FRAME_COLUMNS = 2000;
@@ -86,9 +86,10 @@ public class Limits
   public static final long MAX_WORKERS_FOR_PARALLEL_MERGE = 100;
 
   /**
-   * Max number of rows in the query reports of the SELECT queries run by MSQ. This ensures that the reports donot blow
-   * up for queries operating on larger datasets. The full result of the select query should be available once the
-   * MSQ is able to run async queries
+   * Max number of rows in the query reports of SELECT queries run by MSQ when using
+   * {@link org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination}. Reports in this mode contain a
+   * preview of actual query results, but not the full resultset.This ensures that the reports do not blow up in
+   * size for queries operating on larger datasets.
    */
   public static final long MAX_SELECT_RESULT_ROWS = 3_000;
 

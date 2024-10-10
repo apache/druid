@@ -21,14 +21,20 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.common.semantic.SemanticUtils;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.LongBuffer;
+import java.util.Map;
+import java.util.function.Function;
 
 public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
 {
+  private static final Map<Class<?>, Function<BlockLayoutColumnarLongs, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(BlockLayoutColumnarLongs.class);
+
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseLongBuffers;
 
   // The number of rows in this column.
@@ -47,7 +53,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
       CompressionStrategy strategy
   )
   {
-    baseLongBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(order, strategy));
+    this.baseLongBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(order, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseReader = reader;
@@ -157,6 +163,12 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
     @Override
     public void get(final long[] out, final int start, final int length)
     {
+      get(out, 0, start, length);
+    }
+
+    @Override
+    public void get(long[] out, int offset, int start, int length)
+    {
       // division + remainder is optimized by the compiler so keep those together
       int bufferNum = start / sizePer;
       int bufferIndex = start % sizePer;
@@ -169,7 +181,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
         }
 
         final int limit = Math.min(length - p, sizePer - bufferIndex);
-        reader.read(out, p, bufferIndex, limit);
+        reader.read(out, offset + p, bufferIndex, limit);
         p += limit;
         bufferNum++;
         bufferIndex = 0;
@@ -214,6 +226,15 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
         buffer = null;
         longBuffer = null;
       }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Nullable
+    @Override
+    public <T> T as(Class<? extends T> clazz)
+    {
+      //noinspection ReturnOfNull
+      return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
     }
 
     @Override

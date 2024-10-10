@@ -19,10 +19,12 @@
 
 package org.apache.druid.segment.loading;
 
+import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.timeline.DataSegment;
 
 import java.io.File;
-import java.util.concurrent.ExecutorService;
+import java.util.List;
 
 /**
  * Test implementation of {@link SegmentCacheManager} which throws an
@@ -30,9 +32,38 @@ import java.util.concurrent.ExecutorService;
  */
 public class NoopSegmentCacheManager implements SegmentCacheManager
 {
+  @Override
+  public boolean canHandleSegments()
+  {
+    throw new UnsupportedOperationException();
+  }
 
   @Override
-  public boolean isSegmentCached(DataSegment segment)
+  public List<DataSegment> getCachedSegments()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void storeInfoFile(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void removeInfoFile(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ReferenceCountingSegment getSegment(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ReferenceCountingSegment getBootstrapSegment(DataSegment segment, SegmentLazyLoadFailCallback loadFailed)
   {
     throw new UnsupportedOperationException();
   }
@@ -62,7 +93,19 @@ public class NoopSegmentCacheManager implements SegmentCacheManager
   }
 
   @Override
-  public void loadSegmentIntoPageCache(DataSegment segment, ExecutorService exec)
+  public void loadSegmentIntoPageCache(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void loadSegmentIntoPageCacheOnBootstrap(DataSegment segment)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void shutdownBootstrap()
   {
     throw new UnsupportedOperationException();
   }

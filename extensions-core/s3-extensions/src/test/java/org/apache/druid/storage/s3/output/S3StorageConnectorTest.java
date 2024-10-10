@@ -31,6 +31,9 @@ import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.java.util.common.HumanReadableBytes;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.DruidProcessingConfigTest;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -77,14 +80,19 @@ public class S3StorageConnectorTest
   public void setup()
   {
     try {
-      storageConnector = new S3StorageConnector(new S3OutputConfig(
+      S3OutputConfig s3OutputConfig = new S3OutputConfig(
           BUCKET,
           PREFIX,
           temporaryFolder.newFolder(),
           null,
           null,
           true
-      ), service);
+      );
+      storageConnector = new S3StorageConnector(s3OutputConfig, service, new S3UploadManager(
+          s3OutputConfig,
+          new S3ExportConfig("tempDir", new HumanReadableBytes("5MiB"), 1, null),
+          new DruidProcessingConfigTest.MockRuntimeInfo(10, 0, 0),
+          new StubServiceEmitter()));
     }
     catch (IOException e) {
       throw new RuntimeException(e);

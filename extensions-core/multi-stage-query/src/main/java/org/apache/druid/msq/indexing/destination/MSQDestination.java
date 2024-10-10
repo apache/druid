@@ -21,9 +21,11 @@ package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.msq.indexing.TaskReportQueryListener;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.server.security.Resource;
 
+import javax.annotation.Nullable;
 import java.util.Optional;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -35,7 +37,31 @@ import java.util.Optional;
 })
 public interface MSQDestination
 {
+  /**
+   * Returned by {@link #getRowsInTaskReport()} when an unlimited number of rows should be included in the task report.
+   */
+  long UNLIMITED = -1;
+
+  /**
+   * Shuffle spec for the final stage, which writes results to the destination.
+   */
   ShuffleSpecFactory getShuffleSpecFactory(int targetSize);
 
+  /**
+   * Return the resource for this destination. Used for security checks.
+   */
   Optional<Resource> getDestinationResource();
+
+  /**
+   * Number of rows to include in the task report when using {@link TaskReportQueryListener}. Zero means do not
+   * include results in the report at all. {@link #UNLIMITED} means include an unlimited number of rows.
+   */
+  long getRowsInTaskReport();
+
+  /**
+   * Return the {@link MSQSelectDestination} that corresponds to this destination. Returns null if this is not a
+   * SELECT destination (for example, returns null for {@link DataSourceMSQDestination}).
+   */
+  @Nullable
+  MSQSelectDestination toSelectDestination();
 }

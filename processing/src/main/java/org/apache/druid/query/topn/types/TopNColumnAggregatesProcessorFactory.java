@@ -43,7 +43,8 @@ public class TopNColumnAggregatesProcessorFactory
   @Override
   public TopNColumnAggregatesProcessor<?> makeColumnSelectorStrategy(
       ColumnCapabilities capabilities,
-      ColumnValueSelector selector
+      ColumnValueSelector selector,
+      String dimension
   )
   {
     if (capabilities.is(ValueType.STRING)) {
@@ -77,5 +78,11 @@ public class TopNColumnAggregatesProcessorFactory
     }
 
     throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
+  }
+
+  @Override
+  public boolean supportsComplexTypes()
+  {
+    return false;
   }
 }

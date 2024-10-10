@@ -126,7 +126,7 @@ public interface Operator
      */
     STOP,
     /**
-     * Inidcates that the downstream processing should pause its pushing of results and instead return a
+     * Indicates that the downstream processing should pause its pushing of results and instead return a
      * continuation object that encapsulates whatever state is required to resume processing.  When this signal is
      * received, Operators that are generating data might choose to exert backpressure or otherwise pause their
      * processing efforts until called again with the returned continuation object.

@@ -75,6 +75,7 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(5, config2.getConfiguredMaxSelectorDictionarySize());
     Assert.assertEquals(6_000_000, config2.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
+    Assert.assertEquals(DeferExpressionDimensions.FIXED_WIDTH_NON_NUMERIC, config2.getDeferExpressionDimensions());
     Assert.assertFalse(config2.isApplyLimitPushDownToSegment());
   }
 
@@ -94,6 +95,10 @@ public class GroupByQueryConfigTest
                                     .put("maxSelectorDictionarySize", 3)
                                     .put("maxMergingDictionarySize", 4)
                                     .put("applyLimitPushDownToSegment", true)
+                                    .put(
+                                        GroupByQueryConfig.CTX_KEY_DEFER_EXPRESSION_DIMENSIONS,
+                                        DeferExpressionDimensions.ALWAYS.toString()
+                                    )
                                     .build()
                     )
                     .build()
@@ -105,6 +110,7 @@ public class GroupByQueryConfigTest
     Assert.assertEquals(3, config2.getConfiguredMaxSelectorDictionarySize());
     Assert.assertEquals(4, config2.getConfiguredMaxMergingDictionarySize());
     Assert.assertEquals(7.0, config2.getBufferGrouperMaxLoadFactor(), 0.0);
+    Assert.assertEquals(DeferExpressionDimensions.ALWAYS, config2.getDeferExpressionDimensions());
     Assert.assertTrue(config2.isApplyLimitPushDownToSegment());
   }
 

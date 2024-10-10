@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Tab, Tabs } from '@blueprintjs/core';
+import { Tab, Tabs, TabsExpander } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
@@ -52,9 +52,7 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
       const resp = await Api.instance.get(
         `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/history`,
       );
-      return resp.data.map((vs: SupervisorHistoryEntry) =>
-        deepSet(vs, 'spec', cleanSpec(vs.spec, true)),
-      );
+      return resp.data.map((vs: SupervisorHistoryEntry) => deepSet(vs, 'spec', cleanSpec(vs.spec)));
     },
   });
 
@@ -70,7 +68,7 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
           <Tab
             id={i}
             key={i}
-            title={pastSupervisor.version}
+            data-tooltip={pastSupervisor.version}
             panelClassName="panel"
             panel={
               <ShowValue
@@ -81,14 +79,14 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
             }
           />
         ))}
-        <Tabs.Expander />
+        <TabsExpander />
       </Tabs>
       {diffIndex !== -1 && (
         <DiffDialog
           title="Supervisor spec diff"
           versions={historyData.map(s => ({ label: s.version, value: s.spec }))}
-          initLeftIndex={diffIndex + 1}
-          initRightIndex={diffIndex}
+          initOldIndex={diffIndex + 1}
+          initNewIndex={diffIndex}
           onClose={() => setDiffIndex(-1)}
         />
       )}

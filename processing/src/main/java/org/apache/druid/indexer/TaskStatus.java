@@ -37,7 +37,7 @@ import java.util.Objects;
  */
 public class TaskStatus
 {
-  public static final int MAX_ERROR_MSG_LENGTH = 100;
+  public static final int MAX_ERROR_MSG_TRUNCATION_LIMIT = 1024;
 
   public static TaskStatus running(String taskId)
   {
@@ -88,8 +88,10 @@ public class TaskStatus
    */
   private static @Nullable String truncateErrorMsg(@Nullable String errorMsg)
   {
-    if (errorMsg != null && errorMsg.length() > MAX_ERROR_MSG_LENGTH) {
-      return errorMsg.substring(0, MAX_ERROR_MSG_LENGTH) + "...";
+    if (errorMsg != null && errorMsg.length() > MAX_ERROR_MSG_TRUNCATION_LIMIT) {
+      return errorMsg.substring(0, MAX_ERROR_MSG_TRUNCATION_LIMIT / 2)
+             + "..." + (errorMsg.length() - MAX_ERROR_MSG_TRUNCATION_LIMIT) + " characters omitted..."
+             + errorMsg.substring(errorMsg.length() - MAX_ERROR_MSG_TRUNCATION_LIMIT / 2);
     } else {
       return errorMsg;
     }

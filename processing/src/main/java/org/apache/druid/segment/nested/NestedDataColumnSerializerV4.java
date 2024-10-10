@@ -27,7 +27,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
@@ -48,6 +47,8 @@ import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
+import org.apache.druid.segment.serde.ComplexColumnMetadata;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
@@ -182,7 +183,7 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
     doubleDictionaryWriter.open();
 
     rawWriter = new CompressedVariableSizedBlobColumnSerializer(
-        getInternalFileName(name, RAW_FILE_NAME),
+        ColumnSerializerUtils.getInternalFileName(name, RAW_FILE_NAME),
         segmentWriteOutMedium,
         indexSpec.getJsonCompression() != null ? indexSpec.getJsonCompression() : CompressionStrategy.LZ4
     );
@@ -322,8 +323,8 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
       ByteArrayOutputStream baos = new ByteArrayOutputStream();
       IndexMerger.SERIALIZER_UTILS.writeString(
           baos,
-          NestedDataComplexTypeSerde.OBJECT_MAPPER.writeValueAsString(
-              new NestedDataColumnMetadata(
+          ColumnSerializerUtils.SMILE_MAPPER.writeValueAsString(
+              new ComplexColumnMetadata(
                   ByteOrder.nativeOrder(),
                   indexSpec.getBitmapSerdeFactory(),
                   name,
@@ -390,14 +391,9 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
 
   private void writeInternal(FileSmoosher smoosher, Serializer serializer, String fileName) throws IOException
   {
-    final String internalName = getInternalFileName(name, fileName);
+    final String internalName = ColumnSerializerUtils.getInternalFileName(name, fileName);
     try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, serializer.getSerializedSize())) {
       serializer.writeTo(smooshChannel, smoosher);
     }
-  }
-
-  public static String getInternalFileName(String fileNameBase, String field)
-  {
-    return StringUtils.format("%s.%s", fileNameBase, field);
   }
 }

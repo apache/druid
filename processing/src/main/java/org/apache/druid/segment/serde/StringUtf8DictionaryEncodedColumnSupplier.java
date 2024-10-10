@@ -50,6 +50,11 @@ public class StringUtf8DictionaryEncodedColumnSupplier<TIndexed extends Indexed<
     this.multiValuedColumn = multiValuedColumn;
   }
 
+  public Supplier<TIndexed> getDictionary()
+  {
+    return utf8Dictionary;
+  }
+
   @Override
   public DictionaryEncodedColumn<?> get()
   {

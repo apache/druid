@@ -112,7 +112,7 @@ public class FlatTextFormatParserTest extends InitializedNullHandlingTest
   public void testWithSkipHeaderRows()
   {
     final int skipHeaderRows = 2;
-    final Parser<String, Object> parser = PARSER_FACTORY.get(format, false, skipHeaderRows);
+    final Parser<String, Object> parser = PARSER_FACTORY.get(format, false, skipHeaderRows, false);
     parser.startFileFromBeginning();
     final String[] body = new String[]{
         concat(format, "header", "line", "1"),
@@ -134,7 +134,7 @@ public class FlatTextFormatParserTest extends InitializedNullHandlingTest
   @Test
   public void testWithHeaderRow()
   {
-    final Parser<String, Object> parser = PARSER_FACTORY.get(format, true, 0);
+    final Parser<String, Object> parser = PARSER_FACTORY.get(format, true, 0, false);
     parser.startFileFromBeginning();
     final String[] body = new String[]{
         concat(format, "time", "value1", "value2"),
@@ -152,7 +152,7 @@ public class FlatTextFormatParserTest extends InitializedNullHandlingTest
   @Test
   public void testWithHeaderRowOfEmptyColumns()
   {
-    final Parser<String, Object> parser = PARSER_FACTORY.get(format, true, 0);
+    final Parser<String, Object> parser = PARSER_FACTORY.get(format, true, 0, false);
     parser.startFileFromBeginning();
     final String[] body = new String[]{
         concat(format, "time", "", "value2", ""),
@@ -170,7 +170,7 @@ public class FlatTextFormatParserTest extends InitializedNullHandlingTest
   @Test
   public void testWithDifferentHeaderRows()
   {
-    final Parser<String, Object> parser = PARSER_FACTORY.get(format, true, 0);
+    final Parser<String, Object> parser = PARSER_FACTORY.get(format, true, 0, false);
     parser.startFileFromBeginning();
     final String[] body = new String[]{
         concat(format, "time", "value1", "value2"),
@@ -207,7 +207,7 @@ public class FlatTextFormatParserTest extends InitializedNullHandlingTest
     );
 
     final int skipHeaderRows = 2;
-    final Parser<String, Object> parser = PARSER_FACTORY.get(format, false, skipHeaderRows);
+    final Parser<String, Object> parser = PARSER_FACTORY.get(format, false, skipHeaderRows, false);
     final String[] body = new String[]{
         concat(format, "header", "line", "1"),
         concat(format, "header", "line", "2"),
@@ -219,7 +219,7 @@ public class FlatTextFormatParserTest extends InitializedNullHandlingTest
   @Test
   public void testWithNullValues()
   {
-    final Parser<String, Object> parser = PARSER_FACTORY.get(format, true, 0);
+    final Parser<String, Object> parser = PARSER_FACTORY.get(format, true, 0, false);
     parser.startFileFromBeginning();
     final String[] body = new String[]{
         concat(format, "time", "value1", "value2"),
@@ -234,16 +234,16 @@ public class FlatTextFormatParserTest extends InitializedNullHandlingTest
   {
     public Parser<String, Object> get(FlatTextFormat format)
     {
-      return get(format, false, 0);
+      return get(format, false, 0, false);
     }
 
-    public Parser<String, Object> get(FlatTextFormat format, boolean hasHeaderRow, int maxSkipHeaderRows)
+    public Parser<String, Object> get(FlatTextFormat format, boolean hasHeaderRow, int maxSkipHeaderRows, boolean tryParseNumbers)
     {
       switch (format) {
         case CSV:
-          return new CSVParser(null, hasHeaderRow, maxSkipHeaderRows);
+          return new CSVParser(null, hasHeaderRow, maxSkipHeaderRows, tryParseNumbers);
         case DELIMITED:
-          return new DelimitedParser("\t", null, hasHeaderRow, maxSkipHeaderRows);
+          return new DelimitedParser("\t", null, hasHeaderRow, maxSkipHeaderRows, tryParseNumbers);
         default:
           throw new IAE("Unknown format[%s]", format);
       }

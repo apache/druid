@@ -22,8 +22,9 @@ package org.apache.druid.storage.azure;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class AzureAccountConfigTest
 {
@@ -33,10 +34,8 @@ public class AzureAccountConfigTest
   public void test_getBlobStorageEndpoint_endpointSuffixNullAndStorageAccountEndpointSuffixNull_expectedDefault()
       throws JsonProcessingException
   {
-    AzureAccountConfig config = new AzureAccountConfig();
-    AzureAccountConfig configSerde = MAPPER.readValue("{}", AzureAccountConfig.class);
-    Assert.assertEquals(configSerde, config);
-    Assert.assertEquals(AzureUtils.AZURE_STORAGE_HOST_ADDRESS, config.getBlobStorageEndpoint());
+    AzureAccountConfig emptyConfig = MAPPER.readValue("{}", AzureAccountConfig.class);
+    assertEquals(AzureUtils.AZURE_STORAGE_HOST_ADDRESS, emptyConfig.getBlobStorageEndpoint());
   }
 
   @Test
@@ -44,15 +43,21 @@ public class AzureAccountConfigTest
       throws JsonProcessingException
   {
     String endpointSuffix = "core.usgovcloudapi.net";
+
     AzureAccountConfig config = new AzureAccountConfig();
     config.setEndpointSuffix(endpointSuffix);
-    AzureAccountConfig configSerde = MAPPER.readValue(
-        "{"
-        + "\"endpointSuffix\": \"" + endpointSuffix + "\""
-        + "}",
-        AzureAccountConfig.class);
-    Assert.assertEquals(configSerde, config);
-    Assert.assertEquals(AzureUtils.BLOB + "." + endpointSuffix, config.getBlobStorageEndpoint());
+
+    assertEquals(
+        MAPPER.writeValueAsString(config),
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(
+                "{"
+                + "\"endpointSuffix\": \"" + endpointSuffix + "\""
+                + "}",
+                AzureAccountConfig.class
+            )
+        )
+    );
   }
 
   @Test
@@ -61,17 +66,24 @@ public class AzureAccountConfigTest
   {
     String endpointSuffix = "core.usgovcloudapi.net";
     String storageAccountEndpointSuffix = "ABCD1234.blob.storage.azure.net";
+
     AzureAccountConfig config = new AzureAccountConfig();
     config.setEndpointSuffix(endpointSuffix);
     config.setStorageAccountEndpointSuffix(storageAccountEndpointSuffix);
-    AzureAccountConfig configSerde = MAPPER.readValue(
-        "{"
-        + "\"endpointSuffix\": \"" + endpointSuffix + "\","
-        + " \"storageAccountEndpointSuffix\": \"" + storageAccountEndpointSuffix + "\""
-        + "}",
-        AzureAccountConfig.class);
-    Assert.assertEquals(configSerde, config);
-    Assert.assertEquals(AzureUtils.BLOB + "." + endpointSuffix, config.getBlobStorageEndpoint());
+
+    assertEquals(AzureUtils.BLOB + "." + endpointSuffix, config.getBlobStorageEndpoint());
+    assertEquals(
+        MAPPER.writeValueAsString(config),
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(
+                "{"
+                + "\"endpointSuffix\": \"" + endpointSuffix + "\","
+                + " \"storageAccountEndpointSuffix\": \"" + storageAccountEndpointSuffix + "\""
+                + "}",
+                AzureAccountConfig.class
+            )
+        )
+    );
   }
 
   @Test
@@ -79,15 +91,22 @@ public class AzureAccountConfigTest
       throws JsonProcessingException
   {
     String storageAccountEndpointSuffix = "ABCD1234.blob.storage.azure.net";
+
     AzureAccountConfig config = new AzureAccountConfig();
     config.setStorageAccountEndpointSuffix(storageAccountEndpointSuffix);
-    AzureAccountConfig configSerde = MAPPER.readValue(
-        "{"
-        + "\"storageAccountEndpointSuffix\": \"" + storageAccountEndpointSuffix + "\""
-        + "}",
-        AzureAccountConfig.class);
-    Assert.assertEquals(configSerde, config);
-    Assert.assertEquals(storageAccountEndpointSuffix, config.getBlobStorageEndpoint());
+
+    assertEquals(storageAccountEndpointSuffix, config.getBlobStorageEndpoint());
+    assertEquals(
+        MAPPER.writeValueAsString(config),
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(
+                "{"
+                + "\"storageAccountEndpointSuffix\": \"" + storageAccountEndpointSuffix + "\""
+                + "}",
+                AzureAccountConfig.class
+            )
+        )
+    );
   }
 
   @Test
@@ -95,14 +114,21 @@ public class AzureAccountConfigTest
       throws JsonProcessingException
   {
     String managedIdentityClientId = "blah";
+
     AzureAccountConfig config = new AzureAccountConfig();
     config.setManagedIdentityClientId("blah");
-    AzureAccountConfig configSerde = MAPPER.readValue(
-        "{"
-        + "\"managedIdentityClientId\": \"" + managedIdentityClientId + "\""
-        + "}",
-        AzureAccountConfig.class);
-    Assert.assertEquals(configSerde, config);
-    Assert.assertEquals("blah", config.getManagedIdentityClientId());
+
+    assertEquals("blah", config.getManagedIdentityClientId());
+    assertEquals(
+        MAPPER.writeValueAsString(config),
+        MAPPER.writeValueAsString(
+            MAPPER.readValue(
+                "{"
+                + "\"managedIdentityClientId\": \"" + managedIdentityClientId + "\""
+                + "}",
+                AzureAccountConfig.class
+            )
+        )
+    );
   }
 }

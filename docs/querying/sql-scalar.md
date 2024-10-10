@@ -56,9 +56,9 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`LOG10(expr)`|Logarithm (base 10).|
 |`POWER(expr, power)`|`expr` raised to the power of `power`.|
 |`SQRT(expr)`|Square root.|
-|`TRUNCATE(expr, [digits])`|Truncate `expr` to a specific number of decimal digits. If digits is negative, then this truncates that many places to the left of the decimal point. Digits defaults to zero if not specified.|
-|`TRUNC(expr, [digits])`|Alias for `TRUNCATE`.|
-|`ROUND(expr, [digits])`|`ROUND(x, y)` would return the value of the x rounded to the y decimal places. While x can be an integer or floating-point number, y must be an integer. The type of the return value is specified by that of x. y defaults to 0 if omitted. When y is negative, x is rounded on the left side of the y decimal points. If `expr` evaluates to either `NaN`, `expr` will be converted to 0. If `expr` is infinity, `expr` will be converted to the nearest finite double. |
+|`TRUNCATE(expr[, digits])`|Truncates `expr` to a specific number of decimal digits. If `digits` is negative, then this truncates that many places to the left of the decimal point. If not specified, `digits` defaults to zero.|
+|`TRUNC(expr[, digits])`|Alias for `TRUNCATE`.|
+|`ROUND(expr[, digits])`|Rounds `expr` to a specific number of decimal digits. If `digits` is negative, then it rounds that many places to the left of the decimal point. If not specified, `digits` defaults to zero.|
 |`MOD(x, y)`|Modulo (remainder of x divided by y).|
 |`SIN(expr)`|Trigonometric sine of an angle `expr`.|
 |`COS(expr)`|Trigonometric cosine of an angle `expr`.|
@@ -79,50 +79,50 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`BITWISE_SHIFT_RIGHT(expr1, expr2)`|Returns the result of `expr1 >> expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles.|
 |`BITWISE_XOR(expr1, expr2)`|Returns the result of `expr1 ^ expr2`. Double values will be implicitly cast to longs, use `BITWISE_CONVERT_DOUBLE_TO_LONG_BITS` to perform bitwise operations directly with doubles.|
 |`DIV(x, y)`|Returns the result of integer division of x by y |
-|`HUMAN_READABLE_BINARY_BYTE_FORMAT(value, [precision])`| Format a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, HUMAN_READABLE_BINARY_BYTE_FORMAT(1048576) returns `1.00 MiB`. `precision` must be in the range of `[0, 3]` (default: 2). |
-|`HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value, [precision])`| Format a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1048576) returns `1.04 MB`. `precision` must be in the range of `[0, 3]` (default: 2). `precision` must be in the range of `[0, 3]` (default: 2). |
-|`HUMAN_READABLE_DECIMAL_FORMAT(value, [precision])`| Format a number in human-readable SI format. For example, HUMAN_READABLE_DECIMAL_FORMAT(1048576) returns `1.04 M`. `precision` must be in the range of `[0, 3]` (default: 2). |
+|`HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])`| Formats a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, `HUMAN_READABLE_BINARY_BYTE_FORMAT(1048576)` returns `1.00 MiB`. `precision` must be in the range of `[0, 3]`. If not specified,  `precision` defaults to 2. |
+|`HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value[, precision])`| Formats a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, `HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1048576)` returns `1.04 MB`. `precision` must be in the range of `[0, 3]`. If not specified, `precision` defaults to 2. |
+|`HUMAN_READABLE_DECIMAL_FORMAT(value[, precision])`| Formats a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, `HUMAN_READABLE_DECIMAL_FORMAT(1048576)` returns `1.04 M`. `precision` must be in the range of `[0, 3]`. If not specified, `precision` defaults to 2. |
 |`SAFE_DIVIDE(x, y)`|Returns the division of x by y guarded on division by 0. In case y is 0 it returns 0, or `null` if `druid.generic.useDefaultValueForNull=false` |
 
 
 ## String functions
 
-String functions accept strings, and return a type appropriate to the function.
+String functions accept strings and return a type appropriate to the function.
 
 |Function|Notes|
 |--------|-----|
-|`CONCAT(expr, expr...)`|Concats a list of expressions. Also see the [concatenation operator](sql-operators.md#concatenation-operator).|
-|`TEXTCAT(expr, expr)`|Two argument version of `CONCAT`.|
+|`CONCAT(expr[, expr, ...])`|Concatenates a list of expressions. Also see the [concatenation operator](sql-operators.md#concatenation-operator).|
+|`TEXTCAT(expr, expr)`|Concatenates two expressions.|
 |`CONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`.|
 |`ICONTAINS_STRING(expr, str)`|Returns true if the `str` is a substring of `expr`. The match is case-insensitive.|
 |`DECODE_BASE64_UTF8(expr)`|Decodes a Base64-encoded string into a UTF-8 encoded string.|
-|`LEFT(expr, [length])`|Returns the leftmost length characters from `expr`.|
-|`RIGHT(expr, [length])`|Returns the rightmost length characters from `expr`.|
+|`LEFT(expr, N)`|Returns the `N` leftmost characters from `expr`, where `N` is an integer. |
+|`RIGHT(expr, N)`|Returns the `N` rightmost characters from `expr`, where `N` is an integer. |
 |`LENGTH(expr)`|Length of `expr` in UTF-16 code units.|
 |`CHAR_LENGTH(expr)`|Alias for `LENGTH`.|
 |`CHARACTER_LENGTH(expr)`|Alias for `LENGTH`.|
 |`STRLEN(expr)`|Alias for `LENGTH`.|
-|`LOOKUP(expr, lookupName, [replaceMissingValueWith])`|Look up `expr` in a registered [query-time lookup table](lookups.md) named `lookupName`. The optional constant `replaceMissingValueWith`, if provided, is returned when the `expr` is null or when the lookup does not contain a value for `expr`.<br /><br />Lookups can also be queried directly using the [`lookup` schema](sql.md#from).|
+|`LOOKUP(expr, lookupName[, replaceMissingValueWith])`|Searches for `expr` in a registered [query-time lookup table](lookups.md) named `lookupName` and returns the mapped value. If `expr` is null or not contained in the lookup, returns `replaceMissingValueWith` if supplied, otherwise returns null.<br /><br />You can query lookups directly using the [`lookup` schema](sql.md#from).|
 |`LOWER(expr)`|Returns `expr` in all lowercase.|
 |`UPPER(expr)`|Returns `expr` in all uppercase.|
-|`LPAD(expr, length, [chars])`|Returns a string of `length` from `expr` left-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
-|`RPAD(expr, length, [chars])`|Returns a string of `length` from `expr` right-padded with `chars`. If `length` is shorter than the length of `expr`, the result is `expr` which is truncated to `length`. The result will be null if either `expr` or `chars` is null. If `chars` is an empty string, no padding is added, however `expr` may be trimmed if necessary.|
-|`PARSE_LONG(string, [radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
-|`POSITION(needle IN haystack [FROM fromIndex])`|Returns the index of `needle` within `haystack`, with indexes starting from 1. The search will begin at `fromIndex`, or 1 if `fromIndex` is not specified. If `needle` is not found, returns 0.|
-|`REGEXP_EXTRACT(expr, pattern, [index])`|Apply regular expression `pattern` to `expr` and extract a capture group, or `NULL` if there is no match. If index is unspecified or zero, returns the first substring that matched the pattern. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Note: when `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both will return `NULL`).|
+|`LPAD(expr, length[, chars])`|Returns a string of `length` from `expr`. If `expr` is shorter than `length`, left pads `expr` with `chars`, which defaults to space characters. If `expr` exceeds `length`, truncates `expr` to equal `length`.  If `chars` is an empty string, no padding is added. Returns `null` if either `expr` or `chars` is null.|
+|`RPAD(expr, length[, chars])`|Returns a string of `length` from `expr`. If `expr` is shorter than `length`, right pads `expr` with `chars`, which defaults to space characters. If `expr` exceeds `length`, truncates `expr` to equal `length`.  If `chars` is an empty string, no padding is added. Returns `null` if either `expr` or `chars` is null.|
+|`PARSE_LONG(string[, radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
+|`POSITION(substring IN expr [FROM startingIndex])`|Returns the index of `substring` within `expr` with indexes starting from 1. The search begins at `startingIndex`. If `startingIndex` is not specified, the default is 1. If `substring` is not found, returns 0.|
+|`REGEXP_EXTRACT(expr, pattern[, index])`|Apply regular expression `pattern` to `expr` and extract a capture group or `NULL` if there is no match. If `index` is unspecified or zero, returns the first substring that matches the pattern. The pattern may match anywhere inside `expr`. To match the entire string, use the `^` and `$` markers at the start and end of your pattern. When `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both return `NULL`).|
 |`REGEXP_LIKE(expr, pattern)`|Returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Similar to [`LIKE`](sql-operators.md#logical-operators), but uses regexps instead of LIKE patterns. Especially useful in WHERE clauses.|
 |`REGEXP_REPLACE(expr, pattern, replacement)`|Replaces all occurrences of regular expression `pattern` within `expr` with `replacement`. The replacement string may refer to capture groups using `$1`, `$2`, etc. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern.|
-|`REPLACE(expr, pattern, replacement)`|Replaces pattern with replacement in `expr`, and returns the result.|
-|`REPEAT(expr, [N])`|Repeats `expr` N times.|
+|`REPLACE(expr, substring, replacement)`|Replaces instances of `substring` in `expr` with `replacement` and returns the result.|
+|`REPEAT(expr, N)`|Repeats `expr` `N` times.|
 |`REVERSE(expr)`|Reverses `expr`.|
-|`STRING_FORMAT(pattern, [args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
-|`STRPOS(haystack, needle)`|Returns the index of `needle` within `haystack`, with indexes starting from 1. If `needle` is not found, returns 0.|
-|`SUBSTRING(expr, index, [length])`|Returns a substring of `expr` starting at index, with a max length, both measured in UTF-16 code units.|
-|`SUBSTR(expr, index, [length])`|Alias for `SUBSTRING`.|
+|`STRING_FORMAT(pattern[, args...])`|Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
+|`STRPOS(expr, substring)`|Returns the index of `substring` within `expr`, with indexes starting from 1. If `substring` is not found, returns 0.|
+|`SUBSTRING(expr, index[, length])`|Returns a substring of `expr` starting at a given one-based index. If `length` is omitted, extracts characters to the end of the string, otherwise returns a substring of `length` UTF-16 characters.|
+|`SUBSTR(expr, index[, length])`|Alias for `SUBSTRING`.|
 |`TRIM([BOTH `<code>&#124;</code>` LEADING `<code>&#124;</code>` TRAILING] [chars FROM] expr)`|Returns `expr` with characters removed from the leading, trailing, or both ends of `expr` if they are in `chars`. If `chars` is not provided, it defaults to `''` (a space). If the directional argument is not provided, it defaults to `BOTH`.|
-|`BTRIM(expr, [chars])`|Alternate form of `TRIM(BOTH chars FROM expr)`.|
-|`LTRIM(expr, [chars])`|Alternate form of `TRIM(LEADING chars FROM expr)`.|
-|`RTRIM(expr, [chars])`|Alternate form of `TRIM(TRAILING chars FROM expr)`.|
+|`BTRIM(expr[, chars])`|Alternate form of `TRIM(BOTH chars FROM expr)`.|
+|`LTRIM(expr[, chars])`|Alternate form of `TRIM(LEADING chars FROM expr)`.|
+|`RTRIM(expr[, chars])`|Alternate form of `TRIM(TRAILING chars FROM expr)`.|
 
 
 ## Date and time functions 
@@ -143,11 +143,11 @@ Literal timestamps in the connection time zone can be written using `TIMESTAMP '
 simplest way to write literal timestamps in other time zones is to use TIME_PARSE, like
 `TIME_PARSE('2000-02-01 00:00:00', NULL, 'America/Los_Angeles')`.
 
-The best ways to filter based on time are by using ISO8601 intervals, like
+The best way to filter based on time is by using ISO 8601 intervals, like
 `TIME_IN_INTERVAL(__time, '2000-01-01/2000-02-01')`, or by using literal timestamps with the `>=` and `<` operators, like
 `__time >= TIMESTAMP '2000-01-01 00:00:00' AND __time < TIMESTAMP '2000-02-01 00:00:00'`.
 
-Druid supports the standard SQL BETWEEN operator, but we recommend avoiding it for time filters. BETWEEN is inclusive
+Druid supports the standard SQL `BETWEEN` operator, but we recommend avoiding it for time filters. `BETWEEN` is inclusive
 of its upper bound, which makes it awkward to write time filters correctly. For example, the equivalent of
 `TIME_IN_INTERVAL(__time, '2000-01-01/2000-02-01')` is
 `__time BETWEEN TIMESTAMP '2000-01-01 00:00:00' AND TIMESTAMP '2000-01-31 23:59:59.999'`.
@@ -160,23 +160,23 @@ overhead.
 
 |Function|Notes|
 |--------|-----|
-|`CURRENT_TIMESTAMP`|Current timestamp in the connection's time zone.|
-|`CURRENT_DATE`|Current date in the connection's time zone.|
+|`CURRENT_TIMESTAMP`|Current timestamp in UTC time, unless you specify a different timezone in the query context.|
+|`CURRENT_DATE`|Current date in UTC time, unless you specify a different timezone in the query context.|
 |`DATE_TRUNC(unit, timestamp_expr)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be 'milliseconds', 'second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year', 'decade', 'century', or 'millennium'.|
-|`TIME_CEIL(timestamp_expr, period, [origin, [timezone]])`|Rounds up a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). Specify `origin` as a timestamp to set the reference time for rounding. For example, `TIME_CEIL(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `CEIL` but is more flexible.|
-|`TIME_FLOOR(timestamp_expr, period, [origin, [timezone]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO8601 period, like P3M (quarters) or PT12H (half-days). Specify `origin` as a timestamp to set the reference time for rounding. For example, `TIME_FLOOR(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `FLOOR` but is more flexible.|
-|`TIME_SHIFT(timestamp_expr, period, step, [timezone])`|Shifts a timestamp by a period (step times), returning it as a new timestamp. Period can be any ISO8601 period. Step may be negative. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00".|
-|`TIME_EXTRACT(timestamp_expr, [unit, [timezone]])`|Extracts a time part from `expr`, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". This function is similar to `EXTRACT` but is more flexible. Unit and time zone must be literals, and must be provided quoted, like `TIME_EXTRACT(__time, 'HOUR')` or `TIME_EXTRACT(__time, 'HOUR', 'America/Los_Angeles')`.|
-|`TIME_PARSE(string_expr, [pattern, [timezone]])`|Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00", and will be used as the time zone for strings that do not include a time zone offset. Pattern and time zone must be literals. Strings that cannot be parsed as timestamps will be returned as NULL.|
-|`TIME_FORMAT(timestamp_expr, [pattern, [timezone]])`|Formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The time zone, if provided, should be a time zone name like "America/Los_Angeles" or offset like "-08:00". Pattern and time zone must be literals.|
-|`TIME_IN_INTERVAL(timestamp_expr, interval)`|Returns whether a timestamp is contained within a particular interval. The interval must be a literal string containing any ISO8601 interval, such as `'2001-01-01/P1D'` or `'2001-01-01T01:00:00/2001-01-02T01:00:00'`. The start instant of the interval is inclusive and the end instant is exclusive.|
+|`TIME_CEIL(timestamp_expr, period[, origin[, timezone]])`|Rounds up a timestamp, returning it as a new timestamp. Period can be any ISO 8601 period, like P3M (quarters) or PT12H (half-days). Specify `origin` as a timestamp to set the reference time for rounding. For example, `TIME_CEIL(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`. This function is similar to `CEIL` but is more flexible.|
+|`TIME_FLOOR(timestamp_expr, period[, origin[, timezone]])`|Rounds down a timestamp, returning it as a new timestamp. Period can be any ISO 8601 period, like P3M (quarters) or PT12H (half-days). Specify `origin` as a timestamp to set the reference time for rounding. For example, `TIME_FLOOR(__time, 'PT1H', TIMESTAMP '2016-06-27 00:30:00')` measures an hourly period from 00:30-01:30 instead of 00:00-01:00. See [Period granularities](granularities.md) for details on the default starting boundaries. The time zone, if provided, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`. This function is similar to `FLOOR` but is more flexible.|
+|`TIME_SHIFT(timestamp_expr, period, step[, timezone])`|Shifts a timestamp by a period (step times), returning it as a new timestamp. The `period` parameter can be any ISO 8601 period. The `step` parameter can be negative. The time zone, if provided, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`.|
+|`TIME_EXTRACT(timestamp_expr, unit[, timezone])`|Extracts a time part from `expr`, returning it as a number. Unit can be EPOCH, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), DOY (day of year), WEEK (week of [week year](https://en.wikipedia.org/wiki/ISO_week_date)), MONTH (1 through 12), QUARTER (1 through 4), or YEAR. The time zone, if provided, should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`. The `unit` and `timezone` parameters must be provided as quoted literals, such as `TIME_EXTRACT(__time, 'HOUR')` or `TIME_EXTRACT(__time, 'HOUR', 'America/Los_Angeles')`. This function is similar to `EXTRACT` but is more flexible. |
+|`TIME_PARSE(string_expr[, pattern[, timezone]])`|Parses a string into a timestamp using a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO 8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. The `timezone` parameter is used as the time zone for strings that do not already include a time zone offset. If provided, `timezone` should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`. The `pattern` and `timezone` parameters must be literals. Strings that cannot be parsed as timestamps return NULL.|
+|`TIME_FORMAT(timestamp_expr[, pattern[, timezone]])`|Formats a timestamp as a string with a given [Joda DateTimeFormat pattern](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html), or ISO 8601 (e.g. `2000-01-02T03:04:05Z`) if the pattern is not provided. If provided, the `timezone` parameter should be a time zone name like `America/Los_Angeles` or an offset like `-08:00`. The `pattern` and `timezone` parameters must be literals.|
+|`TIME_IN_INTERVAL(timestamp_expr, interval)`|Returns whether a timestamp is contained within a particular interval. The interval must be a literal string containing any ISO 8601 interval, such as `'2001-01-01/P1D'` or `'2001-01-01T01:00:00/2001-01-02T01:00:00'`. The start instant of the interval is inclusive and the end instant is exclusive.|
 |`MILLIS_TO_TIMESTAMP(millis_expr)`|Converts a number of milliseconds since the epoch (1970-01-01 00:00:00 UTC) into a timestamp.|
 |`TIMESTAMP_TO_MILLIS(timestamp_expr)`|Converts a timestamp into a number of milliseconds since the epoch.|
 |`EXTRACT(unit FROM timestamp_expr)`|Extracts a time part from `expr`, returning it as a number. Unit can be EPOCH, MICROSECOND, MILLISECOND, SECOND, MINUTE, HOUR, DAY (day of month), DOW (day of week), ISODOW (ISO day of week), DOY (day of year), WEEK (week of year), MONTH, QUARTER, YEAR, ISOYEAR, DECADE, CENTURY or MILLENNIUM. Units must be provided unquoted, like `EXTRACT(HOUR FROM __time)`.|
-|`FLOOR(timestamp_expr TO unit)`|Rounds down a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
-|`CEIL(timestamp_expr TO unit)`|Rounds up a timestamp, returning it as a new timestamp. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
-|`TIMESTAMPADD(unit, count, timestamp)`|Equivalent to `timestamp + count * INTERVAL '1' UNIT`.|
-|`TIMESTAMPDIFF(unit, timestamp1, timestamp2)`|Returns the (signed) number of `unit` between `timestamp1` and `timestamp2`. Unit can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`FLOOR(timestamp_expr TO unit)`|Rounds down a timestamp, returning it as a new timestamp. The `unit` parameter must be unquoted and can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`CEIL(timestamp_expr TO unit)`|Rounds up a timestamp, returning it as a new timestamp. The `unit` parameter must be unquoted and can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`TIMESTAMPADD(unit, count, timestamp)`|Adds a `count` number of time `unit` to timestamp, equivalent to `timestamp + count * unit`. The `unit` parameter must be unquoted and can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
+|`TIMESTAMPDIFF(unit, timestamp1, timestamp2)`|Returns a signed number of `unit` between `timestamp1` and `timestamp2`. The `unit` parameter must be unquoted and can be SECOND, MINUTE, HOUR, DAY, WEEK, MONTH, QUARTER, or YEAR.|
 
 
 ## Reduction functions
@@ -223,8 +223,8 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 
 |Function|Notes|
 |--------|-----|
-|`HLL_SKETCH_ESTIMATE(expr, [round])`|Returns the distinct count estimate from an HLL sketch. `expr` must return an HLL sketch. The optional `round` boolean parameter will round the estimate if set to `true`, with a default of `false`.|
-|`HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr, [numStdDev])`|Returns the distinct count estimate and error bounds from an HLL sketch. `expr` must return an HLL sketch. An optional `numStdDev` argument can be provided.|
+|`HLL_SKETCH_ESTIMATE(expr[, round])`|Returns the distinct count estimate from an HLL sketch. `expr` must return an HLL sketch. The optional `round` boolean parameter will round the estimate if set to `true`, with a default of `false`.|
+|`HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr[, numStdDev])`|Returns the distinct count estimate and error bounds from an HLL sketch. `expr` must return an HLL sketch. An optional `numStdDev` argument can be provided.|
 |`HLL_SKETCH_UNION([lgK, tgtHllType], expr0, expr1, ...)`|Returns a union of HLL sketches, where each input expression must return an HLL sketch. The `lgK` and `tgtHllType` can be optionally specified as the first parameter; if provided, both optional parameters must be specified.|
 |`HLL_SKETCH_TO_STRING(expr)`|Returns a human-readable string representation of an HLL sketch for debugging. `expr` must return an HLL sketch.|
 
@@ -263,9 +263,9 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |Function|Notes|Default|
 |--------|-----|-------|
 |`DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(expr)`|Computes approximate sums of the values contained within a [Tuple sketch](../development/extensions-core/datasketches-tuple.md#estimated-metrics-values-for-each-column-of-arrayofdoublessketch) column which contains an array of double values as its Summary Object.
-|`DS_TUPLE_DOUBLES_INTERSECT(expr, ..., [nominalEntries])`|Returns an intersection of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
-|`DS_TUPLE_DOUBLES_NOT(expr, ..., [nominalEntries])`|Returns a set difference of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Object are preserved as is. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
-|`DS_TUPLE_DOUBLES_UNION(expr, ..., [nominalEntries])`|Returns a union of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
+|`DS_TUPLE_DOUBLES_INTERSECT(expr, ...[, nominalEntries])`|Returns an intersection of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
+|`DS_TUPLE_DOUBLES_NOT(expr, ...[, nominalEntries])`|Returns a set difference of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Object are preserved as is. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
+|`DS_TUPLE_DOUBLES_UNION(expr, ...[, nominalEntries])`|Returns a union of tuple sketches, where each input expression must return a tuple sketch which contains an array of double values as its Summary Object. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).|
 
 
 ## Other scalar functions
@@ -277,6 +277,6 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`CAST(value AS TYPE)`|Cast value to another type. See [Data types](sql-data-types.md) for details about how Druid SQL handles CAST.|
 |`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
-|`DECODE_BASE64_COMPLEX(dataType, expr)`| Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode. The `hyperUnique` and `serializablePairLongString` data types are supported by default. You can enable support for the following complex data types by loading their extensions:<br/><ul><li>`druid-bloom-filter`: `bloom`</li><li>`druid-datasketches`: `arrayOfDoublesSketch`, `HLLSketch`, `KllDoublesSketch`, `KllFloatsSketch`, `quantilesDoublesSketch`, `thetaSketch`</li><li>`druid-histogram`: `approximateHistogram`, `fixedBucketsHistogram`</li><li>`druid-stats`: `variance`</li><li>`druid-compressed-big-decimal`: `compressedBigDecimal`</li><li>`druid-momentsketch`: `momentSketch`</li><li>`druid-tdigestsketch`: `tDigestSketch`</li></ul>|
+|`DECODE_BASE64_COMPLEX(dataType, expr)`| Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode. The `hyperUnique` and `serializablePairLongString` data types are supported by default. You can enable support for the following complex data types by loading their extensions:<br/><ul><li>`druid-bloom-filter`: `bloom`</li><li>`druid-datasketches`: `arrayOfDoublesSketch`, `HLLSketch`, `KllDoublesSketch`, `KllFloatsSketch`, `quantilesDoublesSketch`, `thetaSketch`</li><li>`druid-histogram`: `approximateHistogram`, `fixedBucketsHistogram`</li><li>`druid-stats`: `variance`</li><li>`druid-compressed-bigdecimal`: `compressedBigDecimal`</li><li>`druid-momentsketch`: `momentSketch`</li><li>`druid-tdigestsketch`: `tDigestSketch`</li></ul>|
 |`NULLIF(value1, value2)`|Returns NULL if `value1` and `value2` match, else returns `value1`.|
 |`NVL(value1, value2)`|Returns `value1` if `value1` is not null, otherwise `value2`.|

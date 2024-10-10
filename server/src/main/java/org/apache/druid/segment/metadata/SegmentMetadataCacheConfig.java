@@ -37,6 +37,10 @@ public class SegmentMetadataCacheConfig
   @JsonProperty
   private Period metadataRefreshPeriod = new Period("PT1M");
 
+  // This is meant to be used for testing purpose.
+  @JsonProperty
+  private boolean disableSegmentMetadataQueries = false;
+
   @JsonProperty
   private AbstractSegmentMetadataCache.ColumnTypeMergePolicy metadataColumnTypeMergePolicy =
       new AbstractSegmentMetadataCache.LeastRestrictiveTypeMergePolicy();
@@ -66,6 +70,11 @@ public class SegmentMetadataCacheConfig
     return awaitInitializationOnStart;
   }
 
+  public boolean isDisableSegmentMetadataQueries()
+  {
+    return disableSegmentMetadataQueries;
+  }
+
   public AbstractSegmentMetadataCache.ColumnTypeMergePolicy getMetadataColumnTypeMergePolicy()
   {
     return metadataColumnTypeMergePolicy;
@@ -74,6 +83,11 @@ public class SegmentMetadataCacheConfig
   public Period getMetadataRefreshPeriod()
   {
     return metadataRefreshPeriod;
+  }
+
+  public void setDisableSegmentMetadataQueries(boolean disableSegmentMetadataQueries)
+  {
+    this.disableSegmentMetadataQueries = disableSegmentMetadataQueries;
   }
 
   @Override

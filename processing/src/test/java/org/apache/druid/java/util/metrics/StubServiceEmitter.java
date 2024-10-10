@@ -26,9 +26,9 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Test implementation of {@link ServiceEmitter} that collects emitted metrics
@@ -38,7 +38,7 @@ public class StubServiceEmitter extends ServiceEmitter implements MetricsVerifie
 {
   private final List<Event> events = new ArrayList<>();
   private final List<AlertEvent> alertEvents = new ArrayList<>();
-  private final Map<String, List<ServiceMetricEvent>> metricEvents = new HashMap<>();
+  private final ConcurrentHashMap<String, List<ServiceMetricEvent>> metricEvents = new ConcurrentHashMap<>();
 
   public StubServiceEmitter()
   {

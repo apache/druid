@@ -41,7 +41,6 @@ import org.joda.time.Interval;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -337,9 +336,33 @@ public class QueryContextTest
         ImmutableMap.of(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "auto")
     );
     assertEquals("auto", context2.getMaxSubqueryMemoryBytes(null));
-    
+
     final QueryContext context3 = new QueryContext(ImmutableMap.of());
     assertEquals("disabled", context3.getMaxSubqueryMemoryBytes("disabled"));
+  }
+
+  @Test
+  public void testGetInFunctionThreshold()
+  {
+    final QueryContext context1 = new QueryContext(
+        ImmutableMap.of(QueryContexts.IN_FUNCTION_THRESHOLD, Integer.MAX_VALUE)
+    );
+    assertEquals(Integer.MAX_VALUE, context1.getInFunctionThreshold());
+
+    final QueryContext context2 = QueryContext.empty();
+    assertEquals(QueryContexts.DEFAULT_IN_FUNCTION_THRESHOLD, context2.getInFunctionThreshold());
+  }
+
+  @Test
+  public void testGetInFunctionExprThreshold()
+  {
+    final QueryContext context1 = new QueryContext(
+        ImmutableMap.of(QueryContexts.IN_FUNCTION_EXPR_THRESHOLD, Integer.MAX_VALUE)
+    );
+    assertEquals(Integer.MAX_VALUE, context1.getInFunctionExprThreshold());
+
+    final QueryContext context2 = QueryContext.empty();
+    assertEquals(QueryContexts.DEFAULT_IN_FUNCTION_EXPR_THRESHOLD, context2.getInFunctionExprThreshold());
   }
 
   @Test
@@ -439,12 +462,6 @@ public class QueryContextTest
     public Map<String, Object> getContext()
     {
       return context;
-    }
-
-    @Override
-    public boolean isDescending()
-    {
-      return false;
     }
 
     @Override

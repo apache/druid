@@ -23,8 +23,8 @@ const snarkdown = require('snarkdown');
 
 const writefile = 'lib/sql-docs.js';
 
-const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 167;
-const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 14;
+const MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS = 198;
+const MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES = 15;
 
 const initialFunctionDocs = {
   TABLE: [['external', convertMarkdownToHtml('Defines a logical table from an external.')]],
@@ -78,6 +78,7 @@ const readDoc = async () => {
     await fs.readFile('../docs/querying/sql-array-functions.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-multivalue-string-functions.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-json-functions.md', 'utf-8'),
+    await fs.readFile('../docs/querying/sql-window-functions.md', 'utf-8'),
     await fs.readFile('../docs/querying/sql-operators.md', 'utf-8'),
   ].join('\n');
 

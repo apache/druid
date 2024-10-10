@@ -22,14 +22,18 @@ package org.apache.druid.segment.incremental;
 import org.apache.druid.guice.annotations.UnstableApi;
 
 /**
- * AppendableIndexSpec describes the in-memory indexing method for data ingestion.
+ * Describes the in-memory indexing method for data ingestion.
  */
 @UnstableApi
 public interface AppendableIndexSpec
 {
-  // Returns a builder of the appendable index.
+  /**
+   * Creates a new builder of the appendable index.
+   */
   AppendableIndexBuilder builder();
 
-  // Returns the default max bytes in memory for this index.
+  /**
+   * Returns the default max bytes in memory for this index.
+   */
   long getDefaultMaxBytesInMemory();
 }

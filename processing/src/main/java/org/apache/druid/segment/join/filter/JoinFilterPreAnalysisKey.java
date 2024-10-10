@@ -68,6 +68,7 @@ public class JoinFilterPreAnalysisKey
     return virtualColumns;
   }
 
+  @Nullable
   public Filter getFilter()
   {
     return filter;

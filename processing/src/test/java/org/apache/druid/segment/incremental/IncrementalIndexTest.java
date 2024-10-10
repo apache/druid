@@ -197,7 +197,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=19.0, long=asdj, double=21.0}], exceptions: [could not convert value [asdj] to long]",
+        "Found unparseable columns in row: [{string=A, float=19.0, long=asdj, double=21.0}], exceptions: [Could not convert value [asdj] to long for dimension [long].]",
         result.getParseException().getMessage()
     );
 
@@ -219,7 +219,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=aaa, long=20, double=21.0}], exceptions: [could not convert value [aaa] to float]",
+        "Found unparseable columns in row: [{string=A, float=aaa, long=20, double=21.0}], exceptions: [Could not convert value [aaa] to float for dimension [float].]",
         result.getParseException().getMessage()
     );
 
@@ -241,7 +241,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=}], exceptions: [could not convert value [] to double]",
+        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=}], exceptions: [Could not convert value [] to double for dimension [double].]",
         result.getParseException().getMessage()
     );
   }
@@ -270,7 +270,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=19.0, long=[10, 5], double=21.0}], exceptions: [Could not ingest value [10, 5] as long. A long column cannot have multiple values in the same row.]",
+        "Found unparseable columns in row: [{string=A, float=19.0, long=[10, 5], double=21.0}], exceptions: [Could not ingest value [[10, 5]] as long for dimension [long]. A long column cannot have multiple values in the same row.]",
         result.getParseException().getMessage()
     );
 
@@ -292,7 +292,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=[10.0, 5.0], long=20, double=21.0}], exceptions: [Could not ingest value [10.0, 5.0] as float. A float column cannot have multiple values in the same row.]",
+        "Found unparseable columns in row: [{string=A, float=[10.0, 5.0], long=20, double=21.0}], exceptions: [Could not ingest value [[10.0, 5.0]] as float for dimension [float]. A float column cannot have multiple values in the same row.]",
         result.getParseException().getMessage()
     );
 
@@ -314,7 +314,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         result.getParseException().getInput()
     );
     Assert.assertEquals(
-        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=[10.0, 5.0]}], exceptions: [Could not ingest value [10.0, 5.0] as double. A double column cannot have multiple values in the same row.]",
+        "Found unparseable columns in row: [{string=A, float=19.0, long=20, double=[10.0, 5.0]}], exceptions: [Could not ingest value [[10.0, 5.0]] as double for dimension [double]. A double column cannot have multiple values in the same row.]",
         result.getParseException().getMessage()
     );
   }
@@ -332,7 +332,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     index.add(row);
     index.add(row);
 
-    Assert.assertEquals("rollup".equals(mode) ? 1 : 3, index.size());
+    Assert.assertEquals("rollup".equals(mode) ? 1 : 3, index.numRows());
   }
 
   @Test

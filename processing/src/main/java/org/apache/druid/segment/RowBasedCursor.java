@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -32,7 +31,7 @@ import javax.annotation.Nullable;
 import java.util.function.ToLongFunction;
 
 /**
- * A {@link Cursor} that is based on a stream of objects. Generally created by a {@link RowBasedStorageAdapter}.
+ * A {@link Cursor} that is based on a stream of objects. Generally created by a {@link RowBasedCursorFactory}.
  *
  * @see RowBasedSegment#RowBasedSegment for implementation notes
  */
@@ -42,7 +41,7 @@ public class RowBasedCursor<RowType> implements Cursor
   private final ToLongFunction<RowType> timestampFunction;
   private final Interval interval;
   private final boolean descending;
-  private final DateTime cursorTime;
+  private final DateTime startTime;
   private final ColumnSelectorFactory columnSelectorFactory;
   private final ValueMatcher valueMatcher;
 
@@ -54,7 +53,6 @@ public class RowBasedCursor<RowType> implements Cursor
       @Nullable final Filter filter,
       final Interval interval,
       final VirtualColumns virtualColumns,
-      final Granularity gran,
       final boolean descending,
       final RowSignature rowSignature
   )
@@ -63,7 +61,7 @@ public class RowBasedCursor<RowType> implements Cursor
     this.timestampFunction = rowAdapter.timestampFunction();
     this.interval = interval;
     this.descending = descending;
-    this.cursorTime = gran.toDateTime(interval.getStartMillis());
+    this.startTime = descending ? interval.getEnd().minus(1) : interval.getStart();
     this.columnSelectorFactory = virtualColumns.wrap(
         new RowBasedColumnSelectorFactory<>(
             rowWalker::currentRow,
@@ -80,8 +78,7 @@ public class RowBasedCursor<RowType> implements Cursor
     } else {
       this.valueMatcher = filter.makeMatcher(this.columnSelectorFactory);
     }
-
-    rowWalker.skipToDateTime(descending ? interval.getEnd().minus(1) : interval.getStart(), descending);
+    rowWalker.skipToDateTime(startTime, descending);
     advanceToMatchingRow();
   }
 
@@ -89,12 +86,6 @@ public class RowBasedCursor<RowType> implements Cursor
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
     return columnSelectorFactory;
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    return cursorTime;
   }
 
   @Override
@@ -129,7 +120,7 @@ public class RowBasedCursor<RowType> implements Cursor
   {
     rowId = 0;
     rowWalker.reset();
-    rowWalker.skipToDateTime(descending ? interval.getEnd().minus(1) : interval.getStart(), descending);
+    rowWalker.skipToDateTime(startTime, descending);
     advanceToMatchingRow();
   }
 
