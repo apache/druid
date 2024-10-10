@@ -276,7 +276,7 @@ public class Logger
 
     if (logStackTrace) {
       // If logging stack traces, *also* log extra context information about DruidExceptions.
-      if (t instanceof DruidException) {
+      if (t instanceof DruidException && !((DruidException) t).getContext().isEmpty()) {
         message = (message == null ? "" : message + "\nDruidException context: " + ((DruidException) t).getContext());
       }
 
