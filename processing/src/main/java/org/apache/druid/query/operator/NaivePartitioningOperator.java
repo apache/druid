@@ -59,13 +59,13 @@ public class NaivePartitioningOperator extends AbstractPartitioningOperator
     return HandleContinuationResult.CONTINUE_PROCESSING;
   }
 
-  private static class StaticReceiver implements Receiver
+  private static class PartitioningReceiver implements Receiver
   {
     Receiver delegate;
     AtomicReference<Iterator<RowsAndColumns>> iterHolder;
     List<String> partitionColumns;
 
-    public StaticReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder, List<String> partitionColumns)
+    public PartitioningReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder, List<String> partitionColumns)
     {
       this.delegate = delegate;
       this.iterHolder = iterHolder;
@@ -81,17 +81,17 @@ public class NaivePartitioningOperator extends AbstractPartitioningOperator
 
       Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac, partitionColumns);
 
-      AtomicReference<Signal> keepItGoing = new AtomicReference<>(Signal.GO);
-      while (keepItGoing.get() == Signal.GO && partitionsIter.hasNext()) {
-        handleKeepItGoing(keepItGoing, partitionsIter, delegate);
+      Signal keepItGoing = Signal.GO;
+      while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
+        keepItGoing = delegate.push(partitionsIter.next());
       }
 
-      if (keepItGoing.get() == Signal.PAUSE && partitionsIter.hasNext()) {
+      if (keepItGoing == Signal.PAUSE && partitionsIter.hasNext()) {
         iterHolder.set(partitionsIter);
         return Signal.PAUSE;
       }
 
-      return keepItGoing.get();
+      return keepItGoing;
     }
 
     @Override
@@ -112,15 +112,9 @@ public class NaivePartitioningOperator extends AbstractPartitioningOperator
     return groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
   }
 
-  protected static void handleKeepItGoing(AtomicReference<Signal> signalRef, Iterator<RowsAndColumns> iterator, Receiver receiver)
-  {
-    RowsAndColumns next = iterator.next();
-    signalRef.set(receiver.push(next));
-  }
-
   @Override
   protected Receiver createReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder)
   {
-    return new StaticReceiver(delegate, iterHolder, partitionColumns);
+    return new PartitioningReceiver(delegate, iterHolder, partitionColumns);
   }
 }

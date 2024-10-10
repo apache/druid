@@ -96,7 +96,7 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
     return HandleContinuationResult.CONTINUE_PROCESSING;
   }
 
-  private static class StaticReceiver implements Receiver
+  private static class PartitioningReceiver implements Receiver
   {
     private final Receiver delegate;
     private final AtomicReference<Iterator<RowsAndColumns>> iterHolder;
@@ -104,7 +104,7 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
     private final int maxRowsMaterialized;
     private final List<String> partitionColumns;
 
-    public StaticReceiver(
+    public PartitioningReceiver(
         Receiver delegate,
         AtomicReference<Iterator<RowsAndColumns>> iterHolder,
         AtomicReference<RowsAndColumns> previousRacRef,
@@ -129,17 +129,23 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
 
       Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac, previousRacRef, partitionColumns, maxRowsMaterialized);
 
-      AtomicReference<Signal> keepItGoing = new AtomicReference<>(Signal.GO);
-      while (keepItGoing.get() == Signal.GO && partitionsIter.hasNext()) {
-        handleKeepItGoing(keepItGoing, partitionsIter, delegate, previousRacRef);
+      Signal keepItGoing = Signal.GO;
+      while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
+        final RowsAndColumns rowsAndColumns = partitionsIter.next();
+        if (partitionsIter.hasNext()) {
+          keepItGoing = delegate.push(rowsAndColumns);
+        } else {
+          // If it's the last element, save it in previousRac instead of pushing to receiver.
+          previousRacRef.set(rowsAndColumns);
+        }
       }
 
-      if (keepItGoing.get() == Signal.PAUSE && partitionsIter.hasNext()) {
+      if (keepItGoing == Signal.PAUSE && partitionsIter.hasNext()) {
         iterHolder.set(partitionsIter);
         return Signal.PAUSE;
       }
 
-      return keepItGoing.get();
+      return keepItGoing;
     }
 
     @Override
@@ -288,25 +294,9 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
     return new GluedRACsIterator(rac, previousRacRef, partitionColumns, maxRowsMaterialized);
   }
 
-  protected static void handleKeepItGoing(
-      AtomicReference<Signal> signalRef,
-      Iterator<RowsAndColumns> iterator,
-      Receiver receiver,
-      AtomicReference<RowsAndColumns> previousRacRef
-  )
-  {
-    RowsAndColumns rowsAndColumns = iterator.next();
-    if (iterator.hasNext()) {
-      signalRef.set(receiver.push(rowsAndColumns));
-    } else {
-      // If it's the last element, save it in previousRac instead of pushing to receiver.
-      previousRacRef.set(rowsAndColumns);
-    }
-  }
-
   @Override
   protected Receiver createReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder)
   {
-    return new StaticReceiver(delegate, iterHolder, previousRacRef, partitionColumns, maxRowsMaterialized);
+    return new PartitioningReceiver(delegate, iterHolder, previousRacRef, partitionColumns, maxRowsMaterialized);
   }
 }
