@@ -62,6 +62,7 @@ import org.eclipse.aether.util.repository.DefaultProxySelector;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -77,6 +78,8 @@ public class PullDependencies implements Runnable
   private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
       "https://repo1.maven.org/maven2/"
   );
+
+  private static final HashSet<Artifact> ARTIFACT_HASH_SET = new HashSet<>();
 
   private static final Dependencies PROVIDED_BY_CORE_DEPENDENCIES =
       Dependencies.builder()
@@ -400,8 +403,11 @@ public class PullDependencies implements Runnable
       for (Artifact artifact : artifacts) {
         if (exclusions.contain(artifact)) {
           log.debug("Skipped Artifact[%s]", artifact);
+        } else if (ARTIFACT_HASH_SET.contains(artifact)) {
+          log.debug("Skipped Artifact[%s]", artifact);
         } else {
           log.info("Adding file [%s] at [%s]", artifact.getFile().getName(), toLocation.getAbsolutePath());
+          ARTIFACT_HASH_SET.add(artifact);
           org.apache.commons.io.FileUtils.copyFileToDirectory(artifact.getFile(), toLocation);
         }
       }
