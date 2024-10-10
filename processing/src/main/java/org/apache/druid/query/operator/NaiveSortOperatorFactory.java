@@ -23,63 +23,20 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
-import java.util.Objects;
 
-public class NaiveSortOperatorFactory implements OperatorFactory
+public class NaiveSortOperatorFactory extends AbstractSortOperatorFactory
 {
-  private final List<ColumnWithDirection> sortColumns;
-
   @JsonCreator
   public NaiveSortOperatorFactory(
       @JsonProperty("columns") List<ColumnWithDirection> sortColumns
   )
   {
-    this.sortColumns = sortColumns;
-  }
-
-  @JsonProperty("columns")
-  public List<ColumnWithDirection> getSortColumns()
-  {
-    return sortColumns;
+    super(sortColumns);
   }
 
   @Override
   public Operator wrap(Operator op)
   {
     return new NaiveSortOperator(op, sortColumns);
-  }
-
-  @Override
-  public boolean validateEquivalent(OperatorFactory other)
-  {
-    if (other instanceof NaiveSortOperatorFactory) {
-      return sortColumns.equals(((NaiveSortOperatorFactory) other).getSortColumns());
-    }
-    return false;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(sortColumns);
-  }
-
-  @Override
-  public boolean equals(Object obj)
-  {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null || getClass() != obj.getClass()) {
-      return false;
-    }
-    NaiveSortOperatorFactory other = (NaiveSortOperatorFactory) obj;
-    return Objects.equals(sortColumns, other.sortColumns);
-  }
-
-  @Override
-  public String toString()
-  {
-    return "NaiveSortOperatorFactory{sortColumns=" + sortColumns + "}";
   }
 }

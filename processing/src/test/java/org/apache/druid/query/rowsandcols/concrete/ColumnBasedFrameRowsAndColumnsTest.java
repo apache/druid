@@ -44,6 +44,7 @@ public class ColumnBasedFrameRowsAndColumnsTest extends RowsAndColumnsTestBase
         null,
         OffsetLimit.limit(Integer.MAX_VALUE),
         null,
+        null,
         null
     );
 

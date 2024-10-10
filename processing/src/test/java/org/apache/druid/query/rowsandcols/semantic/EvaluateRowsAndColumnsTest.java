@@ -89,6 +89,7 @@ public class EvaluateRowsAndColumnsTest extends SemanticTestBase
             TestExprMacroTable.INSTANCE)),
         OffsetLimit.NONE,
         null,
+        null,
         null);
 
     // do the materialziation

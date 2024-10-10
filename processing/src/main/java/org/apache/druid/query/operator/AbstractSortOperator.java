@@ -19,24 +19,26 @@
 
 package org.apache.druid.query.operator;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
+import java.io.Closeable;
 import java.util.List;
 
-public class NaivePartitioningOperatorFactory extends AbstractPartitioningOperatorFactory
+/**
+ * Base class for sort operators.
+ */
+public abstract class AbstractSortOperator implements Operator
 {
-  @JsonCreator
-  public NaivePartitioningOperatorFactory(
-      @JsonProperty("partitionColumns") List<String> partitionColumns
+  protected final Operator child;
+  protected final List<ColumnWithDirection> sortColumns;
+
+  public AbstractSortOperator(
+      Operator child,
+      List<ColumnWithDirection> sortColumns
   )
   {
-    super(partitionColumns);
+    this.child = child;
+    this.sortColumns = sortColumns;
   }
 
   @Override
-  public Operator wrap(Operator op)
-  {
-    return new NaivePartitioningOperator(partitionColumns, op);
-  }
+  public abstract Closeable goOrContinue(Closeable continuation, Receiver receiver);
 }

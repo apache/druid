@@ -77,6 +77,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
   private OffsetLimit limit;
   private LinkedHashSet<String> viewableColumns;
   private List<ColumnWithDirection> ordering;
+  private final Integer allocatorCapacity;
 
   public LazilyDecoratedRowsAndColumns(
       RowsAndColumns base,
@@ -85,7 +86,8 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       VirtualColumns virtualColumns,
       OffsetLimit limit,
       List<ColumnWithDirection> ordering,
-      LinkedHashSet<String> viewableColumns
+      LinkedHashSet<String> viewableColumns,
+      Long allocatorCapacity
   )
   {
     this.base = base;
@@ -95,6 +97,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     this.limit = limit;
     this.ordering = ordering;
     this.viewableColumns = viewableColumns;
+    this.allocatorCapacity = allocatorCapacity != null ? allocatorCapacity.intValue() : 200 << 20;
   }
 
   @Override
@@ -268,7 +271,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
       }
 
       final FrameWriterFactory frameWriterFactory = FrameWriters.makeColumnBasedFrameWriterFactory(
-          new ArenaMemoryAllocatorFactory(200 << 20), // 200 MB, because, why not?
+          new ArenaMemoryAllocatorFactory(allocatorCapacity),
           signature,
           sortColumns
       );
@@ -367,8 +370,7 @@ public class LazilyDecoratedRowsAndColumns implements RowsAndColumns
     // is being left as an exercise for the future.
 
     final RowSignature.Builder sigBob = RowSignature.builder();
-    final ArenaMemoryAllocatorFactory memFactory = new ArenaMemoryAllocatorFactory(200 << 20);
-
+    final ArenaMemoryAllocatorFactory memFactory = new ArenaMemoryAllocatorFactory(allocatorCapacity);
 
     for (String column : columnsToGenerate) {
       final Column racColumn = rac.findColumn(column);
