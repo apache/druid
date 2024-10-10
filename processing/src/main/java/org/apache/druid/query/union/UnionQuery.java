@@ -58,7 +58,7 @@ public class UnionQuery implements Query<RealUnionResult>
 
   @JsonCreator
   public UnionQuery(
-      @JsonProperty("queries")      List<Query<?>> queries,
+      @JsonProperty("queries") List<Query<?>> queries,
       @JsonProperty("context") Map<String, Object> context)
   {
     Preconditions.checkArgument(queries.size() > 1, "union with fewer than 2 queries makes no sense");
@@ -194,7 +194,7 @@ public class UnionQuery implements Query<RealUnionResult>
   public Query<RealUnionResult> withDataSources(List<DataSource> children)
   {
     Preconditions.checkArgument(queries.size() == children.size(), "Number of children must match number of queries");
-    List<Query<?>> newQueries= new ArrayList<>();
+    List<Query<?>> newQueries = new ArrayList<>();
     for (int i = 0; i < queries.size(); i++) {
       newQueries.add(queries.get(i).withDataSource(children.get(i)));
     }
@@ -218,15 +218,6 @@ public class UnionQuery implements Query<RealUnionResult>
 
   public DataSourceAnalysis getDataSourceAnalysis()
   {
-    if(true)
-    {
-      throw new RuntimeException("FIXME: Unimplemented!");
-    }
-    return null;
-
+    throw new RuntimeException("FIXME: Unimplemented!");
   }
-
-
-
-
 }

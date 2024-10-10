@@ -437,4 +437,11 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   {
     return Optional.empty();
   }
+
+  public <T> boolean canExecuteFully(Query<T> query) {
+
+
+
+    return canPerformSubquery(query);
+  }
 }

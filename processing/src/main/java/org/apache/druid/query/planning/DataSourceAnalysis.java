@@ -32,6 +32,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -293,5 +294,13 @@ public class DataSourceAnalysis
            ", baseQuery=" + baseQuery +
            ", preJoinableClauses=" + preJoinableClauses +
            '}';
+  }
+
+  /**
+   * {@link DataSource#isGlobal()}.
+   */
+  public boolean isGlobal()
+  {
+    return baseDataSource.isGlobal();
   }
 }
