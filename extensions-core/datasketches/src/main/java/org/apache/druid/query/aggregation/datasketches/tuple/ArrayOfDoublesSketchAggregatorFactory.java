@@ -321,7 +321,7 @@ public class ArrayOfDoublesSketchAggregatorFactory extends AggregatorFactory
 
     ArrayOfDoublesSketchAggregatorFactory that = (ArrayOfDoublesSketchAggregatorFactory) preAggregated;
     if (nominalEntries <= that.nominalEntries &&
-        numberOfValues <= that.numberOfValues &&
+        numberOfValues == that.numberOfValues &&
         Objects.equals(fieldName, that.fieldName) &&
         Objects.equals(metricColumns, that.metricColumns)
     ) {

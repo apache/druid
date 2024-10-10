@@ -290,7 +290,6 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
     }
     HllSketchAggregatorFactory that = (HllSketchAggregatorFactory) preAggregated;
     if (lgK <= that.lgK &&
-        tgtHllType.ordinal() <= that.tgtHllType.ordinal() &&
         stringEncoding == that.stringEncoding &&
         Objects.equals(fieldName, that.fieldName)
     ) {
