@@ -80,6 +80,37 @@ public abstract class AbstractPartitioningOperator implements Operator
     }
   }
 
+  protected abstract static class AbstractReceiver implements Receiver
+  {
+    protected final Receiver delegate;
+    protected final AtomicReference<Iterator<RowsAndColumns>> iterHolder;
+    protected final List<String> partitionColumns;
+
+    public AbstractReceiver(
+        Receiver delegate,
+        AtomicReference<Iterator<RowsAndColumns>> iterHolder,
+        List<String> partitionColumns
+    )
+    {
+      this.delegate = delegate;
+      this.iterHolder = iterHolder;
+      this.partitionColumns = partitionColumns;
+    }
+
+    @Override
+    public abstract Signal push(RowsAndColumns rac);
+
+    @Override
+    public void completed()
+    {
+      if (iterHolder.get() == null) {
+        delegate.completed();
+      }
+    }
+
+    protected abstract Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac);
+  }
+
   protected abstract HandleContinuationResult handleContinuation(Receiver receiver, Continuation cont);
 
   protected abstract Receiver createReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder);

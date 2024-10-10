@@ -59,17 +59,15 @@ public class NaivePartitioningOperator extends AbstractPartitioningOperator
     return HandleContinuationResult.CONTINUE_PROCESSING;
   }
 
-  private static class PartitioningReceiver implements Receiver
+  private static class NaiveReceiver extends AbstractReceiver
   {
-    Receiver delegate;
-    AtomicReference<Iterator<RowsAndColumns>> iterHolder;
-    List<String> partitionColumns;
-
-    public PartitioningReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder, List<String> partitionColumns)
+    public NaiveReceiver(
+        Receiver delegate,
+        AtomicReference<Iterator<RowsAndColumns>> iterHolder,
+        List<String> partitionColumns
+    )
     {
-      this.delegate = delegate;
-      this.iterHolder = iterHolder;
-      this.partitionColumns = partitionColumns;
+      super(delegate, iterHolder, partitionColumns);
     }
 
     @Override
@@ -79,7 +77,7 @@ public class NaivePartitioningOperator extends AbstractPartitioningOperator
         throw DruidException.defensive("Should never get a null rac here.");
       }
 
-      Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac, partitionColumns);
+      Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac);
 
       Signal keepItGoing = Signal.GO;
       while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
@@ -95,26 +93,19 @@ public class NaivePartitioningOperator extends AbstractPartitioningOperator
     }
 
     @Override
-    public void completed()
+    protected Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac)
     {
-      if (iterHolder.get() == null) {
-        delegate.completed();
+      ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
+      if (groupPartitioner == null) {
+        groupPartitioner = new DefaultClusteredGroupPartitioner(rac);
       }
+      return groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
     }
-  }
-
-  protected static Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac, List<String> partitionColumns)
-  {
-    ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
-    if (groupPartitioner == null) {
-      groupPartitioner = new DefaultClusteredGroupPartitioner(rac);
-    }
-    return groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
   }
 
   @Override
   protected Receiver createReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder)
   {
-    return new PartitioningReceiver(delegate, iterHolder, partitionColumns);
+    return new NaiveReceiver(delegate, iterHolder, partitionColumns);
   }
 }

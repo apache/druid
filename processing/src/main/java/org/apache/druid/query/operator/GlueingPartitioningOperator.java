@@ -96,15 +96,12 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
     return HandleContinuationResult.CONTINUE_PROCESSING;
   }
 
-  private static class PartitioningReceiver implements Receiver
+  private static class GlueingReceiver extends AbstractReceiver
   {
-    private final Receiver delegate;
-    private final AtomicReference<Iterator<RowsAndColumns>> iterHolder;
     private final AtomicReference<RowsAndColumns> previousRacRef;
     private final int maxRowsMaterialized;
-    private final List<String> partitionColumns;
 
-    public PartitioningReceiver(
+    public GlueingReceiver(
         Receiver delegate,
         AtomicReference<Iterator<RowsAndColumns>> iterHolder,
         AtomicReference<RowsAndColumns> previousRacRef,
@@ -112,10 +109,8 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
         int maxRowsMaterialized
     )
     {
-      this.delegate = delegate;
-      this.iterHolder = iterHolder;
+      super(delegate, iterHolder, partitionColumns);
       this.previousRacRef = previousRacRef;
-      this.partitionColumns = partitionColumns;
       this.maxRowsMaterialized = maxRowsMaterialized;
     }
 
@@ -126,7 +121,7 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
         throw DruidException.defensive("Should never get a null rac here.");
       }
       ensureMaxRowsMaterializedConstraint(rac.numRows(), maxRowsMaterialized);
-      Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac, previousRacRef, partitionColumns, maxRowsMaterialized);
+      Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac);
 
       Signal keepItGoing = Signal.GO;
       while (keepItGoing == Signal.GO && partitionsIter.hasNext()) {
@@ -154,9 +149,13 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
         delegate.push(previousRacRef.get());
         previousRacRef.set(null);
       }
-      if (iterHolder.get() == null) {
-        delegate.completed();
-      }
+      super.completed();
+    }
+
+    @Override
+    protected Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac)
+    {
+      return new GluedRACsIterator(rac, previousRacRef, partitionColumns, maxRowsMaterialized);
     }
   }
 
@@ -278,19 +277,9 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
     }
   }
 
-  protected static Iterator<RowsAndColumns> getIteratorForRAC(
-      RowsAndColumns rac,
-      AtomicReference<RowsAndColumns> previousRacRef,
-      List<String> partitionColumns,
-      int maxRowsMaterialized
-  )
-  {
-    return new GluedRACsIterator(rac, previousRacRef, partitionColumns, maxRowsMaterialized);
-  }
-
   @Override
   protected Receiver createReceiver(Receiver delegate, AtomicReference<Iterator<RowsAndColumns>> iterHolder)
   {
-    return new PartitioningReceiver(delegate, iterHolder, previousRacRef, partitionColumns, maxRowsMaterialized);
+    return new GlueingReceiver(delegate, iterHolder, previousRacRef, partitionColumns, maxRowsMaterialized);
   }
 }
