@@ -40,7 +40,6 @@ public class ExtractOperatorConversion implements SqlOperatorConversion
   private static final Map<TimeUnitRange, TimestampExtractExprMacro.Unit> EXTRACT_UNIT_MAP =
       ImmutableMap.<TimeUnitRange, TimestampExtractExprMacro.Unit>builder()
           .put(TimeUnitRange.EPOCH, TimestampExtractExprMacro.Unit.EPOCH)
-          .put(TimeUnitRange.MICROSECOND, TimestampExtractExprMacro.Unit.MICROSECOND)
           .put(TimeUnitRange.MILLISECOND, TimestampExtractExprMacro.Unit.MILLISECOND)
           .put(TimeUnitRange.SECOND, TimestampExtractExprMacro.Unit.SECOND)
           .put(TimeUnitRange.MINUTE, TimestampExtractExprMacro.Unit.MINUTE)
