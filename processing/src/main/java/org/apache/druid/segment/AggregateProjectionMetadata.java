@@ -332,6 +332,7 @@ public class AggregateProjectionMetadata
             if (combining != null) {
               matchBuilder.remapColumn(queryAgg.getName(), projectionAgg.getName()).addPreAggregatedAggregator(combining);
               foundMatch = true;
+              break;
             }
           }
           allMatch = allMatch && foundMatch;
