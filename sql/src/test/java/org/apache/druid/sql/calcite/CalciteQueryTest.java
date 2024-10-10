@@ -4189,7 +4189,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingWithNullPlusNonNullInFilter()
   {
-    msqIncompatible();
     testQuery(
         "SELECT COUNT(*) FROM foo WHERE dim1 IN (NULL, 'abc')",
         ImmutableList.of(
@@ -4209,7 +4208,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingWithNotNullPlusNonNullInFilter()
   {
-    msqIncompatible();
     testQuery(
         "SELECT COUNT(*) FROM foo WHERE dim1 NOT IN (NULL, 'abc')",
         ImmutableList.of(
@@ -4233,7 +4231,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByNothingWithLiterallyFalseFilter()
   {
-    msqIncompatible();
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE 1 = 0",
         ImmutableList.of(
@@ -4258,7 +4255,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByNothingWithImpossibleTimeFilter()
   {
-    msqIncompatible();
     // Regression test for https://github.com/apache/druid/issues/7671
 
     testQuery(
@@ -4700,7 +4696,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountStarWithLongColumnFiltersOnFloatLiterals()
   {
-    msqIncompatible();
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt > 1.1 and cnt < 100000001.0",
         ImmutableList.of(

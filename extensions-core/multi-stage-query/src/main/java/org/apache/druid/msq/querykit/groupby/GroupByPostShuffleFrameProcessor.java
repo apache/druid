@@ -287,7 +287,18 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
       final int resultRowSize = query.getResultRowSignature().size();
       this.outputRow = ResultRow.create(resultRowSize);
       final Object[] nullResultArray = TimeseriesQueryQueryToolChest.getNullAggregations(query.getAggregatorSpecs());
-      System.arraycopy(nullResultArray, 0, outputRow.getArray(), 0, nullResultArray.length);
+      if (query.getResultRowHasTimestamp()) {
+        // Can happen if the query has granularity "ALL" but no intervals. In this case nothing is matched and the
+        // __time column will be ignored, but it's there in the result row signature anyway, so we need to populate it.
+        outputRow.set(0, 0L);
+      }
+      System.arraycopy(
+          nullResultArray,
+          0,
+          outputRow.getArray(),
+          query.getResultRowAggregatorStart(),
+          nullResultArray.length
+      );
       setUpFrameWriterIfNeeded();
       writeOutputRow();
       writeCurrentFrameIfNeeded();
