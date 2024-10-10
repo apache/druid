@@ -195,12 +195,12 @@ public abstract class AbstractPartitioningOperator implements Operator
   /**
    * This helper class helps us distinguish whether we need to continue processing or not.
    */
-  public static class HandleContinuationResult
+  protected static class HandleContinuationResult
   {
     private final Closeable continuation;
     private final boolean continueProcessing;
 
-    public static final HandleContinuationResult CONTINUE_PROCESSING = new HandleContinuationResult(null, true);
+    protected static final HandleContinuationResult CONTINUE_PROCESSING = new HandleContinuationResult(null, true);
 
     private HandleContinuationResult(Closeable continuation, boolean continueProcessing)
     {
@@ -208,17 +208,17 @@ public abstract class AbstractPartitioningOperator implements Operator
       this.continueProcessing = continueProcessing;
     }
 
-    public static HandleContinuationResult of(Closeable closeable)
+    protected static HandleContinuationResult of(Closeable closeable)
     {
       return new HandleContinuationResult(closeable, false);
     }
 
-    public boolean needToContinueProcessing()
+    private boolean needToContinueProcessing()
     {
       return continueProcessing;
     }
 
-    public Closeable getContinuation()
+    private Closeable getContinuation()
     {
       return continuation;
     }
