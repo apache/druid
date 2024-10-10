@@ -104,6 +104,35 @@ public class GlueingPartitioningOperatorTest
   }
 
   @Test
+  public void testPartitioningWithNoGlueing()
+  {
+    InlineScanOperator inlineScanOperator = InlineScanOperator.make(
+        makeSimpleRac(1, 2, 3),
+        makeSimpleRac(4, 5, 6),
+        makeSimpleRac(7, 8, 9)
+    );
+
+    GlueingPartitioningOperator op = new GlueingPartitioningOperator(
+        inlineScanOperator,
+        ImmutableList.of("column")
+    );
+
+    new OperatorTestHelper()
+        .expectRowsAndColumns(
+            expectedSimpleRac(1),
+            expectedSimpleRac(2),
+            expectedSimpleRac(3),
+            expectedSimpleRac(4),
+            expectedSimpleRac(5),
+            expectedSimpleRac(6),
+            expectedSimpleRac(7),
+            expectedSimpleRac(8),
+            expectedSimpleRac(9)
+        )
+        .runToCompletion(op);
+  }
+
+  @Test
   public void testPartitioningWithNoPartitionColumns()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(

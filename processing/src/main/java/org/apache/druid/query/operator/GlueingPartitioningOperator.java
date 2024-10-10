@@ -171,7 +171,6 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
     private final RowsAndColumns rac;
     private final int[] boundaries;
     private int currentIndex = 0;
-    private boolean firstPartitionHandled = false;
     private final AtomicReference<RowsAndColumns> previousRacRef;
     private final int maxRowsMaterialized;
     private final List<String> partitionColumns;
@@ -209,8 +208,7 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
         throw new NoSuchElementException();
       }
 
-      if (!firstPartitionHandled) {
-        firstPartitionHandled = true;
+      if (currentIndex == 0) {
         int start = boundaries[currentIndex];
         int end = boundaries[currentIndex + 1];
         LimitedRowsAndColumns limitedRAC = new LimitedRowsAndColumns(rac, start, end);
