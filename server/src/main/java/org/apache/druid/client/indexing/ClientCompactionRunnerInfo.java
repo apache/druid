@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -107,7 +108,7 @@ public class ClientCompactionRunnerInfo
    * Checks if the provided compaction config is supported by MSQ. The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
-   * <li>'range' partitionsSpec with non-string partition dimensions.</li>
+   * <li>'range' partitionsSpec with non-single-valued-string partition dimensions.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
    * <li>Rollup without metricsSpec being specified or vice-versa.</li>
    * <li>Any aggregatorFactory {@code A} s.t. {@code A != A.combiningFactory()}.</li>
@@ -119,7 +120,9 @@ public class ClientCompactionRunnerInfo
     if (newConfig.getTuningConfig() != null) {
       validationResults.add(validatePartitionsSpecForMSQ(
           newConfig.getTuningConfig().getPartitionsSpec(),
-          newConfig.getDimensionsSpec() == null ? null : newConfig.getDimensionsSpec().getDimensions()
+          newConfig.getDimensionsSpec() == null ? null : newConfig.getDimensionsSpec().getDimensions(),
+          // multi-valued dimensions info is not available inside the compaction config
+          null
       ));
     }
     if (newConfig.getGranularitySpec() != null) {
@@ -138,13 +141,19 @@ public class ClientCompactionRunnerInfo
 
   /**
    * Validate that partitionSpec is either 'dynamic` or 'range'. If 'dynamic', ensure 'maxTotalRows' is null. If range
-   * ensure all partition columns are of string type.
+   * ensure all partition columns are of single-valued string type .
    */
   public static CompactionConfigValidationResult validatePartitionsSpecForMSQ(
       @Nullable PartitionsSpec partitionsSpec,
-      @Nullable List<DimensionSchema> dimensionSchemas
+      @Nullable List<DimensionSchema> dimensionSchemas,
+      @Nullable Set<String> multiValuedDimensions
   )
   {
+    if (partitionsSpec == null) {
+      return CompactionConfigValidationResult.failure(
+          "MSQ: tuningConfig.partitionsSpec must be set"
+      );
+    }
     if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
           || partitionsSpec instanceof DynamicPartitionsSpec)) {
       return CompactionConfigValidationResult.failure(
@@ -163,17 +172,26 @@ public class ClientCompactionRunnerInfo
       Map<String, DimensionSchema> dimensionSchemaMap = dimensionSchemas.stream().collect(
           Collectors.toMap(DimensionSchema::getName, Function.identity())
       );
-      Optional<String> nonStringDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
+      Optional<String> unsupportedDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
           .getPartitionDimensions()
           .stream()
-          .filter(dim -> !ColumnType.STRING.equals(dimensionSchemaMap.get(dim).getColumnType()))
+          .filter(dim -> !ColumnType.STRING.equals(dimensionSchemaMap.get(dim).getColumnType())
+                         || multiValuedDimensions != null && multiValuedDimensions.contains(dim))
           .findAny();
-      if (nonStringDimension.isPresent()) {
-        return CompactionConfigValidationResult.failure(
-            "MSQ: Non-string partition dimension[%s] of type[%s] not supported with 'range' partition spec",
-            nonStringDimension.get(),
-            dimensionSchemaMap.get(nonStringDimension.get()).getTypeName()
-        );
+      if (unsupportedDimension.isPresent()) {
+        DimensionSchema unsupportedDimensionSchema = dimensionSchemaMap.get(unsupportedDimension.get());
+        if (ColumnType.STRING.equals(unsupportedDimensionSchema.getColumnType())) {
+          return CompactionConfigValidationResult.failure(
+              "MSQ: Multi-valued string partition dimension[%s] not supported with 'range' partition spec",
+              unsupportedDimensionSchema.getName()
+          );
+        } else {
+          return CompactionConfigValidationResult.failure(
+              "MSQ: Non-string partition dimension[%s] of type[%s] not supported with 'range' partition spec",
+              unsupportedDimensionSchema.getName(),
+              unsupportedDimensionSchema.getTypeName()
+          );
+        }
       }
     }
     return CompactionConfigValidationResult.success();

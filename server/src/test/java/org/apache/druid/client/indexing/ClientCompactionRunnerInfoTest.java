@@ -96,6 +96,27 @@ public class ClientCompactionRunnerInfoTest
   }
 
   @Test
+  public void testMSQEngineWithNullPartitionsSpecIsInvalid()
+  {
+    DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
+        null,
+        Collections.emptyMap(),
+        null,
+        null,
+        null
+    );
+    CompactionConfigValidationResult validationResult = ClientCompactionRunnerInfo.validateCompactionConfig(
+        compactionConfig,
+        CompactionEngine.NATIVE
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: tuningConfig.partitionsSpec must be specified",
+        validationResult.getReason()
+    );
+  }
+
+  @Test
   public void testMSQEngineWithDynamicPartitionsSpecIsValid()
   {
     DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
@@ -253,7 +274,7 @@ public class ClientCompactionRunnerInfoTest
       List<DimensionSchema> dimensions
   )
   {
-    final DataSourceCompactionConfig config = new DataSourceCompactionConfig(
+    return new DataSourceCompactionConfig(
         "dataSource",
         null,
         500L,
@@ -268,12 +289,11 @@ public class ClientCompactionRunnerInfoTest
         CompactionEngine.MSQ,
         context
     );
-    return config;
   }
 
   private static UserCompactionTaskQueryTuningConfig createTuningConfig(PartitionsSpec partitionsSpec)
   {
-    final UserCompactionTaskQueryTuningConfig tuningConfig = new UserCompactionTaskQueryTuningConfig(
+    return new UserCompactionTaskQueryTuningConfig(
         40000,
         null,
         2000L,
@@ -302,6 +322,5 @@ public class ClientCompactionRunnerInfoTest
         100,
         2
     );
-    return tuningConfig;
   }
 }

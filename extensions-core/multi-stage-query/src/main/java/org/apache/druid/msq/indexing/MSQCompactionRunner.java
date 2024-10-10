@@ -130,7 +130,7 @@ public class MSQCompactionRunner implements CompactionRunner
    * The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
-   * <li>'range' partitionsSpec with non-string partition dimensions.</li>
+   * <li>'range' partitionsSpec with non-single-valued-string partition dimensions.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
    * <li>Rollup without metricsSpec being specified or vice-versa.</li>
    * <li>Any aggregatorFactory {@code A} s.t. {@code A != A.combiningFactory()}.</li>
@@ -153,11 +153,15 @@ public class MSQCompactionRunner implements CompactionRunner
       );
     }
     List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
+    DataSchema dataSchema = Iterables.getOnlyElement(intervalToDataSchemaMap.values());
     if (compactionTask.getTuningConfig() != null) {
       validationResults.add(
           ClientCompactionRunnerInfo.validatePartitionsSpecForMSQ(
               compactionTask.getTuningConfig().getPartitionsSpec(),
-              Iterables.getOnlyElement(intervalToDataSchemaMap.values()).getDimensionsSpec().getDimensions()
+              dataSchema.getDimensionsSpec().getDimensions(),
+              dataSchema instanceof CombinedDataSchema
+              ? ((CombinedDataSchema) dataSchema).getMultiValuedDimensions()
+              : null
           )
       );
     }
