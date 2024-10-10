@@ -207,28 +207,30 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
         throw new NoSuchElementException();
       }
 
-      if (currentIndex == 0) {
-        int start = boundaries[currentIndex];
-        int end = boundaries[currentIndex + 1];
-        LimitedRowsAndColumns limitedRAC = new LimitedRowsAndColumns(rac, start, end);
+      int start = boundaries[currentIndex];
+      int end = boundaries[currentIndex + 1];
 
-        final ConcatRowsAndColumns concatRacForFirstPartition = getConcatRacForFirstPartition(previousRacRef.get(), limitedRAC);
+      if (previousRacRef.get() != null) {
+        if (currentIndex != 0) {
+          throw new ISE("previousRac should be non-null only while handling the first partition boundary.");
+        }
+
+        final RowsAndColumns previousRac = previousRacRef.get();
+        previousRacRef.set(null);
+
+        final LimitedRowsAndColumns limitedRAC = new LimitedRowsAndColumns(rac, start, end);
+
+        final ConcatRowsAndColumns concatRacForFirstPartition = getConcatRacForFirstPartition(previousRac, limitedRAC);
         if (isGlueingNeeded(concatRacForFirstPartition)) {
           ensureMaxRowsMaterializedConstraint(concatRacForFirstPartition.numRows(), maxRowsMaterialized);
-          previousRacRef.set(null);
           currentIndex++;
           return concatRacForFirstPartition;
         } else {
-          if (previousRacRef.get() != null) {
-            RowsAndColumns temp = previousRacRef.get();
-            previousRacRef.set(null);
-            return temp;
-          }
+          return previousRac;
         }
       }
 
-      int start = boundaries[currentIndex];
-      int end = boundaries[currentIndex + 1];
+      // If previousRac is null, just return the next partitioned RAC.
       currentIndex++;
       return new LimitedRowsAndColumns(rac, start, end);
     }
