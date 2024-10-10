@@ -72,43 +72,120 @@ Counts distinct values of a string, numeric, or `hyperUnique` column using Druid
 
 ## APPROX_COUNT_DISTINCT_DS_HLL
 
-`APPROX_COUNT_DISTINCT_DS_HLL(expr, [<NUMERIC>, <CHARACTER>])`
+Approximates distinct values of a HLL sketch column or a regular column. See [DataSketches HLL Sketch module](../development/extensions-core/datasketches-hll.md) for a description of optional parameters.
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax:** `APPROX_COUNT_DISTINCT_DS_HLL(expr, [lgK, tgtHllType])`
+* **Function type:** Aggregation
 
-Counts distinct values of an HLL sketch column or a regular column.
+<details><summary>Example</summary>
+
+The following example returns the approximate number of distinct tail numbers in the `flight_carriers` datasource.
+
+```sql
+SELECT APPROX_COUNT_DISTINCT_DS_HLL("Tail_Number") AS "estimate"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `estimate` |
+| -- |
+| `4686` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## APPROX_COUNT_DISTINCT_DS_THETA
 
-`APPROX_COUNT_DISTINCT_DS_THETA(expr, [<NUMERIC>])`
+Estimates distinct values of a Theta sketch column or a regular column. The [Theta sketch documentation](../development/extensions-core/datasketches-theta#aggregator) describes the optional `size` parameter. 
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax:** `APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`
+* **Function type:** Aggregation
 
-Counts distinct values of a Theta sketch column or a regular column.
+<details><summary>Example</summary>
+
+The following example estimates the number of distinct tail numbers in the `Tail_Number` column from the `flight-carriers` datasource. 
+
+```sql 
+SELECT APPROX_COUNT_DISTINCT_DS_THETA("Tail_Number") AS "estimate"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `estimate` |
+| -- |
+| `4667` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## APPROX_QUANTILE
 
-`APPROX_QUANTILE(expr, <NUMERIC>, [<NUMERIC>])`
+:::info
+Deprecated in favor of [`APPROX_QUANTILE_DS`](#approx_quantile_ds).
+:::
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax:** `APPROX_QUANTILE(expr, fraction, [k])`
+* **Function type:** Aggregation
 
-Deprecated in favor of `APPROX_QUANTILE_DS`.
+[Learn more](sql-aggregations.md)
 
 ## APPROX_QUANTILE_DS
 
-`APPROX_QUANTILE_DS(expr, <NUMERIC>, [<NUMERIC>])`
+Computes approximate quantiles on a Quantiles sketch column or a regular numeric column. The parameter `k` determines the accuracy and size of the sketch. The [DataSketches Quantiles Sketch module](../development/extensions-core/datasketches-quantiles.md) provides more information on the parameter `k`.
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax:** `APPROX_QUANTILE_DS(expr, fraction, [k])`
+* **Function type:** Aggregation
 
-Computes approximate quantiles on a Quantiles sketch column or a regular numeric column.
+
+<details><summary>Example</summary>
+
+The following example approximates the median of the `Distance` column from the `flight-carriers` datasource using a `k` value of 128. The query may return a different approximation on each execution.
+
+```sql
+SELECT APPROX_QUANTILE_DS("Distance", 0.5, 128)  AS "estimate_median"
+FROM "flight-carriers"
+```
+
+May return the following:
+
+| `estimate_median` |
+| -- | 
+| `569` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## APPROX_QUANTILE_FIXED_BUCKETS
 
-`APPROX_QUANTILE_FIXED_BUCKETS(expr, <NUMERIC>, <NUMERIC>, <NUMERIC>, <NUMERIC>, [<CHARACTER>])`
+Computes approximate quantiles on fixed buckets histogram column or a regular numeric column. The [fixed buckets histogram](../development/extensions-core/approximate-histograms.md#fixed-buckets-histogram) documentation describes the parameters.
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax:** `APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`
+* **Function type:** Aggregation
 
-Computes approximate quantiles on fixed buckets histogram column or a regular numeric column.
+
+<details><summary>Example</summary>
+
+The following example approximates the median of a histogram on the `Distance` column from the `flight-carriers` datasource. The histogram has 10 buckets, a lower limit of zero, an upper limit of 2500, and outliers are ignored. 
+
+```sql
+SELECT APPROX_QUANTILE_FIXED_BUCKETS("Distance", 0.5, 10, 0, 2500, 'ignore')  AS "estimate_median"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `estimate_median` |
+| -- | 
+| `571.6983032226562` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## ARRAY[]
 
@@ -395,19 +472,86 @@ Trims characters from both the leading and trailing ends of an expression.
 
 ## CASE
 
-`CASE expr WHEN value1 THEN result1 \[ WHEN value2 THEN result2 ... \] \[ ELSE resultN \] END`
+Returns a result based on given conditions.
 
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+* **Syntax:** `CASE expr WHEN value1 THEN result1 \[ WHEN value2 THEN result2 ... \] \[ ELSE resultN \] END`
+* **Syntax:** `CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`
+* **Function type:** Scalar, other
 
-Returns a result based on a given condition.
+<details><summary>Examples</summary>
+
+The following example returns a string representing the UI type based on the value of `agent_category` from the `kttm` datasource.
+
+```sql
+SELECT "agent_category" AS "device_type",
+CASE "agent_category"
+    WHEN 'Personal computer' THEN 'Large UI'
+    WHEN 'Smartphone' THEN 'Mobile UI'
+    ELSE 'other'
+END AS "UI_type"
+FROM "kttm"
+LIMIT 2
+```
+
+Returns the following:
+
+| `device_type` | `UI_type` |
+| -- | -- |
+| `Personal computer` | `Large UI` |
+| `Smartphone` | `Mobile UI` |
+
+The following example returns a string based on the value of the `OriginStateName` column from the `flight-carriers` datasource.
+
+```sql
+SELECT "OriginStateName" AS "flight_origin",
+CASE
+    WHEN "OriginStateName" = 'Puerto Rico' THEN 'U.S. Territory'
+    WHEN "OriginStateName" = 'U.S. Virgin Islands' THEN 'U.S. Territory'
+    ELSE 'U.S. State'
+END AS "state_status"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `flight_origin` | `departure_location` |
+| -- | -- |
+| `Puerto Rico` | `U.S. Territory` |
+| `Massachusetts` | `U.S. State` |
+
+</details>
+
+[Lean more](sql-scalar.md#other-scalar-functions)
+
 
 ## CAST
 
-`CAST(value AS TYPE)`
-
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
-
 Converts a value into the specified data type.
+
+* **Syntax:** `CAST(value AS TYPE)`
+* **Function type:** Scalar, other
+
+<details><summary>Example</summary>
+
+The following example converts the values in the `Distance` column from the `flight-carriers` datasource from `DOUBLE` into type `VARCHAR`
+
+```sql
+SELECT "Distance" AS "original_column",
+      CAST("Distance" AS VARCHAR) "cast_to_string" 
+FROM "flight-carriers"
+LIMIT 1
+```
+
+Returns the following:
+
+| `original_column` | `cast_to_string` |
+| -- | -- | 
+| `1571` | `1571.0` |
+
+</details>
+
+[Learn more](sql-scalar.md#other-scalar-functions)
 
 ## CEIL (date and time)
 
@@ -443,11 +587,27 @@ Alias for [`LENGTH`](#length).
 
 ## COALESCE
 
-`COALESCE(expr, expr, ...)`
-
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
-
 Returns the first non-null value.
+* **Syntax:** `COALESCE(expr, expr, ...)`
+* **Function type:** Scalar, other
+
+<details><summary>Example</summary>
+
+The following example returns the first non-null value from `null`, `null`, `5`, and `abc`.
+
+```sql
+SELECT COALESCE(null, null, 5, 'abc') AS "first_non_null"
+```
+
+Returns the following:
+
+| `first_non_null` |
+| -- |
+| `5` |
+
+</details>
+
+[Learn more](sql-scalar.md#other-scalar-functions)
 
 ## CONCAT
 
@@ -570,76 +730,278 @@ The `DIV` function is not implemented in Druid versions 30.0.0 or earlier. Consi
 
 ## DS_CDF
 
-`DS_CDF(expr, splitPoint0, splitPoint1, ...)`
+Returns a string representing an approximation to the cumulative distribution function given a list of split points that define the edges of the bins from a Quantiles sketch.  
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `DS_CDF(expr, splitPoint0, splitPoint1, ...)`
+* **Function type:** Scalar, sketch
 
-Returns a string representing an approximation to the Cumulative Distribution Function given the specified bin definition.
+<details><summary>Example</summary>
+
+The following example specifies three split points to return cumulative distribution function approximations on the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation for each bin on each execution.
+
+```sql 
+SELECT DS_CDF( DS_QUANTILES_SKETCH("Distance"), 750, 1500, 2250) AS "estimate_cdf"
+FROM "flight-carriers"
+```
+
+May return the following:
+
+| `estimate_cdf` | 
+| -- |
+| `[0.6332237016416492,0.8908411023460711,0.9612303007393957,1.0]` |
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## DS_GET_QUANTILE
 
-`DS_GET_QUANTILE(expr, fraction)`
+Returns the quantile estimate corresponding to `fraction` from a Quantiles sketch. 
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `DS_GET_QUANTILE(expr, fraction)`
+* **Function type:** Scalar, sketch
 
-Returns the quantile estimate corresponding to `fraction` from a quantiles sketch.
+<details><summary>Example</summary>
+
+The following example approximates the median of the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation with each execution.
+
+```sql
+SELECT DS_GET_QUANTILE( DS_QUANTILES_SKETCH("Distance"), 0.5) AS "estimate_median"
+FROM "flight-carriers"
+```
+
+May return the following:
+
+| `estimate_median` |
+| -- | 
+| `569` |
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## DS_GET_QUANTILES
 
-`DS_GET_QUANTILES(expr, fraction0, fraction1, ...)`
+Returns a string representing an array of quantile estimates corresponding to a list of fractions from a Quantiles sketch. 
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `DS_GET_QUANTILES(expr, fraction0, fraction1, ...)`
+* **Function type:** Scalar, sketch
 
-Returns a string representing an array of quantile estimates corresponding to a list of fractions from a quantiles sketch.
+<details><summary>Example</summary>
+
+The following example approximates the 25th, 50th, and 75th percentiles of the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation for each percentile on each execution.
+
+```sql 
+SELECT DS_GET_QUANTILES( DS_QUANTILES_SKETCH("Distance"), 0.25, 0.5, 0.75) AS "estimate_fractions"
+FROM "flight-carriers"
+```
+
+May returns the following:
+
+| `estimate_fractions` |
+| -- | 
+| `[316.0,571.0,951.0]` |
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## DS_HISTOGRAM
 
-`DS_HISTOGRAM(expr, splitPoint0, splitPoint1, ...)`
+Returns a string representing an approximation to the histogram given a list of split points that define the histogram bins from a Quantiles sketch. 
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `DS_HISTOGRAM(expr, splitPoint0, splitPoint1, ...)`
+* **Function type:** Scalar, sketch
 
-Returns a string representing an approximation to the histogram given the specified bin definition.
+<details><summary>Example</summary>
 
+The following example specifies three split points to approximate a histogram on the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation for each bin on each execution.
+
+```sql
+SELECT DS_HISTOGRAM( DS_QUANTILES_SKETCH("Distance"), 750, 1500, 2250) AS "estimate_histogram"
+FROM "flight-carriers"
+
+```
+
+May return the following:
+
+| `estimate_histogram` | 
+| -- |
+| `[354396.0,150199.00000000003,39848.000000000015,21694.99999999997]` |
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## DS_HLL
 
-`DS_HLL(expr, [lgK, tgtHllType])`
+Creates a HLL sketch on a column containing HLL sketches or a regular column. See [DataSketches HLL Sketch module](../development/extensions-core/datasketches-hll.md) for a description of optional parameters.
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax:**`DS_HLL(expr, [lgK, tgtHllType])`
+* **Function type:** Aggregation
 
-Creates an HLL sketch on a column containing HLL sketches or a regular column.
+<details><summary>Example</summary>
+
+The following example creates a HLL sketch on the `Tail_number` column from the `flight-carriers` dataset, grouping by `OriginState` and `DestState`.
+
+```sql
+SELECT
+  "OriginState" AS "origin_state",
+  "DestState" AS "destination_state",
+  DS_HLL("Tail_Number") AS "hll_tail_number"
+FROM "flight-carriers"
+GROUP BY 1,2
+LIMIT 1
+```
+
+Returns the following:
+
+| `origin_state` | `destination_state` | `hll_tail_number` | 
+| -- | -- | -- | 
+| `AK` | `AK` | `"AwEHDAcIAAFBAAAAfY..."` |
+
+</details>
+
+
+[Learn more](sql-aggregations.md)
 
 ## DS_QUANTILE_SUMMARY
 
-`DS_QUANTILE_SUMMARY(expr)`
+Returns a string summary of a Quantiles sketch. 
+* **Syntax:** `DS_QUANTILE_SUMMARY(expr)`
+* **Function type:** Scalar, sketch
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+<details><summary>Example</summary>
 
-Returns a string summary of a quantiles sketch.
+The following example returns a summary of a Quantiles sketch on the `Distance` column from the `flight-carriers`.
+
+```sql
+SELECT DS_QUANTILE_SUMMARY( DS_QUANTILES_SKETCH("Distance") ) AS "summary"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+<table>
+<tr>
+<td><code>summary</code></td>
+</tr>
+<tr>
+<td>
+
+```
+### Quantiles DirectCompactDoublesSketch SUMMARY: 
+   Empty                        : false
+   Memory, Capacity bytes       : true, 6128
+   Estimation Mode              : true
+   K                            : 128
+   N                            : 566,138
+   Levels (Needed, Total, Valid): 12, 12, 5
+   Level Bit Pattern            : 100010100011
+   BaseBufferCount              : 122
+   Combined Buffer Capacity     : 762
+   Retained Items               : 762
+   Compact Storage Bytes        : 6,128
+   Updatable Storage Bytes      : 14,368
+   Normalized Rank Error        : 1.406%
+   Normalized Rank Error (PMF)  : 1.711%
+   Min Item                     : 2.400000e+01
+   Max Item                     : 4.962000e+03
+### END SKETCH SUMMARY
+```
+
+</td>
+</tr>
+</table>
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## DS_QUANTILES_SKETCH
 
-`DS_QUANTILES_SKETCH(expr, [k])`
+Creates a Quantiles sketch on a column containing Quantiles sketches or a regular column. The parameter `k` determines the accuracy and size of the sketch. The [DataSketches Quantiles Sketch module](../development/extensions-core/datasketches-quantiles.md) provides more information on the parameter `k`.
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax:** `DS_QUANTILES_SKETCH(expr, [k])`
+* **Function type:** Aggregation
 
-Creates a Quantiles sketch on a column containing Quantiles sketches or a regular column.
+<details><summary>Example</summary>
+
+The following example creates a Quantile sketch on the `Distance` column from the `flight-carriers` datasource.
+
+```sql
+SELECT DS_QUANTILES_SKETCH("Distance") AS "quantile_sketch"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `quantile_sketch` | 
+| -- | 
+| `AgMIGoAAAAB6owgAA...` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## DS_RANK
 
-`DS_RANK(expr, value)`
+Returns an approximate rank for `value` between zero and one, in which the rank signifies the fraction of the distribution less than `value`.
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `DS_RANK(expr, value)`
+* **Function type:** Scalar, sketch
 
-Returns an approximate rank between 0 and 1 of a given value, in which the rank signifies the fraction of the distribution less than the given value.
+<details><summary>Example</summary>
+
+The following example approximates what fraction of records have a lesser value than `500` in the `Distance` column from the `flight-carries` datasource. The query may return a different approximation on each execution.
+
+```sql
+SELECT DS_RANK( DS_QUANTILES_SKETCH("Distance"), 500) AS "estimate_rank"
+FROM "flight-carriers"
+```
+
+May return the following:
+
+| `estimate_rank` |
+| -- |
+| `0.43791089804959216` |
+
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## DS_THETA
 
-`DS_THETA(expr, [size])`
+Creates a Theta sketch on a column containing Theta sketches or a regular column. The [Theta sketch documentation](../development/extensions-core/datasketches-theta#aggregator) describes the optional `size` parameter
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax:** `DS_THETA(expr, [size])`
+* **Function type:** Aggregation
 
-Creates a Theta sketch on a column containing Theta sketches or a regular column.
+
+<details><summary>Example</summary>
+
+The following example creates a Theta sketch on the `Tail_number` column from the `flight-carriers` dataset grouping by `originState` and `DestState`.
+
+```sql
+SELECT
+  "OriginState" AS "origin_state",
+  "DestState" AS "destination_state",
+  DS_THETA("Tail_Number") AS "theta_tail_number"
+FROM "flight-carriers"
+GROUP BY 1,2
+LIMIT 1
+```
+
+Returns the following:
+
+| `origin_state` | `destination_state` | `theta_tail_number` |
+| -- | -- | -- |
+| `AK` | `AK` | `AgMDAAAazJNBAAAAA...` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## DS_TUPLE_DOUBLES
 
@@ -665,7 +1027,7 @@ Returns an intersection of Tuple sketches which each contain an array of double 
 
 **Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
 
-Computes approximate sums of the values contained within a Tuple sketch which contains an array of double values as the Summary Object.
+Computes approximate sums of the values contained within a Tuple sketch which contains an array of double values as the Summary Object. 
 
 ## DS_TUPLE_DOUBLES_NOT
 
@@ -757,35 +1119,144 @@ Returns a number for each output row of a groupBy query, indicating whether the 
 
 ## HLL_SKETCH_ESTIMATE
 
-`HLL_SKETCH_ESTIMATE(expr, [round])`
+Returns a distinct count estimate from a HLL sketch. To round the distinct count estimate, set `round` to true. Otherwise, `round` defaults to false.
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `HLL_SKETCH_ESTIMATE(expr, [round])`
+* **Function type:** Scalar, sketch
 
-Returns the distinct count estimate from an HLL sketch.
+
+<details><summary>Example</summary>
+
+The following example estimates the number of unique tail numbers in the `flight-carriers` datasource.
+
+```sql
+SELECT
+  HLL_SKETCH_ESTIMATE(DS_HLL("Tail_Number")) AS "estimate"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `estimate` | 
+| -- |
+| `4685.8815405960595` |
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS
 
-`HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr, [numStdDev])`
+Returns the distinct count estimate and error bounds from a HLL sketch. To specify the number of standard deviations of the bounds use `numStdDev`.
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr, [numStdDev])`
+* **Function type:** Scalar, sketch
 
-Returns the distinct count estimate and error bounds from an HLL sketch.
+<details><summary>Example</summary>
+
+The following example estimates the number of unique tail numbers in the `flight-carriers` datasource with error bounds at plus or minus one standard deviation.
+
+```sql
+SELECT
+  HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(DS_HLL("Tail_Number"), 1) AS "estimate_with_errors"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `estimate_with_errors` |
+| -- |
+| `[4685.8815405960595,4611.381540678335,4762.978259800803]` |
+
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## HLL_SKETCH_TO_STRING
 
-`HLL_SKETCH_TO_STRING(expr)`
+Returns a human-readable string representation of a HLL sketch for debugging.
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `HLL_SKETCH_TO_STRING(expr)`
+* **Function type:** Scalar, sketch
 
-Returns a human-readable string representation of an HLL sketch.
+<details><summary>Example</summary>
+
+The following example returns the HLL sketch on column `Tail_Number` from the `flight-carriers` as a human-readable string.
+
+```sql
+SELECT
+  HLL_SKETCH_TO_STRING( DS_HLL("Tail_Number") ) AS "summary"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+<table>
+<tr>
+<td><code>summary</code></td>
+</tr>
+<tr>
+<td>
+
+```
+### HLL SKETCH SUMMARY: 
+  Log Config K   : 12
+  Hll Target     : HLL_4
+  Current Mode   : HLL
+  Memory         : false
+  LB             : 4611.381540678335
+  Estimate       : 4685.8815405960595
+  UB             : 4762.978259800803
+  OutOfOrder Flag: true
+  CurMin         : 0
+  NumAtCurMin    : 1316
+  HipAccum       : 0.0
+  KxQ0           : 2080.7755126953125
+  KxQ1           : 0.0
+  Rebuild KxQ Flg: false
+```
+
+</td>
+</tr>
+</table>
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## HLL_SKETCH_UNION
 
-`HLL_SKETCH_UNION([lgK, tgtHllType], expr0, expr1, ...)`
+Returns a union of HLL sketches. See [DataSketches HLL Sketch module](../development/extensions-core/datasketches-hll.md) for a description of optional parameters.
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `HLL_SKETCH_UNION([lgK, tgtHllType], expr0, expr1, ...)`
+* **Function type:** Scalar, sketch
 
-Returns a union of HLL sketches.
+
+<details><summary>Example</summary>
+
+The following example estimates the union of the HLL sketch of tail numbers that took off from `CA` and the HLL sketch of tail numbers that took off from `TX`. The examples uses the `Tail_Number` and `OriginState` columns from the `flight-carriers` datasource. 
+
+```sql
+SELECT
+  HLL_SKETCH_ESTIMATE(
+    HLL_SKETCH_UNION( 
+      DS_HLL("Tail_Number") FILTER(WHERE "OriginState" = 'CA'),
+      DS_HLL("Tail_Number") FILTER(WHERE "OriginState" = 'TX')
+    )
+  ) AS "estimate_union"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `estimate_union` |
+| -- |
+| `4204.798431046455` |
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## HUMAN_READABLE_BINARY_BYTE_FORMAT
 
@@ -1180,19 +1651,62 @@ Divides the rows within a window as evenly as possible into the number of tiles,
 
 ## NULLIF
 
-`NULLIF(value1, value2)`
+Returns null if two values are equal, else returns the first value.
+* **Syntax:** `NULLIF(value1, value2)`
+* **Function type:** Scalar, other
 
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+<details><summary>Example</summary>
 
-Returns NULL if two values are equal, else returns the first value.
+The following example returns null if the `OriginState` column from the `flight-carriers` datasource is `PR`.
+
+```sql
+SELECT "OriginState" AS "origin_state",
+  NULLIF("OriginState", 'PR') AS "remove_pr"
+FROM "flight-carriers"
+LIMIT 2
+```
+
+Returns the following:
+
+| `origin_state` | `remove_pr` |
+| -- | -- |
+| `PR` | `null` |
+| `MA` | `MA` |
+
+</details>
+
+[Learn more](sql-scalar.md#other-scalar-functions)
+
 
 ## NVL
 
-`NVL(e1, e2)`
+Returns `value1` if `value1` is not null, otherwise returns `value2`.
 
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+* **Syntax:** `NVL(value1, value1)`
+* **Function type:** Scalar, other
 
-Returns `e2` if `e1` is null, else returns `e1`.
+<details><summary>Example</summary>
+
+The following example returns "No tail number" if the `Tail_Number` column from the `flight-carriers` datasource is null.
+
+```sql
+SELECT "Tail_Number" AS "original_column",
+  NVL("Tail_Number", 'No tail number') AS "remove_null"
+FROM "flight-carriers"
+WHERE "OriginState" = 'CT'
+LIMIT 2
+```
+
+Returns the following:
+
+| `original_column` | `remove_null`
+| -- | -- |
+| `N951DL` | `N951DL` |
+| `null` | `No tail number` |
+
+</details>
+
+[Learn more](sql-scalar.md#other-scalar-functions)
 
 ## PARSE_JSON
 
@@ -1494,43 +2008,154 @@ Concatenates two string expressions.
 
 ## THETA_SKETCH_ESTIMATE
 
-`THETA_SKETCH_ESTIMATE(expr)`
+Returns the distinct count estimate from a Theta sketch. The `expr` argument must return a Theta sketch.
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `THETA_SKETCH_ESTIMATE(expr)`
+* **Function type:** Scalar, sketch
 
-Returns the distinct count estimate from a Theta sketch.
+<details><summary>Example</summary>
+
+The following example estimates the distinct number of tail numbers in the `Tail_Number` column from the `flight-carriers` datasource.
+
+```sql
+SELECT THETA_SKETCH_ESTIMATE( DS_THETA("Tail_Number") ) AS "estimate"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `estimate` |
+| -- | 
+| `4667` |
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS
 
-`THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr, errorBoundsStdDev)`
+Returns the distinct count estimate and error bounds from a Theta sketch. The `expr` argument must return a Theta sketch. The optional `errorBoundsStdDev` argument represents the standard deviation of the error bars and  must be 1, 2, or 3.
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr, errorBoundsStdDev)`
+* **Function type:** Scalar, sketch
 
-Returns the distinct count estimate and error bounds from a Theta sketch.
+<details><summary>Details</summary>
+
+The following example returns the estimate with error bars for the number of distinct tail numbers in the `Tail_Number` column from the `flight-carriers`.
+
+```sql
+SELECT THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(DS_THETA("Tail_Number", 4096), 1) AS "estimate_with_error"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `estimate_with_error` |
+| -- |
+| `{"estimate":4691.201541339628,"highBound":4718.4577807143205,"lowBound":4664.093801991001,"numStdDev":1}` |
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## THETA_SKETCH_INTERSECT
 
-`THETA_SKETCH_INTERSECT([size], expr0, expr1, ...)`
+Returns an intersection of Theta sketches. Each input expression must return a Theta sketch. The [Theta sketch documentation](../development/extensions-core/datasketches-theta#aggregator) describes the optional `size` parameter. 
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `THETA_SKETCH_INTERSECT([size], expr0, expr1, ...)`
+* **Function type:** Scalar, sketch
 
-Returns an intersection of Theta sketches.
+<details><summary>Example</summary>
+
+The following example estimates the intersection of distinct tail numbers that have flights that originate in `CA`, `TX` and `NY` based on the `flight-carriers` datasource.
+
+```sql
+SELECT
+  THETA_SKETCH_ESTIMATE(
+    THETA_SKETCH_INTERSECT( 
+      DS_THETA("Tail_Number") FILTER(WHERE "OriginState" = 'CA'),
+      DS_THETA("Tail_Number") FILTER(WHERE "OriginState" = 'TX'),
+      DS_THETA("Tail_Number") FILTER(WHERE "OriginState" = 'NY')
+    )
+  ) AS "estimate_intersection"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `estimate_intersection` |
+| -- |
+| `1701` |
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## THETA_SKETCH_NOT
 
-`THETA_SKETCH_NOT([size], expr0, expr1, ...)`
+Returns a set difference of Theta sketches. Each input expression must return a Theta sketch. The [Theta sketch documentation](../development/extensions-core/datasketches-theta#aggregator) describes the optional `size` parameter.
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:** `THETA_SKETCH_NOT([size], expr0, expr1, ...)`
+* **Function type:** Scalar, sketch
 
-Returns a set difference of Theta sketches.
+<details><summary>Example</summary>
+
+The following example estimates the number of distinct tail numbers that have no departures from the states of `CA`, `TX`, or `NY` based on the `flight-carriers` datasource.
+
+```sql
+SELECT
+  THETA_SKETCH_ESTIMATE(
+    THETA_SKETCH_NOT( 
+      DS_THETA("Tail_Number"),
+      DS_THETA("Tail_Number") FILTER(WHERE "OriginState" = 'CA'),
+      DS_THETA("Tail_Number") FILTER(WHERE "OriginState" = 'TX'),
+      DS_THETA("Tail_Number") FILTER(WHERE "OriginState" = 'NY')
+    )
+  ) AS "estimate_not"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `estimate_not` |
+| -- | 
+| `145` |
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## THETA_SKETCH_UNION
 
-`THETA_SKETCH_UNION([size], expr0, expr1, ...)`
+Returns a union of Theta sketches. Each input expression must return a Theta sketch. The [Theta sketch documentation](../development/extensions-core/datasketches-theta#aggregator) describes the optional `size` parameter.
 
-**Function type:** [Scalar, sketch](sql-scalar.md#sketch-functions)
+* **Syntax:**`THETA_SKETCH_UNION([size], expr0, expr1, ...)`
+* **Function type:** Scalar, sketch
 
-Returns a union of Theta sketches.
+<details><summary>Example</summary>
+
+The following example estimates the number of distinct tail numbers that have departures from `CA`, `TX`, or `NY`.
+
+```sql
+SELECT
+  THETA_SKETCH_ESTIMATE(
+    THETA_SKETCH_UNION( 
+      DS_THETA("Tail_Number") FILTER(WHERE "OriginState" = 'CA'),
+      DS_THETA("Tail_Number") FILTER(WHERE "OriginState" = 'TX'),
+      DS_THETA("Tail_Number") FILTER(WHERE "OriginState" = 'NY')
+    )
+  ) AS "estimate_union"
+FROM "flight-carriers"
+```
+Returns the following:
+
+| `estimate_union` |
+| -- |
+| `4522` |
+
+</details>
+
+[Learn more](sql-scalar.md#sketch-functions)
 
 ## TIME_CEIL
 
