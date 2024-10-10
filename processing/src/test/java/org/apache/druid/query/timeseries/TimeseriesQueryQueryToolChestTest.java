@@ -462,7 +462,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
   }
 
   @Test
-  public void testGetNullTimeseriesResultValue()
+  public void testGetEmptyTimeseriesResultValue()
   {
     final TimeseriesQuery query =
         Druids.newTimeseriesQueryBuilder()
@@ -480,7 +480,7 @@ public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTe
             DateTimes.of("2000"),
             new TimeseriesResultValue(resultMap)
         ),
-        TOOL_CHEST.getNullTimeseriesResultValue(query)
+        TOOL_CHEST.getEmptyTimeseriesResultValue(query)
     );
   }
 }

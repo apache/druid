@@ -142,7 +142,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
         }
 
         writeCurrentFrameIfNeeded();
-        writeNullAggregationsFrameIfNeeded();
+        writeEmptyAggregationsFrameIfNeeded();
         return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         final Frame frame = inputChannel.read();
@@ -280,24 +280,24 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
    * there would only be a single output partition of the prior stage, and therefore a single instance of
    * this processor. This ensures that only a single null-aggregations row is generated for the entire stage.
    */
-  private void writeNullAggregationsFrameIfNeeded() throws IOException
+  private void writeEmptyAggregationsFrameIfNeeded() throws IOException
   {
     // Check isIncludeNullResultRow, which is populated by the SQL planner when doing a query like GROUP BY ().
     if (outputRows == 0 && GroupingEngine.summaryRowPreconditions(query)) {
       final int resultRowSize = query.getResultRowSignature().size();
       this.outputRow = ResultRow.create(resultRowSize);
-      final Object[] nullResultArray = TimeseriesQueryQueryToolChest.getNullAggregations(query.getAggregatorSpecs());
+      final Object[] emptyResultArray = TimeseriesQueryQueryToolChest.getEmptyAggregations(query.getAggregatorSpecs());
       if (query.getResultRowHasTimestamp()) {
         // Can happen if the query has granularity "ALL" but no intervals. In this case nothing is matched and the
         // __time column will be ignored, but it's there in the result row signature anyway, so we need to populate it.
         outputRow.set(0, 0L);
       }
       System.arraycopy(
-          nullResultArray,
+          emptyResultArray,
           0,
           outputRow.getArray(),
           query.getResultRowAggregatorStart(),
-          nullResultArray.length
+          emptyResultArray.length
       );
       setUpFrameWriterIfNeeded();
       writeOutputRow();

@@ -164,8 +164,9 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         // Usally it is NOT Okay to materialize results via toList(), but Granularity is ALL thus
         // we have only one record.
         final List<Result<TimeseriesResultValue>> val = baseResults.toList();
-        finalSequence = val.isEmpty() ? Sequences.simple(Collections.singletonList(
-            getNullTimeseriesResultValue(query))) : Sequences.simple(val);
+        finalSequence = val.isEmpty()
+                        ? Sequences.simple(Collections.singletonList(getEmptyTimeseriesResultValue(query)))
+                        : Sequences.simple(val);
       } else {
         finalSequence = baseResults;
       }
@@ -231,9 +232,13 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     return ResultGranularTimestampComparator.create(query.getGranularity(), ((TimeseriesQuery) query).isDescending());
   }
 
-  public Result<TimeseriesResultValue> getNullTimeseriesResultValue(TimeseriesQuery query)
+  /**
+   * Returns a {@link TimeseriesResultValue} that corresponds to an empty-set aggregation, which is used in situations
+   * where we want to return a single result representing "nothing was aggregated".
+   */
+  public Result<TimeseriesResultValue> getEmptyTimeseriesResultValue(TimeseriesQuery query)
   {
-    final Object[] resultArray = getNullAggregations(query.getAggregatorSpecs());
+    final Object[] resultArray = getEmptyAggregations(query.getAggregatorSpecs());
     final DateTime start = query.getIntervals().isEmpty() ? DateTimes.EPOCH : query.getIntervals().get(0).getStart();
     TimeseriesResultBuilder bob = new TimeseriesResultBuilder(start);
     for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
@@ -533,7 +538,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     };
   }
 
-  public static Object[] getNullAggregations(List<AggregatorFactory> aggregatorSpecs)
+  /**
+   * Returns a set of values that corresponds to an empty-set aggregation, which is used in situations
+   * where we want to return a single result representing "nothing was aggregated". The returned array has
+   * one element per {@link AggregatorFactory}.
+   */
+  public static Object[] getEmptyAggregations(List<AggregatorFactory> aggregatorSpecs)
   {
     final Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
     final RowSignature aggregatorsSignature =
