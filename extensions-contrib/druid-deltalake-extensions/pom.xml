@@ -48,6 +48,18 @@
       <groupId>io.delta</groupId>
       <artifactId>delta-kernel-defaults</artifactId>
       <version>${delta-kernel.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-client-runtime</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client-runtime</artifactId>
+      <version>${hadoop.compile.version}</version>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
