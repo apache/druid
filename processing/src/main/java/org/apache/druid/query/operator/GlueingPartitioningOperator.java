@@ -122,11 +122,10 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
     @Override
     public Signal push(RowsAndColumns rac)
     {
-      ensureMaxRowsMaterializedConstraint(rac.numRows(), maxRowsMaterialized);
       if (rac == null) {
         throw DruidException.defensive("Should never get a null rac here.");
       }
-
+      ensureMaxRowsMaterializedConstraint(rac.numRows(), maxRowsMaterialized);
       Iterator<RowsAndColumns> partitionsIter = getIteratorForRAC(rac, previousRacRef, partitionColumns, maxRowsMaterialized);
 
       Signal keepItGoing = Signal.GO;
