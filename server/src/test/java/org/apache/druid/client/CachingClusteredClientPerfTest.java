@@ -172,7 +172,6 @@ public class CachingClusteredClientPerfTest
 
   private static class MockQueryToolChestWareHouse implements QueryToolChestWarehouse
   {
-
     @Override
     public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
     {

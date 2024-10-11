@@ -33,6 +33,7 @@ import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
+import org.apache.druid.query.ConglomerateBackedQueryToolChestWarehouse;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -45,8 +46,6 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
@@ -137,14 +136,7 @@ public class QueryStackTests
         emitter,
         clusterWalker,
         localWalker,
-        new QueryToolChestWarehouse()
-        {
-          @Override
-          public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
-          {
-            return conglomerate.findFactory(query).getToolchest();
-          }
-        },
+        new ConglomerateBackedQueryToolChestWarehouse(conglomerate),
         joinableFactory,
         new RetryQueryRunnerConfig(),
         injector.getInstance(ObjectMapper.class),

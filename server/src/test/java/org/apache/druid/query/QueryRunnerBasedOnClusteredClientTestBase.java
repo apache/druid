@@ -109,15 +109,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
         CLOSER,
         () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
     );
-
-    toolChestWarehouse = new QueryToolChestWarehouse()
-    {
-      @Override
-      public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
-      {
-        return conglomerate.findFactory(query).getToolchest();
-      }
-    };
+    toolChestWarehouse = new ConglomerateBackedQueryToolChestWarehouse(conglomerate);
   }
 
   @AfterClass
