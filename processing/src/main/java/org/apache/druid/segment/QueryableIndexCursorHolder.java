@@ -249,8 +249,6 @@ public class QueryableIndexCursorHolder implements CursorHolder
     final NumericColumn timestamps = resources.timestamps;
     final ColumnCache columnCache = resources.columnCache;
     final Order timeOrder = resources.timeOrder;
-    // Wrap the remainder of cursor setup in a try, so if an error is encountered while setting it up, we don't
-    // leak columns in the ColumnCache.
 
     // sanity check
     if (!canVectorize()) {
