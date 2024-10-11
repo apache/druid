@@ -311,6 +311,22 @@ public class QueryStackTests
     final TestGroupByBuffers groupByBuffers =
         closer.register(TestGroupByBuffers.createFromProcessingConfig(processingConfig));
 
+    return createQueryRunnerFactoryConglomerate(
+        processingConfig,
+        minTopNThresholdSupplier,
+        jsonMapper,
+        testBufferPool,
+        groupByBuffers);
+  }
+
+  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
+      final DruidProcessingConfig processingConfig,
+      final Supplier<Integer> minTopNThresholdSupplier,
+      final ObjectMapper jsonMapper,
+      final TestBufferPool testBufferPool,
+      final TestGroupByBuffers groupByBuffers
+  )
+  {
     final GroupByQueryRunnerFactory groupByQueryRunnerFactory =
         GroupByQueryRunnerTest.makeQueryRunnerFactory(
             jsonMapper,
