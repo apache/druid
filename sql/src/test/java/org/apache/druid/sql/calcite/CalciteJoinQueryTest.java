@@ -4325,6 +4325,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     });
   }
 
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNION_ALL_QUERY)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testUnionAllTwoQueriesLeftQueryIsJoin(Map<String, Object> queryContext)
@@ -4369,7 +4370,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNION_WITH_COMPLEX_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNION_ALL_QUERY)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testUnionAllTwoQueriesRightQueryIsJoin(Map<String, Object> queryContext)
@@ -4414,6 +4415,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNION_ALL_QUERY)
   @Test
   public void testUnionAllTwoQueriesBothQueriesAreJoin()
   {

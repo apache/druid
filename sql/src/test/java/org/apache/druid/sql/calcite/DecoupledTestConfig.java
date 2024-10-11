@@ -157,7 +157,11 @@ public @interface DecoupledTestConfig
     /**
      * New plan UNNEST-s a different resultset.
      */
-    UNNEST_DIFFERENT_RESULTSET;
+    UNNEST_DIFFERENT_RESULTSET,
+    /**
+     * Uses a UNION ALL query.
+     */
+    UNION_ALL_QUERY;
 
     public boolean isPresent()
     {
