@@ -605,20 +605,16 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public TestBufferPool makeProcessingConfig1()
+    public TestBufferPool makeTestBufferPool()
     {
-      Closer closer = resourceCloser;
-      final TestBufferPool testBufferPool = QueryStackTests.makeTestBufferPool(closer);
-      return testBufferPool;
+      return QueryStackTests.makeTestBufferPool(resourceCloser);
     }
 
     @Provides
     @LazySingleton
-    public TestGroupByBuffers makeProcessingConfig1(DruidProcessingConfig processingConfig)
+    public TestGroupByBuffers makeTestGroupByBuffers(DruidProcessingConfig processingConfig)
     {
-      Closer closer = resourceCloser;
-      final TestGroupByBuffers groupByBuffers = QueryStackTests.makeGroupByBuffers(closer, processingConfig);
-      return groupByBuffers;
+      return QueryStackTests.makeGroupByBuffers(resourceCloser, processingConfig);
     }
 
     @Provides
