@@ -4231,6 +4231,20 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByNothingWithLiterallyFalseFilter()
   {
+    // Result of MAX(cnt) when nothing matches the filter.
+    final Long emptyMaxResult;
+
+    if (testBuilder().config.isRunningMSQ() && NullHandling.replaceWithDefault()) {
+      // Standard SQL dictates an empty MAX should return NULL. Calcite is smart enough to know that this query can
+      // never match anything, and therefore the query should return COUNT(*) = 0, MAX(cnt) = NULL. However, when
+      // running with MSQ in replace-with-default mode, the null gets turned into a 0 because we actually run the
+      // inline datasource through the MSQ engine. This doesn't happen with native, where the null from Calcite's
+      // plan is returned as-is.
+      emptyMaxResult = 0L;
+    } else {
+      emptyMaxResult = null;
+    }
+
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE 1 = 0",
         ImmutableList.of(
@@ -4247,7 +4261,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{0L, null}
+            new Object[]{0L, emptyMaxResult}
         )
     );
   }
