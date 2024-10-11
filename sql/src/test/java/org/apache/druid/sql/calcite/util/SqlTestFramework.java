@@ -265,20 +265,12 @@ public class SqlTestFramework
         ObjectMapper jsonMapper
     )
     {
-      if (builder.mergeBufferCount == 0) {
-        return QueryStackTests.createQueryRunnerFactoryConglomerate(
-            resourceCloser,
-            builder.minTopNThreshold,
-            jsonMapper
-        );
-      } else {
-        return QueryStackTests.createQueryRunnerFactoryConglomerate(
-            resourceCloser,
-            QueryStackTests.getProcessingConfig(builder.mergeBufferCount),
-            TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD,
-            jsonMapper
-        );
-      }
+      return QueryStackTests.createQueryRunnerFactoryConglomerate(
+          resourceCloser,
+          QueryStackTests.getProcessingConfig(builder.mergeBufferCount),
+          builder.minTopNThreshold,
+          jsonMapper
+      );
     }
 
     @Override
