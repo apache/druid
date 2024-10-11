@@ -25,7 +25,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
 
 import java.util.ArrayList;
@@ -33,19 +32,17 @@ import java.util.List;
 
 class UnionQueryRunner implements QueryRunner<RealUnionResult>
 {
+  private final QuerySegmentWalker walker;
+  private final UnionQuery query;
+  private final List<QueryRunner> runners;
 
-  private QueryToolChestWarehouse warehouse;
-  private QuerySegmentWalker walker;
-  private UnionQuery query;
-  private List<QueryRunner> runners;
-
-  public UnionQueryRunner(QueryToolChestWarehouse warehouse, UnionQuery query,
-      QuerySegmentWalker walker)
+  public UnionQueryRunner(
+      UnionQuery query,
+      QuerySegmentWalker walker
+  )
   {
-    this.warehouse = warehouse;
     this.query = query;
     this.walker = walker;
-
     this.runners = makeSubQueryRunners(query);
   }
 

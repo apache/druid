@@ -53,8 +53,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
   public QueryRunner<RealUnionResult> makeQueryRunner(QueryToolChestWarehouse warehouse,
       Query<RealUnionResult> query, QuerySegmentWalker clientQuerySegmentWalker)
   {
-    UnionQueryRunner runner = new UnionQueryRunner(warehouse, (UnionQuery) query, clientQuerySegmentWalker);
-    setWarehouse(warehouse);
+    UnionQueryRunner runner = new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker);
     return runner;
   }
 

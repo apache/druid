@@ -452,7 +452,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               )
           );
           QueryToolChest subQueryToolChest = warehouse.getToolChest(subQuery);
-          subQueryToolChest.setWarehouse(warehouse);
 
 //          final QueryRunner<?> subQueryRunner ;
           final QueryRunner subQueryRunner;

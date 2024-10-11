@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
+import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.guice.annotations.ExtensionPoint;
@@ -424,9 +425,10 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     return Optional.empty();
   }
 
+  @Inject
   public void setWarehouse(QueryToolChestWarehouse warehouse)
   {
-    this.warehouse=warehouse;
+    this.warehouse = warehouse;
   }
 
   public Optional<QueryRunner<ResultType>> executeQuery(
