@@ -25,8 +25,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
@@ -36,22 +34,19 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.SegmentReference;
-import org.joda.time.DateTimeZone;
-import org.joda.time.Duration;
-import org.joda.time.Interval;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-public class UnionQuery implements Query<RealUnionResult>
+public class UnionQuery extends BaseQuery<RealUnionResult>
 {
+
   @JsonProperty("context")
   protected final Map<String, Object> context;
 
@@ -60,14 +55,16 @@ public class UnionQuery implements Query<RealUnionResult>
 
   public UnionQuery(List<Query<?>> queries)
   {
-    this(queries, queries.get(0).getContext());
+    this(MultipleIntervalSegmentSpec.ETERNITY, queries, queries.get(0).getContext());
   }
 
   @JsonCreator
   public UnionQuery(
+      @JsonProperty("intervals") QuerySegmentSpec intervals,
       @JsonProperty("queries") List<Query<?>> queries,
       @JsonProperty("context") Map<String, Object> context)
   {
+    super(intervals, context);
     Preconditions.checkArgument(queries.size() > 1, "union with fewer than 2 queries makes no sense");
     this.queries = queries;
     this.context = context;
@@ -116,36 +113,6 @@ public class UnionQuery implements Query<RealUnionResult>
   }
 
   @Override
-  public List<Interval> getIntervals()
-  {
-    return Collections.emptyList();
-  }
-
-  @Override
-  public Duration getDuration()
-  {
-    throw DruidException.defensive("This is not supported");
-  }
-
-  @Override
-  public Granularity getGranularity()
-  {
-    return Granularities.ALL;
-  }
-
-  @Override
-  public DateTimeZone getTimezone()
-  {
-    throw DruidException.defensive("This is not supported");
-  }
-
-  @Override
-  public Map<String, Object> getContext()
-  {
-    return context;
-  }
-
-  @Override
   public Ordering<RealUnionResult> getResultOrdering()
   {
     throw new RuntimeException("FIXME: Unimplemented!");
@@ -155,13 +122,13 @@ public class UnionQuery implements Query<RealUnionResult>
   public Query<RealUnionResult> withOverriddenContext(Map<String, Object> contextOverrides)
   {
     List<Query<?>> newQueries = mapQueries(q -> q.withOverriddenContext(contextOverrides));
-    return new UnionQuery(newQueries, QueryContexts.override(getContext(), contextOverrides));
+    return new UnionQuery(getQuerySegmentSpec(), newQueries, QueryContexts.override(getContext(), contextOverrides));
   }
 
   @Override
   public Query<RealUnionResult> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    throw new RuntimeException("FIXME: Unimplemented!");
+    return new UnionQuery(spec, queries, context);
   }
 
   @Override
@@ -202,7 +169,7 @@ public class UnionQuery implements Query<RealUnionResult>
     for (int i = 0; i < queries.size(); i++) {
       newQueries.add(queries.get(i).withDataSource(children.get(i)));
     }
-    return new UnionQuery(newQueries, context);
+    return new UnionQuery(querySegmentSpec, newQueries, context);
   }
 
   List<Query<?>> mapQueries(Function<Query<?>, Query<?>> mapFn)

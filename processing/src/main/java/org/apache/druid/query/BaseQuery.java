@@ -56,10 +56,10 @@ public abstract class BaseQuery<T> implements Query<T>
   public static final String QUERY_ID = "queryId";
   public static final String SUB_QUERY_ID = "subQueryId";
   public static final String SQL_QUERY_ID = "sqlQueryId";
-  private final QueryContext context;
-  private final QuerySegmentSpec querySegmentSpec;
-  private final Duration duration;
-  private final Granularity granularity;
+  protected final QueryContext context;
+  protected final QuerySegmentSpec querySegmentSpec;
+  protected final Duration duration;
+  protected final Granularity granularity;
 
   public BaseQuery(
       QuerySegmentSpec querySegmentSpec,
