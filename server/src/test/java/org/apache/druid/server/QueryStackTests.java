@@ -234,22 +234,13 @@ public class QueryStackTests
       final Integer minTopNThreshold
   )
   {
-    return createQueryRunnerFactoryConglomerate(closer, minTopNThreshold, TestHelper.makeJsonMapper());
-  }
-
-  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
-      final Closer closer,
-      final Integer minTopNThreshold,
-      final ObjectMapper jsonMapper
-  )
-  {
     return createQueryRunnerFactoryConglomerate(
         closer,
         getProcessingConfig(
             DEFAULT_NUM_MERGE_BUFFERS
         ),
         minTopNThreshold,
-        jsonMapper
+        TestHelper.makeJsonMapper()
     );
   }
 
