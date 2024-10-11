@@ -568,9 +568,11 @@ public class IndexTask extends AbstractTask
   ) throws IOException, InterruptedException
 
   {
+    final IndexTuningConfig tuningConfig = ingestionSchema.tuningConfig;
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     final FireDepartment fireDepartmentForMetrics = new FireDepartment(
-        dataSchema, new RealtimeIOConfig(null, null, null), null
+        dataSchema, new RealtimeIOConfig(null, null, null), 
+        RealtimeTuningConfig.makeDefaultTuningConfig(tuningConfig.getBasePersistDirectory())
     );
     final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
 
@@ -584,7 +586,6 @@ public class IndexTask extends AbstractTask
     }
 
     final IndexIOConfig ioConfig = ingestionSchema.getIOConfig();
-    final IndexTuningConfig tuningConfig = ingestionSchema.tuningConfig;
     final long pushTimeout = tuningConfig.getPushTimeout();
     final boolean isGuaranteedRollup = isGuaranteedRollup(ioConfig, tuningConfig);
 
