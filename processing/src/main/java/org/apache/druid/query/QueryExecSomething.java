@@ -21,7 +21,10 @@ package org.apache.druid.query;
 
 public interface QueryExecSomething<T>
 {
-  public QueryRunner<T> executeQuery2(QueryToolChestWarehouse warehouse,
-      Query<T> query, QuerySegmentWalker clientQuerySegmentWalker);
+  QueryRunner<T> makeQueryRunner(
+      QueryToolChestWarehouse warehouse,
+      Query<T> query,
+      QuerySegmentWalker walker
+  );
 
 }

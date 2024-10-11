@@ -50,10 +50,10 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
     implements QueryExecSomething<RealUnionResult>
 {
 
-  public QueryRunner<RealUnionResult> executeQuery2(QueryToolChestWarehouse warehouse,
+  public QueryRunner<RealUnionResult> makeQueryRunner(QueryToolChestWarehouse warehouse,
       Query<RealUnionResult> query, QuerySegmentWalker clientQuerySegmentWalker)
   {
-    RealUnionQueryRunner2 runner = new RealUnionQueryRunner2(warehouse, (UnionQuery) query, clientQuerySegmentWalker);
+    UnionQueryRunner runner = new UnionQueryRunner(warehouse, (UnionQuery) query, clientQuerySegmentWalker);
     setWarehouse(warehouse);
     return runner;
   }

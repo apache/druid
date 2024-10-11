@@ -31,7 +31,7 @@ import org.apache.druid.query.context.ResponseContext;
 import java.util.ArrayList;
 import java.util.List;
 
-class RealUnionQueryRunner2 implements QueryRunner<RealUnionResult>
+class UnionQueryRunner implements QueryRunner<RealUnionResult>
 {
 
   private QueryToolChestWarehouse warehouse;
@@ -39,7 +39,7 @@ class RealUnionQueryRunner2 implements QueryRunner<RealUnionResult>
   private UnionQuery query;
   private List<QueryRunner> runners;
 
-  public RealUnionQueryRunner2(QueryToolChestWarehouse warehouse, UnionQuery query,
+  public UnionQueryRunner(QueryToolChestWarehouse warehouse, UnionQuery query,
       QuerySegmentWalker walker)
   {
     this.warehouse = warehouse;
