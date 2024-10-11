@@ -40,7 +40,6 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
   public enum Unit
   {
     EPOCH,
-    MICROSECOND,
     MILLISECOND,
     SECOND,
     MINUTE,
@@ -71,8 +70,6 @@ public class TimestampExtractExprMacro implements ExprMacroTable.ExprMacro
     switch (unit) {
       case EPOCH:
         return ExprEval.of(epoch);
-      case MICROSECOND:
-        return ExprEval.of(epoch / 1000);
       case MILLISECOND:
         return ExprEval.of(dateTime.millisOfSecond().get());
       case SECOND:
