@@ -2891,7 +2891,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @Override
   protected QueryRunnerFactoryConglomerate makeQueryRunnerConglomerate()
   {
-    return new DefaultQueryRunnerFactoryConglomerate(
+    return DefaultQueryRunnerFactoryConglomerate.of(
         ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
                     .put(
                         TimeseriesQuery.class,

@@ -83,7 +83,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
       new CachePopulatorStats(),
       TestHelper.makeJsonMapper(),
       new NoopServiceEmitter(),
-      () -> new DefaultQueryRunnerFactoryConglomerate(ImmutableMap.of())
+      () -> DefaultQueryRunnerFactoryConglomerate.of(ImmutableMap.of())
   );
 
   private AppenderatorConfig appenderatorConfig;

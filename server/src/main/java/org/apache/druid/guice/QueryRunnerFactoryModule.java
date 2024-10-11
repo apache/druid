@@ -50,7 +50,6 @@ import org.apache.druid.query.union.RealUnionQueryRunnerFactory;
 import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
-
 import java.util.Map;
 
 /**
