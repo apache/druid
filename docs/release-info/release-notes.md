@@ -90,9 +90,13 @@ The community extension for Iceberg has been improved. For more information, see
 
 ### Projections (experimental)
 
-Druid 31.0.0 includes experimental support for projections in segments. Like materialized views, projections can improve the performance of queries by optimizing the route the query takes when it executes.
+Druid 31.0.0 includes experimental support for new feature called projections. Projections are grouped pre-aggregates of a segment that are automatically used at query time to optimize execution for any queries which 'fit' the shape of the projection by reducing both computation and i/o cost by reducing the number of rows which need to be processed. Projections are contained within segments of a datasource and do increase the segment size. But they can share data, such as value dictionaries of dictionary encoded columns, with the columns of the base segment.
 
-[#17214](https://github.com/apache/druid/pull/17214)
+Projections currently only support JSON-based ingestion, but they can be used by queries that use the MSQ task engine or the new Dart engine. Future development will allow projections to be created as part of SQL-based ingestion.
+
+We have a lot of plans to continue to improve this feature in the coming releases, but are excited to get it out there so users can begin experimentation since projections can dramatically improve query performance.
+
+For more information, see [Projections](#projections)
 
 ### Low latency high complexity queries using Dart (experimental)
 
@@ -284,6 +288,20 @@ The reader relies on a `ByteEntity` type of `KinesisRecordEntity` which includes
 Dart is a query engine with multi-threaded workers that conducts in-memory shuffles to provide tunable concurrency and infrastructure costs for low-latency high complexity queries.
 
 To try out Dart, set `druid.msq.dart.enabled` to `true` in your common runtime properties. Then, you can select Dart as a query engine in the web console or through the API `/druid/v2/sql/dart`, which accepts the same JSON payload as `/druid/v2/sql`. Dart is fully compatible with current Druid query shapes and Druid's storage format. That means you can try Dart with your existing queries and datasources.
+
+#### Projections
+
+As an experimental feature, projections are not well documented yet, but can be defined for streaming ingestion and 'classic' batch ingestion as part of the `dataSchema`. For an example ingestion spec, see the [the pull request description for #17214](https://github.com/apache/druid/pull/17214).
+
+The `groupingColumns` field in the spec defines the order which data is sorted in the projection. Instead of explicitly defining granularity like for the base table, you define it with a virtual column. During ingestion, the processing logic finds the ‘finest’ granularity virtual column that is a `timestamp_floor` expression and uses it as the `__time` column for the projection. Projections do not need to have a time column defined. In these cases, they can still match queries that are not grouping on time.
+
+There are new query context flags that have been added to aid in experimentation with projections:
+
+- `useProjection` accepts a specific projection name and instructs the query engine that it must use that projection, and will fail the query if the projection does not match the query
+- `forceProjections` accepts true or false and instructs the query engine that it must use a projection, and will fail the query if it cannot find a matching projection
+- `noProjections` accpets true or false and instructs the query engines to not use any projections
+
+ [#17214](https://github.com/apache/druid/pull/17214)
 
 #### Enabled querying cold datasources
 
