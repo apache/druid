@@ -261,38 +261,10 @@ public class QueryStackTests
     return createQueryRunnerFactoryConglomerate(
         closer,
         processingConfig,
-        TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
-    );
-  }
-
-  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
-      final Closer closer,
-      final DruidProcessingConfig processingConfig,
-      final ObjectMapper jsonMapper
-  )
-  {
-    return createQueryRunnerFactoryConglomerate(
-        closer,
-        processingConfig,
         TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD,
-        jsonMapper
-    );
-  }
-
-  public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
-      final Closer closer,
-      final DruidProcessingConfig processingConfig,
-      final Integer minTopNThreshold
-  )
-  {
-    return createQueryRunnerFactoryConglomerate(
-        closer,
-        processingConfig,
-        minTopNThreshold,
         TestHelper.makeJsonMapper()
     );
   }
-
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,

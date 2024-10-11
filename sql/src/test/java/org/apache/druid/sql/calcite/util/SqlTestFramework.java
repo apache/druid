@@ -275,6 +275,7 @@ public class SqlTestFramework
         return QueryStackTests.createQueryRunnerFactoryConglomerate(
             resourceCloser,
             QueryStackTests.getProcessingConfig(builder.mergeBufferCount),
+            TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD,
             jsonMapper
         );
       }
