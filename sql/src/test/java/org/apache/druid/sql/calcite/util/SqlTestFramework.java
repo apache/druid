@@ -39,9 +39,12 @@ import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.TestBufferPool;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.TestSqlModule;
@@ -265,11 +268,17 @@ public class SqlTestFramework
         ObjectMapper jsonMapper
     )
     {
+      DruidProcessingConfig processingConfig = QueryStackTests.getProcessingConfig(builder.mergeBufferCount);
+      Closer closer = resourceCloser;
+      final TestBufferPool testBufferPool = QueryStackTests.makeTestBufferPool(closer);
+      final TestGroupByBuffers groupByBuffers = QueryStackTests.makeGroupByBuffers(closer, processingConfig);
+
       return QueryStackTests.createQueryRunnerFactoryConglomerate(
-          resourceCloser,
-          QueryStackTests.getProcessingConfig(builder.mergeBufferCount),
+          processingConfig,
           builder.minTopNThreshold,
-          jsonMapper
+          jsonMapper,
+          testBufferPool,
+          groupByBuffers
       );
     }
 

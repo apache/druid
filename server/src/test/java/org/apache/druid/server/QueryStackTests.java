@@ -257,6 +257,23 @@ public class QueryStackTests
     );
   }
 
+  public static TestBufferPool makeTestBufferPool(final Closer closer)
+  {
+    final TestBufferPool testBufferPool = TestBufferPool.offHeap(COMPUTE_BUFFER_SIZE, Integer.MAX_VALUE);
+    closer.register(() -> {
+      // Verify that all objects have been returned to the pool.
+      Assert.assertEquals(0, testBufferPool.getOutstandingObjectCount());
+    });
+    return testBufferPool;
+  }
+
+  public static TestGroupByBuffers makeGroupByBuffers(final Closer closer, final DruidProcessingConfig processingConfig)
+  {
+    final TestGroupByBuffers groupByBuffers =
+        closer.register(TestGroupByBuffers.createFromProcessingConfig(processingConfig));
+    return groupByBuffers;
+  }
+
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
       final DruidProcessingConfig processingConfig,
@@ -264,14 +281,8 @@ public class QueryStackTests
       final ObjectMapper jsonMapper
   )
   {
-    final TestBufferPool testBufferPool = TestBufferPool.offHeap(COMPUTE_BUFFER_SIZE, Integer.MAX_VALUE);
-    closer.register(() -> {
-      // Verify that all objects have been returned to the pool.
-      Assert.assertEquals(0, testBufferPool.getOutstandingObjectCount());
-    });
-
-    final TestGroupByBuffers groupByBuffers =
-        closer.register(TestGroupByBuffers.createFromProcessingConfig(processingConfig));
+    final TestBufferPool testBufferPool = makeTestBufferPool(closer);
+    final TestGroupByBuffers groupByBuffers = makeGroupByBuffers(closer, processingConfig);
 
     return createQueryRunnerFactoryConglomerate(
         processingConfig,
@@ -280,6 +291,7 @@ public class QueryStackTests
         testBufferPool,
         groupByBuffers);
   }
+
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final DruidProcessingConfig processingConfig,
