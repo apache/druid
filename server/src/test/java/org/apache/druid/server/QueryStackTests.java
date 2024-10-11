@@ -331,7 +331,7 @@ public class QueryStackTests
             processingConfig
         );
 
-    final QueryRunnerFactoryConglomerate conglomerate = DefaultQueryRunnerFactoryConglomerate.of(
+    final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
             .put(
                 SegmentMetadataQuery.class,

@@ -2418,7 +2418,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @Override
   protected QueryRunnerFactoryConglomerate makeQueryRunnerConglomerate()
   {
-    return DefaultQueryRunnerFactoryConglomerate.of(
+    return new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.of(
             TimeseriesQuery.class,
             new TimeseriesQueryRunnerFactory(

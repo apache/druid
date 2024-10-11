@@ -224,7 +224,7 @@ public class StreamAppenderatorTester implements AutoCloseable
           objectMapper,
           indexIO,
           indexMerger,
-          DefaultQueryRunnerFactoryConglomerate.of(
+          new DefaultQueryRunnerFactoryConglomerate(
               ImmutableMap.of(
                   TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
                       new TimeseriesQueryQueryToolChest(),
@@ -268,7 +268,7 @@ public class StreamAppenderatorTester implements AutoCloseable
           objectMapper,
           indexIO,
           indexMerger,
-          DefaultQueryRunnerFactoryConglomerate.of(
+          new DefaultQueryRunnerFactoryConglomerate(
               ImmutableMap.of(
                   TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
                       new TimeseriesQueryQueryToolChest(),

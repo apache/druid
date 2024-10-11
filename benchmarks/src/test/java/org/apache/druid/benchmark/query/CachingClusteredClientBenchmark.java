@@ -258,7 +258,7 @@ public class CachingClusteredClientBenchmark
       }
     };
 
-    conglomerate = DefaultQueryRunnerFactoryConglomerate.of(
+    conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
             .put(
                 TimeseriesQuery.class,
