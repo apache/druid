@@ -598,16 +598,43 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public QueryRunnerFactoryConglomerate conglomerate()
+    public DruidProcessingConfig makeProcessingConfig()
     {
-      DruidProcessingConfig processingConfig = QueryStackTests.getProcessingConfig(builder.mergeBufferCount);
+      return QueryStackTests.getProcessingConfig(builder.mergeBufferCount);
+    }
+
+    @Provides
+    @LazySingleton
+    public TestBufferPool makeProcessingConfig1()
+    {
       Closer closer = resourceCloser;
       final TestBufferPool testBufferPool = QueryStackTests.makeTestBufferPool(closer);
-      final TestGroupByBuffers groupByBuffers = QueryStackTests.makeGroupByBuffers(closer, processingConfig);
+      return testBufferPool;
+    }
 
+    @Provides
+    @LazySingleton
+    public TestGroupByBuffers makeProcessingConfig1(DruidProcessingConfig processingConfig)
+    {
+      Closer closer = resourceCloser;
+      final TestGroupByBuffers groupByBuffers = QueryStackTests.makeGroupByBuffers(closer, processingConfig);
+      return groupByBuffers;
+    }
+
+    @Provides
+    @LazySingleton
+    public QueryRunnerFactoryConglomerate conglomerate(
+        DruidProcessingConfig processingConfig,
+        TestBufferPool testBufferPool,
+        TestGroupByBuffers groupByBuffers)
+    {
       return componentSupplier.createCongolmerate(
-          builder, resourceCloser, queryJsonMapper(),
-          testBufferPool, groupByBuffers, processingConfig
+          builder,
+          resourceCloser,
+          queryJsonMapper(),
+          testBufferPool,
+          groupByBuffers,
+          processingConfig
       );
     }
 
