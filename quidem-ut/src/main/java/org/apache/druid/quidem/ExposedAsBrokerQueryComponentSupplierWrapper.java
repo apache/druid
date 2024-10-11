@@ -75,8 +75,11 @@ import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.initialization.TombstoneDataStorageModule;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.RetryQueryRunnerConfig;
+import org.apache.druid.query.TestBufferPool;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -155,11 +158,13 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper implements QueryCompon
   }
 
   @Override
-  public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer, ObjectMapper om)
+  public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer resourceCloser,
+      ObjectMapper jsonMapper, TestBufferPool testBufferPool, TestGroupByBuffers groupByBuffers,
+      DruidProcessingConfig processingConfig)
   {
-    return delegate.createCongolmerate(builder, closer, om);
+    return delegate
+        .createCongolmerate(builder, resourceCloser, jsonMapper, testBufferPool, groupByBuffers, processingConfig);
   }
-
   @Override
   public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate,
       JoinableFactoryWrapper joinableFactory, Injector injector)

@@ -32,7 +32,10 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.TestBufferPool;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.DruidNode;
@@ -238,9 +241,12 @@ public class DruidAvaticaTestDriver implements Driver
     }
 
     @Override
-    public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer closer, ObjectMapper jsonMapper)
+    public QueryRunnerFactoryConglomerate createCongolmerate(Builder builder, Closer resourceCloser,
+        ObjectMapper jsonMapper, TestBufferPool testBufferPool, TestGroupByBuffers groupByBuffers,
+        DruidProcessingConfig processingConfig)
     {
-      return delegate.createCongolmerate(builder, closer, jsonMapper);
+      return delegate
+          .createCongolmerate(builder, resourceCloser, jsonMapper, testBufferPool, groupByBuffers, processingConfig);
     }
 
     @Override

@@ -149,6 +149,7 @@ public class SqlTestFramework
      */
     void gatherProperties(Properties properties);
 
+
     /**
      * Configure modules needed for tests. This is the preferred way to configure
      * Jackson: include the production module in this method that includes the
@@ -158,8 +159,11 @@ public class SqlTestFramework
 
     QueryRunnerFactoryConglomerate createCongolmerate(
         Builder builder,
-        Closer closer,
-        ObjectMapper jsonMapper
+        Closer resourceCloser,
+        ObjectMapper jsonMapper,
+        TestBufferPool testBufferPool,
+        TestGroupByBuffers groupByBuffers,
+        DruidProcessingConfig processingConfig
     );
 
     SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
@@ -265,14 +269,12 @@ public class SqlTestFramework
     public QueryRunnerFactoryConglomerate createCongolmerate(
         Builder builder,
         Closer resourceCloser,
-        ObjectMapper jsonMapper
+        ObjectMapper jsonMapper,
+        final TestBufferPool testBufferPool,
+        final TestGroupByBuffers groupByBuffers,
+        DruidProcessingConfig processingConfig
     )
     {
-      DruidProcessingConfig processingConfig = QueryStackTests.getProcessingConfig(builder.mergeBufferCount);
-      Closer closer = resourceCloser;
-      final TestBufferPool testBufferPool = QueryStackTests.makeTestBufferPool(closer);
-      final TestGroupByBuffers groupByBuffers = QueryStackTests.makeGroupByBuffers(closer, processingConfig);
-
       return QueryStackTests.createQueryRunnerFactoryConglomerate(
           processingConfig,
           builder.minTopNThreshold,
@@ -598,7 +600,15 @@ public class SqlTestFramework
     @LazySingleton
     public QueryRunnerFactoryConglomerate conglomerate()
     {
-      return componentSupplier.createCongolmerate(builder, resourceCloser, queryJsonMapper());
+      DruidProcessingConfig processingConfig = QueryStackTests.getProcessingConfig(builder.mergeBufferCount);
+      Closer closer = resourceCloser;
+      final TestBufferPool testBufferPool = QueryStackTests.makeTestBufferPool(closer);
+      final TestGroupByBuffers groupByBuffers = QueryStackTests.makeGroupByBuffers(closer, processingConfig);
+
+      return componentSupplier.createCongolmerate(
+          builder, resourceCloser, queryJsonMapper(),
+          testBufferPool, groupByBuffers, processingConfig
+      );
     }
 
     @Provides
