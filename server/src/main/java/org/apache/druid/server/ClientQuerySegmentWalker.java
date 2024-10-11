@@ -49,6 +49,7 @@ import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.QueryExecSomething;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -62,7 +63,6 @@ import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -180,9 +180,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
-    Optional<QueryRunner<T>> toolchestExecResult = toolChest.executeQuery(warehouse, query, this);
-    if (toolchestExecResult.isPresent()) {
-      return toolchestExecResult.get();
+//    Optional<QueryRunner<T>> toolchestExecResult = toolChest.executeQuery21(warehouse, query, this);
+    if (toolChest instanceof QueryExecSomething) {
+      QueryExecSomething<T> t = (QueryExecSomething<T>) toolChest;
+      return t.executeQuery2(warehouse, query, this);
     }
 
     // transform TableDataSource to GlobalTableDataSource when eligible
@@ -313,11 +314,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingClusterWalker(Query<T> query)
   {
-    if (query instanceof UnionQuery) {
-      return true;
-    }
     final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+
+    if (toolChest instanceof QueryExecSomething) {
+      return true;
+    }
 
     // 1) Must be based on a concrete table (the only shape the Druid cluster can handle).
     // 2) If there is an outer query, it must be handleable by the query toolchest (the cluster walker does not handle
