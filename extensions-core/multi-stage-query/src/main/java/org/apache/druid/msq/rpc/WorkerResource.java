@@ -120,12 +120,10 @@ public class WorkerResource
           public void onTimeout(AsyncEvent event)
           {
             if (responseResolved.compareAndSet(false, true)) {
-              return;
+              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
+              response.setStatus(HttpServletResponse.SC_OK);
+              event.getAsyncContext().complete();
             }
-
-            HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-            response.setStatus(HttpServletResponse.SC_OK);
-            event.getAsyncContext().complete();
           }
 
           @Override
