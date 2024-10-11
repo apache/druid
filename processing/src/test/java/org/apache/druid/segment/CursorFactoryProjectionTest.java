@@ -99,15 +99,15 @@ import java.util.stream.Collectors;
 public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 {
   private static final Closer CLOSER = Closer.create();
-  private static final DateTime TIMESTAMP = Granularities.DAY.bucket(DateTimes.nowUtc()).getStart();
+  static final DateTime TIMESTAMP = Granularities.DAY.bucket(DateTimes.nowUtc()).getStart();
 
-  private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
+  static final RowSignature ROW_SIGNATURE = RowSignature.builder()
                                                                 .add("a", ColumnType.STRING)
                                                                 .add("b", ColumnType.STRING)
                                                                 .add("c", ColumnType.LONG)
                                                                 .add("d", ColumnType.DOUBLE)
                                                                 .build();
-  private static final List<InputRow> ROWS = Arrays.asList(
+  static final List<InputRow> ROWS = Arrays.asList(
       new ListBasedInputRow(
           ROW_SIGNATURE,
           TIMESTAMP,

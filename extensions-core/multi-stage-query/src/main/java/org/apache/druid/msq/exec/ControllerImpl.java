@@ -117,6 +117,7 @@ import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
 import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
+import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
@@ -322,9 +323,12 @@ public class ControllerImpl implements Controller
   @Override
   public void run(final QueryListener queryListener) throws Exception
   {
+    final MSQTaskReportPayload reportPayload;
     try (final Closer closer = Closer.create()) {
-      runInternal(queryListener, closer);
+      reportPayload = runInternal(queryListener, closer);
     }
+    // Call onQueryComplete after Closer is fully closed, ensuring no controller-related processing is ongoing.
+    queryListener.onQueryComplete(reportPayload);
   }
 
   @Override
@@ -347,7 +351,7 @@ public class ControllerImpl implements Controller
     }
   }
 
-  private void runInternal(final QueryListener queryListener, final Closer closer)
+  private MSQTaskReportPayload runInternal(final QueryListener queryListener, final Closer closer)
   {
     QueryDefinition queryDef = null;
     ControllerQueryKernel queryKernel = null;
@@ -510,7 +514,7 @@ public class ControllerImpl implements Controller
       stagesReport = null;
     }
 
-    final MSQTaskReportPayload taskReportPayload = new MSQTaskReportPayload(
+    return new MSQTaskReportPayload(
         makeStatusReport(
             taskStateForReport,
             errorForReport,
@@ -525,8 +529,6 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
-
-    queryListener.onQueryComplete(taskReportPayload);
   }
 
   /**
@@ -752,6 +754,11 @@ public class ControllerImpl implements Controller
     }
 
     workerErrorRef.compareAndSet(null, mapQueryColumnNameToOutputColumnName(errorReport));
+
+    // Wake up the main controller thread.
+    addToKernelManipulationQueue(kernel -> {
+      throw new MSQException(new WorkerFailedFault(errorReport.getTaskId(), null));
+    });
   }
 
   /**
