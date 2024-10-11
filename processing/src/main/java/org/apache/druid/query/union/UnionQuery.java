@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -42,6 +43,7 @@ import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,9 +58,9 @@ public class UnionQuery implements Query<RealUnionResult>
   @JsonProperty("queries")
   protected final List<Query<?>> queries;
 
-  public UnionQuery(List<Query<?>> queries2)
+  public UnionQuery(List<Query<?>> queries)
   {
-    this(queries2, queries2.get(0).getContext());
+    this(queries, queries.get(0).getContext());
   }
 
   @JsonCreator
@@ -116,7 +118,7 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public List<Interval> getIntervals()
   {
-    throw DruidException.defensive("This is not supported");
+    return Collections.emptyList();
   }
 
   @Override
@@ -128,7 +130,7 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public Granularity getGranularity()
   {
-    throw DruidException.defensive("This is not supported");
+    return Granularities.ALL;
   }
 
   @Override
