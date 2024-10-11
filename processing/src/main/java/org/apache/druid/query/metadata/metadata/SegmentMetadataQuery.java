@@ -26,7 +26,7 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.SingleDataSourceQuery;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -36,11 +36,14 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.joda.time.Interval;
+
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class SegmentMetadataQuery extends SingleDataSourceQuery<SegmentAnalysis>
+public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 {
   private static final QuerySegmentSpec DEFAULT_SEGMENT_SPEC = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
 
@@ -234,6 +237,12 @@ public class SegmentMetadataQuery extends SingleDataSourceQuery<SegmentAnalysis>
         .copy(this)
         .analysisTypes(config.getDefaultAnalysisTypes())
         .build();
+  }
+
+  @Override
+  public List<Interval> getIntervals()
+  {
+    return this.getQuerySegmentSpec().getIntervals();
   }
 
   @Override

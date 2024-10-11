@@ -21,14 +21,12 @@ package org.apache.druid.query.spec;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.joda.time.Interval;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -36,10 +34,6 @@ import java.util.Objects;
  */
 public class MultipleIntervalSegmentSpec implements QuerySegmentSpec
 {
-  public static final MultipleIntervalSegmentSpec ETERNITY = new MultipleIntervalSegmentSpec(
-      Collections.singletonList(Intervals.ETERNITY)
-  );
-
   private final List<Interval> intervals;
 
   @JsonCreator

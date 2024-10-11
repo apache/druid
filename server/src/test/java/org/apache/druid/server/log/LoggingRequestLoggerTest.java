@@ -27,7 +27,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.query.SingleDataSourceQuery;
+import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -319,7 +319,7 @@ public class LoggingRequestLoggerTest
 }
 
 @JsonTypeName("fake")
-class FakeQuery extends SingleDataSourceQuery<Object>
+class FakeQuery extends BaseQuery<Object>
 {
   public FakeQuery(
       DataSource dataSource,

@@ -23,11 +23,10 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 
 import javax.annotation.Nullable;
-
 import java.util.Map;
 import java.util.Set;
 
-public class TestQuery extends SingleDataSourceQuery
+public class TestQuery extends BaseQuery
 {
   @Nullable
   private Set<String> requiredColumns;

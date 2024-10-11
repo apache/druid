@@ -42,7 +42,6 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.BaseQuery;
-import org.apache.druid.query.SingleDataSourceQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.Queries;
@@ -73,7 +72,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -87,7 +85,7 @@ import java.util.stream.Collectors;
 /**
  *
  */
-public class GroupByQuery extends SingleDataSourceQuery<ResultRow> implements SupportRowSignature
+public class GroupByQuery extends BaseQuery<ResultRow> implements SupportRowSignature
 {
   public static final String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
   public static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";

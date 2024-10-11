@@ -56,47 +56,47 @@ public abstract class BaseQuery<T> implements Query<T>
   public static final String QUERY_ID = "queryId";
   public static final String SUB_QUERY_ID = "subQueryId";
   public static final String SQL_QUERY_ID = "sqlQueryId";
-  protected final QueryContext context;
-  protected final QuerySegmentSpec querySegmentSpec;
-  protected final Duration duration;
-  protected final Granularity granularity;
+  private final DataSource dataSource;
+  private final QueryContext context;
+  private final QuerySegmentSpec querySegmentSpec;
+  private volatile Duration duration;
+  private final Granularity granularity;
 
   public BaseQuery(
+      DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
       Map<String, Object> context
   )
   {
-    this(querySegmentSpec, context, Granularities.ALL);
+    this(dataSource, querySegmentSpec, context, Granularities.ALL);
   }
 
   public BaseQuery(
+      DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
       Map<String, Object> context,
       Granularity granularity
   )
   {
+    Preconditions.checkNotNull(dataSource, "dataSource can't be null");
     Preconditions.checkNotNull(querySegmentSpec, "querySegmentSpec can't be null");
     Preconditions.checkNotNull(granularity, "Must specify a granularity");
 
+    this.dataSource = dataSource;
     this.context = QueryContext.of(context);
     this.querySegmentSpec = querySegmentSpec;
     this.granularity = granularity;
-    this.duration = computeDuration();
   }
 
-  private final Duration computeDuration()
+  @JsonProperty
+  @Override
+  public DataSource getDataSource()
   {
-    Duration totalDuration = new Duration(0);
-    for (Interval interval : querySegmentSpec.getIntervals()) {
-      if (interval != null) {
-        totalDuration = totalDuration.plus(interval.toDuration());
-      }
-    }
-    return totalDuration;
+    return dataSource;
   }
 
   @JsonProperty("intervals")
-  public final QuerySegmentSpec getQuerySegmentSpec()
+  public QuerySegmentSpec getQuerySegmentSpec()
   {
     return querySegmentSpec;
   }
@@ -117,26 +117,36 @@ public abstract class BaseQuery<T> implements Query<T>
   }
 
   @Override
-  public final List<Interval> getIntervals()
+  public List<Interval> getIntervals()
   {
     return querySegmentSpec.getIntervals();
   }
 
   @Override
-  public final Duration getDuration()
+  public Duration getDuration()
   {
+    if (duration == null) {
+      Duration totalDuration = new Duration(0);
+      for (Interval interval : querySegmentSpec.getIntervals()) {
+        if (interval != null) {
+          totalDuration = totalDuration.plus(interval.toDuration());
+        }
+      }
+      duration = totalDuration;
+    }
+
     return duration;
   }
 
   @Override
   @JsonProperty
-  public final Granularity getGranularity()
+  public Granularity getGranularity()
   {
     return granularity;
   }
 
   @Override
-  public final DateTimeZone getTimezone()
+  public DateTimeZone getTimezone()
   {
     return granularity instanceof PeriodGranularity
            ? ((PeriodGranularity) granularity).getTimeZone()
@@ -146,15 +156,25 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   @JsonProperty
   @JsonInclude(Include.NON_DEFAULT)
-  public final Map<String, Object> getContext()
+  public Map<String, Object> getContext()
   {
     return context.asMap();
   }
 
   @Override
-  public final QueryContext context()
+  public QueryContext context()
   {
     return context;
+  }
+
+  /**
+   * @deprecated use {@link #computeOverriddenContext(Map, Map) computeOverriddenContext(getContext(), overrides))}
+   * instead. This method may be removed in the next minor or major version of Druid.
+   */
+  @Deprecated
+  protected Map<String, Object> computeOverridenContext(final Map<String, Object> overrides)
+  {
+    return computeOverriddenContext(getContext(), overrides);
   }
 
   public static Map<String, Object> computeOverriddenContext(
@@ -220,15 +240,18 @@ public abstract class BaseQuery<T> implements Query<T>
     }
     BaseQuery<?> baseQuery = (BaseQuery<?>) o;
 
-    return Objects.equals(context, baseQuery.context) &&
+    // Must use getDuration() instead of "duration" because duration is lazily computed.
+    return Objects.equals(dataSource, baseQuery.dataSource) &&
+           Objects.equals(context, baseQuery.context) &&
            Objects.equals(querySegmentSpec, baseQuery.querySegmentSpec) &&
-           Objects.equals(duration, baseQuery.getDuration()) &&
+           Objects.equals(getDuration(), baseQuery.getDuration()) &&
            Objects.equals(granularity, baseQuery.granularity);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(context, querySegmentSpec, duration, granularity);
+    // Must use getDuration() instead of "duration" because duration is lazily computed.
+    return Objects.hash(dataSource, context, querySegmentSpec, getDuration(), granularity);
   }
 }
