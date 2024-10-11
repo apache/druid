@@ -26,22 +26,30 @@ import java.util.Map;
 
 /**
 */
-public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactoryConglomerate
+public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactoryConglomerate, QueryToolChestWarehouse
 {
   private final Map<Class<? extends Query>, QueryRunnerFactory> factories;
 
   @Inject
   public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories)
   {
-    // Accesses to IdentityHashMap should be faster than to HashMap or ImmutableMap.
-    // Class doesn't override Object.equals().
     this.factories = new IdentityHashMap<>(factories);
+    for (QueryRunnerFactory factory :factories.values()) {
+      factory.getToolchest().setWarehouse(this);
+    }
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
   {
-    return (QueryRunnerFactory<T, QueryType>) factories.get(query.getClass());
+    return factories.get(query.getClass());
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
+  {
+    return factories.get(query.getClass()).getToolchest();
   }
 }
