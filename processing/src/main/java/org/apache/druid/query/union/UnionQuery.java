@@ -110,7 +110,7 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public QueryRunner<RealUnionResult> getRunner(QuerySegmentWalker walker)
   {
-    throw DruidException.defensive("This is not supported");
+    throw DruidException.defensive("Use QueryToolChest to get a Runner");
   }
 
   @Override
