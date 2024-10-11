@@ -31,7 +31,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.UOE;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.SingleDataSourceQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
@@ -50,6 +50,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Builder;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -57,7 +58,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class ScanQuery extends BaseQuery<ScanResultValue>
+public class ScanQuery extends SingleDataSourceQuery<ScanResultValue>
 {
   public enum ResultFormat
   {

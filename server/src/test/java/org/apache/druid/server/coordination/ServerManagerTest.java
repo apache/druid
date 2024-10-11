@@ -44,7 +44,7 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.YieldingAccumulator;
 import org.apache.druid.java.util.common.guava.YieldingSequenceBase;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.SingleDataSourceQuery;
 import org.apache.druid.query.ConcatQueryRunner;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
@@ -594,7 +594,7 @@ public class ServerManagerTest
     expectedException.expect(QueryUnsupportedException.class);
     expectedException.expectMessage("Unknown query type");
     serverManager.getQueryRunnerForSegments(
-        new BaseQuery<Object>(
+        new SingleDataSourceQuery<Object>(
             new TableDataSource("test"),
             new MultipleSpecificSegmentSpec(descriptors),
             new HashMap<>()

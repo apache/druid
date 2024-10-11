@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.TestSequence;
 import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.SingleDataSourceQuery;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
@@ -194,7 +195,7 @@ public class CachingClusteredClientPerfTest
     }
   }
 
-  private static class TestQuery extends BaseQuery<SegmentDescriptor>
+  private static class TestQuery extends SingleDataSourceQuery<SegmentDescriptor>
   {
     private QuerySegmentSpec spec;
 

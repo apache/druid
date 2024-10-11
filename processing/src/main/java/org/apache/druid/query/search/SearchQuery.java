@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.SingleDataSourceQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -42,7 +42,7 @@ import java.util.Objects;
 
 /**
  */
-public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
+public class SearchQuery extends SingleDataSourceQuery<Result<SearchResultValue>>
 {
   private static final SearchSortSpec DEFAULT_SORT_SPEC = new SearchSortSpec(StringComparators.LEXICOGRAPHIC);
 

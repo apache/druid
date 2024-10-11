@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.SingleDataSourceQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
@@ -47,6 +47,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Finalization;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -57,7 +58,7 @@ import java.util.Set;
 /**
  */
 @JsonTypeName("timeseries")
-public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>> implements SupportRowSignature
+public class TimeseriesQuery extends SingleDataSourceQuery<Result<TimeseriesResultValue>> implements SupportRowSignature
 {
   public static final String CTX_GRAND_TOTAL = "grandTotal";
   public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";

@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.granularity.Granularity;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.SingleDataSourceQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Queries;
@@ -40,6 +40,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -49,7 +50,7 @@ import java.util.Set;
 
 /**
  */
-public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
+public class TopNQuery extends SingleDataSourceQuery<Result<TopNResultValue>>
 {
   public static final String TOPN = "topN";
 

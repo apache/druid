@@ -66,7 +66,7 @@ public class ReportTimelineMissingSegmentQueryRunnerTest
     Assert.assertEquals(missingSegments, responseContext.getMissingSegments());
   }
 
-  private static class TestQuery extends BaseQuery<Object>
+  private static class TestQuery extends SingleDataSourceQuery<Object>
   {
     private TestQuery()
     {

@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.SingleDataSourceQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -40,7 +40,7 @@ import java.util.Map;
 
 /**
  */
-public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadataResultValue>>
+public class DataSourceMetadataQuery extends SingleDataSourceQuery<Result<DataSourceMetadataResultValue>>
 {
   private static final QuerySegmentSpec DEFAULT_SEGMENT_SPEC = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
 

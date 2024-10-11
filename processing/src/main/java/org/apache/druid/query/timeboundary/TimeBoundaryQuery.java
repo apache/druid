@@ -26,7 +26,7 @@ import it.unimi.dsi.fastutil.bytes.ByteArrays;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.SingleDataSourceQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
@@ -44,7 +44,7 @@ import java.util.Map;
 
 /**
  */
-public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>>
+public class TimeBoundaryQuery extends SingleDataSourceQuery<Result<TimeBoundaryResultValue>>
 {
   private static final QuerySegmentSpec DEFAULT_SEGMENT_SPEC = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
   public static final String MAX_TIME = "maxTime";

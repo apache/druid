@@ -22,7 +22,7 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.query.SingleDataSourceQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Order;
@@ -36,6 +36,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -52,7 +53,7 @@ import java.util.Objects;
  * The assumptions on the incoming data are defined by the operators.  At initial time of writing, there is a baked
  * in assumption that data has been sorted "correctly" before this runs.
  */
-public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
+public class WindowOperatorQuery extends SingleDataSourceQuery<RowsAndColumns>
 {
   private static DataSource validateMaybeRewriteDataSource(DataSource dataSource, boolean hasLeafs)
   {
