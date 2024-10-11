@@ -567,6 +567,7 @@ public class SqlTestFramework
    */
   private class TestSetupModule implements DruidModule
   {
+    private static final String SQL_TEST_FRAME_WORK = "sqlTestFrameWork";
     private final Builder builder;
     private final List<DruidModule> subModules = Arrays.asList(new BuiltInTypesModule(), new TestSqlModule());
 
@@ -596,6 +597,10 @@ public class SqlTestFramework
       binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));
     }
 
+    /*
+     * Ideally this should not have a Named annotation, but it clashes with {@link DruidProcessingModule}.
+     */
+    @Named(SQL_TEST_FRAME_WORK)
     @Provides
     @LazySingleton
     public DruidProcessingConfig makeProcessingConfig()
@@ -612,7 +617,7 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public TestGroupByBuffers makeTestGroupByBuffers(DruidProcessingConfig processingConfig)
+    public TestGroupByBuffers makeTestGroupByBuffers(@Named(SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig)
     {
       return QueryStackTests.makeGroupByBuffers(resourceCloser, processingConfig);
     }
@@ -620,7 +625,7 @@ public class SqlTestFramework
     @Provides
     @LazySingleton
     public QueryRunnerFactoryConglomerate conglomerate(
-        DruidProcessingConfig processingConfig,
+        @Named(SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig,
         TestBufferPool testBufferPool,
         TestGroupByBuffers groupByBuffers)
     {
