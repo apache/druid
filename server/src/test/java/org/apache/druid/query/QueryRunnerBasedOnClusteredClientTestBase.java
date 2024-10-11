@@ -107,7 +107,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
   {
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
         CLOSER,
-        () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
+        TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
     );
     toolChestWarehouse = new ConglomerateBackedQueryToolChestWarehouse(conglomerate);
   }

@@ -268,7 +268,7 @@ public class SqlTestFramework
       if (builder.mergeBufferCount == 0) {
         return QueryStackTests.createQueryRunnerFactoryConglomerate(
             resourceCloser,
-            () -> builder.minTopNThreshold,
+            builder.minTopNThreshold,
             jsonMapper
         );
       } else {

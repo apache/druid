@@ -99,7 +99,6 @@ import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
 
 /**
  * Utilities for creating query-stack objects for tests.
@@ -227,20 +226,20 @@ public class QueryStackTests
    */
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(final Closer closer)
   {
-    return createQueryRunnerFactoryConglomerate(closer, () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD);
+    return createQueryRunnerFactoryConglomerate(closer, TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD);
   }
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
-      final Supplier<Integer> minTopNThresholdSupplier
+      final Integer minTopNThreshold
   )
   {
-    return createQueryRunnerFactoryConglomerate(closer, minTopNThresholdSupplier, TestHelper.makeJsonMapper());
+    return createQueryRunnerFactoryConglomerate(closer, minTopNThreshold, TestHelper.makeJsonMapper());
   }
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
-      final Supplier<Integer> minTopNThresholdSupplier,
+      final Integer minTopNThreshold,
       final ObjectMapper jsonMapper
   )
   {
@@ -249,7 +248,7 @@ public class QueryStackTests
         getProcessingConfig(
             DEFAULT_NUM_MERGE_BUFFERS
         ),
-        minTopNThresholdSupplier,
+        minTopNThreshold,
         jsonMapper
     );
   }
@@ -262,7 +261,7 @@ public class QueryStackTests
     return createQueryRunnerFactoryConglomerate(
         closer,
         processingConfig,
-        () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
+        TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
     );
   }
 
@@ -275,7 +274,7 @@ public class QueryStackTests
     return createQueryRunnerFactoryConglomerate(
         closer,
         processingConfig,
-        () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD,
+        TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD,
         jsonMapper
     );
   }
@@ -283,13 +282,13 @@ public class QueryStackTests
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
       final DruidProcessingConfig processingConfig,
-      final Supplier<Integer> minTopNThresholdSupplier
+      final Integer minTopNThreshold
   )
   {
     return createQueryRunnerFactoryConglomerate(
         closer,
         processingConfig,
-        minTopNThresholdSupplier,
+        minTopNThreshold,
         TestHelper.makeJsonMapper()
     );
   }
@@ -298,7 +297,7 @@ public class QueryStackTests
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final Closer closer,
       final DruidProcessingConfig processingConfig,
-      final Supplier<Integer> minTopNThresholdSupplier,
+      final Integer minTopNThreshold,
       final ObjectMapper jsonMapper
   )
   {
@@ -313,7 +312,7 @@ public class QueryStackTests
 
     return createQueryRunnerFactoryConglomerate(
         processingConfig,
-        minTopNThresholdSupplier,
+        minTopNThreshold,
         jsonMapper,
         testBufferPool,
         groupByBuffers);
@@ -321,7 +320,7 @@ public class QueryStackTests
 
   public static QueryRunnerFactoryConglomerate createQueryRunnerFactoryConglomerate(
       final DruidProcessingConfig processingConfig,
-      final Supplier<Integer> minTopNThresholdSupplier,
+      final Integer minTopNThreshold,
       final ObjectMapper jsonMapper,
       final TestBufferPool testBufferPool,
       final TestGroupByBuffers groupByBuffers
@@ -373,7 +372,7 @@ public class QueryStackTests
                       @Override
                       public int getMinTopNThreshold()
                       {
-                        return minTopNThresholdSupplier.get();
+                        return minTopNThreshold;
                       }
                     }),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
