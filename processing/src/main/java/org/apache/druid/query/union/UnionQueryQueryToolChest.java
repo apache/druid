@@ -46,7 +46,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, UnionQuery>
+public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, UnionQuery>
     implements QueryExecSomething<RealUnionResult>
 {
 
@@ -56,97 +56,6 @@ public class RealUnionQueryQueryToolChest extends QueryToolChest<RealUnionResult
     RealUnionQueryRunner2 runner = new RealUnionQueryRunner2(warehouse, (UnionQuery) query, clientQuerySegmentWalker);
     setWarehouse(warehouse);
     return runner;
-  }
-
-  public Optional<QueryRunner<RealUnionResult>> executeQuery1(QueryToolChestWarehouse warehouse,
-      Query<RealUnionResult> query, QuerySegmentWalker clientQuerySegmentWalker)
-  {
-    UnionQuery unionQuery = (UnionQuery) query;
-    List<QueryRunner> queryRunners = new ArrayList<>();
-    for (Query<?> q : unionQuery.queries) {
-      QueryRunner subRunner = clientQuerySegmentWalker.executeQuery(q);
-      queryRunners.add(subRunner);
-    }
-    QueryRunner<RealUnionResult> unionRunner = new LocalRealUnionQueryRunner(
-        queryRunners
-    );
-    return Optional.of(unionRunner);
-  }
-
-  private static class RealUnionQueryRunner2 implements QueryRunner<RealUnionResult>
-  {
-
-    private QueryToolChestWarehouse warehouse;
-    private QuerySegmentWalker walker;
-    private UnionQuery query;
-    private List<QueryRunner> runners;
-
-    public RealUnionQueryRunner2(QueryToolChestWarehouse warehouse, UnionQuery query,
-        QuerySegmentWalker walker)
-    {
-      this.warehouse = warehouse;
-      this.query = query;
-      this.walker = walker;
-
-      this.runners = makeSubQueryRunners(query);
-    }
-
-    private List<QueryRunner> makeSubQueryRunners(UnionQuery unionQuery)
-    {
-      List<QueryRunner> runners = new ArrayList<>();
-      for (Query<?> query : unionQuery.queries) {
-        runners.add(query.getRunner(walker));
-      }
-      return runners;
-
-    }
-
-    @Override
-    public Sequence<RealUnionResult> run(QueryPlus<RealUnionResult> queryPlus, ResponseContext responseContext)
-    {
-      UnionQuery unionQuery = queryPlus.unwrapQuery(UnionQuery.class);
-
-      List<RealUnionResult> seqs = new ArrayList<RealUnionResult>();
-      for (int i = 0; i < runners.size(); i++) {
-        Query<?> q = unionQuery.queries.get(i);
-        QueryRunner r = runners.get(i);
-        seqs.add(makeUnionResult(r, queryPlus.withQuery(q), responseContext));
-      }
-      return Sequences.simple(seqs);
-    }
-
-    private <T> RealUnionResult makeUnionResult(QueryRunner runner, QueryPlus<T> withQuery,
-        ResponseContext responseContext)
-    {
-      Sequence<T> seq = runner.run(withQuery, responseContext);
-      return new RealUnionResult(seq);
-    }
-  }
-
-  private static class LocalRealUnionQueryRunner implements QueryRunner<RealUnionResult>
-  {
-
-    public LocalRealUnionQueryRunner(List<QueryRunner> queryRunners)
-    {
-
-    }
-
-    @Override
-    public Sequence<RealUnionResult> run(QueryPlus<RealUnionResult> queryPlus, ResponseContext responseContext)
-    {
-      return buildSequence();
-    }
-
-    Sequence<RealUnionResult> buildSequence()
-    {
-      return null;
-    }
-
-  }
-
-  public void RealUnionQueryQueryToolChest()
-  {
-    int asd = 1;
   }
 
   @Override

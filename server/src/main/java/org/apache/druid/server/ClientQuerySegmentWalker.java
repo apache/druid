@@ -451,9 +451,19 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                                                .toString()
               )
           );
-          warehouse.getToolChest(subQuery).setWarehouse(warehouse);
-          queryResults = subQueryWithSerialization
-              .getRunner(this)
+          QueryToolChest subQueryToolChest = warehouse.getToolChest(subQuery);
+          subQueryToolChest.setWarehouse(warehouse);
+
+//          final QueryRunner<?> subQueryRunner ;
+          final QueryRunner subQueryRunner;
+          if (subQueryToolChest instanceof QueryExecSomething) {
+            subQueryRunner = ((QueryExecSomething) subQueryToolChest)
+                .executeQuery2(warehouse, subQueryWithSerialization, this);
+          }else {
+            subQueryRunner = subQueryWithSerialization.getRunner(this);
+          }
+
+          queryResults = subQueryRunner
               .run(QueryPlus.wrap(subQueryWithSerialization), DirectDruidClient.makeResponseContextForQuery());
         }
 

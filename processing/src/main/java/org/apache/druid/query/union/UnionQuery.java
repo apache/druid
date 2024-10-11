@@ -74,7 +74,7 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public DataSource getDataSource()
   {
-    throw new RuntimeException("This is not supported");
+    throw DruidException.defensive("This is not supported");
   }
 
   @Override
@@ -110,31 +110,31 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public QueryRunner<RealUnionResult> getRunner(QuerySegmentWalker walker)
   {
-    return new RealUnionQueryRunner(walker);
+    throw DruidException.defensive("This is not supported");
   }
 
   @Override
   public List<Interval> getIntervals()
   {
-    throw new RuntimeException("FIXME: Unimplemented!");
+    throw DruidException.defensive("This is not supported");
   }
 
   @Override
   public Duration getDuration()
   {
-    throw new RuntimeException("FIXME: Unimplemented!");
+    throw DruidException.defensive("This is not supported");
   }
 
   @Override
   public Granularity getGranularity()
   {
-    throw new RuntimeException("FIXME: Unimplemented!");
+    throw DruidException.defensive("This is not supported");
   }
 
   @Override
   public DateTimeZone getTimezone()
   {
-    throw new RuntimeException("FIXME: Unimplemented!");
+    throw DruidException.defensive("This is not supported");
   }
 
   @Override
@@ -146,10 +146,7 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public Ordering<RealUnionResult> getResultOrdering()
   {
-    if (true) {
-      throw new RuntimeException("FIXME: Unimplemented!");
-    }
-    return null;
+    throw new RuntimeException("FIXME: Unimplemented!");
   }
 
   @Override

@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
  */
 public class RealUnionResult
 {
-  private Sequence<?> seq;
+  private final Sequence<?> seq;
 
   public RealUnionResult(Sequence<?> seq)
   {
