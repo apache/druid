@@ -973,7 +973,7 @@ public class WorkerImpl implements Worker
    */
   private static String cancellationIdFor(final StageId stageId, final int workerNumber)
   {
-    return StringUtils.format("dart-worker[%s_%s]", stageId, workerNumber);
+    return StringUtils.format("msq-worker[%s_%s]", stageId, workerNumber);
   }
 
   /**
