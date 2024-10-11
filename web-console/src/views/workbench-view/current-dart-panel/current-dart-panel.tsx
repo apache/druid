@@ -134,7 +134,7 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
             const anonymous = w.identity === 'allowAll' && w.authenticator === 'allowAll';
             return (
               <Popover className="work-entry" key={w.sqlQueryId} position="left" content={menu}>
-                <div>
+                <div onDoubleClick={() => setShowSql(w.sql)}>
                   <div className="line1">
                     <Icon
                       className={'status-icon ' + w.state.toLowerCase()}
