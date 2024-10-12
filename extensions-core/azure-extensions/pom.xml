@@ -54,6 +54,8 @@
         <dependency>
             <groupId>com.azure</groupId>
             <artifactId>azure-identity</artifactId>
+            <!-- fixing the version here while we wait for an updated azure-sdk-bom -->
+            <version>1.12.2</version>
         </dependency>
         <dependency>
             <groupId>com.azure</groupId>
