@@ -207,6 +207,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       if (!currentStage.getOperatorFactories().isEmpty()) {
         stages.add(currentStage);
       }
+
+      log.info("Created window stages: [%s]", stages);
     }
 
     private List<WindowStage> getStages()
