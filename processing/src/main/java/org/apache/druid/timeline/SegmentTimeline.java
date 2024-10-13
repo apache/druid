@@ -21,6 +21,7 @@ package org.apache.druid.timeline;
 
 import com.google.common.collect.Iterators;
 
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 
@@ -58,6 +59,13 @@ public class SegmentTimeline extends VersionedIntervalTimeline<String, DataSegme
             )
         )
     );
+  }
+
+  public void removeSegments(Collection<DataSegment> segments)
+  {
+    for (DataSegment segment : segments) {
+      remove(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+    }
   }
 
   public boolean isOvershadowed(DataSegment segment)

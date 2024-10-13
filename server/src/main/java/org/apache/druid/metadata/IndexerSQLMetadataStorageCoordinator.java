@@ -119,6 +119,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private final SegmentSchemaManager segmentSchemaManager;
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final boolean schemaPersistEnabled;
+  private final SegmentCache segmentCache = new SegmentCache();
 
   @Inject
   public IndexerSQLMetadataStorageCoordinator(
@@ -151,6 +152,45 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     connector.createUpgradeSegmentsTable();
   }
 
+  public void initializeCache(Map<String, Set<Interval>> datasourceToActiveLockIntervals)
+  {
+    segmentCache.clear();
+    for (String datsource : retrieveAllDatasourceNames()) {
+      segmentCache.addSegments(datsource, retrieveAllUsedSegments(datsource, Segments.INCLUDING_OVERSHADOWED));
+    }
+    for (final String datasource : datasourceToActiveLockIntervals.keySet()) {
+      for (final Interval interval : datasourceToActiveLockIntervals.get(datasource)) {
+        segmentCache.addPendingSegments(
+            datasource,
+            getPendingSegments(datasource, interval).stream()
+                                                    .map(PendingSegmentRecord::getId)
+                                                    .collect(Collectors.toSet())
+        );
+      }
+    }
+  }
+
+  public Set<DataSegment> retrieveUsedSegmentsForIntervalsFromCache(
+      final String dataSource,
+      final Interval interval,
+      final Segments visibility
+  )
+  {
+    final SegmentTimeline timeline = segmentCache.getDatasourceTimelines().get(dataSource);
+    if (timeline == null) {
+      return Collections.emptySet();
+    }
+    Set<DataSegment> allSegments = new HashSet<>();
+    timeline.lookup(interval)
+            .forEach(holder -> holder.getObject().payloads().forEach(allSegments::add));
+    if (visibility == Segments.INCLUDING_OVERSHADOWED) {
+      return allSegments;
+    } else {
+      return SegmentTimeline.forSegments(allSegments)
+                            .findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
+    }
+  }
+
   @Override
   public Set<DataSegment> retrieveUsedSegmentsForIntervals(
       final String dataSource,
@@ -169,6 +209,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   {
     return doRetrieveUsedSegments(dataSource, Collections.emptyList(), visibility);
   }
+
+  private List<String> retrieveAllDatasourceNames()
+  {
+    final String query = "SELECT DISTINCT datasource from %s WHERE used = true";
+    final Query<Map<String, Object>> sql = connector.retryWithHandle(
+        handle -> handle.createQuery(StringUtils.format(query, dbTables.getSegmentsTable()))
+    );
+
+    final ResultIterator<String> resultIterator =
+        sql.map((index, r, ctx) -> JacksonUtils.readValue(jsonMapper, r.getBytes(1), String.class))
+           .iterator();
+    return Lists.newArrayList(resultIterator);
+  }
+
 
   /**
    * @param intervals empty list means unrestricted interval.
@@ -530,6 +584,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                     usedSegments,
                     segmentSchemaMapping
                 );
+            segmentCache.addSegments(dataSource, inserted);
             return SegmentPublishResult.ok(ImmutableSet.copyOf(inserted));
           },
           3,
@@ -752,9 +807,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return connector.retryWithHandle(
         handle -> {
           // Get the time chunk and associated data segments for the given interval, if any
+          final SegmentTimeline timeline = segmentCache.getDatasourceTimelines().get(dataSource);
           final List<TimelineObjectHolder<String, DataSegment>> existingChunks =
-              getTimelineForIntervalsWithHandle(handle, dataSource, ImmutableList.of(interval))
-                  .lookup(interval);
+              timeline == null ? Collections.emptyList() : timeline.lookup(interval);
           if (existingChunks.size() > 1) {
             // Not possible to expand more than one chunk with a single segment.
             log.warn(
@@ -1012,9 +1067,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   ) throws IOException
   {
     // Get the time chunk and associated data segments for the given interval, if any
+    final SegmentTimeline timeline = segmentCache.getDatasourceTimelines().get(dataSource);
     final List<TimelineObjectHolder<String, DataSegment>> existingChunks =
-        getTimelineForIntervalsWithHandle(handle, dataSource, Collections.singletonList(interval))
-            .lookup(interval);
+        timeline == null ? Collections.emptyList() : timeline.lookup(interval);
     if (existingChunks.size() > 1) {
       log.warn(
           "Cannot allocate new segments for dataSource[%s], interval[%s] as interval already has [%,d] chunks.",
@@ -1511,6 +1566,21 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
+  /**
+   * Test only method
+   */
+  @VisibleForTesting
+  public void insertPendingSegments(
+      String dataSource,
+      List<PendingSegmentRecord> pendingSegments,
+      boolean skipSegmentLineageCheck
+  )
+  {
+    connector.retryWithHandle(
+        handle -> insertPendingSegmentsIntoMetastore(handle, pendingSegments, dataSource, skipSegmentLineageCheck)
+    );
+  }
+
   @VisibleForTesting
   int insertPendingSegmentsIntoMetastore(
       Handle handle,
@@ -1556,6 +1626,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
       processedSegmentIds.add(segmentId);
     }
+    segmentCache.addPendingSegments(dataSource, processedSegmentIds);
     int[] updated = insertBatch.execute();
     return Arrays.stream(updated).sum();
   }
@@ -1592,6 +1663,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           .bind("payload", jsonMapper.writeValueAsBytes(newIdentifier))
           .bind("task_allocator_id", taskAllocatorId)
           .execute();
+    segmentCache.addPendingSegments(dataSource, Collections.singleton(newIdentifier));
   }
 
   private Map<SegmentCreateRequest, PendingSegmentRecord> createNewSegments(
@@ -1643,9 +1715,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // A pending segment having a higher partitionId must also be considered
     // to avoid clashes when inserting the pending segment created here.
     final Set<SegmentIdWithShardSpec> pendingSegments = new HashSet<>(
-        getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).stream()
-                                                                             .map(PendingSegmentRecord::getId)
-                                                                             .collect(Collectors.toSet())
+        segmentCache.getPendingSegments(dataSource, interval)
     );
 
     final Map<SegmentCreateRequest, PendingSegmentRecord> createdSegments = new HashMap<>();
@@ -1851,9 +1921,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     // A pending segment having a higher partitionId must also be considered
     // to avoid clashes when inserting the pending segment created here.
     final Set<SegmentIdWithShardSpec> pendings = new HashSet<>(
-        getPendingSegmentsForIntervalWithHandle(handle, dataSource, interval).stream()
-                                                                             .map(PendingSegmentRecord::getId)
-                                                                             .collect(Collectors.toSet())
+        segmentCache.getPendingSegments(dataSource, interval)
     );
     if (committedMaxId != null) {
       pendings.add(committedMaxId);
@@ -2378,6 +2446,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       }
     }
 
+    if (!segmentsToInsert.isEmpty()) {
+      segmentCache.addSegments(
+          segmentsToInsert.stream().findFirst().get().getDataSource(),
+          segmentsToInsert
+      );
+    }
     return segmentsToInsert;
   }
 

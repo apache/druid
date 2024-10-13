@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.query.QueryContexts;
@@ -168,6 +169,8 @@ public class TaskLockbox
       final Set<String> failedToReacquireLockTaskGroups = new HashSet<>();
       // Bookkeeping for a log message at the end
       int taskLockCount = 0;
+      // To initialize metadata storage coordinator pending segment cache
+      final Map<String, Set<Interval>> datasourceToActiveTaskLocks = new HashMap<>();
       for (final Pair<Task, TaskLock> taskAndLock : byVersionOrdering.sortedCopy(storedLocks)) {
         final Task task = Preconditions.checkNotNull(taskAndLock.lhs, "task");
         final TaskLock savedTaskLock = Preconditions.checkNotNull(taskAndLock.rhs, "savedTaskLock");
@@ -192,6 +195,8 @@ public class TaskLockbox
 
           if (savedTaskLockWithPriority.getVersion().equals(taskLock.getVersion())) {
             taskLockCount++;
+            datasourceToActiveTaskLocks.computeIfAbsent(taskLock.getDataSource(), ds -> new HashSet<>())
+                                       .add(taskLock.getInterval());
             log.info(
                 "Reacquired lock[%s] for task: %s",
                 taskLock,
@@ -199,6 +204,8 @@ public class TaskLockbox
             );
           } else {
             taskLockCount++;
+            datasourceToActiveTaskLocks.computeIfAbsent(taskLock.getDataSource(), ds -> new HashSet<>())
+                                       .add(taskLock.getInterval());
             log.info(
                 "Could not reacquire lock on interval[%s] version[%s] (got version[%s] instead) for task: %s",
                 savedTaskLockWithPriority.getInterval(),
@@ -243,6 +250,10 @@ public class TaskLockbox
       if (!failedToReacquireLockTaskGroups.isEmpty()) {
         log.warn("Marking all tasks from task groups[%s] to be failed "
                  + "as they failed to reacquire at least one lock.", failedToReacquireLockTaskGroups);
+      }
+
+      if (metadataStorageCoordinator instanceof IndexerSQLMetadataStorageCoordinator) {
+        ((IndexerSQLMetadataStorageCoordinator) metadataStorageCoordinator).initializeCache(datasourceToActiveTaskLocks);
       }
 
       return new TaskLockboxSyncResult(tasksToFail);

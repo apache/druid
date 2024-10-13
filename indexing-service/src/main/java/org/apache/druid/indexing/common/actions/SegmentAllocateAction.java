@@ -28,7 +28,6 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.LockRequestForNewSegment;
 import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.Segments;
@@ -37,6 +36,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
@@ -226,7 +226,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
         throw new IAE("Task dataSource must match action dataSource, [%s] != [%s].", task.getDataSource(), dataSource);
       }
 
-      final IndexerMetadataStorageCoordinator msc = toolbox.getIndexerMetadataStorageCoordinator();
+      final IndexerSQLMetadataStorageCoordinator msc = (IndexerSQLMetadataStorageCoordinator) toolbox.getIndexerMetadataStorageCoordinator();
 
       // 1) if something overlaps our timestamp, use that
       // 2) otherwise try preferredSegmentGranularity & going progressively smaller
@@ -234,7 +234,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       final Interval rowInterval = queryGranularity.bucket(timestamp).withChronology(ISOChronology.getInstanceUTC());
 
       final Set<DataSegment> usedSegmentsForRow =
-          new HashSet<>(msc.retrieveUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE));
+          new HashSet<>(msc.retrieveUsedSegmentsForIntervalsFromCache(dataSource, rowInterval, Segments.ONLY_VISIBLE));
+
 
       final SegmentIdWithShardSpec identifier;
       if (usedSegmentsForRow.isEmpty()) {
@@ -251,7 +252,8 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       // and if it's different, repeat.
 
       Set<DataSegment> newUsedSegmentsForRow =
-          new HashSet<>(msc.retrieveUsedSegmentsForInterval(dataSource, rowInterval, Segments.ONLY_VISIBLE));
+          new HashSet<>(msc.retrieveUsedSegmentsForIntervalsFromCache(dataSource, rowInterval, Segments.ONLY_VISIBLE));
+
       if (!newUsedSegmentsForRow.equals(usedSegmentsForRow)) {
         if (attempt < MAX_ATTEMPTS) {
           final long shortRandomSleep = 50 + (long) (ThreadLocalRandom.current().nextDouble() * 450);
