@@ -161,7 +161,7 @@ public class SqlTestFramework
      */
     void configureGuice(DruidInjectorBuilder builder);
 
-    QueryRunnerFactoryConglomerate createCongolmerate(
+    QueryRunnerFactoryConglomerate createCongolmerate1(
         Builder builder,
         Closer resourceCloser,
         ObjectMapper jsonMapper,
@@ -267,13 +267,10 @@ public class SqlTestFramework
     @Override
     public void configureGuice(DruidInjectorBuilder builder)
     {
-      builder.addModule(new x());
     }
 
     class x implements Module
     {
-
-
 
       @Provides
       public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> createCongolmerate(
@@ -299,7 +296,7 @@ public class SqlTestFramework
   }
 
     @Override
-    public QueryRunnerFactoryConglomerate createCongolmerate(
+    public QueryRunnerFactoryConglomerate createCongolmerate1(
         Builder builder,
         Closer resourceCloser,
         ObjectMapper jsonMapper,
@@ -630,6 +627,23 @@ public class SqlTestFramework
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
       binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));
+    }
+
+
+    @Provides
+    public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> make1(
+        ObjectMapper jsonMapper,
+        final TestBufferPool testBufferPool,
+        final TestGroupByBuffers groupByBuffers,
+        @Named(SqlTestFramework.SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig)
+    {
+      return QueryStackTests.makeDefaultQueryRunnerFactories(
+          processingConfig,
+          builder.mergeBufferCount,
+          jsonMapper,
+          testBufferPool,
+          groupByBuffers
+      );
     }
 
     /*
