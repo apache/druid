@@ -22,9 +22,14 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.Module;
+import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.SegmentWranglerModule;
@@ -304,6 +309,65 @@ public class QueryStackTests
         makeDefaultQueryRunnerFactories(processingConfig, minTopNThreshold, jsonMapper, testBufferPool, groupByBuffers)
     );
     return conglomerate;
+  }
+
+  public static class DefaultRunnersModule implements Module {
+
+    @Inject
+    public
+    DruidProcessingConfig processingConfig;
+////    @Inject
+////    public Integer minTopNThreshold;
+    @Inject
+    public     ObjectMapper jsonMapper;
+    @Inject
+    public     TestBufferPool testBufferPool;
+//    @Inject
+//    public TestGroupByBuffers groupByBuffers;
+
+//    @Inject
+//    private void asd(TestBufferPool aa)
+//    {
+//      if (true) {
+//        throw new RuntimeException("FIXME: Unimplemented!");
+//      }
+//
+//    }
+
+    @Override
+    public void configure(Binder binder)
+    {
+      MapBinder<Class<? extends Query>, QueryRunnerFactory> runnerFactoryBinder = DruidBinders.queryRunnerFactoryBinder(binder);
+      runnerFactoryBinder.addBinding(ScanQuery.class).toProvider(this::asd);
+//      runnerFactoryBinder.addBinding(SegmentMetadataQuery.class).to(SegmentMetadataQueryRunnerFactory.class);
+    }
+
+
+    public ScanQueryRunnerFactory asd()
+    {
+      return new ScanQueryRunnerFactory(
+          new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
+          new ScanQueryEngine(),
+          new ScanQueryConfig()
+      );
+    }
+
+//    @Provides
+//    public GroupByQueryRunnerFactory  makeGroupByQueryRunnerFactory (
+//        final DruidProcessingConfig processingConfig,
+//        final Integer minTopNThreshold,
+//        final ObjectMapper jsonMapper,
+//        final TestBufferPool testBufferPool,
+//        final TestGroupByBuffers groupByBuffers,
+//        final Binder binder)
+//    {
+//      ImmutableMap<Class<? extends Query>, QueryRunnerFactory> defaultFactories = makeDefaultQueryRunnerFactories(processingConfig, minTopNThreshold, jsonMapper, testBufferPool, groupByBuffers);
+//
+//      return null;
+//    }
+//
+
+
   }
 
   @SuppressWarnings("rawtypes")
