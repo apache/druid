@@ -104,7 +104,7 @@ public final class Closer implements Closeable
   private final Deque<Closeable> stack = new ArrayDeque<>(4);
   private Throwable thrown;
 
-  public Closer()
+  private Closer()
   {
   }
 

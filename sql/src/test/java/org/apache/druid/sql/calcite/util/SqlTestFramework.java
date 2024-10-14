@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
@@ -265,9 +264,6 @@ public class SqlTestFramework
     @Override
     public void configureGuice(DruidInjectorBuilder builder)
     {
-      builder.addClass(SubTestModule.class);
-
-      builder.addClass(QueryStackTests.DefaultRunnersModule.class);
     }
 
     @Override
@@ -559,53 +555,6 @@ public class SqlTestFramework
     }
   }
 
-  private static final String SQL_TEST_FRAME_WORK = "sqlTestFrameWork";
-
-  public static class SubTestModule implements Module
-  {
-    private final int mergeBufferCount;
-    private final Closer resourceCloser;
-
-    @Inject
-    public SubTestModule(
-
-        )
-    {
-      this.resourceCloser = new Closer();
-      this.mergeBufferCount = 11;
-    }
-    /*
-     * Ideally this should not have a Named annotation, but it clashes with
-     * {@link DruidProcessingModule}.
-     */
-    @Named(SQL_TEST_FRAME_WORK)
-    @Provides
-    @LazySingleton
-    public DruidProcessingConfig makeProcessingConfig()
-    {
-      return QueryStackTests.getProcessingConfig(mergeBufferCount);
-    }
-
-    @Provides
-    @LazySingleton
-    public TestBufferPool makeTestBufferPool()
-    {
-      return QueryStackTests.makeTestBufferPool(resourceCloser);
-    }
-
-    @Provides
-    @LazySingleton
-    public TestGroupByBuffers makeTestGroupByBuffers(
-        @Named(SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig)
-    {
-      return QueryStackTests.makeGroupByBuffers(resourceCloser, processingConfig);
-    }
-
-    @Override
-    public void configure(Binder binder)
-    {
-    }
-  }
   /**
    * Guice module to create the various query framework items. By creating items within
    * a module, later items can depend on those created earlier by grabbing them from the
@@ -621,6 +570,7 @@ public class SqlTestFramework
    */
   private class TestSetupModule implements DruidModule
   {
+    private static final String SQL_TEST_FRAME_WORK = "sqlTestFrameWork";
     private final Builder builder;
     private final List<DruidModule> subModules = Arrays.asList(new BuiltInTypesModule(), new TestSqlModule());
 
@@ -648,12 +598,31 @@ public class SqlTestFramework
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
       binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));
+    }
 
-//      binder.install(new SubTestModule(resourceCloser, builder.mergeBufferCount));
-//      QueryStackTests.DefaultRunnersModule module = new QueryStackTests.DefaultRunnersModule();
-//      binder.requestInjection(module);
-//      binder.install(module);
+    /*
+     * Ideally this should not have a Named annotation, but it clashes with {@link DruidProcessingModule}.
+     */
+    @Named(SQL_TEST_FRAME_WORK)
+    @Provides
+    @LazySingleton
+    public DruidProcessingConfig makeProcessingConfig()
+    {
+      return QueryStackTests.getProcessingConfig(builder.mergeBufferCount);
+    }
 
+    @Provides
+    @LazySingleton
+    public TestBufferPool makeTestBufferPool()
+    {
+      return QueryStackTests.makeTestBufferPool(resourceCloser);
+    }
+
+    @Provides
+    @LazySingleton
+    public TestGroupByBuffers makeTestGroupByBuffers(@Named(SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig)
+    {
+      return QueryStackTests.makeGroupByBuffers(resourceCloser, processingConfig);
     }
 
     @Provides
