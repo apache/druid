@@ -73,7 +73,7 @@
     "axios": "^0.26.1",
     "classnames": "^2.2.6",
     "copy-to-clipboard": "^3.2.0",
-    "core-js": "^3.10.1",
+    "core-js": "^3.38.1",
     "d3-array": "^2.12.1",
     "d3-axis": "^2.1.0",
     "d3-scale": "^3.3.0",
