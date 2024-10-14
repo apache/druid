@@ -42,6 +42,8 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.GlobalTableDataSource;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.TestBufferPool;
@@ -86,6 +88,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -264,7 +267,36 @@ public class SqlTestFramework
     @Override
     public void configureGuice(DruidInjectorBuilder builder)
     {
+      builder.addModule(new x());
     }
+
+    class x implements Module
+    {
+
+
+
+      @Provides
+      public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> createCongolmerate(
+          ObjectMapper jsonMapper,
+          final TestBufferPool testBufferPool,
+          final TestGroupByBuffers groupByBuffers,
+          @Named(SqlTestFramework.SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig)
+      {
+        return QueryStackTests.makeDefaultQueryRunnerFactories(
+            processingConfig,
+            111,
+            jsonMapper,
+            testBufferPool,
+            groupByBuffers
+        );
+      }
+
+    @Override
+    public void configure(Binder binder)
+    {
+    }
+
+  }
 
     @Override
     public QueryRunnerFactoryConglomerate createCongolmerate(
@@ -555,6 +587,7 @@ public class SqlTestFramework
     }
   }
 
+  public static final String SQL_TEST_FRAME_WORK = "sqlTestFrameWork";
   /**
    * Guice module to create the various query framework items. By creating items within
    * a module, later items can depend on those created earlier by grabbing them from the
@@ -570,7 +603,6 @@ public class SqlTestFramework
    */
   private class TestSetupModule implements DruidModule
   {
-    private static final String SQL_TEST_FRAME_WORK = "sqlTestFrameWork";
     private final Builder builder;
     private final List<DruidModule> subModules = Arrays.asList(new BuiltInTypesModule(), new TestSqlModule());
 
@@ -630,16 +662,23 @@ public class SqlTestFramework
     public QueryRunnerFactoryConglomerate conglomerate(
         @Named(SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig,
         TestBufferPool testBufferPool,
-        TestGroupByBuffers groupByBuffers)
+        TestGroupByBuffers groupByBuffers,
+        @Named(SQL_TEST_FRAME_WORK)
+        Map<Class<? extends Query>, QueryRunnerFactory>  fact
+        )
     {
-      return componentSupplier.createCongolmerate(
-          builder,
-          resourceCloser,
-          queryJsonMapper(),
-          testBufferPool,
-          groupByBuffers,
-          processingConfig
-      );
+      return new DefaultQueryRunnerFactoryConglomerate(
+          fact
+          );
+
+//      return componentSupplier.createCongolmerate(
+//          builder,
+//          resourceCloser,
+//          queryJsonMapper(),
+//          testBufferPool,
+//          groupByBuffers,
+//          processingConfig
+//      );
     }
 
     @Provides
