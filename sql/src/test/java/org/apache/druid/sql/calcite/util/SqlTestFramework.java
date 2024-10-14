@@ -39,6 +39,7 @@ import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -275,12 +276,14 @@ public class SqlTestFramework
         DruidProcessingConfig processingConfig
     )
     {
-      return QueryStackTests.createQueryRunnerFactoryConglomerate(
-          processingConfig,
-          builder.minTopNThreshold,
-          jsonMapper,
-          testBufferPool,
-          groupByBuffers
+      return new DefaultQueryRunnerFactoryConglomerate(
+          QueryStackTests.makeDefaultQueryRunnerFactories(
+              processingConfig,
+              builder.minTopNThreshold,
+              jsonMapper,
+              testBufferPool,
+              groupByBuffers
+          )
       );
     }
 
