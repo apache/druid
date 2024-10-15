@@ -39,6 +39,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.batch.ScheduledBatchScheduler;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TimeChunkLock;
 import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
@@ -259,6 +260,7 @@ public class OverlordTest
         new TestDruidLeaderSelector(),
         EasyMock.createNiceMock(SegmentAllocationQueue.class),
         EasyMock.createNiceMock(CompactionScheduler.class),
+        EasyMock.createNiceMock(ScheduledBatchScheduler.class),
         new DefaultObjectMapper(),
         new NoopTaskContextEnricher()
     );

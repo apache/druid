@@ -25,10 +25,12 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.rpc.ServiceClient;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -41,7 +43,10 @@ import java.util.concurrent.ExecutionException;
 
 /**
  * This class facilitates interaction with Broker.
+ * Note that this should be removed and reconciled with org.apache.druid.sql.client.BrokerClient, which has the
+ * built-in functionality of {@link ServiceClient}, and proper Guice and service discovery wired in.
  */
+@Deprecated
 public class BrokerClient
 {
   private static final int MAX_RETRIES = 5;

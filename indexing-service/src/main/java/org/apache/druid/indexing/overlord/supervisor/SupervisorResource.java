@@ -40,6 +40,7 @@ import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;

@@ -25,6 +25,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.sql.http.SqlTaskStatus;
 import org.junit.Assert;
 import org.junit.Test;
 

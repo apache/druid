@@ -26,6 +26,7 @@ import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.indexing.batch.ScheduledBatchScheduler;
 import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.TaskContextEnricher;
@@ -89,6 +90,7 @@ public class DruidOverlord
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue,
       final CompactionScheduler compactionScheduler,
+      final ScheduledBatchScheduler scheduledBatchScheduler,
       final ObjectMapper mapper,
       final TaskContextEnricher taskContextEnricher
   )
@@ -143,6 +145,7 @@ public class DruidOverlord
                   segmentAllocationQueue.becomeLeader();
                   taskMaster.becomeLeader(taskRunner, taskQueue);
                   compactionScheduler.start();
+                  scheduledBatchScheduler.start();
 
                   // Announce the node only after all the services have been initialized
                   initialized = true;
@@ -153,6 +156,7 @@ public class DruidOverlord
                 public void stop()
                 {
                   serviceAnnouncer.unannounce(node);
+                  scheduledBatchScheduler.stop();
                   compactionScheduler.stop();
                   taskMaster.stopBeingLeader();
                   segmentAllocationQueue.stopBeingLeader();

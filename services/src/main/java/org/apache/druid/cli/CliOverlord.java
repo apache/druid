@@ -38,6 +38,7 @@ import com.google.inject.name.Names;
 import com.google.inject.servlet.GuiceFilter;
 import com.google.inject.util.Providers;
 import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.discovery.BrokerClient;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
@@ -53,6 +54,7 @@ import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.indexing.batch.ScheduledBatchScheduler;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.TaskStorageDirTracker;
 import org.apache.druid.indexing.common.actions.LocalTaskActionClientFactory;
@@ -132,6 +134,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.sql.guice.SqlServiceModule;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
@@ -249,6 +252,8 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskQueryTool.class).in(LazySingleton.class);
             binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
             binder.bind(CompactionScheduler.class).to(OverlordCompactionScheduler.class).in(LazySingleton.class);
+
+            binder.bind(ScheduledBatchScheduler.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
             binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));
@@ -457,7 +462,8 @@ public class CliOverlord extends ServerRunnable
         new InputSourceModule(),
         new SupervisorModule(),
         new LookupSerdeModule(),
-        new SamplerModule()
+        new SamplerModule(),
+        new SqlServiceModule()
     );
   }
 

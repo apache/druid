@@ -1,0 +1,192 @@
+package org.apache.druid.indexing.batch;
+
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.config.Configs;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.sql.calcite.planner.ExplainAttributes;
+import org.apache.druid.sql.client.BrokerClient;
+import org.apache.druid.sql.http.ExplainPlanResponse;
+import org.apache.druid.sql.http.SqlQuery;
+
+import javax.annotation.Nullable;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+
+public class BatchSupervisorSpec implements SupervisorSpec
+{
+  public static final String TYPE = "scheduled_batch";
+  public static final String ID_PREFIX = "scheduled_batch__";
+
+  private static final Logger log = new Logger(BatchSupervisor.class);
+
+  @JsonProperty
+  private final SqlQuery spec;
+  @JsonProperty
+  private final boolean suspended;
+  @JsonProperty
+  private final CronSchedulerConfig schedulerConfig;
+
+  /**
+   * Note that both {@link #dataSource} and {@link #id} are optional JSON fields present in the spec.
+   * They are only used internally because we use and persist the user-facing spec in the metadata store. So these
+   * additional fields are required for jackson deserialization.
+   * It would be better to have separate user-facing and domain-specific DTOs for this purpose and map them, but
+   * that'll entail a larger change.
+   */
+  @JsonProperty
+  private final String dataSource;
+  @JsonProperty
+  private final String id;
+
+  private final ObjectMapper objectMapper;
+  private final ScheduledBatchScheduler batchScheduler;
+  private final BrokerClient sqlBrokerClient;
+
+  @JsonCreator
+  public BatchSupervisorSpec(
+      @JsonProperty("spec") final SqlQuery spec,
+      @JsonProperty("schedulerConfig") final CronSchedulerConfig schedulerConfig,
+      @JsonProperty("suspended") @Nullable Boolean suspended,
+      @JsonProperty("id") @Nullable final String id,
+      @JsonProperty("dataSource") @Nullable final String dataSource,
+      @JacksonInject ObjectMapper objectMapper,
+      @JacksonInject ScheduledBatchScheduler batchScheduler,
+      @JacksonInject BrokerClient sqlBrokerClient
+  )
+  {
+    this.spec = spec;
+    this.schedulerConfig = schedulerConfig;
+    this.suspended = Configs.valueOrDefault(suspended, false);
+    this.objectMapper = objectMapper;
+    this.batchScheduler = batchScheduler;
+    this.sqlBrokerClient = sqlBrokerClient;
+
+    this.dataSource =  dataSource != null ? dataSource : getDatasourceFromQuery();
+    this.id = id != null ? id : ID_PREFIX + this.dataSource + "__" + UUID.randomUUID();
+  }
+
+  private String getDatasourceFromQuery()
+  {
+    final List<ExplainPlanResponse> explainPlanResponses;
+    final ListenableFuture<List<ExplainPlanResponse>> explainPlanFuture = sqlBrokerClient.explainPlanFor(spec);
+    try {
+      explainPlanResponses = explainPlanFuture.get();
+    } catch (Exception e) {
+      throw InvalidInput.exception("Error getting datasource from query[%s]: [%s]", spec, e);
+    }
+
+    if (explainPlanResponses.size() != 1) {
+      throw DruidException.defensive(
+          "Received an invalid EXPLAIN PLAN response for query[%s]. Expected a single plan, but got[%d]: [%s].",
+          spec.getQuery(), explainPlanResponses.size(), explainPlanResponses
+      );
+    }
+
+    final ExplainPlanResponse explainPlanResponse = explainPlanResponses.get(0);
+    final ExplainAttributes explainAttributes;
+    try {
+      explainAttributes = objectMapper.readValue(
+          explainPlanResponse.getAttributes(),
+          ExplainAttributes.class
+      );
+    }
+    catch (JsonProcessingException e) {
+      throw DruidException.defensive(
+          "Error unmarshaling EXPLAIN PLAN attributes for query[%s] from response[%s]: [%s]",
+          spec.getQuery(), explainPlanResponse, e
+      );
+    }
+
+    if ("SELECT".equalsIgnoreCase(explainAttributes.getStatementType())) {
+      throw InvalidInput.exception(
+          "SELECT queries are not supported by the [%s] supervisor. "
+          + "Only INSERT or REPLACE ingest queries are allowed.", getType());
+    }
+
+    return explainAttributes.getTargetDataSource();
+  }
+
+  @Override
+  public String getId()
+  {
+    return id;
+  }
+
+  @Override
+  public BatchSupervisor createSupervisor()
+  {
+    return new BatchSupervisor(this, batchScheduler);
+  }
+
+  @Override
+  public List<String> getDataSources()
+  {
+    return Collections.singletonList(dataSource);
+  }
+
+  @Override
+  public BatchSupervisorSpec createSuspendedSpec()
+  {
+    return new BatchSupervisorSpec(
+        spec,
+        schedulerConfig,
+        true,
+        id, dataSource,
+        objectMapper,
+        batchScheduler,
+        null
+    );
+  }
+
+  @Override
+  public BatchSupervisorSpec createRunningSpec()
+  {
+    return new BatchSupervisorSpec(
+        spec,
+        schedulerConfig,
+        false,
+        id,
+        dataSource,
+        objectMapper,
+        batchScheduler,
+        null
+    );
+  }
+
+  @Override
+  public boolean isSuspended()
+  {
+    return suspended;
+  }
+
+  @Override
+  public String getType()
+  {
+    return TYPE;
+  }
+
+  @Override
+  public String getSource()
+  {
+    return "";
+  }
+
+  public CronSchedulerConfig getSchedulerConfig()
+  {
+    return schedulerConfig;
+  }
+
+  public SqlQuery getSpec()
+  {
+    return spec;
+  }
+}
