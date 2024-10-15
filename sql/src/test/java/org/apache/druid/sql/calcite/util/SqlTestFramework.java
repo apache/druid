@@ -207,7 +207,7 @@ public class SqlTestFramework
      */
     Boolean isExplainSupported();
 
-    QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate);
+    QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate, Closer resourceCloser);
   }
 
   public abstract static class QueryComponentSupplierDelegate implements QueryComponentSupplier
@@ -286,9 +286,10 @@ public class SqlTestFramework
     }
 
     @Override
-    public QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate)
+    public QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate,
+        Closer resourceCloser)
     {
-      return delegate.wrapConglomerate(conglomerate);
+      return delegate.wrapConglomerate(conglomerate, resourceCloser);
     }
   }
 
@@ -414,7 +415,8 @@ public class SqlTestFramework
     }
 
     @Override
-    public QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate)
+    public QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate,
+        Closer resourceCloser)
     {
       return conglomerate;
     }
@@ -718,7 +720,7 @@ public class SqlTestFramework
         @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> factories)
     {
       QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(factories);
-      return componentSupplier.wrapConglomerate(conglomerate);
+      return componentSupplier.wrapConglomerate(conglomerate, resourceCloser);
     }
 
     @Provides
