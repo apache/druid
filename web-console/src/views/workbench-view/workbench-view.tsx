@@ -212,10 +212,13 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
   componentDidMount(): void {
     this.metadataQueryManager = new QueryManager({
-      processQuery: async () => {
-        return await queryDruidSql<ColumnMetadata>({
-          query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
-        });
+      processQuery: async (_, cancelToken) => {
+        return await queryDruidSql<ColumnMetadata>(
+          {
+            query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
+          },
+          cancelToken,
+        );
       },
       onStateChange: columnMetadataState => {
         if (columnMetadataState.error) {

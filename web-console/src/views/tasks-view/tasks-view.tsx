@@ -165,13 +165,16 @@ ORDER BY
     };
 
     this.taskQueryManager = new QueryManager({
-      processQuery: async capabilities => {
+      processQuery: async (capabilities, cancelToken) => {
         if (capabilities.hasSql()) {
-          return await queryDruidSql({
-            query: TasksView.TASK_SQL,
-          });
+          return await queryDruidSql(
+            {
+              query: TasksView.TASK_SQL,
+            },
+            cancelToken,
+          );
         } else if (capabilities.hasOverlordAccess()) {
-          const resp = await Api.instance.get(`/druid/indexer/v1/tasks`);
+          const resp = await Api.instance.get(`/druid/indexer/v1/tasks`, { cancelToken });
           return TasksView.parseTasks(resp.data);
         } else {
           throw new Error(`must have SQL or overlord access`);

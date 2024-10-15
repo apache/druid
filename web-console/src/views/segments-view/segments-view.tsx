@@ -255,7 +255,7 @@ END AS "time_span"`,
 
     this.segmentsQueryManager = new QueryManager({
       debounceIdle: 500,
-      processQuery: async (query: SegmentsQuery, _cancelToken, setIntermediateQuery) => {
+      processQuery: async (query: SegmentsQuery, cancelToken, setIntermediateQuery) => {
         const { page, pageSize, filtered, sorted, visibleColumns, capabilities, groupByInterval } =
           query;
 
@@ -356,10 +356,10 @@ END AS "time_span"`,
           }
           const sqlQuery = queryParts.join('\n');
           setIntermediateQuery(sqlQuery);
-          return await queryDruidSql({ query: sqlQuery });
+          return await queryDruidSql({ query: sqlQuery }, cancelToken);
         } else if (capabilities.hasCoordinatorAccess()) {
           let datasourceList: string[] = (
-            await Api.instance.get('/druid/coordinator/v1/metadata/datasources')
+            await Api.instance.get('/druid/coordinator/v1/metadata/datasources', { cancelToken })
           ).data;
 
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
@@ -383,6 +383,7 @@ END AS "time_span"`,
             const segments = (
               await Api.instance.get(
                 `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
+                { cancelToken },
               )
             ).data?.segments;
             if (!Array.isArray(segments)) continue;
