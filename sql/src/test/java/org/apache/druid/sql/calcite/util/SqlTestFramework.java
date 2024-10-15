@@ -50,8 +50,8 @@ import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.query.union.UnionQueryRunnerFactory;
 import org.apache.druid.query.union.UnionQuery;
+import org.apache.druid.query.union.UnionQueryRunnerFactory;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -435,7 +435,7 @@ public class SqlTestFramework
     @Override
     public Map<? extends Class<? extends Query>, ? extends QueryRunnerFactory> makeRunnerFactories(Injector injector)
     {
-      Map map =new HashMap<>();
+      Map map = new HashMap<>();
       UnionQueryRunnerFactory factory = injector.getInstance(UnionQueryRunnerFactory.class);
       map.put(UnionQuery.class, factory);
       return map;
