@@ -694,19 +694,25 @@ public class SqlTestFramework
 
 
     @Provides
-    public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> make1(
+    public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> makeRunnerFactories(
         ObjectMapper jsonMapper,
         final TestBufferPool testBufferPool,
         final TestGroupByBuffers groupByBuffers,
         @Named(SqlTestFramework.SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig)
     {
-      return QueryStackTests.makeDefaultQueryRunnerFactories(
-          processingConfig,
-          builder.mergeBufferCount,
-          jsonMapper,
-          testBufferPool,
-          groupByBuffers
-      );
+      return ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
+          .putAll(
+              QueryStackTests
+                  .makeDefaultQueryRunnerFactories(
+                      processingConfig,
+                      builder.mergeBufferCount,
+                      jsonMapper,
+                      testBufferPool,
+                      groupByBuffers
+                  )
+          )
+          .build();
+
     }
 
     /*
@@ -737,25 +743,9 @@ public class SqlTestFramework
     @Provides
     @LazySingleton
     public QueryRunnerFactoryConglomerate conglomerate(
-        @Named(SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig,
-        TestBufferPool testBufferPool,
-        TestGroupByBuffers groupByBuffers,
-        @Named(SQL_TEST_FRAME_WORK)
-        Map<Class<? extends Query>, QueryRunnerFactory>  fact
-        )
+        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> factories)
     {
-      return new DefaultQueryRunnerFactoryConglomerate(
-          fact
-          );
-
-//      return componentSupplier.createCongolmerate(
-//          builder,
-//          resourceCloser,
-//          queryJsonMapper(),
-//          testBufferPool,
-//          groupByBuffers,
-//          processingConfig
-//      );
+      return new DefaultQueryRunnerFactoryConglomerate(factories);
     }
 
     @Provides
