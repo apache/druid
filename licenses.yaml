@@ -3206,7 +3206,7 @@ module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
 version: 1.1.5
 libraries:
-  - software.amazon.msk: aws-msk-iam-auth-all
+  - software.amazon.msk: aws-msk-iam-auth
 
 ---
 
@@ -3217,7 +3217,7 @@ module: extensions/druid-kafka-extraction-namespace
 license_name: Apache License version 2.0
 version: 1.1.5
 libraries:
-  - software.amazon.msk: aws-msk-iam-auth-all
+  - software.amazon.msk: aws-msk-iam-auth
 
 ---
 
