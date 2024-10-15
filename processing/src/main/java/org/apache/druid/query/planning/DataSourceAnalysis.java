@@ -301,6 +301,11 @@ public class DataSourceAnalysis
    */
   public boolean isGlobal()
   {
+    for (PreJoinableClause preJoinableClause : preJoinableClauses) {
+      if (!preJoinableClause.getDataSource().isGlobal()) {
+        return false;
+      }
+    }
     return baseDataSource.isGlobal();
   }
 }
