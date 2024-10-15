@@ -62,8 +62,8 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryMetricsFactory;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
-import org.apache.druid.query.union.UnionQueryQueryToolChest;
 import org.apache.druid.query.union.UnionQuery;
+import org.apache.druid.query.union.UnionQueryQueryToolChest;
 
 import java.util.Map;
 

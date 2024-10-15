@@ -180,10 +180,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
-//    Optional<QueryRunner<T>> toolchestExecResult = toolChest.executeQuery21(warehouse, query, this);
     if (toolChest instanceof QueryExecutor) {
-      QueryExecutor<T> t = (QueryExecutor<T>) toolChest;
-      return t.makeQueryRunner(query, warehouse, this);
+      return ((QueryExecutor<T>) toolChest).makeQueryRunner(query, warehouse, this);
     }
 
     // transform TableDataSource to GlobalTableDataSource when eligible
@@ -453,12 +451,11 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
           );
           QueryToolChest subQueryToolChest = warehouse.getToolChest(subQuery);
 
-//          final QueryRunner<?> subQueryRunner ;
           final QueryRunner subQueryRunner;
           if (subQueryToolChest instanceof QueryExecutor) {
             subQueryRunner = ((QueryExecutor) subQueryToolChest)
                 .makeQueryRunner(subQueryWithSerialization, warehouse, this);
-          }else {
+          } else {
             subQueryRunner = subQueryWithSerialization.getRunner(this);
           }
 

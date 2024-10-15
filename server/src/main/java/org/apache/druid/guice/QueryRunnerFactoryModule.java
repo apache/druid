@@ -46,8 +46,8 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
-import org.apache.druid.query.union.UnionQueryRunnerFactory;
 import org.apache.druid.query.union.UnionQuery;
+import org.apache.druid.query.union.UnionQueryRunnerFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 
