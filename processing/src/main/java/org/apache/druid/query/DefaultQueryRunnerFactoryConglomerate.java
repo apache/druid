@@ -26,7 +26,7 @@ import java.util.Map;
 
 /**
 */
-public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactoryConglomerate, QueryToolChestWarehouse
+public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactoryConglomerate
 {
   private final Map<Class<? extends Query>, QueryRunnerFactory> factories;
 
@@ -46,10 +46,4 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
     return factories.get(query.getClass());
   }
 
-  @SuppressWarnings("unchecked")
-  @Override
-  public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
-  {
-    return factories.get(query.getClass()).getToolchest();
-  }
 }

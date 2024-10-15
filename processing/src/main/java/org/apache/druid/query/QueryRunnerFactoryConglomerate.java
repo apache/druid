@@ -21,7 +21,16 @@ package org.apache.druid.query;
 
 /**
  */
-public interface QueryRunnerFactoryConglomerate
+public interface QueryRunnerFactoryConglomerate extends QueryToolChestWarehouse
 {
   <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query);
+
+  default <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
+  {
+    QueryRunnerFactory<T, QueryType> factory = findFactory(query);
+    if (factory == null) {
+      return null;
+    }
+    return factory.getToolchest();
+  }
 }
