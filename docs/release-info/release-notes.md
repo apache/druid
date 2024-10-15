@@ -96,7 +96,7 @@ Projections currently only support JSON-based ingestion, but they can be used by
 
 We have a lot of plans to continue to improve this feature in the coming releases, but are excited to get it out there so users can begin experimentation since projections can dramatically improve query performance.
 
-For more information, see [Projections](#projections)
+For more information, see [Projections](#projections).
 
 ### Low latency high complexity queries using Dart (experimental)
 
