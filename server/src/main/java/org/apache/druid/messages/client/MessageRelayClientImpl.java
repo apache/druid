@@ -69,7 +69,7 @@ public class MessageRelayClientImpl<MessageType> implements MessageRelayClient<M
         startWatermark
     );
 
-    ListenableFuture<BytesFullResponseHolder> asyncRequest = (ListenableFuture<BytesFullResponseHolder>) serviceClient.asyncRequest(
+    ListenableFuture<BytesFullResponseHolder> asyncRequest = serviceClient.asyncRequest(
         new RequestBuilder(HttpMethod.GET, path),
         new BytesFullResponseHandler()
     );
