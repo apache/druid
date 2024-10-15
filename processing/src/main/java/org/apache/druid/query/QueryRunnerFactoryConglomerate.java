@@ -32,7 +32,8 @@ public interface QueryRunnerFactoryConglomerate extends QueryToolChestWarehouse
   {
     QueryRunnerFactory<T, QueryType> factory = findFactory(query);
     if (factory == null) {
-      throw DruidException.defensive(query.getClass().getName() + " is not registered");
+      throw DruidException
+          .defensive("QueryRunnerFactory for QueryType [%s] is not registered!", query.getClass().getName());
     }
     return factory.getToolchest();
   }
