@@ -82,7 +82,6 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public List<DataSource> getDataSources()
   {
-
     List<DataSource> dataSources = new ArrayList<>();
     for (Query<?> query : queries) {
       dataSources.add(query.getDataSource());
@@ -94,7 +93,6 @@ public class UnionQuery implements Query<RealUnionResult>
   public boolean hasFilters()
   {
     return false;
-
   }
 
   @Override
@@ -220,6 +218,7 @@ public class UnionQuery implements Query<RealUnionResult>
     return "UnionQuery [context=" + context + ", queries=" + queries + "]";
   }
 
+  @Override
   public DataSourceAnalysis getDataSourceAnalysis()
   {
     OpagueDataSourceCover ds = new OpagueDataSourceCover(new UnionDataSource(getDataSources()));

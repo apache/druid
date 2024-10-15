@@ -350,6 +350,7 @@ public class GroupByQuery extends BaseQuery<ResultRow> implements SupportRowSign
    *
    * @see ResultRow for documentation about the order that fields will be in
    */
+  @Override
   public RowSignature getResultRowSignature(final RowSignature.Finalization finalization)
   {
     if (finalization == RowSignature.Finalization.UNKNOWN) {
