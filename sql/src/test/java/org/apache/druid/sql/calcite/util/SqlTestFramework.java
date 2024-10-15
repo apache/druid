@@ -161,7 +161,7 @@ public class SqlTestFramework
      */
     void configureGuice(DruidInjectorBuilder builder);
 
-    QueryRunnerFactoryConglomerate createCongolmerate1(
+    QueryRunnerFactoryConglomerate createCongolmerate(
         Builder builder,
         Closer resourceCloser,
         ObjectMapper jsonMapper,
@@ -239,7 +239,7 @@ public class SqlTestFramework
     }
 
     @Override
-    public QueryRunnerFactoryConglomerate createCongolmerate1(
+    public QueryRunnerFactoryConglomerate createCongolmerate(
         Builder builder,
         Closer resourceCloser,
         ObjectMapper jsonMapper,
@@ -248,7 +248,7 @@ public class SqlTestFramework
         DruidProcessingConfig processingConfig)
     {
       return delegate
-          .createCongolmerate1(builder, resourceCloser, jsonMapper, testBufferPool, groupByBuffers, processingConfig);
+          .createCongolmerate(builder, resourceCloser, jsonMapper, testBufferPool, groupByBuffers, processingConfig);
     }
 
     @Override
@@ -359,7 +359,7 @@ public class SqlTestFramework
     }
 
     @Override
-    public QueryRunnerFactoryConglomerate createCongolmerate1(
+    public QueryRunnerFactoryConglomerate createCongolmerate(
         Builder builder,
         Closer resourceCloser,
         ObjectMapper jsonMapper,
