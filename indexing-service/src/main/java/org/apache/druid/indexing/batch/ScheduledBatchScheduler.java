@@ -75,7 +75,7 @@ public class ScheduledBatchScheduler
       final ServiceEmitter emitter,
       final ObjectMapper objectMapper,
       final BrokerClient brokerClient2
-      )
+  )
   {
     this.objectMapper = objectMapper;
     this.taskMaster = taskMaster;
@@ -213,7 +213,11 @@ public class ScheduledBatchScheduler
     // Track the last know run time.
     private DateTime lastRunTime;
 
-    private SchedulerManager(final String supervisorId, final CronSchedulerConfig cronSchedulerConfig, final SqlQuery spec)
+    private SchedulerManager(
+        final String supervisorId,
+        final CronSchedulerConfig cronSchedulerConfig,
+        final SqlQuery spec
+    )
     {
       this.supervisorId = supervisorId;
       this.cronSchedulerConfig = cronSchedulerConfig;
@@ -279,11 +283,13 @@ public class ScheduledBatchScheduler
       }
     }
 
-    private DateTime getPreviousExecutionTime() {
+    private DateTime getPreviousExecutionTime()
+    {
       return lastRunTime;
     }
 
-    private Optional<DateTime> getNextExecutionTime() {
+    private Optional<DateTime> getNextExecutionTime()
+    {
       final Optional<ZonedDateTime> zonedDateTime = executionTime.nextExecution(ZonedDateTime.now());
 
       if (zonedDateTime.isPresent()) {

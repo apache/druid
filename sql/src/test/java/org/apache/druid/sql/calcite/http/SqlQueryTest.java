@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.http;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -32,8 +31,6 @@ import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 import org.junit.Assert;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
 
 public class SqlQueryTest extends CalciteTestBase
 {

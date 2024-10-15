@@ -105,7 +105,8 @@ public class BatchSupervisorSpecTest
   {
     testSerde(
         new BatchSupervisorSpec(
-            query, new UnixCronSchedulerConfig("* * * * *"),
+            query,
+            new UnixCronSchedulerConfig("* * * * *"),
             true,
             "foo",
             "boo",
@@ -234,5 +235,4 @@ public class BatchSupervisorSpecTest
       throw DruidException.defensive(e, "Error while performing serde");
     }
   }
-
 }

@@ -25,19 +25,25 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.sql.http.SqlTaskStatus;
 import org.junit.Before;
 import org.junit.Test;
-import static org.junit.Assert.*;
 
-public class BatchSupervisorStatusTrackerTest {
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+public class BatchSupervisorStatusTrackerTest
+{
 
   private BatchSupervisorStatusTracker statusTracker;
 
   @Before
-  public void setUp() {
+  public void setUp()
+  {
     statusTracker = new BatchSupervisorStatusTracker();
   }
 
   @Test
-  public void testOnTaskSubmitted() {
+  public void testOnTaskSubmitted()
+  {
     String supervisorId = "supervisor1";
     SqlTaskStatus sqlTaskStatus = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
 
@@ -50,7 +56,8 @@ public class BatchSupervisorStatusTrackerTest {
   }
 
   @Test
-  public void testOnTaskCompleted() {
+  public void testOnTaskCompleted()
+  {
     String supervisorId = "supervisor1";
     SqlTaskStatus sqlTaskStatus = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
     statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus);
@@ -65,7 +72,8 @@ public class BatchSupervisorStatusTrackerTest {
   }
 
   @Test
-  public void testGetTasksWithNoTasks() {
+  public void testGetTasksWithNoTasks()
+  {
     BatchSupervisorStatusTracker.BatchSupervisorTaskStatus result = statusTracker.getSupervisorTasks("supervisor1");
 
     assertNotNull(result);
@@ -74,7 +82,8 @@ public class BatchSupervisorStatusTrackerTest {
   }
 
   @Test
-  public void testGetTasksWithMultipleTasks() {
+  public void testGetTasksWithMultipleTasks()
+  {
     String supervisorId = "supervisor1";
     SqlTaskStatus sqlTaskStatus1 = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
     SqlTaskStatus sqlTaskStatus2 = new SqlTaskStatus("taskId2", TaskState.RUNNING, null);
@@ -94,7 +103,8 @@ public class BatchSupervisorStatusTrackerTest {
   }
 
   @Test
-  public void testThreadSafety() throws InterruptedException {
+  public void testThreadSafety() throws InterruptedException
+  {
     String supervisorId = "supervisor1";
     SqlTaskStatus sqlTaskStatus1 = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
     SqlTaskStatus sqlTaskStatus2 = new SqlTaskStatus("taskId2", TaskState.RUNNING, null);
@@ -122,4 +132,3 @@ public class BatchSupervisorStatusTrackerTest {
     assertTrue(result.getCompletedTasks().containsKey("taskId2"));
   }
 }
-

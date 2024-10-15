@@ -25,7 +25,6 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHandler;

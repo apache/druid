@@ -50,7 +50,11 @@ public class BatchSupervisor implements Supervisor
       log.info("Suspending the scheduled batch supervisor[%s].", supervisorSpec.getId());
       scheduler.stopScheduledIngestion(supervisorSpec.getId());
     } else {
-      scheduler.startScheduledIngestion(supervisorSpec.getId(), supervisorSpec.getSchedulerConfig(), supervisorSpec.getSpec());
+      scheduler.startScheduledIngestion(
+          supervisorSpec.getId(),
+          supervisorSpec.getSchedulerConfig(),
+          supervisorSpec.getSpec()
+      );
       log.info("Starting the scheduled batch supervisor[%s].", supervisorSpec.getId());
     }
   }

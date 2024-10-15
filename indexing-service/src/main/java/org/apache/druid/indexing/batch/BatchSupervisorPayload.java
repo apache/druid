@@ -23,8 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
 
-import java.time.ZonedDateTime;
-
 public class BatchSupervisorPayload
 {
   public enum BatchSupervisorStatus

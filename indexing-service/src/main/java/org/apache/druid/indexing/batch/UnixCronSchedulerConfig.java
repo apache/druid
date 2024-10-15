@@ -43,6 +43,7 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
     this.cron = cronParser.parse(cronExpression);
     this.schedule = schedule;
   }
+
   public String getSchedule()
   {
     return schedule;
@@ -54,7 +55,8 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
     return cron;
   }
 
-  private static String translateMacroToCronExpression(final String schedule) {
+  private static String translateMacroToCronExpression(final String schedule)
+  {
     switch (schedule) {
       case "@yearly":
       case "@annually":

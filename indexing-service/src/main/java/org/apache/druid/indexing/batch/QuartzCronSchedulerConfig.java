@@ -16,16 +16,15 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+
 package org.apache.druid.indexing.batch;
 
 import com.cronutils.model.Cron;
 import com.cronutils.model.CronType;
-import com.cronutils.model.definition.CronDefinition;
 import com.cronutils.model.definition.CronDefinitionBuilder;
 import com.cronutils.parser.CronParser;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.quartz.CronExpression;
 
 public class QuartzCronSchedulerConfig implements CronSchedulerConfig
 {
@@ -55,7 +54,8 @@ public class QuartzCronSchedulerConfig implements CronSchedulerConfig
     return cron;
   }
 
-  private static String translateMacroToCronExpression(final String schedule) {
+  private static String translateMacroToCronExpression(final String schedule)
+  {
     switch (schedule) {
       case "@yearly":
       case "@annually":

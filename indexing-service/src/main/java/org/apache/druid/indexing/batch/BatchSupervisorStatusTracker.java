@@ -78,20 +78,24 @@ public class BatchSupervisorStatusTracker
     return new BatchSupervisorTaskStatus(completedTasks, submittedTasks);
   }
 
-  public static class BatchSupervisorTaskStatus {
+  public static class BatchSupervisorTaskStatus
+  {
     private final Map<String, TaskStatus> completedTasks;
     private final Map<String, TaskStatus> submittedTasks;
 
-    public BatchSupervisorTaskStatus(Map<String, TaskStatus> completedTasks, Map<String, TaskStatus> submittedTasks) {
+    public BatchSupervisorTaskStatus(Map<String, TaskStatus> completedTasks, Map<String, TaskStatus> submittedTasks)
+    {
       this.completedTasks = new HashMap<>(completedTasks);
       this.submittedTasks = new HashMap<>(submittedTasks);
     }
 
-    public Map<String, TaskStatus> getCompletedTasks() {
+    public Map<String, TaskStatus> getCompletedTasks()
+    {
       return completedTasks;
     }
 
-    public Map<String, TaskStatus> getSubmittedTasks() {
+    public Map<String, TaskStatus> getSubmittedTasks()
+    {
       return submittedTasks;
     }
   }
