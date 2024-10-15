@@ -39,9 +39,15 @@ import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
+import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.GlobalTableDataSource;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.TestBufferPool;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.TestSqlModule;
@@ -82,6 +88,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -146,18 +153,13 @@ public class SqlTestFramework
      */
     void gatherProperties(Properties properties);
 
+
     /**
      * Configure modules needed for tests. This is the preferred way to configure
      * Jackson: include the production module in this method that includes the
      * required Jackson configuration.
      */
     void configureGuice(DruidInjectorBuilder builder);
-
-    QueryRunnerFactoryConglomerate createCongolmerate(
-        Builder builder,
-        Closer closer,
-        ObjectMapper jsonMapper
-    );
 
     SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
         QueryRunnerFactoryConglomerate conglomerate,
@@ -204,6 +206,91 @@ public class SqlTestFramework
      * MSQ right now needs a full query run.
      */
     Boolean isExplainSupported();
+
+    QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate, Closer resourceCloser);
+  }
+
+  public abstract static class QueryComponentSupplierDelegate implements QueryComponentSupplier
+  {
+    private final QueryComponentSupplier delegate;
+
+    public QueryComponentSupplierDelegate(QueryComponentSupplier delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void gatherProperties(Properties properties)
+    {
+      delegate.gatherProperties(properties);
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      delegate.configureGuice(builder);
+    }
+
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        QueryRunnerFactoryConglomerate conglomerate,
+        JoinableFactoryWrapper joinableFactory,
+        Injector injector)
+    {
+      return delegate.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
+    }
+
+    @Override
+    public SqlEngine createEngine(
+        QueryLifecycleFactory qlf,
+        ObjectMapper objectMapper,
+        Injector injector)
+    {
+      return delegate.createEngine(qlf, objectMapper, injector);
+    }
+
+    @Override
+    public void configureJsonMapper(ObjectMapper mapper)
+    {
+      delegate.configureJsonMapper(mapper);
+    }
+
+    @Override
+    public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
+    {
+      return delegate.createJoinableFactoryWrapper(lookupProvider);
+    }
+
+    @Override
+    public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
+    {
+      delegate.finalizeTestFramework(sqlTestFramework);
+    }
+
+    @Override
+    public PlannerComponentSupplier getPlannerComponentSupplier()
+    {
+      return delegate.getPlannerComponentSupplier();
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      delegate.close();
+    }
+
+    @Override
+    public Boolean isExplainSupported()
+    {
+      return delegate.isExplainSupported();
+    }
+
+    @Override
+    public QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate,
+        Closer resourceCloser)
+    {
+      return delegate.wrapConglomerate(conglomerate, resourceCloser);
+    }
   }
 
   public interface PlannerComponentSupplier
@@ -256,28 +343,6 @@ public class SqlTestFramework
     @Override
     public void configureGuice(DruidInjectorBuilder builder)
     {
-    }
-
-    @Override
-    public QueryRunnerFactoryConglomerate createCongolmerate(
-        Builder builder,
-        Closer resourceCloser,
-        ObjectMapper jsonMapper
-    )
-    {
-      if (builder.mergeBufferCount == 0) {
-        return QueryStackTests.createQueryRunnerFactoryConglomerate(
-            resourceCloser,
-            () -> builder.minTopNThreshold,
-            jsonMapper
-        );
-      } else {
-        return QueryStackTests.createQueryRunnerFactoryConglomerate(
-            resourceCloser,
-            QueryStackTests.getProcessingConfig(builder.mergeBufferCount),
-            jsonMapper
-        );
-      }
     }
 
     @Override
@@ -347,6 +412,13 @@ public class SqlTestFramework
     public Boolean isExplainSupported()
     {
       return true;
+    }
+
+    @Override
+    public QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate,
+        Closer resourceCloser)
+    {
+      return conglomerate;
     }
   }
 
@@ -548,6 +620,8 @@ public class SqlTestFramework
     }
   }
 
+  public static final String SQL_TEST_FRAME_WORK = "sqlTestFrameWork";
+
   /**
    * Guice module to create the various query framework items. By creating items within
    * a module, later items can depend on those created earlier by grabbing them from the
@@ -592,11 +666,61 @@ public class SqlTestFramework
       binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));
     }
 
+
+    @Provides
+    public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> makeRunnerFactories(
+        ObjectMapper jsonMapper,
+        final TestBufferPool testBufferPool,
+        final TestGroupByBuffers groupByBuffers,
+        @Named(SqlTestFramework.SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig)
+    {
+      return ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
+          .putAll(
+              QueryStackTests
+                  .makeDefaultQueryRunnerFactories(
+                      processingConfig,
+                      builder.mergeBufferCount,
+                      jsonMapper,
+                      testBufferPool,
+                      groupByBuffers
+                  )
+          )
+          .build();
+
+    }
+
+    /*
+     * Ideally this should not have a Named annotation, but it clashes with {@link DruidProcessingModule}.
+     */
+    @Named(SQL_TEST_FRAME_WORK)
     @Provides
     @LazySingleton
-    public QueryRunnerFactoryConglomerate conglomerate()
+    public DruidProcessingConfig makeProcessingConfig()
     {
-      return componentSupplier.createCongolmerate(builder, resourceCloser, queryJsonMapper());
+      return QueryStackTests.getProcessingConfig(builder.mergeBufferCount);
+    }
+
+    @Provides
+    @LazySingleton
+    public TestBufferPool makeTestBufferPool()
+    {
+      return QueryStackTests.makeTestBufferPool(resourceCloser);
+    }
+
+    @Provides
+    @LazySingleton
+    public TestGroupByBuffers makeTestGroupByBuffers(@Named(SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig)
+    {
+      return QueryStackTests.makeGroupByBuffers(resourceCloser, processingConfig);
+    }
+
+    @Provides
+    @LazySingleton
+    public QueryRunnerFactoryConglomerate conglomerate(
+        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> factories)
+    {
+      QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(factories);
+      return componentSupplier.wrapConglomerate(conglomerate, resourceCloser);
     }
 
     @Provides

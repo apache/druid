@@ -69,11 +69,12 @@ public class MessageRelayClientImpl<MessageType> implements MessageRelayClient<M
         startWatermark
     );
 
+    ListenableFuture<BytesFullResponseHolder> asyncRequest = serviceClient.asyncRequest(
+        new RequestBuilder(HttpMethod.GET, path),
+        new BytesFullResponseHandler()
+    );
     return FutureUtils.transform(
-        (ListenableFuture<BytesFullResponseHolder>) serviceClient.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, path),
-            new BytesFullResponseHandler()
-        ),
+        asyncRequest,
         holder -> {
           if (holder.getResponse().getStatus().getCode() == HttpStatus.NO_CONTENT_204) {
             return new MessageBatch<>(Collections.emptyList(), epoch, startWatermark);
