@@ -114,7 +114,6 @@ import org.apache.druid.query.topn.DimensionTopNMetricSpec;
 import org.apache.druid.query.topn.InvertedTopNMetricSpec;
 import org.apache.druid.query.topn.NumericTopNMetricSpec;
 import org.apache.druid.query.topn.TopNQueryBuilder;
-import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -3110,43 +3109,39 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     );
   }
 
+
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNION_ALL_QUERY)
   @Test
   public void testUnionAllQueries()
   {
     msqIncompatible();
     skipVectorize();
-    ImmutableList<Query<?>> queries = ImmutableList.of(
-        Druids.newTimeseriesQueryBuilder()
-            .dataSource(CalciteTests.DATASOURCE1)
-            .intervals(querySegmentSpec(Filtration.eternity()))
-            .granularity(Granularities.ALL)
-            .aggregators(aggregators(new CountAggregatorFactory("a0")))
-            .context(QUERY_CONTEXT_DEFAULT)
-            .build(),
-        Druids.newTimeseriesQueryBuilder()
-            .dataSource(CalciteTests.DATASOURCE1)
-            .intervals(querySegmentSpec(Filtration.eternity()))
-            .granularity(Granularities.ALL)
-            .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-            .context(QUERY_CONTEXT_DEFAULT)
-            .build(),
-        Druids.newTimeseriesQueryBuilder()
-            .dataSource(CalciteTests.DATASOURCE1)
-            .intervals(querySegmentSpec(Filtration.eternity()))
-            .granularity(Granularities.ALL)
-            .aggregators(aggregators(new CountAggregatorFactory("a0")))
-            .context(QUERY_CONTEXT_DEFAULT)
-            .build()
-    );
-    if (testBuilder().isDecoupledMode()) {
-      queries = ImmutableList.of(
-          new UnionQuery(queries)
-      );
-    }
 
     testQuery(
         "SELECT COUNT(*) FROM foo UNION ALL SELECT SUM(cnt) FROM foo UNION ALL SELECT COUNT(*) FROM foo",
-        queries,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build(),
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build(),
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE1)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
         ImmutableList.of(new Object[]{6L}, new Object[]{6L}, new Object[]{6L})
     );
   }

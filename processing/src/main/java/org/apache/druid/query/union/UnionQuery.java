@@ -223,7 +223,7 @@ public class UnionQuery implements Query<RealUnionResult>
   public DataSourceAnalysis getDataSourceAnalysis()
   {
     OpagueDataSourceCover ds = new OpagueDataSourceCover(new UnionDataSource(getDataSources()));
-    return new DataSourceAnalysis(ds, null, null, null);
+    return new DataSourceAnalysis(ds, null, null, Collections.emptyList());
   }
 
   private static class OpagueDataSourceCover implements DataSource

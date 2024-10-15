@@ -4338,6 +4338,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
       cannotVectorize();
     }
 
+
+
     testQuery(
         "(SELECT COUNT(*) FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k)  UNION ALL SELECT SUM(cnt) FROM foo",
         queryContext,

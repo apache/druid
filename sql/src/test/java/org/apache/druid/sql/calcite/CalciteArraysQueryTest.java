@@ -7228,8 +7228,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{"a"},
             new Object[]{"c"},
-            new Object[]{"d"},
-            new Object[]{""}
+            new Object[]{"d"}
         )
     );
   }
