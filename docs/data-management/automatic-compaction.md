@@ -93,7 +93,7 @@ No additional configuration is needed to run automatic compaction tasks using th
 You can configure it for a datasource through the web console or programmatically via an API.
 This process differs for manual compaction tasks, which can be submitted from the [Tasks view of the web console](../operations/web-console.md) or the [Tasks API](../api-reference/tasks-api.md).
 
-### Manage auto-compaction using the web-console
+### Manage auto-compaction using the web console
 
 Use the web console to enable automatic compaction for a datasource as follows:
 
@@ -239,12 +239,12 @@ You can run automatic compaction using compaction supervisors on the Overlord ra
 
 
 To use compaction supervisors, set the following properties in your Overlord runtime properties:
-  *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor task
+  *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor tasks
   *  `druid.supervisor.compaction.engine` to  `msq` to specify the MSQ task engine as the compaction engine or to `native` to use the native engine.
 
 Compaction uses the same syntax as Coordinator-based auto-compaction with some differences. Specifically, you submit a supervisor spec with the `type` set to `autocompact` and the auto-compaction config in the `spec` to configure auto-compaction.
   
-For information about the syntax, see [automatic-compaction syntax](#auto-compaction-syntax). 
+For information about the syntax, see [automatic compaction syntax](#auto-compaction-syntax). 
 
 ### Manage compaction supervisors with the web console
 
@@ -260,7 +260,6 @@ To submit a supervisor spec for MSQ task engine automatic compaction, perform th
    "type": "autocompact",
    "spec": {
       "dataSource": YOUR_DATASOURCE,
-    ...
     ...
    }
     ```
@@ -298,9 +297,9 @@ To stop the automatic compaction task, suspend or terminate the supervisor throu
 
 The MSQ task engine is available as a compaction engine if you configure auto-compaction to use compaction supervisors. To use the MSQ task engine for automatic compaction, make sure the following requirements are met:
 
-* Have the [MSQ  task engine extension loaded](../multi-stage-query/index.md#load-the-extension).
+* [Load the MSQ task engine extension](../multi-stage-query/index.md#load-the-extension).
 * In your Overlord runtime properties, set the following properties:
-  *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor task
+  *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor task.
   *  Optionally, set `druid.supervisor.compaction.engine` to `msq` to specify the MSQ task engine as the default compaction engine. If you don't do this, you'll need to set `spec.engine` to `msq` for each compaction supervisor spec where you want to use the MSQ task engine.
 * Have at least two compaction task slots available or set `compactionConfig.taskContext.maxNumTasks` to two or more. The MSQ task engine requires at least two tasks to run, one controller task and one worker task.
 
@@ -313,7 +312,7 @@ To submit an automatic compaction task, you submit a supervisor spec through the
 When using the MSQ task engine for auto-compaction, keep the following limitations in mind:
 
 - The `metricSpec` field is only supported for certain aggregators. For more information, see [Supported aggregators](#supported-aggregators).
-- Only dynamic and range-based partitioning are supported
+- Only dynamic and range-based partitioning are supported.
 - Set `rollup`  to `true` if and only if `metricSpec` is not empty or null.
 - You can only partition on string dimensions. However, multi-valued string dimensions are not supported.
 - The `maxTotalRows` config is not supported in `DynamicPartitionsSpec`. Use `maxRowsPerSegment` instead.
@@ -322,8 +321,8 @@ When using the MSQ task engine for auto-compaction, keep the following limitatio
 ##### Supported aggregators
 
 Auto-compaction using the MSQ task engine supports only aggregators that satisfy the following properties: 
-a) mergeability: can also be used to combine partial aggregates
-b) idempotency: produce the same results on repeated runs of the aggregator on previously aggregated values in a column
+* __Mergeability__: can combine partial aggregates
+* __Idempotency__: produces the same results on repeated runs of the aggregator on previously aggregated values in a column
 
 This is exemplified by the following `longSum` aggregator:
 
@@ -337,15 +336,15 @@ The following are some examples of aggregators that aren't supported since at le
 
 *  `longSum` aggregator where the `added` column rolls up into `sum_added` column discarding the input `added` column, violating idempotency, as subsequent runs would no longer find the `added` column:
     ```
-    {"name": "sum_added", "type": "longSum", "fieldName": "added" }
+    {"name": "sum_added", "type": "longSum", "fieldName": "added"}
     ```
 * Partial sketches which cannot themselves be used to combine partial aggregates and need merging aggregators -- such as `HLLSketchMerge` required for `HLLSketchBuild` aggregator below -- violating mergeability:
     ```
-    {"name": added, "type":"HLLSketchBuild", fieldName: added}
+    {"name": added, "type":"HLLSketchBuild", fieldName: "added"}
     ```
 * Count aggregator since it cannot be used to combine partial aggregates and it rolls up into a different `count` column discarding the input column(s), violating both mergeability and idempotency.
     ```
-    { "type" : "count", "name" : "count" }
+    {"type": "count", "name": "count"}
     ```
 
 
