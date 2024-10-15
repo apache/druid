@@ -86,7 +86,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
   @Override
   public RowSignature resultArraySignature(UnionQuery query)
   {
-    for (Query<?> q: query.queries) {
+    for (Query<?> q : query.queries) {
       if (q instanceof SupportRowSignature) {
         return ((SupportRowSignature) q).getResultRowSignature(Finalization.UNKNOWN);
       }
@@ -106,25 +106,11 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
     for (int i = 0; i < results.size(); i++) {
       Query<?> q = query.queries.get(i);
       RealUnionResult realUnionResult = results.get(i);
-      Sequence<Object[]> resultsAsArrays2 = resultsAsArrays2(q, realUnionResult);
-      resultSeqs.add(resultsAsArrays2);
+      QueryToolChest toolChest = warehouse.getToolChest(q);
+      Sequence<Object[]> queryResults = toolChest.resultsAsArrays(q, realUnionResult.getResults());
+      resultSeqs.add(queryResults);
     }
     return Sequences.concat(resultSeqs);
-  }
-
-  private <T, QueryType extends Query<T>> Sequence<Object[]> resultsAsArrays(QueryType q,
-      RealUnionResult realUnionResult)
-  {
-    QueryToolChest<T, QueryType> toolChest = warehouse.getToolChest(q);
-    return toolChest.resultsAsArrays(q, realUnionResult.getResults());
-  }
-
-
-  private  Sequence<Object[]> resultsAsArrays2(Query<?> q,
-      RealUnionResult realUnionResult)
-  {
-    QueryToolChest toolChest = warehouse.getToolChest(q);
-    return toolChest.resultsAsArrays(q, realUnionResult.getResults());
   }
 
   @Override
@@ -135,6 +121,20 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
       MemoryAllocatorFactory memoryAllocatorFactory,
       boolean useNestedForUnknownTypes)
   {
-    throw new UnsupportedOperationException("Not supported");
+    List<RealUnionResult> results = resultSequence.toList();
+    List<Sequence<FrameSignaturePair>> resultSeqs = new ArrayList<>();
+
+    for (int i = 0; i < results.size(); i++) {
+      Query<?> q = query.queries.get(i);
+      RealUnionResult realUnionResult = results.get(i);
+      QueryToolChest toolChest = warehouse.getToolChest(q);
+      Optional<Sequence<FrameSignaturePair>> queryResults = toolChest
+          .resultsAsFrames(query, resultSequence, memoryAllocatorFactory, useNestedForUnknownTypes);
+      if (!queryResults.isPresent()) {
+        return Optional.empty();
+      }
+      resultSeqs.add(queryResults.get());
+    }
+    return Optional.of(Sequences.concat(resultSeqs));
   }
 }
