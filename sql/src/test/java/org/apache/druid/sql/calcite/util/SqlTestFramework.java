@@ -217,6 +217,95 @@ public class SqlTestFramework
     Boolean isExplainSupported();
   }
 
+  public static class QueryComponentSupplierDelegate implements QueryComponentSupplier {
+
+    private final QueryComponentSupplier delegate;
+
+    public QueryComponentSupplierDelegate(QueryComponentSupplier delegate)
+    {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void gatherProperties(Properties properties)
+    {
+      delegate.gatherProperties(properties);
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      delegate.configureGuice(builder);
+    }
+
+    @Override
+    public QueryRunnerFactoryConglomerate createCongolmerate1(
+        Builder builder,
+        Closer resourceCloser,
+        ObjectMapper jsonMapper,
+        TestBufferPool testBufferPool,
+        TestGroupByBuffers groupByBuffers,
+        DruidProcessingConfig processingConfig)
+    {
+      return delegate
+          .createCongolmerate1(builder, resourceCloser, jsonMapper, testBufferPool, groupByBuffers, processingConfig);
+    }
+
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+        QueryRunnerFactoryConglomerate conglomerate,
+        JoinableFactoryWrapper joinableFactory,
+        Injector injector)
+    {
+      return delegate.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
+    }
+
+    @Override
+    public SqlEngine createEngine(
+        QueryLifecycleFactory qlf,
+        ObjectMapper objectMapper,
+        Injector injector)
+    {
+      return delegate.createEngine(qlf, objectMapper, injector);
+    }
+
+    @Override
+    public void configureJsonMapper(ObjectMapper mapper)
+    {
+      delegate.configureJsonMapper(mapper);
+    }
+
+    @Override
+    public JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider)
+    {
+      return delegate.createJoinableFactoryWrapper(lookupProvider);
+    }
+
+    @Override
+    public void finalizeTestFramework(SqlTestFramework sqlTestFramework)
+    {
+      delegate.finalizeTestFramework(sqlTestFramework);
+    }
+
+    @Override
+    public PlannerComponentSupplier getPlannerComponentSupplier()
+    {
+      return delegate.getPlannerComponentSupplier();
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      delegate.close();
+    }
+
+    @Override
+    public Boolean isExplainSupported()
+    {
+      return delegate.isExplainSupported();
+    }
+  }
+
   public interface PlannerComponentSupplier
   {
     Set<ExtensionCalciteRuleProvider> extensionCalciteRules();
