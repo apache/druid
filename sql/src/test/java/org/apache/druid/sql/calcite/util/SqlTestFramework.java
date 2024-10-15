@@ -206,11 +206,12 @@ public class SqlTestFramework
      * MSQ right now needs a full query run.
      */
     Boolean isExplainSupported();
+
+    QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate);
   }
 
   public abstract static class QueryComponentSupplierDelegate implements QueryComponentSupplier
   {
-
     private final QueryComponentSupplier delegate;
 
     public QueryComponentSupplierDelegate(QueryComponentSupplier delegate)
@@ -282,6 +283,12 @@ public class SqlTestFramework
     public Boolean isExplainSupported()
     {
       return delegate.isExplainSupported();
+    }
+
+    @Override
+    public QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate)
+    {
+      return delegate.wrapConglomerate(conglomerate);
     }
   }
 
@@ -404,6 +411,12 @@ public class SqlTestFramework
     public Boolean isExplainSupported()
     {
       return true;
+    }
+
+    @Override
+    public QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate)
+    {
+      return conglomerate;
     }
   }
 
@@ -704,7 +717,8 @@ public class SqlTestFramework
     public QueryRunnerFactoryConglomerate conglomerate(
         @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> factories)
     {
-      return new DefaultQueryRunnerFactoryConglomerate(factories);
+      QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(factories);
+      return componentSupplier.wrapConglomerate(conglomerate);
     }
 
     @Provides
