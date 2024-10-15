@@ -95,23 +95,45 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
     throw DruidException.defensive("None of the subqueries support row signature");
   }
 
+  abstract static class UnionSequenceMaker<T>
+  {
+    public Optional<Sequence<T>> transform(
+        UnionQuery query,
+        Sequence<RealUnionResult> resultSequence)
+    {
+      List<RealUnionResult> results = resultSequence.toList();
+      List<Sequence<T>> resultSeqs = new ArrayList<>();
+
+      for (int i = 0; i < results.size(); i++) {
+        Query<?> q = query.queries.get(i);
+        RealUnionResult realUnionResult = results.get(i);
+        Optional<Sequence<T>> queryResults = transformResults(q, realUnionResult.getResults());
+        if (!queryResults.isPresent()) {
+          return Optional.empty();
+        }
+        resultSeqs.add(queryResults.get());
+      }
+      return Optional.of(Sequences.concat(resultSeqs));
+    }
+
+    public abstract Optional<Sequence<T>> transformResults(Query<?> q, Sequence<Object> results);
+  }
+
   @Override
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Sequence<Object[]> resultsAsArrays(
       UnionQuery query,
       Sequence<RealUnionResult> resultSequence)
   {
-    List<RealUnionResult> results = resultSequence.toList();
-    List<Sequence<Object[]>> resultSeqs = new ArrayList<Sequence<Object[]>>();
-
-    for (int i = 0; i < results.size(); i++) {
-      Query<?> q = query.queries.get(i);
-      RealUnionResult realUnionResult = results.get(i);
-      QueryToolChest toolChest = warehouse.getToolChest(q);
-      Sequence<Object[]> queryResults = toolChest.resultsAsArrays(q, realUnionResult.getResults());
-      resultSeqs.add(queryResults);
-    }
-    return Sequences.concat(resultSeqs);
+    return new UnionSequenceMaker<Object[]>()
+    {
+      @Override
+      public Optional<Sequence<Object[]>> transformResults(Query<?> query, Sequence<Object> results)
+      {
+        QueryToolChest toolChest = warehouse.getToolChest(query);
+        return Optional.of(toolChest.resultsAsArrays(query, results));
+      }
+    }.transform(query, resultSequence).get();
   }
 
   @Override
@@ -122,20 +144,14 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
       MemoryAllocatorFactory memoryAllocatorFactory,
       boolean useNestedForUnknownTypes)
   {
-    List<RealUnionResult> results = resultSequence.toList();
-    List<Sequence<FrameSignaturePair>> resultSeqs = new ArrayList<>();
-
-    for (int i = 0; i < results.size(); i++) {
-      Query<?> q = query.queries.get(i);
-      RealUnionResult realUnionResult = results.get(i);
-      QueryToolChest toolChest = warehouse.getToolChest(q);
-      Optional<Sequence<FrameSignaturePair>> queryResults = toolChest
-          .resultsAsFrames(query, realUnionResult.getResults(), memoryAllocatorFactory, useNestedForUnknownTypes);
-      if (!queryResults.isPresent()) {
-        return Optional.empty();
+    return new UnionSequenceMaker<FrameSignaturePair>()
+    {
+      @Override
+      public Optional<Sequence<FrameSignaturePair>> transformResults(Query<?> query, Sequence<Object> results)
+      {
+        QueryToolChest toolChest = warehouse.getToolChest(query);
+        return toolChest.resultsAsFrames(query, results, memoryAllocatorFactory, useNestedForUnknownTypes);
       }
-      resultSeqs.add(queryResults.get());
-    }
-    return Optional.of(Sequences.concat(resultSeqs));
+    }.transform(query, resultSequence);
   }
 }
