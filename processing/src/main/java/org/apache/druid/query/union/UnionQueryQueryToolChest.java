@@ -47,8 +47,8 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
     implements QueryExecutor<RealUnionResult>
 {
 
-  public QueryRunner<RealUnionResult> makeQueryRunner(QueryToolChestWarehouse warehouse,
-      Query<RealUnionResult> query, QuerySegmentWalker clientQuerySegmentWalker)
+  public QueryRunner<RealUnionResult> makeQueryRunner(Query<RealUnionResult> query,
+      QueryToolChestWarehouse warehouse, QuerySegmentWalker clientQuerySegmentWalker)
   {
     return new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker);
   }
