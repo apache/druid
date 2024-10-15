@@ -527,6 +527,6 @@ public class DruidException extends RuntimeException
   public static String getCurrentMethodName()
   {
     StackTraceElement stackTraceElement = Thread.currentThread().getStackTrace()[2];
-    return stackTraceElement.getClassName() + "." + stackTraceElement.getMethodName();
+    return stackTraceElement.getClassName() + "#" + stackTraceElement.getMethodName();
   }
 }
