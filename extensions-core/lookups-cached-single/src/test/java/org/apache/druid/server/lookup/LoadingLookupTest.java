@@ -31,7 +31,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.util.AbstractMap;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -95,11 +94,8 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testApplyWithCacheCheck()
+  public void testApplyTriggersCacheMissAndSubsequentCacheHit()
   {
-    // This test that we have a cache miss that will trigger a data fetch call
-    // and then the cache gets populated, so in the second apply call we get the
-    // value directly from the cache
     Map<String, String> map = new HashMap<>();
     map.put("key", "value");
     EasyMock.expect(lookupCache.getIfPresent(EasyMock.eq("key"))).andReturn(null).once();
@@ -163,10 +159,13 @@ public class LoadingLookupTest extends InitializedNullHandlingTest
   @Test
   public void testAsMap()
   {
-    Map.Entry<String, String> fetchedData = new AbstractMap.SimpleEntry<>("dummy", "test");
-    EasyMock.expect(dataFetcher.fetchAll()).andReturn(Collections.singletonList(fetchedData));
+    final Map<String, String> fetchedData = new HashMap<>();
+    fetchedData.put("dummy", "test");
+    fetchedData.put("key", null);
+    fetchedData.put(null, "value");
+    EasyMock.expect(dataFetcher.fetchAll()).andReturn(fetchedData.entrySet());
     EasyMock.replay(dataFetcher);
-    Assert.assertEquals(loadingLookup.asMap().size(), 1);
+    Assert.assertEquals(loadingLookup.asMap(), fetchedData);
     EasyMock.verify(dataFetcher);
   }
 }

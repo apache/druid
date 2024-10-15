@@ -80,15 +80,12 @@ public class LoadingLookup extends LookupExtractor
       return NullHandling.emptyToNullIfNeeded(presentVal);
     }
 
-    String val = this.dataFetcher.fetch(keyEquivalent);
+    final String val = this.dataFetcher.fetch(keyEquivalent);
     if (val == null) {
       return null;
     }
 
-    Map<String, String> map = new HashMap<>();
-    map.put(keyEquivalent, val);
-
-    this.loadingCache.putAll(map);
+    this.loadingCache.putAll(Collections.singletonMap(keyEquivalent, val));
 
     return NullHandling.emptyToNullIfNeeded(val);
   }
