@@ -62,7 +62,7 @@ public final class QueryPlus<T>
 
   public <C extends Query<T>> C unwrapQuery(Class<C> clazz)
   {
-    if(clazz.isInstance(query)) {
+    if (clazz.isInstance(query)) {
       return (C) query;
     }
     throw DruidException.defensive("Encountered unexpected query type [%s] instead of [%s]", query.getClass(), clazz);
