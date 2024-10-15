@@ -333,7 +333,7 @@ This is exemplified by the following `longSum` aggregator:
 
 where `longSum` being capable of combining partial results satisfies mergeability, while input and output column being the same (`added`) ensures idempotency.
 
-The following are some examples of aggregators that aren't supported since at least of the required conditions aren't satisfied:
+The following are some examples of aggregators that aren't supported since at least one of the required conditions aren't satisfied:
 
 *  `longSum` aggregator where the `added` column rolls up into `sum_added` column discarding the input `added` column, violating idempotency, as subsequent runs would no longer find the `added` column:
     ```
