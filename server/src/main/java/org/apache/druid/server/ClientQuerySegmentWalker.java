@@ -314,12 +314,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingClusterWalker(Query<T> query)
   {
-    final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-
     if (toolChest instanceof QueryExecutor) {
+      // these type of queries should be able to run
       return true;
     }
+    final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
 
     // 1) Must be based on a concrete table (the only shape the Druid cluster can handle).
     // 2) If there is an outer query, it must be handleable by the query toolchest (the cluster walker does not handle
