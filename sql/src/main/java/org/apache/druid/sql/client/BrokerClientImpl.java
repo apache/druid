@@ -46,7 +46,6 @@ public class BrokerClientImpl implements BrokerClient
 
   public BrokerClientImpl(final ServiceClient client, final ObjectMapper jsonMapper)
   {
-    log.info("SqlBrokerClientImpl with ServiceClient[%s]", client);
     this.client = client;
     this.jsonMapper = jsonMapper;
   }
@@ -54,7 +53,7 @@ public class BrokerClientImpl implements BrokerClient
   @Override
   public ListenableFuture<SqlTaskStatus> submitTask(final SqlQuery sqlQuery)
   {
-    log.info("Submit task with query[%s]", sqlQuery);
+    log.info("Submitting task with query[%s].", sqlQuery);
     final String path = "/druid/v2/sql/task/";
     return FutureUtils.transform(
         client.asyncRequest(
@@ -78,7 +77,7 @@ public class BrokerClientImpl implements BrokerClient
         null,
         null
     );
-    log.info("Submit explain query[%s]", explainSqlQuery);
+    log.info("Submitting explain query[%s].", explainSqlQuery);
     final String path = "/druid/v2/sql/task/";
     return FutureUtils.transform(
         client.asyncRequest(
