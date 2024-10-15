@@ -422,15 +422,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // change taskCount without resubmitting.
   private class DynamicAllocationTasksNotice implements Notice
   {
-    Callable<Integer> scaleAction;
+    Callable<Integer> computeDesiredTaskCount;
     ServiceEmitter emitter;
-    Runnable actionAfterScale;
+    Runnable onSuccessfulScale;
     private static final String TYPE = "dynamic_allocation_tasks_notice";
 
-    DynamicAllocationTasksNotice(Callable<Integer> scaleAction, Runnable actionAfterScale, ServiceEmitter emitter)
+    DynamicAllocationTasksNotice(
+        Callable<Integer> computeDesiredTaskCount,
+        Runnable onSuccessfulScale,
+        ServiceEmitter emitter
+    )
     {
-      this.scaleAction = scaleAction;
-      this.actionAfterScale = actionAfterScale;
+      this.computeDesiredTaskCount = computeDesiredTaskCount;
+      this.onSuccessfulScale = onSuccessfulScale;
       this.emitter = emitter;
     }
 
@@ -472,7 +476,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               return;
             }
           }
-          final Integer desiredTaskCount = scaleAction.call();
+          final Integer desiredTaskCount = computeDesiredTaskCount.call();
           ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
               .setDimension(DruidMetrics.DATASOURCE, dataSource)
               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
@@ -502,7 +506,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
           boolean allocationSuccess = changeTaskCount(desiredTaskCount);
           if (allocationSuccess) {
-            actionAfterScale.run();
+            onSuccessfulScale.run();
             dynamicTriggerLastRunTime = nowTime;
           }
         }
@@ -1265,11 +1269,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
   public Runnable buildDynamicAllocationTask(
       Callable<Integer> scaleAction,
-      Runnable actionAfterScale,
+      Runnable onSuccessfulScale,
       ServiceEmitter emitter
   )
   {
-    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, actionAfterScale, emitter));
+    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, emitter));
   }
 
   private Runnable buildRunTask()
