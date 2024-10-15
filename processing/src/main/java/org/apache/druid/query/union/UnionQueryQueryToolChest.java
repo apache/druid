@@ -22,6 +22,7 @@ package org.apache.druid.query.union;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -85,11 +86,12 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
   @Override
   public RowSignature resultArraySignature(UnionQuery query)
   {
-    Query<?> q0 = query.queries.get(0);
-    if (q0 instanceof SupportRowSignature) {
-      return ((SupportRowSignature) q0).getResultRowSignature(Finalization.UNKNOWN);
+    for (Query<?> q: query.queries) {
+      if (q instanceof SupportRowSignature) {
+        return ((SupportRowSignature) q).getResultRowSignature(Finalization.UNKNOWN);
+      }
     }
-    throw new UnsupportedOperationException("Not supported");
+    throw DruidException.defensive("None of the subqueries support row signature");
   }
 
   @Override

@@ -56,7 +56,7 @@ public class UnionQueryRunnerTest
         }
       }
     };
-    UnionQueryRunner runner = new UnionQueryRunner(baseRunner);
+    UnionDataSourceQueryRunner runner = new UnionDataSourceQueryRunner(baseRunner);
     // Make a dummy query with Union datasource
     Query q = Druids.newTimeseriesQueryBuilder()
                     .dataSource(
