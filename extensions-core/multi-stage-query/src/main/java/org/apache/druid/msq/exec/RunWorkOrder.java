@@ -129,6 +129,11 @@ public class RunWorkOrder
     STARTED,
 
     /**
+     * State entered upon failure of some work.
+     */
+    FAILED,
+
+    /**
      * State entered upon calling {@link #stop(Throwable)}.
      */
     STOPPING,
@@ -249,7 +254,8 @@ public class RunWorkOrder
   public void stop(@Nullable Throwable t) throws InterruptedException
   {
     if (state.compareAndSet(State.INIT, State.STOPPING)
-        || state.compareAndSet(State.STARTED, State.STOPPING)) {
+        || state.compareAndSet(State.STARTED, State.STOPPING)
+        || state.compareAndSet(State.FAILED, State.STOPPING)) {
       // Initiate stopping.
       try {
         exec.cancel(cancellationId);
@@ -562,7 +568,11 @@ public class RunWorkOrder
           @Override
           public void onFailure(final Throwable t)
           {
-            notifyListener(Either.error(t));
+            if (state.compareAndSet(State.STARTED, State.FAILED)) {
+              // Call notifyListener only if we were STARTED. In particular, if we were STOPPING, skip this and allow
+              // the stop() method to set its own Canceled error.
+              notifyListener(Either.error(t));
+            }
           }
         },
         Execs.directExecutor()
@@ -1032,7 +1042,8 @@ public class RunWorkOrder
     {
       final StageDefinition stageDefinition = workOrder.getStageDefinition();
       final List<OutputChannel> retVal = new ArrayList<>();
-      final List<KeyStatisticsCollectionProcessor> processors = new ArrayList<>();
+      final int numOutputChannels = channels.getAllChannels().size();
+      final List<KeyStatisticsCollectionProcessor> processors = new ArrayList<>(numOutputChannels);
 
       for (final OutputChannel outputChannel : channels.getAllChannels()) {
         final BlockingQueueFrameChannel channel = BlockingQueueFrameChannel.minimal();
@@ -1045,7 +1056,9 @@ public class RunWorkOrder
                 stageDefinition.getFrameReader(),
                 stageDefinition.getClusterBy(),
                 stageDefinition.createResultKeyStatisticsCollector(
-                    frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+                    // Divide by two: half for the per-processor collectors together, half for the combined collector.
+                    // Then divide by numOutputChannels: one portion per processor.
+                    frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes() / 2 / numOutputChannels
                 )
             )
         );
@@ -1057,7 +1070,9 @@ public class RunWorkOrder
                   ProcessorManagers.of(processors)
                                    .withAccumulation(
                                        stageDefinition.createResultKeyStatisticsCollector(
-                                           frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes()
+                                           // Divide by two: half for the per-processor collectors, half for the
+                                           // combined collector.
+                                           frameContext.memoryParameters().getPartitionStatisticsMaxRetainedBytes() / 2
                                        ),
                                        ClusterByStatisticsCollector::addAll
                                    ),

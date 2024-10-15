@@ -142,4 +142,13 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
       writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
     }
   }
+
+  @Override
+  public int getCardinality()
+  {
+    if (writeDictionary) {
+      return dictionaryWriter.getCardinality();
+    }
+    return dictionaryIdLookup.getDoubleCardinality();
+  }
 }

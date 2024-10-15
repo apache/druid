@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import it.unimi.dsi.fastutil.ints.IntList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
@@ -136,6 +137,31 @@ public class MSQErrorReport
   public String getExceptionStackTrace()
   {
     return exceptionStackTrace;
+  }
+
+  /**
+   * Returns a {@link DruidException} "equivalent" of this instance. This is useful until such time as we can migrate
+   * usages of this class to {@link DruidException}.
+   */
+  public DruidException toDruidException()
+  {
+    final DruidException druidException =
+        error.toDruidException()
+             .withContext("taskId", taskId);
+
+    if (host != null) {
+      druidException.withContext("host", host);
+    }
+
+    if (stageNumber != null) {
+      druidException.withContext("stageNumber", stageNumber);
+    }
+
+    if (exceptionStackTrace != null) {
+      druidException.withContext("exceptionStackTrace", exceptionStackTrace);
+    }
+
+    return druidException;
   }
 
   @Override

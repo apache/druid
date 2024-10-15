@@ -21,6 +21,8 @@ package org.apache.druid.sql.calcite;
 
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.UnnestDataSource;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -39,6 +41,25 @@ public @interface DecoupledTestConfig
    * The value of this field should describe the root cause of the difference.
    */
   QuidemTestCaseReason quidemReason() default QuidemTestCaseReason.NONE;
+
+  /**
+   * Run the tests normally; however disable the native plan checks.
+   */
+  IgnoreQueriesReason ignoreExpectedQueriesReason() default IgnoreQueriesReason.NONE;
+
+  enum IgnoreQueriesReason
+  {
+    NONE,
+    /**
+     * An extra ScanQuery to service a Project and/or Filter was added.
+     */
+    UNNEST_EXTRA_SCANQUERY;
+
+    public boolean isPresent()
+    {
+      return this != NONE;
+    }
+  }
 
   enum QuidemTestCaseReason
   {
@@ -114,7 +135,29 @@ public @interface DecoupledTestConfig
     /**
      * Strange things; needs more investigation
      */
-    IRRELEVANT_SCANQUERY;
+    IRRELEVANT_SCANQUERY,
+    /**
+     * Extra scan query under {@link UnnestDataSource}.
+     */
+    UNNEST_EXTRA_SCAN,
+    /**
+     * Extra virtualcolumn appeared; seemingly unused
+     */
+    UNUSED_VIRTUALCOLUMN,
+    /**
+     * Unnest uses a VC to access a constant like array(1,2,3).
+     */
+    UNNEST_VC_USES_PROJECTED_CONSTANT,
+    /**
+     * This should need some investigation.
+     *
+     * Its not invalid; just strange.
+     */
+    SCAN_QUERY_ON_FILTERED_DS_DOING_FILTERING,
+    /**
+     * New plan UNNEST-s a different resultset.
+     */
+    UNNEST_DIFFERENT_RESULTSET;
 
     public boolean isPresent()
     {

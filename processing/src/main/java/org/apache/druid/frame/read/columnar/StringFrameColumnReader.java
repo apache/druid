@@ -20,7 +20,7 @@
 package org.apache.druid.frame.read.columnar;
 
 import com.google.common.primitives.Ints;
-import org.apache.commons.lang.ObjectUtils;
+import org.apache.commons.lang3.ObjectUtils;
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;

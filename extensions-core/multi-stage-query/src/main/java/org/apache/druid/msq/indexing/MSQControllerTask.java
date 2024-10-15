@@ -55,6 +55,7 @@ import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
@@ -234,8 +235,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   {
     // If we're in replace mode, acquire locks for all intervals before declaring the task ready.
     if (isIngestion(querySpec) && ((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()) {
-      final TaskLockType taskLockType =
-          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(querySpec.getQuery().getContext()), true);
+      final TaskLockType taskLockType = getTaskLockType();
       final List<Interval> intervals =
           ((DataSourceMSQDestination) querySpec.getDestination()).getReplaceTimeChunks();
       log.debug(
@@ -304,6 +304,26 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   public int getPriority()
   {
     return getContextValue(Tasks.PRIORITY_KEY, Tasks.DEFAULT_BATCH_INDEX_TASK_PRIORITY);
+  }
+
+  @Nullable
+  public TaskLockType getTaskLockType()
+  {
+    if (isIngestion(querySpec)) {
+      return MultiStageQueryContext.validateAndGetTaskLockType(
+          QueryContext.of(
+              // Use the task context and override with the query context
+              QueryContexts.override(
+                  getContext(),
+                  querySpec.getQuery().getContext()
+              )
+          ),
+          ((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()
+      );
+    } else {
+      // Locks need to be acquired only if data is being ingested into a DataSource
+      return null;
+    }
   }
 
   private static String getDataSourceForTaskMetadata(final MSQSpec querySpec)

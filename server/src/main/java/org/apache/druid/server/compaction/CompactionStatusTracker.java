@@ -34,6 +34,7 @@ import org.joda.time.Interval;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Tracks status of recently submitted compaction tasks. Can be used by a segment
@@ -49,6 +50,8 @@ public class CompactionStatusTracker
       = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, CompactionCandidate> submittedTaskIdToSegments
       = new ConcurrentHashMap<>();
+
+  private final AtomicReference<DateTime> segmentSnapshotTime = new AtomicReference<>();
 
   @Inject
   public CompactionStatusTracker(ObjectMapper objectMapper)
@@ -109,6 +112,16 @@ public class CompactionStatusTracker
       return CompactionStatus.skipped("Task for interval is already running");
     }
 
+    // Skip intervals that have been recently compacted if segment timeline is not updated yet
+    final DateTime snapshotTime = segmentSnapshotTime.get();
+    if (lastTaskStatus != null
+        && lastTaskStatus.getState() == TaskState.SUCCESS
+        && snapshotTime != null && snapshotTime.isBefore(lastTaskStatus.getUpdatedTime())) {
+      return CompactionStatus.skipped(
+          "Segment timeline not updated since last compaction task succeeded"
+      );
+    }
+
     // Skip intervals that have been filtered out by the policy
     if (!searchPolicy.isEligibleForCompaction(candidate, compactionStatus, lastTaskStatus)) {
       return CompactionStatus.skipped("Rejected by search policy");
@@ -123,6 +136,11 @@ public class CompactionStatusTracker
   )
   {
     // Nothing to do, used by simulator
+  }
+
+  public void onSegmentTimelineUpdated(DateTime snapshotTime)
+  {
+    this.segmentSnapshotTime.set(snapshotTime);
   }
 
   public void onCompactionConfigUpdated(DruidCompactionConfig compactionConfig)

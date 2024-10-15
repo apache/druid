@@ -91,6 +91,11 @@ public class PlannerContext
   public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
 
   /**
+   * Key to enable transfer of RACs over wire.
+   */
+  public static final String CTX_ENABLE_RAC_TRANSFER_OVER_WIRE = "enableRACOverWire";
+
+  /**
    * Context key for {@link PlannerContext#isUseBoundsAndSelectors()}.
    */
   public static final String CTX_SQL_USE_BOUNDS_AND_SELECTORS = "sqlUseBoundAndSelectors";

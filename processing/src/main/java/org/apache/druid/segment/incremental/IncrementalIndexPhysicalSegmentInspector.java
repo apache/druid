@@ -134,6 +134,6 @@ public class IncrementalIndexPhysicalSegmentInspector implements PhysicalSegment
   @Override
   public int getNumRows()
   {
-    return index.size();
+    return index.numRows();
   }
 }

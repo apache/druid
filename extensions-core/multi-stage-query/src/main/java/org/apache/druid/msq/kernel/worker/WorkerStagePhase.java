@@ -84,7 +84,7 @@ public enum WorkerStagePhase
     @Override
     public boolean canTransitionFrom(final WorkerStagePhase priorPhase)
     {
-      return true;
+      return !priorPhase.isTerminal();
     }
   };
 
