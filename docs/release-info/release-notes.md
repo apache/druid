@@ -127,7 +127,7 @@ Java 8 support is now deprecated and will be removed in 32.0.0.
 
 #### Other deprecations
 - Deprecated API `/lockedIntervals` is now removed [#16799](https://github.com/apache/druid/pull/16799)
-- [Cluster-level compaction API](#api-for-cluster-level-compaction-configuration) deprecates taskslots compaction API [#16803](https://github.com/apache/druid/pull/16803)
+- [Cluster-level compaction API](#api-for-cluster-level-compaction-configuration) deprecates task slots compaction API [#16803](https://github.com/apache/druid/pull/16803)
 - The `arrayIngestMode` context parameter is deprecated and will be removed. For more information, see [Array ingest mode now defaults to array](#array-ingest-mode-now-defaults-to-array).
 
 ## Functional areas and related changes
