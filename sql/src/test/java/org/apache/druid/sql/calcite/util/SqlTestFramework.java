@@ -161,15 +161,6 @@ public class SqlTestFramework
      */
     void configureGuice(DruidInjectorBuilder builder);
 
-    QueryRunnerFactoryConglomerate createCongolmerate(
-        Builder builder,
-        Closer resourceCloser,
-        ObjectMapper jsonMapper,
-        TestBufferPool testBufferPool,
-        TestGroupByBuffers groupByBuffers,
-        DruidProcessingConfig processingConfig
-    );
-
     SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
         QueryRunnerFactoryConglomerate conglomerate,
         JoinableFactoryWrapper joinableFactory,
@@ -236,19 +227,6 @@ public class SqlTestFramework
     public void configureGuice(DruidInjectorBuilder builder)
     {
       delegate.configureGuice(builder);
-    }
-
-    @Override
-    public QueryRunnerFactoryConglomerate createCongolmerate(
-        Builder builder,
-        Closer resourceCloser,
-        ObjectMapper jsonMapper,
-        TestBufferPool testBufferPool,
-        TestGroupByBuffers groupByBuffers,
-        DruidProcessingConfig processingConfig)
-    {
-      return delegate
-          .createCongolmerate(builder, resourceCloser, jsonMapper, testBufferPool, groupByBuffers, processingConfig);
     }
 
     @Override
@@ -356,27 +334,6 @@ public class SqlTestFramework
     @Override
     public void configureGuice(DruidInjectorBuilder builder)
     {
-    }
-
-    @Override
-    public QueryRunnerFactoryConglomerate createCongolmerate(
-        Builder builder,
-        Closer resourceCloser,
-        ObjectMapper jsonMapper,
-        final TestBufferPool testBufferPool,
-        final TestGroupByBuffers groupByBuffers,
-        DruidProcessingConfig processingConfig
-    )
-    {
-      return new DefaultQueryRunnerFactoryConglomerate(
-          QueryStackTests.makeDefaultQueryRunnerFactories(
-              processingConfig,
-              builder.minTopNThreshold,
-              jsonMapper,
-              testBufferPool,
-              groupByBuffers
-          )
-      );
     }
 
     @Override
