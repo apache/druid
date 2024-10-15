@@ -161,7 +161,11 @@ public @interface DecoupledTestConfig
     /**
      * Uses a UNION ALL query.
      */
-    UNION_ALL_QUERY;
+    UNION_ALL_QUERY,
+    /**
+     * This is due to substring('',1') is null.
+     */
+    UNNEST_SUBSTRING_EMPTY;
 
     public boolean isPresent()
     {

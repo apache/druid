@@ -3117,26 +3117,26 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     skipVectorize();
     ImmutableList<Query<?>> queries = ImmutableList.of(
         Druids.newTimeseriesQueryBuilder()
-              .dataSource(CalciteTests.DATASOURCE1)
-              .intervals(querySegmentSpec(Filtration.eternity()))
-              .granularity(Granularities.ALL)
-              .aggregators(aggregators(new CountAggregatorFactory("a0")))
-              .context(QUERY_CONTEXT_DEFAULT)
-              .build(),
+            .dataSource(CalciteTests.DATASOURCE1)
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .granularity(Granularities.ALL)
+            .aggregators(aggregators(new CountAggregatorFactory("a0")))
+            .context(QUERY_CONTEXT_DEFAULT)
+            .build(),
         Druids.newTimeseriesQueryBuilder()
-              .dataSource(CalciteTests.DATASOURCE1)
-              .intervals(querySegmentSpec(Filtration.eternity()))
-              .granularity(Granularities.ALL)
-              .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-              .context(QUERY_CONTEXT_DEFAULT)
-              .build(),
+            .dataSource(CalciteTests.DATASOURCE1)
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .granularity(Granularities.ALL)
+            .aggregators(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+            .context(QUERY_CONTEXT_DEFAULT)
+            .build(),
         Druids.newTimeseriesQueryBuilder()
-              .dataSource(CalciteTests.DATASOURCE1)
-              .intervals(querySegmentSpec(Filtration.eternity()))
-              .granularity(Granularities.ALL)
-              .aggregators(aggregators(new CountAggregatorFactory("a0")))
-              .context(QUERY_CONTEXT_DEFAULT)
-              .build()
+            .dataSource(CalciteTests.DATASOURCE1)
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .granularity(Granularities.ALL)
+            .aggregators(aggregators(new CountAggregatorFactory("a0")))
+            .context(QUERY_CONTEXT_DEFAULT)
+            .build()
     );
     if (testBuilder().isDecoupledMode()) {
       queries = ImmutableList.of(

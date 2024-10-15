@@ -7193,7 +7193,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  // this is due to substring('',1') is null
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_SUBSTRING_EMPTY, separateDefaultModeTest = true)
   @Test
   public void testUnnestExtractionFn()
   {
