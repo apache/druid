@@ -208,7 +208,8 @@ public class SqlTestFramework
     Boolean isExplainSupported();
   }
 
-  public static abstract class QueryComponentSupplierDelegate implements QueryComponentSupplier {
+  public abstract static class QueryComponentSupplierDelegate implements QueryComponentSupplier
+  {
 
     private final QueryComponentSupplier delegate;
 
@@ -605,6 +606,7 @@ public class SqlTestFramework
   }
 
   public static final String SQL_TEST_FRAME_WORK = "sqlTestFrameWork";
+
   /**
    * Guice module to create the various query framework items. By creating items within
    * a module, later items can depend on those created earlier by grabbing them from the
