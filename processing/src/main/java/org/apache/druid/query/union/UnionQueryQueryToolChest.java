@@ -48,6 +48,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
     implements QueryExecutor<RealUnionResult>
 {
 
+  @Override
   public QueryRunner<RealUnionResult> makeQueryRunner(Query<RealUnionResult> query,
       QueryToolChestWarehouse warehouse, QuerySegmentWalker clientQuerySegmentWalker)
   {
@@ -129,7 +130,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
       RealUnionResult realUnionResult = results.get(i);
       QueryToolChest toolChest = warehouse.getToolChest(q);
       Optional<Sequence<FrameSignaturePair>> queryResults = toolChest
-          .resultsAsFrames(query, resultSequence, memoryAllocatorFactory, useNestedForUnknownTypes);
+          .resultsAsFrames(query, realUnionResult.getResults(), memoryAllocatorFactory, useNestedForUnknownTypes);
       if (!queryResults.isPresent()) {
         return Optional.empty();
       }
