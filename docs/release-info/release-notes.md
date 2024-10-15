@@ -66,7 +66,7 @@ Druid now supports the following features:
 
 For more information, see [Compaction supervisors](#compaction-supervisors-experimental).
 
-[#16291](https://github.com/apache/druid/pull/16291)
+[#16291](https://github.com/apache/druid/pull/16291) [#16768](https://github.com/apache/druid/pull/16768)
 
 Additionally, compaction tasks that take advantage of concurrent append and replace is now generally available as part of concurrent append and replace becoming GA.
 
@@ -444,7 +444,7 @@ You can submit your existing auto-compaction configs as part of the supervisor s
 
 For more information, see [Automatic compaction](https://druid.apache.org/docs/latest/data-management/automatic-compaction).
 
-[#16291](https://github.com/apache/druid/pull/16291)
+[#16291](https://github.com/apache/druid/pull/16291) [#16768](https://github.com/apache/druid/pull/16768)
 
 
 #### Kill tasks
