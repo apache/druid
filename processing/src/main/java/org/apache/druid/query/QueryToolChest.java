@@ -24,8 +24,6 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
-import com.google.inject.Inject;
-import com.google.inject.Provider;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.guice.annotations.ExtensionPoint;
@@ -49,7 +47,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
 {
   private final JavaType baseResultType;
   private final JavaType bySegmentResultType;
-  private Provider<QueryToolChestWarehouse> warehouseProvider;
+  protected QueryToolChestWarehouse warehouse;
 
   protected QueryToolChest()
   {
@@ -74,10 +72,9 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     }
   }
 
-  @Inject
-  public void setWarehouse(Provider<QueryToolChestWarehouse> warehouseProvider)
+  public void setWarehouse(QueryToolChestWarehouse warehouse)
   {
-    this.warehouseProvider = warehouseProvider;
+    this.warehouse = warehouse;
   }
 
   public final JavaType getBaseResultType()
@@ -437,15 +434,5 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     DataSource dataSourceFromQuery = query.getDataSource();
     return (!(dataSourceFromQuery instanceof QueryDataSource)
         || canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery()));
-  }
-
-  public final QueryToolChestWarehouse getWarehouse()
-  {
-    return warehouseProvider.get();
-  }
-
-  public final <T> QueryToolChest<T, Query<T>> getToolchest(Query<T> query)
-  {
-    return getWarehouse().getToolChest(query);
   }
 }
