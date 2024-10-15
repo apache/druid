@@ -71,7 +71,7 @@ where native engine has a non-empty `leafOperator`.
 
 ## Automatic compaction
 
-<!--This list also exists in data-management/automatic-compaction-->
+<!-- If you update this list, also update data-management/automatic-compaction.md -->
 
 The following known issues and limitations affect automatic compaction with the MSQ task engine:
 
