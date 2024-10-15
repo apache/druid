@@ -19,6 +19,6 @@ set -e
 
 sudo apt-get update && sudo apt-get install python3 -y
 sudo apt-get install python3-six
-curl https://bootstrap.pypa.io/pip/3.5/get-pip.py | sudo -H python3
+curl https://bootstrap.pypa.io/get-pip.py | sudo -H python3
 pip3 install wheel  # install wheel first explicitly
 pip3 install --upgrade pyyaml
