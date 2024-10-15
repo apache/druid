@@ -424,11 +424,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     Callable<Integer> scaleAction;
     ServiceEmitter emitter;
+    Runnable actionAfterScale;
     private static final String TYPE = "dynamic_allocation_tasks_notice";
 
-    DynamicAllocationTasksNotice(Callable<Integer> scaleAction, ServiceEmitter emitter)
+    DynamicAllocationTasksNotice(Callable<Integer> scaleAction, Runnable actionAfterScale, ServiceEmitter emitter)
     {
       this.scaleAction = scaleAction;
+      this.actionAfterScale = actionAfterScale;
       this.emitter = emitter;
     }
 
@@ -500,6 +502,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
           boolean allocationSuccess = changeTaskCount(desiredTaskCount);
           if (allocationSuccess) {
+            actionAfterScale.run();
             dynamicTriggerLastRunTime = nowTime;
           }
         }
@@ -1260,9 +1263,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction, ServiceEmitter emitter)
+  public Runnable buildDynamicAllocationTask(
+      Callable<Integer> scaleAction,
+      Runnable actionAfterScale,
+      ServiceEmitter emitter
+  )
   {
-    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, emitter));
+    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, actionAfterScale, emitter));
   }
 
   private Runnable buildRunTask()
