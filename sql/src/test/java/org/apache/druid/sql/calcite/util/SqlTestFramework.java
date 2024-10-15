@@ -217,7 +217,7 @@ public class SqlTestFramework
     Boolean isExplainSupported();
   }
 
-  public static class QueryComponentSupplierDelegate implements QueryComponentSupplier {
+  public static abstract class QueryComponentSupplierDelegate implements QueryComponentSupplier {
 
     private final QueryComponentSupplier delegate;
 
