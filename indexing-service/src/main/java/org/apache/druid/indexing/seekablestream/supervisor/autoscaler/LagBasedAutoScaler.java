@@ -216,16 +216,15 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
 
     int currentActiveTaskCount = supervisor.getActiveTaskGroupsCount();
     int desiredActiveTaskCount;
+    int partitionCount = supervisor.getPartitionCount();
+    if (partitionCount <= 0) {
+      log.warn("Partition number for [%s] <= 0 ? how can it be?", dataSource);
+      return -1;
+    }
 
     if (beyondProportion >= lagBasedAutoScalerConfig.getTriggerScaleOutFractionThreshold()) {
       // Do Scale out
       int taskCount = currentActiveTaskCount + lagBasedAutoScalerConfig.getScaleOutStep();
-
-      int partitionCount = supervisor.getPartitionCount();
-      if (partitionCount <= 0) {
-        log.warn("Partition number for [%s] <= 0 ? how can it be?", dataSource);
-        return -1;
-      }
 
       int actualTaskCountMax = Math.min(lagBasedAutoScalerConfig.getTaskCountMax(), partitionCount);
       if (currentActiveTaskCount == actualTaskCountMax) {
@@ -248,7 +247,8 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
     if (withinProportion >= lagBasedAutoScalerConfig.getTriggerScaleInFractionThreshold()) {
       // Do Scale in
       int taskCount = currentActiveTaskCount - lagBasedAutoScalerConfig.getScaleInStep();
-      if (currentActiveTaskCount == lagBasedAutoScalerConfig.getTaskCountMin()) {
+      int actualTaskCountMin = Math.min(lagBasedAutoScalerConfig.getTaskCountMin(), partitionCount);
+      if (currentActiveTaskCount == actualTaskCountMin) {
         log.warn("CurrentActiveTaskCount reached task count Min limit, skipping scale in action for dataSource [%s].",
             dataSource
         );
@@ -260,7 +260,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
                          .setMetric(SeekableStreamSupervisor.AUTOSCALER_REQUIRED_TASKS_METRIC, taskCount));
         return -1;
       } else {
-        desiredActiveTaskCount = Math.max(taskCount, lagBasedAutoScalerConfig.getTaskCountMin());
+        desiredActiveTaskCount = Math.max(taskCount, actualTaskCountMin);
       }
       return desiredActiveTaskCount;
     }
