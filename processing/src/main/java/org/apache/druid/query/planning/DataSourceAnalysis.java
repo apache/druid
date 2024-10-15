@@ -182,7 +182,7 @@ public class DataSourceAnalysis
    */
   public DataSourceAnalysis maybeWithBaseQuery(Query<?> query)
   {
-    if (!getBaseQuery().isPresent()) {
+    if (!getBaseQuery().isPresent() && query instanceof BaseQuery) {
       return new DataSourceAnalysis(baseDataSource, query, joinBaseTableFilter, preJoinableClauses);
     }
     return this;

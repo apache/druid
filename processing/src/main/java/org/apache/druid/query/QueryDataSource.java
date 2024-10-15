@@ -23,12 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.SegmentReference;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -119,17 +116,7 @@ public class QueryDataSource implements DataSource
   public DataSourceAnalysis getAnalysis()
   {
     final Query<?> subQuery = this.getQuery();
-    if (subQuery instanceof BaseQuery) {
-      final DataSource current = subQuery.getDataSource();
-      return current.getAnalysis().maybeWithBaseQuery(subQuery);
-    }
-    if(subQuery instanceof UnionQuery) {
-      return new DataSourceAnalysis(this, null, null, Collections.emptyList());
-    }
-    // We must verify that the subQuery is a BaseQuery, because it is required to make
-    // "DataSourceAnalysis.getBaseQuerySegmentSpec" work properly.
-    // All built-in query types are BaseQuery, so we only expect this with funky extension queries.
-    throw new IAE("Cannot analyze subquery of class[%s]", subQuery.getClass().getName());
+    return subQuery.getDataSourceAnalysis();
   }
 
   @Override

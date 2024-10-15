@@ -308,6 +308,6 @@ public interface Query<T>
 
   default DataSourceAnalysis getDataSourceAnalysis()
   {
-    return getDataSource().getAnalysis();
+    return getDataSource().getAnalysis().maybeWithBaseQuery(this);
   }
 }
