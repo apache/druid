@@ -27,7 +27,13 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-This topic describes the status and configuration API endpoints for [automatic compaction](../data-management/automatic-compaction.md) in Apache Druid. You can configure automatic compaction in the Druid web console or API.
+This topic describes the status and configuration API endpoints for [automatic compaction using Coordinator duties](../data-management/automatic-compaction.md#auto-compaction-using-coordinator-duties) in Apache Druid. You can configure automatic compaction in the Druid web console or API.
+
+:::info Experimental
+
+Instead of the automatic compaction API, you can use the supervisor API to submit auto-compaction jobs using compaction supervisors. For more information, see [Auto-compaction using compaction supervisors](../data-management/automatic-compaction.md#auto-compaction-using-compaction-supervisors).
+
+:::
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 

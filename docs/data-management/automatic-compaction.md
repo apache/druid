@@ -48,12 +48,17 @@ The automatic compaction system uses the following syntax:
     "granularitySpec": <compaction task granularitySpec>,
     "skipOffsetFromLatest": <time period to avoid compaction>,
     "taskPriority": <compaction task priority>,
-    "taskContext": <task context>,
-    "engine": <native|msq>
+    "taskContext": <task context>
 }
 ```
 
-For Coordinator-based automatic compaction, you submit the spec to the [Compaction config UI](#manage-auto-compaction-using-the-web-console) or the [Compaction configuration API](#manage-auto-compaction-using-coordinator-apis).
+:::info Experimental
+
+The MSQ task engine is available as a compaction engine when you run automatic compaction as a compaction supervisor. For more information, see [Auto-compaction using compaction supervisors](#auto-compaction-using-compaction-supervisors).
+
+:::
+
+For automatic compaction using Coordinator duties, you submit the spec to the [Compaction config UI](#manage-auto-compaction-using-the-web-console) or the [Compaction configuration API](#manage-auto-compaction-using-coordinator-apis).
 
 Most fields in the auto-compaction configuration correlate to a typical [Druid ingestion spec](../ingestion/ingestion-spec.md).
 The following properties only apply to auto-compaction:
@@ -226,7 +231,7 @@ The following auto-compaction configuration compacts updates the `wikipedia` seg
 ## Auto-compaction using compaction supervisors  
 
 :::info Experimental
-Compaction supervisors are experimental. For production use, we recommend [Coordinator-based auto-compaction](#auto-compaction-using-coordinator-duties).
+Compaction supervisors are experimental. For production use, we recommend [auto-compaction using Coordinator duties](#auto-compaction-using-coordinator-duties).
 :::
 
 You can run automatic compaction using compaction supervisors on the Overlord rather than Coordinator duties. Compaction supervisors provide the following benefits over Coordinator duties:
@@ -240,11 +245,12 @@ You can run automatic compaction using compaction supervisors on the Overlord ra
 
 To use compaction supervisors, set the following properties in your Overlord runtime properties:
   *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor tasks
-  *  `druid.supervisor.compaction.engine` to  `msq` to specify the MSQ task engine as the compaction engine or to `native` to use the native engine.
+  *  `druid.supervisor.compaction.engine` to  `msq` to specify the MSQ task engine as the compaction engine or to `native` to use the native engine. This is the default engine if the `engine` field is omitted from your compaction config
 
-Compaction uses the same syntax as Coordinator-based auto-compaction with some differences. Specifically, you submit a supervisor spec with the `type` set to `autocompact` and the auto-compaction config in the `spec` to configure auto-compaction.
-  
-For information about the syntax, see [automatic compaction syntax](#auto-compaction-syntax). 
+Compaction supervisors use the same syntax as auto-compaction using  Coordinator duties with one key difference: you submit the auto-compaction as a a supervisor spec. In the spec, set the `type` to `autocompact` and include the auto-compaction config in the `spec` .
+
+To submit an automatic compaction task, you can submit a supervisor spec through the [web console](#manage-compaction-supervisors-with-the-web-console) or the [supervisor API](#manage-compaction-supervisors-with-supervisor-apis).
+
 
 ### Manage compaction supervisors with the web console
 
@@ -260,7 +266,10 @@ To submit a supervisor spec for MSQ task engine automatic compaction, perform th
    "type": "autocompact",
    "spec": {
       "dataSource": YOUR_DATASOURCE,
-    ...
+      "tuningConfig": {...},
+       "granularitySpec": {...},
+       "engine": <native|msq>,
+       ...
    }
     ```
 1. Submit the supervisor.
@@ -277,13 +286,13 @@ The following example configures auto-compaction for the `wikipedia` datasource:
 curl --location --request POST 'http://localhost:8081/druid/indexer/v1/supervisor' \
 --header 'Content-Type: application/json' \
 --data-raw '{
-   "type": "autocompact",    // required
-   "suspended": false,         // optional
-   "spec": {                           // required
-       "dataSource": "wikipedia",          // required
-       "tuningConfig": {...},                    // optional
-       "granularitySpec": {...},               // optional
-       "engine": <native|msq>,  //optional
+   "type": "autocompact",                     // required
+   "suspended": false,                        // optional 
+   "spec": {                                  // required
+       "dataSource": "wikipedia",             // required
+       "tuningConfig": {...},                 // optional
+       "granularitySpec": {...},              // optional
+       "engine": <native|msq>,                // optional
        ...
    }
 }'
@@ -304,10 +313,11 @@ The MSQ task engine is available as a compaction engine if you configure auto-co
 * Have at least two compaction task slots available or set `compactionConfig.taskContext.maxNumTasks` to two or more. The MSQ task engine requires at least two tasks to run, one controller task and one worker task.
 
 You can use [MSQ task engine context parameters](../multi-stage-query/reference.md#context-parameters) in `spec.taskContext` when configuring your datasource for automatic compaction, such as setting the maximum number of tasks using the `spec.taskContext.maxNumTasks` parameter. Some of the MSQ task engine context parameters overlap with automatic compaction parameters. When these settings overlap, set one or the other.
-To submit an automatic compaction task, you submit a supervisor spec through the UI or API with the type `autocompact` and the `spec` where you define the compaction behavior using the [automatic compaction syntax](#auto-compaction-syntax). You can also use the [web console](#manage-compaction-supervisors-with-the-web-console).
 
 
 #### MSQ task engine limitations
+
+<!--This list also exists in multi-stage-query/known-issues-->
 
 When using the MSQ task engine for auto-compaction, keep the following limitations in mind:
 
