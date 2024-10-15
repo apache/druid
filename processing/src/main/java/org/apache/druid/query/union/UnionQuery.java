@@ -124,7 +124,7 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public Duration getDuration()
   {
-    throw DruidException.defensive("This is not supported");
+    throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
   }
 
   @Override
@@ -136,7 +136,7 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public DateTimeZone getTimezone()
   {
-    throw DruidException.defensive("This is not supported");
+    throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
   }
 
   @Override
@@ -148,7 +148,7 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public Ordering<RealUnionResult> getResultOrdering()
   {
-    throw new RuntimeException("FIXME: Unimplemented!");
+    throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
   }
 
   @Override
@@ -161,7 +161,7 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public Query<RealUnionResult> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    throw new RuntimeException("FIXME: Unimplemented!");
+    throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
   }
 
   @Override
@@ -191,7 +191,7 @@ public class UnionQuery implements Query<RealUnionResult>
   @Override
   public Query<RealUnionResult> withDataSource(DataSource dataSource)
   {
-    throw new RuntimeException("FIXME: Unimplemented!");
+    throw new RuntimeException("This method is not supported. Use withDataSources instead!");
   }
 
   @Override
@@ -250,7 +250,7 @@ public class UnionQuery implements Query<RealUnionResult>
     @Override
     public DataSource withChildren(List<DataSource> children)
     {
-      throw DruidException.defensive().build("Not implemented");
+      throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
     }
 
     @Override
@@ -274,13 +274,13 @@ public class UnionQuery implements Query<RealUnionResult>
     @Override
     public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc)
     {
-      throw DruidException.defensive().build("Not implemented");
+      throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
     }
 
     @Override
     public DataSource withUpdatedDataSource(DataSource newSource)
     {
-      throw DruidException.defensive().build("Not implemented");
+      throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
     }
 
     @Override
@@ -292,7 +292,7 @@ public class UnionQuery implements Query<RealUnionResult>
     @Override
     public DataSourceAnalysis getAnalysis()
     {
-      throw DruidException.defensive().build("Not implemented");
+      throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
     }
   }
 }
