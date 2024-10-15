@@ -19,12 +19,16 @@
 
 package org.apache.druid.query;
 
-public interface QueryExecSomething<T>
+/**
+ * Executes the query by utilizing the given walker.
+ *
+ * {@link QueryToolChest}-s implementing this interface will get control over the execution of the query.
+ */
+public interface QueryExecutor<T>
 {
   QueryRunner<T> makeQueryRunner(
       QueryToolChestWarehouse warehouse,
       Query<T> query,
       QuerySegmentWalker walker
   );
-
 }

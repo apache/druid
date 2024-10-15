@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryExecSomething;
+import org.apache.druid.query.QueryExecutor;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -44,7 +44,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, UnionQuery>
-    implements QueryExecSomething<RealUnionResult>
+    implements QueryExecutor<RealUnionResult>
 {
 
   public QueryRunner<RealUnionResult> makeQueryRunner(QueryToolChestWarehouse warehouse,

@@ -19,52 +19,40 @@
 
 package org.apache.druid.query.union;
 
+import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.Segment;
 
-public class RealUnionQueryRunnerFactory implements QueryRunnerFactory<RealUnionResult, UnionQuery>
+public class UnionQueryRunnerFactory implements QueryRunnerFactory<RealUnionResult, UnionQuery>
 {
+  private UnionQueryQueryToolChest toolChest;
 
-  private static UnionQueryQueryToolChest tt;
-
-  public RealUnionQueryRunnerFactory(String string)
+  @Inject
+  public UnionQueryRunnerFactory(UnionQueryQueryToolChest toolChest)
   {
-    int asd=1;
+    this.toolChest = toolChest;
   }
 
   @Override
   public QueryRunner<RealUnionResult> createRunner(Segment segment)
   {
-    if(true)
-    {
-      throw new RuntimeException("FIXME: Unimplemented!");
-    }
-    return null;
-
+    throw DruidException.defensive("not expected to be used");
   }
 
   @Override
   public QueryRunner<RealUnionResult> mergeRunners(QueryProcessingPool queryProcessingPool,
       Iterable<QueryRunner<RealUnionResult>> queryRunners)
   {
-    if(true)
-    {
-      throw new RuntimeException("FIXME: Unimplemented!");
-    }
-    return null;
-
+    throw DruidException.defensive("not expected to be used");
   }
 
   @Override
   public QueryToolChest<RealUnionResult, UnionQuery> getToolchest()
   {
-    if (tt == null) {
-      tt = new UnionQueryQueryToolChest();
-    }
-    return tt;
+    return toolChest;
   }
-
 }

@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.error.DruidException;
+
 /**
  */
 public interface QueryRunnerFactoryConglomerate extends QueryToolChestWarehouse
@@ -29,7 +31,7 @@ public interface QueryRunnerFactoryConglomerate extends QueryToolChestWarehouse
   {
     QueryRunnerFactory<T, QueryType> factory = findFactory(query);
     if (factory == null) {
-      return null;
+      throw DruidException.defensive(query.getClass().getName() + " is not registered");
     }
     return factory.getToolchest();
   }

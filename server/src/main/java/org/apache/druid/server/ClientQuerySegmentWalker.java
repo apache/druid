@@ -49,7 +49,7 @@ import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryExecSomething;
+import org.apache.druid.query.QueryExecutor;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -181,8 +181,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
 //    Optional<QueryRunner<T>> toolchestExecResult = toolChest.executeQuery21(warehouse, query, this);
-    if (toolChest instanceof QueryExecSomething) {
-      QueryExecSomething<T> t = (QueryExecSomething<T>) toolChest;
+    if (toolChest instanceof QueryExecutor) {
+      QueryExecutor<T> t = (QueryExecutor<T>) toolChest;
       return t.makeQueryRunner(warehouse, query, this);
     }
 
@@ -317,7 +317,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
     final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
 
-    if (toolChest instanceof QueryExecSomething) {
+    if (toolChest instanceof QueryExecutor) {
       return true;
     }
 
@@ -455,8 +455,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
 //          final QueryRunner<?> subQueryRunner ;
           final QueryRunner subQueryRunner;
-          if (subQueryToolChest instanceof QueryExecSomething) {
-            subQueryRunner = ((QueryExecSomething) subQueryToolChest)
+          if (subQueryToolChest instanceof QueryExecutor) {
+            subQueryRunner = ((QueryExecutor) subQueryToolChest)
                 .makeQueryRunner(warehouse, subQueryWithSerialization, this);
           }else {
             subQueryRunner = subQueryWithSerialization.getRunner(this);

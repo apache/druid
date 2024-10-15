@@ -72,6 +72,11 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     }
   }
 
+  public void setWarehouse(QueryToolChestWarehouse warehouse)
+  {
+    this.warehouse = warehouse;
+  }
+
   public final JavaType getBaseResultType()
   {
     return baseResultType;
@@ -422,11 +427,6 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   )
   {
     return Optional.empty();
-  }
-
-  public void setWarehouse(QueryToolChestWarehouse warehouse)
-  {
-    this.warehouse = warehouse;
   }
 
   public Optional<QueryRunner<ResultType>> executeQuery(
