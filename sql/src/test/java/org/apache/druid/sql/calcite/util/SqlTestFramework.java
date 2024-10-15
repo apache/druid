@@ -358,32 +358,6 @@ public class SqlTestFramework
     {
     }
 
-    class x implements Module
-    {
-
-      @Provides
-      public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> createCongolmerate(
-          ObjectMapper jsonMapper,
-          final TestBufferPool testBufferPool,
-          final TestGroupByBuffers groupByBuffers,
-          @Named(SqlTestFramework.SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig)
-      {
-        return QueryStackTests.makeDefaultQueryRunnerFactories(
-            processingConfig,
-            111,
-            jsonMapper,
-            testBufferPool,
-            groupByBuffers
-        );
-      }
-
-    @Override
-    public void configure(Binder binder)
-    {
-    }
-
-  }
-
     @Override
     public QueryRunnerFactoryConglomerate createCongolmerate1(
         Builder builder,
