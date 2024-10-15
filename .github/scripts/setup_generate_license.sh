@@ -18,8 +18,8 @@
 set -e
 
 sudo apt-get update && sudo apt-get install python3 -y
-python3 -m venv .python3venv
-source .python3venv/bin/activate
+python3 -m venv ~/.python3venv
+source ~/.python3venv/bin/activate
 sudo apt install python3-pip
 pip3 install wheel  # install wheel first explicitly
 pip3 install --upgrade pyyaml
