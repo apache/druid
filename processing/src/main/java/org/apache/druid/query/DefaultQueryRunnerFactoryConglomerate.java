@@ -34,7 +34,7 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
   public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories)
   {
     this.factories = new IdentityHashMap<>(factories);
-    for (QueryRunnerFactory factory :factories.values()) {
+    for (QueryRunnerFactory factory : factories.values()) {
       factory.getToolchest().setWarehouse(this);
     }
   }

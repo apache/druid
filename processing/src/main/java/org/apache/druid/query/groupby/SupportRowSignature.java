@@ -23,6 +23,5 @@ import org.apache.druid.segment.column.RowSignature;
 
 public interface SupportRowSignature
 {
-  public RowSignature getResultRowSignature(final RowSignature.Finalization finalization);
-
+  RowSignature getResultRowSignature(RowSignature.Finalization finalization);
 }

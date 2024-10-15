@@ -184,7 +184,8 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>> im
   }
 
   @Override
-  public RowSignature getResultRowSignature(Finalization finalization) {
+  public RowSignature getResultRowSignature(Finalization finalization)
+  {
     return getResultSignature(finalization);
   }
 
