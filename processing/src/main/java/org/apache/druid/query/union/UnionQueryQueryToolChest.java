@@ -106,7 +106,8 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
     for (int i = 0; i < results.size(); i++) {
       Query<?> q = query.queries.get(i);
       RealUnionResult realUnionResult = results.get(i);
-      resultSeqs.add(resultsAsArrays(q, realUnionResult));
+      Sequence<Object[]> resultsAsArrays2 = resultsAsArrays2(q, realUnionResult);
+      resultSeqs.add(resultsAsArrays2);
     }
     return Sequences.concat(resultSeqs);
   }
@@ -115,6 +116,14 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
       RealUnionResult realUnionResult)
   {
     QueryToolChest<T, QueryType> toolChest = warehouse.getToolChest(q);
+    return toolChest.resultsAsArrays(q, realUnionResult.getResults());
+  }
+
+
+  private  Sequence<Object[]> resultsAsArrays2(Query<?> q,
+      RealUnionResult realUnionResult)
+  {
+    QueryToolChest toolChest = warehouse.getToolChest(q);
     return toolChest.resultsAsArrays(q, realUnionResult.getResults());
   }
 
