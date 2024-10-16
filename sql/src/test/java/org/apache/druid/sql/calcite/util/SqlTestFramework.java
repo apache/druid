@@ -679,7 +679,7 @@ public class SqlTestFramework
               QueryStackTests
                   .makeDefaultQueryRunnerFactories(
                       processingConfig,
-                      builder.mergeBufferCount,
+                      builder.minTopNThreshold,
                       jsonMapper,
                       testBufferPool,
                       groupByBuffers
