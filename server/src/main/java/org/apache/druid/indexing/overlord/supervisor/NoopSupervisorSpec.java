@@ -59,6 +59,7 @@ public class NoopSupervisorSpec implements SupervisorSpec
   @JsonProperty("source")
   private String source; //ignored
 
+  @VisibleForTesting
   public NoopSupervisorSpec(
       String id,
       List<String> datasources
@@ -67,7 +68,6 @@ public class NoopSupervisorSpec implements SupervisorSpec
     this(id, datasources, null, null, null);
   }
 
-  @VisibleForTesting
   @JsonCreator
   public NoopSupervisorSpec(
       @JsonProperty("id") @Nullable String id,

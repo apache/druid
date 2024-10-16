@@ -149,6 +149,7 @@ public class ExplainAttributesTest
                                        + "}";
     Assert.assertEquals(expectedAttributes1, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes1));
 
+
     ExplainAttributes replaceAttributes2 = new ExplainAttributes(
         "REPLACE",
         "foo",
