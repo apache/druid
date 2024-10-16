@@ -151,7 +151,7 @@ public class ClientCompactionRunnerInfo
   {
     if (partitionsSpec == null) {
       return CompactionConfigValidationResult.failure(
-          "MSQ: tuningConfig.partitionsSpec must be set"
+          "MSQ: tuningConfig.partitionsSpec must be specified"
       );
     }
     if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
@@ -172,24 +172,28 @@ public class ClientCompactionRunnerInfo
       Map<String, DimensionSchema> dimensionSchemaMap = dimensionSchemas.stream().collect(
           Collectors.toMap(DimensionSchema::getName, Function.identity())
       );
-      Optional<String> unsupportedDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
+      Optional<String> nonStringDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
           .getPartitionDimensions()
           .stream()
-          .filter(dim -> !ColumnType.STRING.equals(dimensionSchemaMap.get(dim).getColumnType())
-                         || multiValuedDimensions != null && multiValuedDimensions.contains(dim))
+          .filter(dim -> !ColumnType.STRING.equals(dimensionSchemaMap.get(dim).getColumnType()))
           .findAny();
-      if (unsupportedDimension.isPresent()) {
-        DimensionSchema unsupportedDimensionSchema = dimensionSchemaMap.get(unsupportedDimension.get());
-        if (ColumnType.STRING.equals(unsupportedDimensionSchema.getColumnType())) {
+      if (nonStringDimension.isPresent()) {
+        return CompactionConfigValidationResult.failure(
+            "MSQ: Non-string partition dimension[%s] of type[%s] not supported with 'range' partition spec",
+            nonStringDimension.get(),
+            dimensionSchemaMap.get(nonStringDimension.get()).getTypeName()
+        );
+      }
+      if (multiValuedDimensions != null) {
+        Optional<String> multiValuedDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
+            .getPartitionDimensions()
+            .stream()
+            .filter(multiValuedDimensions::contains)
+            .findAny();
+        if (multiValuedDimension.isPresent()) {
           return CompactionConfigValidationResult.failure(
               "MSQ: Multi-valued string partition dimension[%s] not supported with 'range' partition spec",
-              unsupportedDimensionSchema.getName()
-          );
-        } else {
-          return CompactionConfigValidationResult.failure(
-              "MSQ: Non-string partition dimension[%s] of type[%s] not supported with 'range' partition spec",
-              unsupportedDimensionSchema.getName(),
-              unsupportedDimensionSchema.getTypeName()
+              multiValuedDimension.get()
           );
         }
       }

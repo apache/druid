@@ -145,7 +145,7 @@ public class ClientCompactionRunnerInfoTest
   }
 
   @Test
-  public void testMSQEngineWithLongDimensionsInRangePartitionsSpecIsValid()
+  public void testMSQEngineWithLongDimensionsInRangePartitionsSpecIsInvalid()
   {
     DataSourceCompactionConfig compactionConfig = createMSQCompactionConfig(
         new DimensionRangePartitionsSpec(100, null, ImmutableList.of("partitionDim"), false),
