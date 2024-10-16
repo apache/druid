@@ -27,6 +27,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.java.util.metrics.KeyedDiff;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -35,15 +36,18 @@ public class QueryCountStatsMonitor extends AbstractMonitor
 {
   private final KeyedDiff keyedDiff = new KeyedDiff();
   private final QueryCountStatsProvider statsProvider;
+  private final GroupByStatsProvider groupByStatsProvider;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
 
   @Inject
   public QueryCountStatsMonitor(
       QueryCountStatsProvider statsProvider,
+      GroupByStatsProvider groupByStatsProvider,
       @Merging BlockingPool<ByteBuffer> mergeBufferPool
   )
   {
     this.statsProvider = statsProvider;
+    this.groupByStatsProvider = groupByStatsProvider;
     this.mergeBufferPool = mergeBufferPool;
   }
 
@@ -74,7 +78,22 @@ public class QueryCountStatsMonitor extends AbstractMonitor
 
     long pendingQueries = this.mergeBufferPool.getPendingRequests();
     emitter.emit(builder.setMetric("mergeBuffer/pendingRequests", pendingQueries));
+
+    emitter.emit(
+        builder.setMetric(
+            "mergeBuffer/acquiredCount",
+            groupByStatsProvider.getAcquiredMergeBufferCount()
+        )
+    );
+    emitter.emit(
+        builder.setMetric(
+            "groupBy/acquisitionTimeNs",
+            groupByStatsProvider.getAndResetGroupByResourceAcquisitionStats()
+        )
+    );
+
+    emitter.emit(builder.setMetric("groupBy/spilledBytes", groupByStatsProvider.getSpilledBytes()));
+
     return true;
   }
-
 }

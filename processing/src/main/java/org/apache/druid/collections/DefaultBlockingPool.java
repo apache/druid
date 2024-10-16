@@ -129,6 +129,12 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
     return pendingRequests.get();
   }
 
+  @Override
+  public long getUsedBufferCount()
+  {
+    return maxSize - objects.size();
+  }
+
   private List<T> pollObjects(int elementNum) throws InterruptedException
   {
     final List<T> list = new ArrayList<>(elementNum);

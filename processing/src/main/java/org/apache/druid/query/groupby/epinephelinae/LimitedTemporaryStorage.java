@@ -121,7 +121,7 @@ public class LimitedTemporaryStorage implements Closeable
   }
 
   @VisibleForTesting
-  long currentSize()
+  public long currentSize()
   {
     return bytesUsed.get();
   }
@@ -142,6 +142,11 @@ public class LimitedTemporaryStorage implements Closeable
         log.warn("Cannot delete storageDirectory: %s", storageDirectory);
       }
     }
+  }
+
+  public boolean isClosed()
+  {
+    return closed;
   }
 
   public class LimitedOutputStream extends OutputStream

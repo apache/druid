@@ -93,8 +93,11 @@ public class GroupByResourcesReservationPoolTest
 
     // Blocking pool with a single buffer, which means only one of the queries can succeed at a time
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
-    GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG);
+
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergeBufferPool);
+
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG, groupByStatsProvider);
 
     // Latch indicating that the first thread has called reservationPool.reserve()
     CountDownLatch reserveCalledByFirstThread = new CountDownLatch(1);
@@ -191,8 +194,9 @@ public class GroupByResourcesReservationPoolTest
   public void testMultipleSimultaneousAllocationAttemptsFail()
   {
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
-    GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergeBufferPool);
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG, groupByStatsProvider);
     QueryResourceId queryResourceId = new QueryResourceId("test-id");
 
     groupByResourcesReservationPool.reserve(queryResourceId, QUERY, true);
@@ -207,8 +211,9 @@ public class GroupByResourcesReservationPoolTest
   public void testMultipleSequentialAllocationAttemptsSucceed()
   {
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
-    GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergeBufferPool);
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG, groupByStatsProvider);
     QueryResourceId queryResourceId = new QueryResourceId("test-id");
 
     groupByResourcesReservationPool.reserve(queryResourceId, QUERY, true);

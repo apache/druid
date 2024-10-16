@@ -97,15 +97,17 @@ public class GroupByQueryRunnerFailureTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(MERGE_BUFFER_POOL, config);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(MERGE_BUFFER_POOL);
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(MERGE_BUFFER_POOL, config, groupByStatsProvider);
     final GroupingEngine groupingEngine = new GroupingEngine(
         DEFAULT_PROCESSING_CONFIG,
         configSupplier,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         mapper,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupByQueryQueryToolChest toolChest =
         new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);

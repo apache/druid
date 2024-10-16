@@ -325,13 +325,19 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(
+
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergePool);
+    final GroupByStatsProvider tooSmallGroupByStatsProvider = new GroupByStatsProvider(tooSmallMergePool);
+
+    final GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(
         mergePool,
-        config
+        config,
+        groupByStatsProvider
     );
-    GroupByResourcesReservationPool tooSmallGroupByResourcesReservationPool = new GroupByResourcesReservationPool(
+    final GroupByResourcesReservationPool tooSmallGroupByResourcesReservationPool = new GroupByResourcesReservationPool(
         tooSmallMergePool,
-        config
+        config,
+        tooSmallGroupByStatsProvider
     );
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
@@ -339,7 +345,8 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
+        NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
 
     final GroupingEngine tooSmallEngine = new GroupingEngine(
@@ -348,7 +355,8 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
         tooSmallGroupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
+        NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
 
     groupByFactory = new GroupByQueryRunnerFactory(

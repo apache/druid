@@ -48,6 +48,7 @@ import org.apache.druid.query.PrioritizedExecutorService;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.server.metrics.MetricsModule;
 import org.apache.druid.utils.JvmUtils;
 
@@ -112,10 +113,11 @@ public class DruidProcessingModule implements Module
   @Merging
   public GroupByResourcesReservationPool getGroupByResourcesReservationPool(
       @Merging BlockingPool<ByteBuffer> mergeBufferPool,
-      GroupByQueryConfig groupByQueryConfig
+      GroupByQueryConfig groupByQueryConfig,
+      GroupByStatsProvider groupByStatsProvider
   )
   {
-    return new GroupByResourcesReservationPool(mergeBufferPool, groupByQueryConfig);
+    return new GroupByResourcesReservationPool(mergeBufferPool, groupByQueryConfig, groupByStatsProvider);
   }
 
   public static void registerConfigsAndMonitor(Binder binder)
