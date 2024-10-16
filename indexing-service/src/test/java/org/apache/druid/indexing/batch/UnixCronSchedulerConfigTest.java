@@ -26,65 +26,78 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
-public class UnixCronSchedulerConfigTest {
-
+public class UnixCronSchedulerConfigTest
+{
   @Test
-  public void testYearlyMacroTranslation() {
-    final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@yearly");
-    assertEquals("@yearly", config.getSchedule());
-    assertEquals("0 0 1 1 *", config.getCron().asString());
-  }
-
-  @Test
-  public void testMonthlyMacroTranslation() {
-    final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@monthly");
-    assertEquals("@monthly", config.getSchedule());
-    assertEquals("0 0 1 * *", config.getCron().asString());
-  }
-
-  @Test
-  public void testWeeklyMacroTranslation() {
-    final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@weekly");
-    assertEquals("@weekly", config.getSchedule());
-    assertEquals("0 0 * * 0", config.getCron().asString());
-  }
-
-  @Test
-  public void testDailyMacroTranslation() {
-    final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@daily");
-    assertEquals("@daily", config.getSchedule());
-    assertEquals("0 0 * * *", config.getCron().asString());
-  }
-
-  @Test
-  public void testHourlyMacroTranslation() {
+  public void testHourlyMacro()
+  {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@hourly");
     assertEquals("@hourly", config.getSchedule());
     assertEquals("0 * * * *", config.getCron().asString());
   }
 
   @Test
-  public void testCustomCronExpression() {
+  public void testDailyMacro()
+  {
+    final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@daily");
+    assertEquals("@daily", config.getSchedule());
+    assertEquals("0 0 * * *", config.getCron().asString());
+  }
+
+  @Test
+  public void testWeeklyMacro()
+  {
+    final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@weekly");
+    assertEquals("@weekly", config.getSchedule());
+    assertEquals("0 0 * * 0", config.getCron().asString());
+  }
+
+  @Test
+  public void testMonthlyMacro()
+  {
+    final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@monthly");
+    assertEquals("@monthly", config.getSchedule());
+    assertEquals("0 0 1 * *", config.getCron().asString());
+  }
+
+  @Test
+  public void testCustomSchedule()
+  {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("0 15 10 * *");
     assertEquals("0 15 10 * *", config.getSchedule());
     assertEquals("0 15 10 * *", config.getCron().asString());
   }
 
   @Test
-  public void testInvalidUnixCronExpression() {
-    assertThrows(IllegalArgumentException.class, () -> new UnixCronSchedulerConfig("invalid-cron"));
+  public void testYearlyMacro()
+  {
+    final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@yearly");
+    assertEquals("@yearly", config.getSchedule());
+    assertEquals("0 0 1 1 *", config.getCron().asString());
   }
 
   @Test
-  public void testSerde() throws JsonProcessingException {
+  public void testSerde() throws JsonProcessingException
+  {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
 
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@daily");
     final String json = objectMapper.writeValueAsString(config);
 
-    final UnixCronSchedulerConfig deserializedConfig = objectMapper.readValue(json, UnixCronSchedulerConfig.class);
-    assertEquals(config.getSchedule(), deserializedConfig.getSchedule());
-    assertEquals(config.getCron().asString(), deserializedConfig.getCron().asString());
+    final CronSchedulerConfig deserializedConfig = objectMapper.readValue(json, CronSchedulerConfig.class);
+    assertTrue(deserializedConfig instanceof UnixCronSchedulerConfig);
+
+    final UnixCronSchedulerConfig deserializedUnixConfig = (UnixCronSchedulerConfig) deserializedConfig;
+
+    assertEquals(config.getSchedule(), deserializedUnixConfig.getSchedule());
+    assertEquals(config.getCron().asString(), deserializedUnixConfig.getCron().asString());
+  }
+
+  @Test
+  public void testInvalidUnixCronExpression()
+  {
+    assertThrows(IllegalArgumentException.class, () -> new UnixCronSchedulerConfig("0 15 10 * * ? *"));
   }
 }

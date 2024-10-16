@@ -37,7 +37,8 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
 
   private static final CronParser CRON_PARSER = createUnixCronParserWithMacros();
 
-  private static CronParser createUnixCronParserWithMacros() {
+  private static CronParser createUnixCronParserWithMacros()
+  {
     final CronDefinitionBuilder unixDefnWithMacros = CronDefinitionBuilder.defineCron();
     CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX)
                          .getFieldDefinitions()

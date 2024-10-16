@@ -22,12 +22,9 @@ package org.apache.druid.indexing.batch;
 import com.cronutils.model.Cron;
 import com.cronutils.model.CronType;
 import com.cronutils.model.definition.CronDefinitionBuilder;
-import com.cronutils.model.field.definition.FieldDefinition;
 import com.cronutils.parser.CronParser;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.Set;
 
 public class QuartzCronSchedulerConfig implements CronSchedulerConfig
 {
@@ -38,32 +35,8 @@ public class QuartzCronSchedulerConfig implements CronSchedulerConfig
 
   private final Cron cron;
 
-  private static final CronParser CRON_PARSER = createQuartzCronParserWithMacros();
-
-  private static CronParser createQuartzCronParserWithMacros() {
-    final CronDefinitionBuilder quartzDefnWithMacros = CronDefinitionBuilder.defineCron();
-    final Set<FieldDefinition> fieldDefinitions = CronDefinitionBuilder.instanceDefinitionFor(CronType.QUARTZ)
-                                                                 .getFieldDefinitions();
-
-    fieldDefinitions.stream()
-                    .filter(fieldDefinition -> !fieldDefinition.isOptional())
-                    .forEach(quartzDefnWithMacros::register);
-
-    fieldDefinitions.stream()
-                    .filter(FieldDefinition::isOptional)
-                    .forEach(quartzDefnWithMacros::register);
-
-    return new CronParser(
-        quartzDefnWithMacros.withSupportedNicknameHourly()
-                            .withSupportedNicknameMidnight()
-                            .withSupportedNicknameDaily()
-                            .withSupportedNicknameWeekly()
-                            .withSupportedNicknameMonthly()
-                            .withSupportedNicknameAnnually()
-                            .withSupportedNicknameYearly()
-                            .instance()
-    );
-  }
+  private static final CronParser CRON_PARSER =
+      new CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.QUARTZ));
 
   @JsonCreator
   public QuartzCronSchedulerConfig(@JsonProperty("schedule") final String schedule)

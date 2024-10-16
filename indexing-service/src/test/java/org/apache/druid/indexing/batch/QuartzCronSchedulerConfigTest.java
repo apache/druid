@@ -19,57 +19,27 @@
 
 package org.apache.druid.indexing.batch;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 public class QuartzCronSchedulerConfigTest
 {
   @Test
-  public void testCronParserWithQuartzExpression() {
+  public void testCustomSchedule()
+  {
     final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 15 10 * * ? *");
     assertEquals("0 15 10 * * ? *", config.getSchedule());
     assertEquals("0 15 10 * * ? *", config.getCron().asString());
   }
 
   @Test
-  public void testHourlyNickname() {
-    final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("@hourly");
-    assertEquals("@hourly", config.getSchedule());
-    assertEquals("0 0 * * * *", config.getCron().asString());
-  }
-
-  @Test
-  public void testDailyNickname() {
-    final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("@daily");
-    assertEquals("@daily", config.getSchedule());
-    assertEquals("0 0 0 * * *", config.getCron().asString());
-  }
-
-  @Test
-  public void testWeeklyNickname() {
-    final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("@weekly");
-    assertEquals("@weekly", config.getSchedule());
-    assertEquals("0 0 0 ? * 1 *", config.getCron().asString());
-  }
-
-  @Test
-  public void testMonthlyNickname() {
-    final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("@monthly");
-    assertEquals("@monthly", config.getSchedule());
-    assertEquals("0 0 0 1 * *", config.getCron().asString());
-  }
-
-  @Test
-  public void testAnnuallyNickname() {
-    final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("@annually");
-    assertEquals("@annually", config.getSchedule());
-    assertEquals("0 0 0 1 1 *", config.getCron().asString());
-  }
-
-  @Test
-  public void testOneOffSchedulerConfig()
+  public void testOneOffYearSchedule()
   {
     final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 0 0 31 12 ? 2024-2025");
     assertEquals("0 0 0 31 12 ? 2024-2025", config.getSchedule());
@@ -77,7 +47,7 @@ public class QuartzCronSchedulerConfigTest
   }
 
   @Test
-  public void testOneOffSchedulerConfig2()
+  public void testOneOffDaySchedule()
   {
     final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 30 10-13 ? * WED,FRI");
     assertEquals("0 30 10-13 ? * WED,FRI", config.getSchedule());
@@ -85,7 +55,30 @@ public class QuartzCronSchedulerConfigTest
   }
 
   @Test
-  public void testInvalidCronExpression() {
-    assertThrows(IllegalArgumentException.class, () -> new QuartzCronSchedulerConfig("invalid-cron-expression"));
+  public void testSerde() throws JsonProcessingException
+  {
+    final ObjectMapper objectMapper = new DefaultObjectMapper();
+
+    final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("*/30 * * * * ?");
+    final String json = objectMapper.writeValueAsString(config);
+
+    final CronSchedulerConfig deserializedConfig = objectMapper.readValue(json, CronSchedulerConfig.class);
+    assertTrue(deserializedConfig instanceof QuartzCronSchedulerConfig);
+
+    final QuartzCronSchedulerConfig deserializedQuartzConfig = (QuartzCronSchedulerConfig) deserializedConfig;
+    assertEquals(config.getSchedule(), deserializedQuartzConfig.getSchedule());
+    assertEquals(config.getCron().asString(), deserializedQuartzConfig.getCron().asString());
+  }
+
+  @Test
+  public void testInvalidCronExpression()
+  {
+    assertThrows(IllegalArgumentException.class, () -> new QuartzCronSchedulerConfig("0 15 10 * *"));
+  }
+
+  @Test
+  public void testDailyMacroNotSupported()
+  {
+    assertThrows(IllegalArgumentException.class, () -> new QuartzCronSchedulerConfig("@daily"));
   }
 }

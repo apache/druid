@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.batch;
 
-import com.cronutils.descriptor.CronDescriptor;
 import com.cronutils.model.time.ExecutionTime;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
