@@ -233,6 +233,7 @@ Splunk
 SqlParameter
 SslContextFactory
 StatsD
+stateful
 SYSTEM_TABLE
 TaskRunner
 TabItem
@@ -254,6 +255,7 @@ UTF8
 XMLs
 ZK
 ZSTD
+Axios
 accessor
 ad-hoc
 aggregator
@@ -323,6 +325,7 @@ deserialization
 deserialize
 deserialized
 deserializes
+deserializing
 downtimes
 druid
 druid–kubernetes-extensions
@@ -345,6 +348,7 @@ filterValue
 firefox
 firehose
 firehoses
+FirehoseFactory
 fromPigAvroStorage
 frontends
 granularities
@@ -535,8 +539,10 @@ stdout
 storages
 stringDictionaryEncoding
 stringified
+structs
 sub-conditions
 subarray
+submenu
 subnet
 subqueries
 subquery
@@ -636,6 +642,7 @@ IS_NULLABLE
 JDBC_TYPE
 MIDDLE_MANAGER
 MILLIS_TO_TIMESTAMP
+NPE
 NULLable
 NUMERIC_PRECISION
 NUMERIC_PRECISION_RADIX
@@ -711,6 +718,7 @@ total_size
 useApproximateCountDistinct
 useGroupingSetForExactDistinct
 useApproximateTopN
+UX
 wikipedia
 your-table
 enableTimeBoundaryPlanning
@@ -1090,6 +1098,7 @@ reverseLoadingCacheSpec
 OAuth
 Okta
 OpenID
+OpenRewrite
 pac4j
 Env
 POD_NAME
@@ -1222,6 +1231,8 @@ chunk2
 stddev
 t1
 t2
+v4
+v5
 variance1
 variance2
 varianceFold
@@ -1631,6 +1642,7 @@ un
 5MB
 64KiB
 8GiB
+GBs
 G1GC
 GroupBys
 QoS-type
@@ -2203,6 +2215,7 @@ PiB
 protobuf
 Golang
 multiValueHandling
+multivalue
 _n_
 KLL
 KllFloatsSketch
