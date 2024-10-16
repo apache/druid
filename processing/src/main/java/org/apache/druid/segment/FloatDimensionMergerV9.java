@@ -27,15 +27,15 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 public class FloatDimensionMergerV9 extends NumericDimensionMergerV9
 {
 
-  FloatDimensionMergerV9(String dimensionName, IndexSpec indexSpec, SegmentWriteOutMedium segmentWriteOutMedium)
+  FloatDimensionMergerV9(String outputName, IndexSpec indexSpec, SegmentWriteOutMedium segmentWriteOutMedium)
   {
-    super(dimensionName, indexSpec, segmentWriteOutMedium);
+    super(outputName, indexSpec, segmentWriteOutMedium);
   }
 
   @Override
   GenericColumnSerializer setupEncodedValueWriter()
   {
-    return IndexMergerV9.createFloatColumnSerializer(segmentWriteOutMedium, dimensionName, indexSpec);
+    return IndexMergerV9.createFloatColumnSerializer(segmentWriteOutMedium, outputName, indexSpec);
   }
 
   @Override

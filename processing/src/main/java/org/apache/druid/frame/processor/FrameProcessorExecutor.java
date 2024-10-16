@@ -222,12 +222,18 @@ public class FrameProcessorExecutor
           }
         }
 
+        final String threadName = Thread.currentThread().getName();
         boolean canceled = false;
         Either<Throwable, ReturnOrAwait<T>> retVal;
 
         try {
           if (Thread.interrupted()) {
             throw new InterruptedException();
+          }
+
+          if (cancellationId != null) {
+            // Set the thread name to something involving the cancellationId, to make thread dumps more useful.
+            Thread.currentThread().setName(threadName + "-" + cancellationId);
           }
 
           retVal = Either.value(processor.runIncrementally(readableInputs));
@@ -253,6 +259,9 @@ public class FrameProcessorExecutor
                 canceled = true;
               }
             }
+
+            // Restore original thread name.
+            Thread.currentThread().setName(threadName);
           }
         }
 

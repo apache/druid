@@ -90,7 +90,7 @@ export class Measure extends ExpressionMeta {
     }
 
     switch (column.nativeType) {
-      case 'BIGINT':
+      case 'LONG':
       case 'FLOAT':
       case 'DOUBLE':
         return [
@@ -104,15 +104,15 @@ export class Measure extends ExpressionMeta {
             expression: F.min(C(column.name)),
           }),
           new Measure({
-            expression: SqlFunction.countDistinct(C(column.name)),
-          }),
-          new Measure({
             as: `P98 ${column.name}`,
             expression: F('APPROX_QUANTILE_DS', C(column.name), 0.98),
           }),
+          new Measure({
+            expression: SqlFunction.countDistinct(C(column.name)),
+          }),
         ];
 
-      case 'VARCHAR':
+      case 'STRING':
       case 'COMPLEX':
       case 'COMPLEX<hyperUnique>':
         return [
@@ -215,6 +215,10 @@ export class Measure extends ExpressionMeta {
 
   public toAggregateBasedMeasure(): Measure {
     return this.changeExpression(F(Measure.AGGREGATE, L(this.name)));
+  }
+
+  public getAggregateMeasureName(): string | undefined {
+    return Measure.getAggregateMeasureName(this.expression);
   }
 
   public getUsedAggregates(): string[] {

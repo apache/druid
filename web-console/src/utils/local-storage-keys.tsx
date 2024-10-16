@@ -53,10 +53,12 @@ export const LocalStorageKeys = {
   WORKBENCH_PANE_SIZE: 'workbench-pane-size' as const,
   WORKBENCH_HISTORY: 'workbench-history' as const,
   WORKBENCH_TASK_PANEL: 'workbench-task-panel' as const,
+  WORKBENCH_DART_PANEL: 'workbench-dart-panel' as const,
 
   SQL_DATA_LOADER_CONTENT: 'sql-data-loader-content' as const,
 
   EXPLORE_STATE: 'explore-state' as const,
+  EXPLORE_STICKY: 'explore-sticky' as const,
 };
 export type LocalStorageKeys = (typeof LocalStorageKeys)[keyof typeof LocalStorageKeys];
 

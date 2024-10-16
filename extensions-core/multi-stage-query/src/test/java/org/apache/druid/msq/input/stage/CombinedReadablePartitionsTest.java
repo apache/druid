@@ -31,7 +31,7 @@ import org.junit.Test;
 
 public class CombinedReadablePartitionsTest
 {
-  private static final CombinedReadablePartitions PARTITIONS = ReadablePartitions.combine(
+  private static final ReadablePartitions PARTITIONS = ReadablePartitions.combine(
       ImmutableList.of(
           ReadablePartitions.striped(0, 2, 2),
           ReadablePartitions.striped(1, 2, 4)

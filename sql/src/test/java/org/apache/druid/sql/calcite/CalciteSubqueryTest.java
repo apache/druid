@@ -456,6 +456,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
       cannotVectorize();
     }
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT TIME_FORMAT(\"date\", 'yyyy-MM'), SUM(x)\n"
         + "FROM (\n"
@@ -1611,6 +1612,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testScalarInArrayToUseHavingFilter(String testName, Map<String, Object> queryContext)
   {
+    cannotVectorizeUnlessFallback();
     DimFilter filter = NullHandling.replaceWithDefault()
                        ? new InDimFilter("v0", new HashSet<>(Arrays.asList("1", "17")))
                        : new TypedInFilter("v0", ColumnType.LONG, null, ImmutableList.of(1, 17), null);

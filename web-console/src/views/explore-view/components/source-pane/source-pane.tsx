@@ -31,9 +31,14 @@ function formatQuerySource(source: SqlQuery | undefined): string | JSX.Element {
   if (!(source instanceof SqlQuery)) return 'No source selected';
   const fromExpressions = source.getFromExpressions();
   if (fromExpressions.length !== 1) return 'Multiple FROM expressions';
-  const fromExpression = fromExpressions[0];
-  if (!(fromExpression instanceof SqlTable)) return 'Complex FROM expression';
-  return fromExpression.getName();
+  const fromExpression = fromExpressions[0].getUnderlyingExpression();
+  if (fromExpression instanceof SqlTable) {
+    return fromExpression.getName();
+  } else if (fromExpression instanceof SqlQuery) {
+    return formatQuerySource(fromExpression);
+  } else {
+    return 'Complex FROM expression';
+  }
 }
 
 export interface SourcePaneProps {

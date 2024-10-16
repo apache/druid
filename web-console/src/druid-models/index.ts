@@ -20,6 +20,7 @@ export * from './async-query/async-query';
 export * from './compaction-config/compaction-config';
 export * from './compaction-status/compaction-status';
 export * from './coordinator-dynamic-config/coordinator-dynamic-config';
+export * from './dart/dart-query-entry';
 export * from './dimension-spec/dimension-spec';
 export * from './druid-engine/druid-engine';
 export * from './execution/execution';

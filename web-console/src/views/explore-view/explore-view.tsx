@@ -22,15 +22,25 @@ import { Button, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { Column, QueryResult, SqlExpression } from '@druid-toolkit/query';
 import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
+import type { CancelToken } from 'axios';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
+import { Loader } from '../../components';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { useHashAndLocalStorageHybridState, useQueryManager } from '../../hooks';
 import { Api, AppToaster } from '../../singletons';
-import { DruidError, LocalStorageKeys, queryDruidSql } from '../../utils';
+import {
+  DruidError,
+  isEmpty,
+  localStorageGetJson,
+  LocalStorageKeys,
+  localStorageSetJson,
+  mapRecord,
+  queryDruidSql,
+} from '../../utils';
 
 import {
   ControlPane,
@@ -50,29 +60,14 @@ import { QuerySource } from './models';
 import { ModuleRepository } from './module-repository/module-repository';
 import { rewriteAggregate, rewriteMaxDataTime } from './query-macros';
 import type { Rename } from './utils';
-import { adjustTransferValue, normalizeType } from './utils';
+import { adjustTransferValue, normalizeType, QueryLog } from './utils';
 
 import './explore-view.scss';
 
-// ---------------------------------------
+const QUERY_LOG = new QueryLog();
 
-interface QueryHistoryEntry {
-  time: Date;
-  sqlQuery: string;
-}
-
-const MAX_PAST_QUERIES = 10;
-const QUERY_HISTORY: QueryHistoryEntry[] = [];
-
-function addQueryToHistory(sqlQuery: string): void {
-  QUERY_HISTORY.unshift({ time: new Date(), sqlQuery });
-  while (QUERY_HISTORY.length > MAX_PAST_QUERIES) QUERY_HISTORY.pop();
-}
-
-function getFormattedQueryHistory(): string {
-  return QUERY_HISTORY.map(
-    ({ time, sqlQuery }) => `At ${time.toISOString()} ran query:\n\n${sqlQuery}`,
-  ).join('\n\n-----------------------------------------------------\n\n');
+function getStickyParameterValuesForModule(moduleId: string): ParameterValues {
+  return localStorageGetJson(LocalStorageKeys.EXPLORE_STICKY)?.[moduleId] || {};
 }
 
 // ---------------------------------------
@@ -81,29 +76,38 @@ const queryRunner = new QueryRunner({
   inflateDateStrategy: 'fromSqlTypes',
   executor: async (sqlQueryPayload, isSql, cancelToken) => {
     if (!isSql) throw new Error('should never get here');
-    addQueryToHistory(sqlQueryPayload.query);
+    QUERY_LOG.addQuery(sqlQueryPayload.query);
     return Api.instance.post('/druid/v2/sql', sqlQueryPayload, { cancelToken });
   },
 });
 
-async function runSqlQuery(query: string | SqlQuery): Promise<QueryResult> {
+async function runSqlQuery(
+  query: string | SqlQuery,
+  cancelToken?: CancelToken,
+): Promise<QueryResult> {
   try {
     return await queryRunner.runQuery({
       query,
+      defaultQueryContext: {
+        sqlStringifyArrays: false,
+      },
+      cancelToken,
     });
   } catch (e) {
     throw new DruidError(e);
   }
 }
 
-async function introspectSource(source: string): Promise<QuerySource> {
+async function introspectSource(source: string, cancelToken?: CancelToken): Promise<QuerySource> {
   const query = SqlQuery.parse(source);
   const introspectResult = await runSqlQuery(QuerySource.makeLimitZeroIntrospectionQuery(query));
 
+  cancelToken?.throwIfRequested();
   const baseIntrospectResult = QuerySource.isSingleStarQuery(query)
     ? introspectResult
     : await runSqlQuery(
         QuerySource.makeLimitZeroIntrospectionQuery(QuerySource.stripToBaseSource(query)),
+        cancelToken,
       );
 
   return QuerySource.fromIntrospectResult(
@@ -160,7 +164,7 @@ export const ExploreView = React.memo(function ExploreView() {
   });
 
   // -------------------------------------------------------
-  // If we have a __time::TIMESTAMP column and no filter add a filter
+  // If we have a TIMESTAMP column and no filter add a filter
 
   useEffect(() => {
     const columns = querySourceState.data?.columns;
@@ -182,7 +186,7 @@ export const ExploreView = React.memo(function ExploreView() {
     }
   }, [module, parameterValues, querySourceState.data]);
 
-  function setModuleId(moduleId: string, parameterValues: Record<string, any>) {
+  function setModuleId(moduleId: string, parameterValues: ParameterValues) {
     if (exploreState.moduleId === moduleId) return;
     setExploreState(exploreState.change({ moduleId, parameterValues }));
   }
@@ -193,10 +197,25 @@ export const ExploreView = React.memo(function ExploreView() {
   }
 
   function resetParameterValues() {
-    setParameterValues({});
+    setParameterValues(getStickyParameterValuesForModule(moduleId));
   }
 
   function updateParameterValues(newParameterValues: ParameterValues) {
+    // Evaluate sticky-ness
+    if (module) {
+      const currentExploreSticky = localStorageGetJson(LocalStorageKeys.EXPLORE_STICKY) || {};
+      const currentModuleSticky = currentExploreSticky[moduleId] || {};
+      const newModuleSticky = {
+        ...currentModuleSticky,
+        ...mapRecord(newParameterValues, (v, k) => (module.parameters[k]?.sticky ? v : undefined)),
+      };
+
+      localStorageSetJson(LocalStorageKeys.EXPLORE_STICKY, {
+        ...currentExploreSticky,
+        [moduleId]: isEmpty(newModuleSticky) ? undefined : newModuleSticky,
+      });
+    }
+
     setParameterValues({ ...parameterValues, ...newParameterValues });
   }
 
@@ -227,11 +246,15 @@ export const ExploreView = React.memo(function ExploreView() {
   const querySource = querySourceState.getSomeData();
 
   const runSqlPlusQuery = useMemo(() => {
-    return async (query: string | SqlQuery) => {
+    return async (query: string | SqlQuery, cancelToken?: CancelToken) => {
       if (!querySource) throw new Error('no querySource');
-      return await runSqlQuery(
-        await rewriteMaxDataTime(rewriteAggregate(SqlQuery.parse(query), querySource.measures)),
-      );
+      const parsedQuery = SqlQuery.parse(query);
+      return (
+        await runSqlQuery(
+          await rewriteMaxDataTime(rewriteAggregate(parsedQuery, querySource.measures)),
+          cancelToken,
+        )
+      ).attachQuery({ query: '' }, parsedQuery);
     };
   }, [querySource]);
 
@@ -301,17 +324,10 @@ export const ExploreView = React.memo(function ExploreView() {
             }}
           />
           <ModulePicker
-            modules={[
-              { id: 'grouping-table', icon: IconNames.PANEL_TABLE, label: 'Grouping table' },
-              { id: 'record-table', icon: IconNames.TH, label: 'Record table' },
-              { id: 'time-chart', icon: IconNames.TIMELINE_LINE_CHART, label: 'Time chart' },
-              { id: 'bar-chart', icon: IconNames.VERTICAL_BAR_CHART_DESC, label: 'Bar chart' },
-              { id: 'pie-chart', icon: IconNames.PIE_CHART, label: 'Pie chart' },
-              { id: 'multi-axis-chart', icon: IconNames.SERIES_ADD, label: 'Multi-axis chart' },
-            ]}
             selectedModuleId={moduleId}
             onSelectedModuleIdChange={newModuleId => {
-              const newParameterValues: ParameterValues = {};
+              let newParameterValues = getStickyParameterValuesForModule(newModuleId);
+
               const oldModule = ModuleRepository.getModule(moduleId);
               const newModule = ModuleRepository.getModule(newModuleId);
               if (oldModule && newModule) {
@@ -333,11 +349,14 @@ export const ExploreView = React.memo(function ExploreView() {
                   );
                   if (!target) continue;
 
-                  newParameterValues[target[0]] = adjustTransferValue(
-                    parameterValue,
-                    oldParameterDefinition.type,
-                    target[1].type,
-                  );
+                  newParameterValues = {
+                    ...newParameterValues,
+                    [target[0]]: adjustTransferValue(
+                      parameterValue,
+                      oldParameterDefinition.type,
+                      target[1].type,
+                    ),
+                  };
                 }
               }
 
@@ -349,9 +368,9 @@ export const ExploreView = React.memo(function ExploreView() {
                 <MenuItem
                   icon={IconNames.DUPLICATE}
                   text="Copy last query"
-                  disabled={!QUERY_HISTORY.length}
+                  disabled={!QUERY_LOG.length()}
                   onClick={() => {
-                    copy(QUERY_HISTORY[0]?.sqlQuery, { format: 'text/plain' });
+                    copy(QUERY_LOG.getLastQuery()!, { format: 'text/plain' });
                     AppToaster.show({
                       message: `Copied query to clipboard`,
                       intent: Intent.SUCCESS,
@@ -360,9 +379,9 @@ export const ExploreView = React.memo(function ExploreView() {
                 />
                 <MenuItem
                   icon={IconNames.HISTORY}
-                  text="Show query history"
+                  text="Show query log"
                   onClick={() => {
-                    setShownText(getFormattedQueryHistory());
+                    setShownText(QUERY_LOG.getFormatted());
                   }}
                 />
                 <MenuItem
@@ -407,10 +426,9 @@ export const ExploreView = React.memo(function ExploreView() {
             onDropColumn={onShowColumn}
             onDropMeasure={onShowMeasure}
           >
-            {querySourceState.error && (
+            {querySourceState.error ? (
               <div className="error-display">{querySourceState.getErrorMessage()}</div>
-            )}
-            {querySource && (
+            ) : querySource ? (
               <ModulePane
                 moduleId={moduleId}
                 querySource={querySource}
@@ -420,7 +438,9 @@ export const ExploreView = React.memo(function ExploreView() {
                 setParameterValues={updateParameterValues}
                 runSqlQuery={runSqlPlusQuery}
               />
-            )}
+            ) : querySourceState.loading ? (
+              <Loader />
+            ) : undefined}
           </DroppableContainer>
           <div className="control-pane-cnt">
             {module && (

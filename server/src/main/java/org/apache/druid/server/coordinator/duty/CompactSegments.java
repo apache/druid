@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionIOConfig;
 import org.apache.druid.client.indexing.ClientCompactionIntervalSpec;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
@@ -61,7 +62,6 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -86,6 +86,7 @@ public class CompactSegments implements CoordinatorCustomDuty
    * Must be the same as org.apache.druid.indexing.common.task.Tasks.STORE_COMPACTION_STATE_KEY
    */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
+  private static final String COMPACTION_REASON_KEY = "compactionReason";
 
   private static final Logger LOG = new Logger(CompactSegments.class);
 
@@ -128,7 +129,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     } else {
       run(
           params.getCompactionConfig(),
-          params.getUsedSegmentsTimelinesPerDataSource(),
+          params.getDataSourcesSnapshot(),
           CompactionEngine.NATIVE,
           params.getCoordinatorStats()
       );
@@ -138,7 +139,7 @@ public class CompactSegments implements CoordinatorCustomDuty
 
   public void run(
       DruidCompactionConfig dynamicConfig,
-      Map<String, SegmentTimeline> dataSources,
+      DataSourcesSnapshot dataSources,
       CompactionEngine defaultEngine,
       CoordinatorRunStats stats
   )
@@ -149,6 +150,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       return;
     }
 
+    statusTracker.onSegmentTimelineUpdated(dataSources.getSnapshotTime());
     statusTracker.onCompactionConfigUpdated(dynamicConfig);
     List<DataSourceCompactionConfig> compactionConfigList = dynamicConfig.getCompactionConfigs();
     if (compactionConfigList == null || compactionConfigList.isEmpty()) {
@@ -224,7 +226,7 @@ public class CompactSegments implements CoordinatorCustomDuty
     final CompactionSegmentIterator iterator = new PriorityBasedCompactionSegmentIterator(
         policy,
         compactionConfigs,
-        dataSources,
+        dataSources.getUsedSegmentsTimelinesPerDataSource(),
         intervalsToSkipCompaction,
         statusTracker
     );
@@ -565,6 +567,10 @@ public class CompactSegments implements CoordinatorCustomDuty
         }
       } else {
         slotsRequiredForCurrentTask = findMaxNumTaskSlotsUsedByOneNativeCompactionTask(config.getTuningConfig());
+      }
+
+      if (entry.getCurrentStatus() != null) {
+        autoCompactionContext.put(COMPACTION_REASON_KEY, entry.getCurrentStatus().getReason());
       }
 
       final String taskId = compactSegments(
