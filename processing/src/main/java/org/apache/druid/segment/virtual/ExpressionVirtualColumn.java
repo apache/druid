@@ -63,6 +63,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   private final String name;
   private final Expression expression;
   private final Supplier<Expr> parsedExpression;
+  private final Supplier<Expr.BindingAnalysis> expressionAnalysis;
   private final Supplier<byte[]> cacheKey;
 
   /**
@@ -126,6 +127,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
     this.name = Preconditions.checkNotNull(name, "name");
     this.expression = new Expression(Preconditions.checkNotNull(expression, "expression"), outputType);
     this.parsedExpression = parsedExpression;
+    this.expressionAnalysis = Suppliers.memoize(parsedExpression.get()::analyzeInputs);
     this.cacheKey = makeCacheKeySupplier();
   }
 
@@ -332,7 +334,7 @@ public class ExpressionVirtualColumn implements VirtualColumn
   @Override
   public List<String> requiredColumns()
   {
-    return parsedExpression.get().analyzeInputs().getRequiredBindingsList();
+    return expressionAnalysis.get().getRequiredBindingsList();
   }
 
   @Override

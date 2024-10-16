@@ -131,4 +131,13 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
       writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME);
     }
   }
+
+  @Override
+  public int getCardinality()
+  {
+    if (writeDictionary) {
+      return dictionaryWriter.getCardinality();
+    }
+    return dictionaryIdLookup.getStringCardinality();
+  }
 }

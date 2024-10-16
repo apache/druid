@@ -24,8 +24,10 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CreateDataSegments;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Assert;
 import org.junit.Before;
@@ -102,6 +104,39 @@ public class CompactionStatusTrackerTest
     status = statusTracker.getLatestTaskStatus(candidateSegments);
     Assert.assertEquals(TaskState.FAILED, status.getState());
     Assert.assertEquals(2, status.getNumConsecutiveFailures());
+  }
+
+  @Test
+  public void testComputeCompactionStatusForSuccessfulTask()
+  {
+    final DataSourceCompactionConfig compactionConfig
+        = DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build();
+    final NewestSegmentFirstPolicy policy = new NewestSegmentFirstPolicy(null);
+    final CompactionCandidate candidateSegments
+        = CompactionCandidate.from(Collections.singletonList(WIKI_SEGMENT));
+
+    // Verify that interval is originally eligible for compaction
+    CompactionStatus status
+        = statusTracker.computeCompactionStatus(candidateSegments, compactionConfig, policy);
+    Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
+    Assert.assertEquals("not compacted yet", status.getReason());
+
+    // Verify that interval is skipped for compaction after task has finished
+    statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc().minusMinutes(1));
+    statusTracker.onTaskSubmitted(createCompactionTask("task1"), candidateSegments);
+    statusTracker.onTaskFinished("task1", TaskStatus.success("task1"));
+
+    status = statusTracker.computeCompactionStatus(candidateSegments, compactionConfig, policy);
+    Assert.assertEquals(CompactionStatus.State.SKIPPED, status.getState());
+    Assert.assertEquals(
+        "Segment timeline not updated since last compaction task succeeded",
+        status.getReason()
+    );
+
+    // Verify that interval becomes eligible again after timeline has been updated
+    statusTracker.onSegmentTimelineUpdated(DateTimes.nowUtc());
+    status = statusTracker.computeCompactionStatus(candidateSegments, compactionConfig, policy);
+    Assert.assertEquals(CompactionStatus.State.PENDING, status.getState());
   }
 
   private ClientCompactionTaskQuery createCompactionTask(

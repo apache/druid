@@ -25,7 +25,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.config.Configs;
-import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -44,6 +44,7 @@ import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Represents the status of compaction for a given {@link CompactionCandidate}.
@@ -230,6 +231,21 @@ public class CompactionStatus
     }
   }
 
+  private static List<DimensionSchema> getNonPartitioningDimensions(
+      @Nullable final List<DimensionSchema> dimensionSchemas,
+      @Nullable final PartitionsSpec partitionsSpec
+  )
+  {
+    if (dimensionSchemas == null || !(partitionsSpec instanceof DimensionRangePartitionsSpec)) {
+      return dimensionSchemas;
+    }
+
+    final List<String> partitionsDimensions = ((DimensionRangePartitionsSpec) partitionsSpec).getPartitionDimensions();
+    return dimensionSchemas.stream()
+                     .filter(dim -> !partitionsDimensions.contains(dim.getName()))
+                     .collect(Collectors.toList());
+  }
+
   /**
    * Converts to have only the effective maxRowsPerSegment to avoid false positives when targetRowsPerSegment is set but
    * effectively translates to the same maxRowsPerSegment.
@@ -389,18 +405,34 @@ public class CompactionStatus
       }
     }
 
+    /**
+     * Removes partition dimensions before comparison, since they are placed in front of the sort order --
+     * which can create a mismatch between expected and actual order of dimensions. Partition dimensions are separately
+     * covered in {@link Evaluator#partitionsSpecIsUpToDate()} check.
+     */
     private CompactionStatus dimensionsSpecIsUpToDate()
     {
       if (compactionConfig.getDimensionsSpec() == null) {
         return COMPLETE;
       } else {
-        final DimensionsSpec existingDimensionsSpec = lastCompactionState.getDimensionsSpec();
-        return CompactionStatus.completeIfEqual(
-            "dimensionsSpec",
-            compactionConfig.getDimensionsSpec().getDimensions(),
-            existingDimensionsSpec == null ? null : existingDimensionsSpec.getDimensions(),
-            String::valueOf
+        List<DimensionSchema> existingDimensions = getNonPartitioningDimensions(
+            lastCompactionState.getDimensionsSpec() == null
+            ? null
+            : lastCompactionState.getDimensionsSpec().getDimensions(),
+            lastCompactionState.getPartitionsSpec()
         );
+        List<DimensionSchema> configuredDimensions = getNonPartitioningDimensions(
+            compactionConfig.getDimensionsSpec().getDimensions(),
+            compactionConfig.getTuningConfig() == null ? null : compactionConfig.getTuningConfig().getPartitionsSpec()
+        );
+        {
+          return CompactionStatus.completeIfEqual(
+              "dimensionsSpec",
+              configuredDimensions,
+              existingDimensions,
+              String::valueOf
+          );
+        }
       }
     }
 

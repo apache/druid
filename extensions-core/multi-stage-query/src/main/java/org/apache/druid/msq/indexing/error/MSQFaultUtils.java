@@ -50,4 +50,11 @@ public class MSQFaultUtils
     return message.split(ERROR_CODE_DELIMITER, 2)[0];
   }
 
+  /**
+   * Returns whether the provided throwable is a {@link MSQException} with {@link CanceledFault}.
+   */
+  public static boolean isCanceledException(final Throwable t)
+  {
+    return t instanceof MSQException && ((MSQException) t).getFault().getErrorCode().equals(CanceledFault.CODE);
+  }
 }

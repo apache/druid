@@ -194,7 +194,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
         };
         return {
           element: (
-            <NamedExpressionsInput
+            <NamedExpressionsInput<ExpressionMeta>
               allowReordering
               values={effectiveValue ? [effectiveValue] : []}
               onValuesChange={vs => onValueChange(vs[0])}
@@ -221,9 +221,10 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
           : filterMap(effectiveValue as ExpressionMeta[], ({ expression }) =>
               expression instanceof SqlColumn ? expression.getName() : undefined,
             );
+
         return {
           element: (
-            <NamedExpressionsInput
+            <NamedExpressionsInput<ExpressionMeta>
               allowReordering
               values={effectiveValue as ExpressionMeta[]}
               onValuesChange={onValueChange}
@@ -266,7 +267,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
       case 'measure': {
         return {
           element: (
-            <NamedExpressionsInput
+            <NamedExpressionsInput<Measure>
               values={effectiveValue ? [effectiveValue] : []}
               onValuesChange={vs => onValueChange(vs[0])}
               singleton
@@ -284,15 +285,21 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
             />
           ),
           onDropColumn: column => {
-            const measures = Measure.getPossibleMeasuresForColumn(column);
-            if (!measures.length) return;
-            onValueChange(measures[0]);
+            const candidateMeasures = Measure.getPossibleMeasuresForColumn(column).filter(
+              p => !effectiveValue || effectiveValue.name !== p.name,
+            );
+            if (!candidateMeasures.length) return;
+            onValueChange(candidateMeasures[0]);
           },
           onDropMeasure: onValueChange,
         };
       }
 
       case 'measures': {
+        const disabledMeasureNames = parameter.allowDuplicates
+          ? []
+          : filterMap(effectiveValue as Measure[], measure => measure.getAggregateMeasureName());
+
         return {
           element: (
             <NamedExpressionsInput<Measure>
@@ -305,6 +312,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                   columns={columns}
                   measures={measures}
                   initMeasure={initMeasure}
+                  disabledMeasureNames={disabledMeasureNames}
                   onSelectMeasure={m => onValueChange(changeOrAdd(effectiveValue, initMeasure, m))}
                   onClose={onClose}
                   onAddToSourceQueryAsMeasure={onAddToSourceQueryAsMeasure}
@@ -313,11 +321,11 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
             />
           ),
           onDropColumn: column => {
-            const measures = Measure.getPossibleMeasuresForColumn(column).filter(
-              p => !effectiveValue.some((v: ExpressionMeta) => v.name === p.name),
+            const candidateMeasures = Measure.getPossibleMeasuresForColumn(column).filter(
+              p => !effectiveValue.some((v: Measure) => v.name === p.name),
             );
-            if (!measures.length) return;
-            onValueChange(effectiveValue.concat(measures[0]));
+            if (!candidateMeasures.length) return;
+            onValueChange(effectiveValue.concat(candidateMeasures[0]));
           },
           onDropMeasure: measure => {
             onValueChange(effectiveValue.concat(measure));

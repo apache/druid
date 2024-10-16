@@ -30,6 +30,7 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -60,6 +61,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class CursorHolderPreaggTest extends InitializedNullHandlingTest
 {
@@ -139,6 +141,15 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
           public boolean isPreAggregated()
           {
             return true;
+          }
+
+          @Nullable
+          @Override
+          public List<AggregatorFactory> getAggregatorsForPreAggregated()
+          {
+            return spec.getAggregators()
+                       .stream().map(AggregatorFactory::getCombiningFactory)
+                       .collect(Collectors.toList());
           }
 
           @Override

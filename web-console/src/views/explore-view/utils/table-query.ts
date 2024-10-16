@@ -37,6 +37,7 @@ import { Measure } from '../models';
 
 import { formatDuration } from './duration';
 import { addTableScope } from './general';
+import { KNOWN_AGGREGATIONS } from './known-aggregations';
 import type { Compare } from './time-manipulation';
 import { computeWhereForCompares } from './time-manipulation';
 
@@ -47,35 +48,6 @@ export type CompareStrategy = 'auto' | 'filtered' | 'join';
 export type CompareType = 'value' | 'delta' | 'absDelta' | 'percent' | 'absPercent';
 
 export type RestrictTop = 'always' | 'never';
-
-const KNOWN_AGGREGATIONS = [
-  'COUNT',
-  'SUM',
-  'MIN',
-  'MAX',
-  'AVG',
-  'APPROX_COUNT_DISTINCT',
-  'APPROX_COUNT_DISTINCT_DS_HLL',
-  'APPROX_COUNT_DISTINCT_DS_THETA',
-  'DS_HLL',
-  'DS_THETA',
-  'APPROX_QUANTILE',
-  'APPROX_QUANTILE_DS',
-  'APPROX_QUANTILE_FIXED_BUCKETS',
-  'DS_QUANTILES_SKETCH',
-  'BLOOM_FILTER',
-  'TDIGEST_QUANTILE',
-  'TDIGEST_GENERATE_SKETCH',
-  'VAR_POP',
-  'VAR_SAMP',
-  'VARIANCE',
-  'STDDEV_POP',
-  'STDDEV_SAMP',
-  'STDDEV',
-  'EARLIEST',
-  'LATEST',
-  'ANY_VALUE',
-];
 
 const DRUID_DEFAULT_TOTAL_SUB_QUERY_LIMIT = 100000;
 
@@ -544,7 +516,7 @@ function makeNonCompareTableQueryAndHints(
 
   return {
     columnHints: makeBaseColumnHints(splitColumns, timeBucket, showColumns),
-    query: SqlQuery.from(source)
+    query: SqlQuery.from(source.as('t'))
       .addWhere(where)
       .applyForEach(mainGroupByExpressions, (q, groupByExpression) =>
         q.addSelect(groupByExpression, {
@@ -896,7 +868,7 @@ function makeFilteredCompareTableQueryAndHints(
   );
 
   const columnHints = makeBaseColumnHints(splitColumns, timeBucket, showColumns);
-  const query = SqlQuery.from(source)
+  const query = SqlQuery.from(source.as('t'))
     .addWhere(commonWhere)
     .applyForEach(mainGroupByExpressions, (q, groupByExpression) =>
       q.addSelect(groupByExpression, {

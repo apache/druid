@@ -42,7 +42,7 @@ interface ExploreStateValue {
   showSourceQuery?: boolean;
   where: SqlExpression;
   moduleId: string;
-  parameterValues: Record<string, any>;
+  parameterValues: ParameterValues;
 }
 
 export class ExploreState {
@@ -64,7 +64,7 @@ export class ExploreState {
   public readonly showSourceQuery: boolean;
   public readonly where: SqlExpression;
   public readonly moduleId: string;
-  public readonly parameterValues: Record<string, any>;
+  public readonly parameterValues: ParameterValues;
 
   public readonly parsedSource: SqlQuery | undefined;
   public readonly parseError: string | undefined;
@@ -134,7 +134,10 @@ export class ExploreState {
     if (!QuerySource.isSingleStarQuery(this.parsedSource)) return this; // Only trigger for `SELECT * FROM ...` queries
     if (!this.where.equal(SqlLiteral.TRUE)) return this;
 
-    const timeColumn = columns.find(c => c.isTimeColumn());
+    // Either find the `__time::TIMESTAMP` column or use the first column if it is a TIMESTAMP
+    const timeColumn =
+      columns.find(c => c.isTimeColumn()) ||
+      (columns[0].sqlType === 'TIMESTAMP' ? columns[0] : undefined);
     if (!timeColumn) return this;
 
     return this.change({
@@ -175,8 +178,10 @@ export class ExploreState {
       parameterValues = {};
     } else {
       moduleId = 'grouping-table';
-      parameterValues = this.moduleId === moduleId ? this.parameterValues : {};
-      parameterValues.splitColumns = [ExpressionMeta.fromColumn(column)];
+      parameterValues = {
+        ...(this.moduleId === moduleId ? this.parameterValues : {}),
+        splitColumns: [ExpressionMeta.fromColumn(column)],
+      };
     }
 
     return this.change({

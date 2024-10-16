@@ -19,16 +19,13 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.GenericColumnSerializer;
-import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.Serializer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 import java.util.SortedMap;
 
@@ -69,7 +66,9 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
 
   public abstract String getColumnName();
 
-  public abstract DictionaryIdLookup getGlobalLookup();
+  public abstract DictionaryIdLookup getDictionaryIdLookup();
+
+  public abstract void setDictionaryIdLookup(DictionaryIdLookup dictionaryIdLookup);
 
   public abstract boolean hasNulls();
 
@@ -83,7 +82,7 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
     ColumnSerializerUtils.writeInternal(smoosher, buffer, getColumnName(), fileName);
   }
 
-  protected void writeV0Header(WritableByteChannel channel, ByteBuffer columnNameBuffer) throws IOException
+  public static void writeV0Header(WritableByteChannel channel, ByteBuffer columnNameBuffer) throws IOException
   {
     channel.write(ByteBuffer.wrap(new byte[]{NestedCommonFormatColumnSerializer.V0}));
     channel.write(columnNameBuffer);
@@ -91,12 +90,7 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
 
   protected ByteBuffer computeFilenameBytes()
   {
-    final byte[] bytes = StringUtils.toUtf8(getColumnName());
-    final int length = VByte.computeIntSize(bytes.length);
-    final ByteBuffer buffer = ByteBuffer.allocate(length + bytes.length).order(ByteOrder.nativeOrder());
-    VByte.writeInt(buffer, bytes.length);
-    buffer.put(bytes);
-    buffer.flip();
-    return buffer;
+    final String columnName = getColumnName();
+    return ColumnSerializerUtils.stringToUtf8InVSizeByteBuffer(columnName);
   }
 }
