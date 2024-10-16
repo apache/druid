@@ -128,10 +128,6 @@ public class GroupingSqlAggregator implements SqlAggregator
       return expression.getDirectColumn();
     }
 
-    if (expression.isSimpleExtraction()) {
-      return expression.getSimpleExtraction().getColumn();
-    }
-
     return virtualColumnRegistry.getOrCreateVirtualColumnForExpression(
         expression,
         node.getType()
