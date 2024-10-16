@@ -38,7 +38,6 @@ public class SqlTaskStatusTest
     DruidException underlyingException = DruidException.forPersona(DruidException.Persona.DEVELOPER)
                                                        .ofCategory(DruidException.Category.INVALID_INPUT)
                                                        .build("error message");
-
     final SqlTaskStatus status = new SqlTaskStatus(
         "taskid",
         TaskState.FAILED,

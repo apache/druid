@@ -30,7 +30,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class BatchSupervisorStatusTrackerTest
+public class ScheduledBatchStatusTrackerTest
 {
 
   private ScheduledBatchStatusTracker statusTracker;
@@ -44,8 +44,8 @@ public class BatchSupervisorStatusTrackerTest
   @Test
   public void testOnTaskSubmitted()
   {
-    String supervisorId = "supervisor1";
-    SqlTaskStatus sqlTaskStatus = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
+    final String supervisorId = "supervisor1";
+    final SqlTaskStatus sqlTaskStatus = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
 
     statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus);
 
@@ -58,13 +58,15 @@ public class BatchSupervisorStatusTrackerTest
   @Test
   public void testOnTaskCompleted()
   {
-    String supervisorId = "supervisor1";
-    SqlTaskStatus sqlTaskStatus = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
+    final String supervisorId = "supervisor1";
+    final SqlTaskStatus sqlTaskStatus = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
     statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus);
 
     statusTracker.onTaskCompleted("taskId1", TaskStatus.success("taskId1"));
 
-    ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result = statusTracker.getSupervisorTasks(supervisorId);
+    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result =
+        statusTracker.getSupervisorTasks(supervisorId);
+
     assertNotNull(result);
     assertTrue(result.getCompletedTasks().containsKey("taskId1"));
     assertEquals(TaskState.SUCCESS, result.getCompletedTasks().get("taskId1").getStatusCode());
@@ -74,7 +76,8 @@ public class BatchSupervisorStatusTrackerTest
   @Test
   public void testGetTasksWithNoTasks()
   {
-    ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result = statusTracker.getSupervisorTasks("supervisor1");
+    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result =
+        statusTracker.getSupervisorTasks("supervisor1");
 
     assertNotNull(result);
     assertTrue(result.getSubmittedTasks().isEmpty());
@@ -84,16 +87,17 @@ public class BatchSupervisorStatusTrackerTest
   @Test
   public void testGetTasksWithMultipleTasks()
   {
-    String supervisorId = "supervisor1";
-    SqlTaskStatus sqlTaskStatus1 = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
-    SqlTaskStatus sqlTaskStatus2 = new SqlTaskStatus("taskId2", TaskState.RUNNING, null);
+    final String supervisorId = "supervisor1";
+    final SqlTaskStatus sqlTaskStatus1 = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
+    final SqlTaskStatus sqlTaskStatus2 = new SqlTaskStatus("taskId2", TaskState.RUNNING, null);
 
     statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus1);
     statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus2);
 
     statusTracker.onTaskCompleted("taskId1", TaskStatus.success("taskId1"));
 
-    ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result = statusTracker.getSupervisorTasks(supervisorId);
+    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result =
+        statusTracker.getSupervisorTasks(supervisorId);
     assertNotNull(result);
     assertTrue(result.getSubmittedTasks().containsKey("taskId2"));
     assertEquals(TaskState.RUNNING, result.getSubmittedTasks().get("taskId2").getStatusCode());
@@ -105,15 +109,15 @@ public class BatchSupervisorStatusTrackerTest
   @Test
   public void testThreadSafety() throws InterruptedException
   {
-    String supervisorId = "supervisor1";
-    SqlTaskStatus sqlTaskStatus1 = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
-    SqlTaskStatus sqlTaskStatus2 = new SqlTaskStatus("taskId2", TaskState.RUNNING, null);
+    final String supervisorId = "supervisor1";
+    final SqlTaskStatus sqlTaskStatus1 = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
+    final SqlTaskStatus sqlTaskStatus2 = new SqlTaskStatus("taskId2", TaskState.RUNNING, null);
 
-    Thread thread1 = new Thread(() -> {
+    final Thread thread1 = new Thread(() -> {
       statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus1);
       statusTracker.onTaskCompleted("taskId1", TaskStatus.success("taskId1"));
     });
-    Thread thread2 = new Thread(() -> {
+    final Thread thread2 = new Thread(() -> {
       statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus2);
       statusTracker.onTaskCompleted("taskId2", TaskStatus.success("taskId2"));
     });
@@ -124,8 +128,8 @@ public class BatchSupervisorStatusTrackerTest
     thread1.join();
     thread2.join();
 
-    // Assert: Verify that both tasks were correctly tracked
-    ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result = statusTracker.getSupervisorTasks(supervisorId);
+    // Verify that both tasks were correctly tracked
+    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result = statusTracker.getSupervisorTasks(supervisorId);
     assertNotNull(result);
     assertEquals(2, result.getCompletedTasks().size());
     assertTrue(result.getCompletedTasks().containsKey("taskId1"));

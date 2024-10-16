@@ -44,7 +44,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
-public class BatchSupervisorSpecTest
+public class ScheduledBatchSupervisorSpecTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private BrokerClient brokerClient;

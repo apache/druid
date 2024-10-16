@@ -34,7 +34,7 @@ import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
 
-public class BatchSupervisorTest
+public class ScheduledBatchSupervisorTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private BrokerClient brokerClient;
