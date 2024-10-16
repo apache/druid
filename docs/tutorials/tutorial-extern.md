@@ -113,7 +113,7 @@ FROM "ext"
 PARTITIONED BY DAY
 ```
 
-## Export data
+### Query to export data
 
 Run the following query to export query results to the path:
 `/tmp/druid/wiki_example`.
@@ -140,7 +140,7 @@ Run the following comannd to list the contents of
 ls '/tmp/druid/wiki_example'
 ```
 
-The results are a csv file export of the data and a directory 
+The results are a csv file export of the data and a directory   
 
 ## Learn more
 
