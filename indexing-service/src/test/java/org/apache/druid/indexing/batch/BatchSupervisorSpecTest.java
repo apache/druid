@@ -21,16 +21,17 @@ package org.apache.druid.indexing.batch;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.discovery.BrokerClient;
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.sql.client.BrokerClient;
+import org.apache.druid.sql.http.ExplainPlanResponse;
 import org.apache.druid.sql.http.SqlQuery;
 import org.hamcrest.MatcherAssert;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -76,11 +77,13 @@ public class BatchSupervisorSpecTest
         null
     );
 
-    final Request request = Mockito.mock(Request.class);
-    Mockito.when(brokerClient.makeRequest(HttpMethod.POST, "/druid/v2/sql/task/"))
-           .thenReturn(request);
-    final String explainPlanResp = "[{\"PLAN\":\"[{\\\"query\\\":{\\\"queryType\\\":\\\"scan\\\",\\\"dataSource\\\":{\\\"type\\\":\\\"inline\\\",\\\"columnNames\\\":[\\\"__time\\\",\\\"c1\\\"],\\\"columnTypes\\\":[\\\"LONG\\\",\\\"STRING\\\"],\\\"rows\\\":[[1672531200000,\\\"insert_1\\\"],[1672531200000,\\\"insert_2\\\"],[1675209600000,\\\"insert3\\\"]]},\\\"intervals\\\":{\\\"type\\\":\\\"intervals\\\",\\\"intervals\\\":[\\\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\\\"]},\\\"resultFormat\\\":\\\"compactedList\\\",\\\"columns\\\":[\\\"__time\\\",\\\"c1\\\"],\\\"context\\\":{\\\"scanSignature\\\":\\\"[{\\\\\\\"name\\\\\\\":\\\\\\\"__time\\\\\\\",\\\\\\\"type\\\\\\\":\\\\\\\"LONG\\\\\\\"},{\\\\\\\"name\\\\\\\":\\\\\\\"c1\\\\\\\",\\\\\\\"type\\\\\\\":\\\\\\\"STRING\\\\\\\"}]\\\",\\\"sqlInsertSegmentGranularity\\\":\\\"{\\\\\\\"type\\\\\\\":\\\\\\\"all\\\\\\\"}\\\",\\\"sqlQueryId\\\":\\\"4d3776b9-8b0d-4ebc-9952-b8db32a546bb\\\",\\\"sqlReplaceTimeChunks\\\":\\\"all\\\"},\\\"columnTypes\\\":[\\\"LONG\\\",\\\"STRING\\\"],\\\"granularity\\\":{\\\"type\\\":\\\"all\\\"},\\\"legacy\\\":false},\\\"signature\\\":[{\\\"name\\\":\\\"__time\\\",\\\"type\\\":\\\"LONG\\\"},{\\\"name\\\":\\\"c1\\\",\\\"type\\\":\\\"STRING\\\"}],\\\"columnMappings\\\":[{\\\"queryColumn\\\":\\\"__time\\\",\\\"outputColumn\\\":\\\"__time\\\"},{\\\"queryColumn\\\":\\\"c1\\\",\\\"outputColumn\\\":\\\"c1\\\"}]}]\",\"RESOURCES\":\"[{\\\"name\\\":\\\"foo\\\",\\\"type\\\":\\\"DATASOURCE\\\"}]\",\"ATTRIBUTES\":\"{\\\"statementType\\\":\\\"REPLACE\\\",\\\"targetDataSource\\\":\\\"foo\\\",\\\"partitionedBy\\\":{\\\"type\\\":\\\"all\\\"},\\\"replaceTimeChunks\\\":\\\"all\\\"}\"}]";
-    Mockito.when(brokerClient.sendQuery(request)).thenReturn(explainPlanResp);
+    final ExplainPlanResponse explainPlanResponse = new ExplainPlanResponse(
+        "",
+        "",
+        "{\"statementType\":\"REPLACE\",\"targetDataSource\":\"foo\",\"partitionedBy\":{\"type\":\"all\"},\"replaceTimeChunks\":\"all\"}"
+    );
+    Mockito.when(brokerClient.explainPlanFor(query))
+           .thenReturn(Futures.immediateFuture(ImmutableList.of(explainPlanResponse)));
   }
 
   @Test
@@ -95,7 +98,7 @@ public class BatchSupervisorSpecTest
             null,
             OBJECT_MAPPER,
             scheduler,
-            null
+            brokerClient
         )
     );
   }
@@ -112,7 +115,7 @@ public class BatchSupervisorSpecTest
             "boo",
             OBJECT_MAPPER,
             scheduler,
-            null
+            brokerClient
         )
     );
   }
@@ -128,7 +131,7 @@ public class BatchSupervisorSpecTest
         null,
         OBJECT_MAPPER,
         scheduler,
-        null
+        brokerClient
     );
     assertTrue(activeSpec.getId().startsWith(BatchSupervisorSpec.TYPE));
     assertEquals(Collections.singletonList("foo"), activeSpec.getDataSources());
@@ -146,7 +149,7 @@ public class BatchSupervisorSpecTest
         null,
         OBJECT_MAPPER,
         scheduler,
-        null
+        brokerClient
     );
     Assert.assertFalse(activeSpec.isSuspended());
 
@@ -168,7 +171,7 @@ public class BatchSupervisorSpecTest
         null,
         OBJECT_MAPPER,
         scheduler,
-        null
+        brokerClient
     );
     Assert.assertTrue(suspendedSpec.isSuspended());
 
@@ -192,11 +195,10 @@ public class BatchSupervisorSpecTest
         null
     );
 
-    final Request request = Mockito.mock(Request.class);
-    Mockito.when(brokerClient.makeRequest(HttpMethod.POST, "/druid/v2/sql/task/")).thenReturn(request);
-
-    final String explainPlanResp = "[{\"PLAN\":\"[{\\\"query\\\":{\\\"queryType\\\":\\\"scan\\\",\\\"dataSource\\\":{\\\"type\\\":\\\"inline\\\",\\\"columnNames\\\":[\\\"__time\\\",\\\"c1\\\"],\\\"columnTypes\\\":[\\\"LONG\\\",\\\"STRING\\\"],\\\"rows\\\":[[1672531200000,\\\"insert_1\\\"],[1672531200000,\\\"insert_2\\\"],[1675209600000,\\\"insert3\\\"]]},\\\"intervals\\\":{\\\"type\\\":\\\"intervals\\\",\\\"intervals\\\":[\\\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\\\"]},\\\"resultFormat\\\":\\\"compactedList\\\",\\\"columns\\\":[\\\"__time\\\",\\\"c1\\\"],\\\"context\\\":{\\\"scanSignature\\\":\\\"[{\\\\\\\"name\\\\\\\":\\\\\\\"__time\\\\\\\",\\\\\\\"type\\\\\\\":\\\\\\\"LONG\\\\\\\"},{\\\\\\\"name\\\\\\\":\\\\\\\"c1\\\\\\\",\\\\\\\"type\\\\\\\":\\\\\\\"STRING\\\\\\\"}]\\\",\\\"sqlQueryId\\\":\\\"4460a2e3-3434-42eb-a96d-1882ff84f176\\\"},\\\"columnTypes\\\":[\\\"LONG\\\",\\\"STRING\\\"],\\\"granularity\\\":{\\\"type\\\":\\\"all\\\"},\\\"legacy\\\":false},\\\"signature\\\":[{\\\"name\\\":\\\"__time\\\",\\\"type\\\":\\\"LONG\\\"},{\\\"name\\\":\\\"c1\\\",\\\"type\\\":\\\"STRING\\\"}],\\\"columnMappings\\\":[{\\\"queryColumn\\\":\\\"__time\\\",\\\"outputColumn\\\":\\\"__time\\\"},{\\\"queryColumn\\\":\\\"c1\\\",\\\"outputColumn\\\":\\\"c1\\\"}]}]\",\"RESOURCES\":\"[]\",\"ATTRIBUTES\":\"{\\\"statementType\\\":\\\"SELECT\\\"}\"}]";
-    Mockito.when(brokerClient.sendQuery(request)).thenReturn(explainPlanResp);
+    Mockito.when(brokerClient.explainPlanFor(query))
+           .thenReturn(Futures.immediateFuture(ImmutableList.of(
+               new ExplainPlanResponse("", "", "{\"statementType\":\"SELECT\"}"))
+           ));
 
     MatcherAssert.assertThat(
         assertThrows(
@@ -209,7 +211,7 @@ public class BatchSupervisorSpecTest
               null,
               OBJECT_MAPPER,
               scheduler,
-              null
+              brokerClient
             )
         ),
         DruidExceptionMatcher.invalidInput().expectMessageIs(

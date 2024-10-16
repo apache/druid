@@ -38,7 +38,6 @@ import org.apache.druid.sql.client.BrokerClient;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
 import org.joda.time.DateTime;
-import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
 import java.time.Duration;

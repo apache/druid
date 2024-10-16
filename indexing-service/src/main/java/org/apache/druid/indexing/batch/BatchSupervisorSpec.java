@@ -68,7 +68,7 @@ public class BatchSupervisorSpec implements SupervisorSpec
 
   private final ObjectMapper objectMapper;
   private final ScheduledBatchScheduler batchScheduler;
-  private final BrokerClient sqlBrokerClient;
+  private final BrokerClient brokerClient;
 
   @JsonCreator
   public BatchSupervisorSpec(
@@ -79,7 +79,7 @@ public class BatchSupervisorSpec implements SupervisorSpec
       @JsonProperty("dataSource") @Nullable final String dataSource,
       @JacksonInject ObjectMapper objectMapper,
       @JacksonInject ScheduledBatchScheduler batchScheduler,
-      @JacksonInject BrokerClient sqlBrokerClient
+      @JacksonInject BrokerClient brokerClient
   )
   {
     this.spec = spec;
@@ -87,7 +87,7 @@ public class BatchSupervisorSpec implements SupervisorSpec
     this.suspended = Configs.valueOrDefault(suspended, false);
     this.objectMapper = objectMapper;
     this.batchScheduler = batchScheduler;
-    this.sqlBrokerClient = sqlBrokerClient;
+    this.brokerClient = brokerClient;
 
     this.dataSource = dataSource != null ? dataSource : getDatasourceFromQuery();
     this.id = id != null ? id : ID_PREFIX + this.dataSource + "__" + UUID.randomUUID();
@@ -96,7 +96,7 @@ public class BatchSupervisorSpec implements SupervisorSpec
   private String getDatasourceFromQuery()
   {
     final List<ExplainPlanResponse> explainPlanResponses;
-    final ListenableFuture<List<ExplainPlanResponse>> explainPlanFuture = sqlBrokerClient.explainPlanFor(spec);
+    final ListenableFuture<List<ExplainPlanResponse>> explainPlanFuture = brokerClient.explainPlanFor(spec);
     try {
       explainPlanResponses = explainPlanFuture.get();
     }
