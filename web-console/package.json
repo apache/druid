@@ -49,11 +49,11 @@
     "start": "webpack serve"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=20"
   },
   "volta": {
-    "node": "16.17.0",
-    "npm": "8.15.0"
+    "node": "20.9.0",
+    "npm": "10.9.0"
   },
   "browserslist": [
     "> 1% and supports es6",
