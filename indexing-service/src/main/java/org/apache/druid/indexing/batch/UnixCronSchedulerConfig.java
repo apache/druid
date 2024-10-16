@@ -35,18 +35,30 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
 
   private final Cron cron;
 
+  private static final CronParser CRON_PARSER = createUnixCronParserWithMacros();
+
+  private static CronParser createUnixCronParserWithMacros() {
+    final CronDefinitionBuilder unixDefnWithMacros = CronDefinitionBuilder.defineCron();
+    CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX)
+                         .getFieldDefinitions()
+                         .forEach(unixDefnWithMacros::register);
+    return new CronParser(
+        unixDefnWithMacros.withSupportedNicknameHourly()
+                            .withSupportedNicknameMidnight()
+                            .withSupportedNicknameDaily()
+                            .withSupportedNicknameWeekly()
+                            .withSupportedNicknameMonthly()
+                            .withSupportedNicknameAnnually()
+                            .withSupportedNicknameYearly()
+                            .instance()
+    );
+  }
+  
   @JsonCreator
   public UnixCronSchedulerConfig(@JsonProperty("schedule") final String schedule)
   {
-    final String cronExpression = translateMacroToCronExpression(schedule);
-    final CronParser cronParser = new CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX));
-    this.cron = cronParser.parse(cronExpression);
+    this.cron = CRON_PARSER.parse(schedule);
     this.schedule = schedule;
-  }
-
-  public String getSchedule()
-  {
-    return schedule;
   }
 
   @Override
@@ -55,23 +67,8 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
     return cron;
   }
 
-  private static String translateMacroToCronExpression(final String schedule)
+  public String getSchedule()
   {
-    switch (schedule) {
-      case "@yearly":
-      case "@annually":
-        return "0 0 1 1 *";      // Every year at midnight on January 1st
-      case "@monthly":
-        return "0 0 1 * *";      // Every month at midnight on the 1st
-      case "@weekly":
-        return "0 0 * * 0";      // Every week on Sunday at midnight
-      case "@daily":
-      case "@midnight":
-        return "0 0 * * *";      // Every day at midnight
-      case "@hourly":
-        return "0 * * * *";      // Every hour on the hour
-      default:
-        return schedule;   // Return as is if no macro is found
-    }
+    return schedule;
   }
 }

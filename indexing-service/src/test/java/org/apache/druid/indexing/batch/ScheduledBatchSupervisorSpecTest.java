@@ -111,7 +111,7 @@ public class ScheduledBatchSupervisorSpecTest
     testSerde(
         new ScheduledBatchSupervisorSpec(
             query,
-            new UnixCronSchedulerConfig("* * * * *"),
+            new UnixCronSchedulerConfig("@daily"),
             true,
             "foo",
             "boo",
