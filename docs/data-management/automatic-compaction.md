@@ -244,10 +244,10 @@ You can run automatic compaction using compaction supervisors on the Overlord ra
 
 
 To use compaction supervisors, set the following properties in your Overlord runtime properties:
-  *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as a supervisor tasks
+  *  `druid.supervisor.compaction.enabled` to `true` so that compaction tasks can be run as supervisor tasks
   *  `druid.supervisor.compaction.engine` to  `msq` to specify the MSQ task engine as the compaction engine or to `native` to use the native engine. This is the default engine if the `engine` field is omitted from your compaction config
 
-Compaction supervisors use the same syntax as auto-compaction using  Coordinator duties with one key difference: you submit the auto-compaction as a a supervisor spec. In the spec, set the `type` to `autocompact` and include the auto-compaction config in the `spec` .
+Compaction supervisors use the same syntax as auto-compaction using  Coordinator duties with one key difference: you submit the auto-compaction as a a supervisor spec. In the spec, set the `type` to `autocompact` and include the auto-compaction config in the `spec`.
 
 To submit an automatic compaction task, you can submit a supervisor spec through the [web console](#manage-compaction-supervisors-with-the-web-console) or the [supervisor API](#manage-compaction-supervisors-with-supervisor-apis).
 
@@ -263,14 +263,14 @@ To submit a supervisor spec for MSQ task engine automatic compaction, perform th
      - The compaction configuration by adding it to the `spec` field
     ```json
     {
-   "type": "autocompact",
-   "spec": {
-      "dataSource": YOUR_DATASOURCE,
-      "tuningConfig": {...},
+     "type": "autocompact",
+     "spec": {
+       "dataSource": YOUR_DATASOURCE,
+       "tuningConfig": {...},
        "granularitySpec": {...},
        "engine": <native|msq>,
        ...
-   }
+    }
     ```
 1. Submit the supervisor.
 
@@ -328,7 +328,7 @@ When using the MSQ task engine for auto-compaction, keep the following limitatio
 - The `maxTotalRows` config is not supported in `DynamicPartitionsSpec`. Use `maxRowsPerSegment` instead.
 - Segments can only be sorted on `__time` as the first column.
 
-##### Supported aggregators
+#### Supported aggregators
 
 Auto-compaction using the MSQ task engine supports only aggregators that satisfy the following properties: 
 * __Mergeability__: can combine partial aggregates
@@ -350,7 +350,7 @@ The following are some examples of aggregators that aren't supported since at le
     ```
 * Partial sketches which cannot themselves be used to combine partial aggregates and need merging aggregators -- such as `HLLSketchMerge` required for `HLLSketchBuild` aggregator below -- violating mergeability:
     ```
-    {"name": added, "type":"HLLSketchBuild", fieldName: "added"}
+    {"name": "added", "type": "HLLSketchBuild", "fieldName": "added"}
     ```
 * Count aggregator since it cannot be used to combine partial aggregates and it rolls up into a different `count` column discarding the input column(s), violating both mergeability and idempotency.
     ```
