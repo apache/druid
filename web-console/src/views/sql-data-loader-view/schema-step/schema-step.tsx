@@ -407,12 +407,15 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
 
   const [existingTableState] = useQueryManager<string, string[]>({
     initQuery: '',
-    processQuery: async (_: string, _cancelToken) => {
+    processQuery: async (_, cancelToken) => {
       // Check if datasource already exists
-      const tables = await queryDruidSql({
-        query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid' ORDER BY TABLE_NAME ASC`,
-        resultFormat: 'array',
-      });
+      const tables = await queryDruidSql(
+        {
+          query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid' ORDER BY TABLE_NAME ASC`,
+          resultFormat: 'array',
+        },
+        cancelToken,
+      );
 
       return tables.map(t => t[0]);
     },
@@ -426,7 +429,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
 
   const [sampleState] = useQueryManager<ExternalConfig, QueryResult, Execution>({
     query: sampleExternalConfig,
-    processQuery: async sampleExternalConfig => {
+    processQuery: async (sampleExternalConfig, cancelToken) => {
       const sampleResponse = await postToSampler(
         {
           type: 'index_parallel',
@@ -469,6 +472,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           },
         },
         'sample',
+        cancelToken,
       );
 
       const columns = getHeaderFromSampleResponse(sampleResponse).map(({ name, type }) => {

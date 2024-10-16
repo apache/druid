@@ -66,8 +66,8 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
 
   const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
     query: workStateVersion,
-    processQuery: async _ => {
-      return (await Api.instance.get('/druid/v2/sql/dart')).data.queries;
+    processQuery: async (_, cancelToken) => {
+      return (await Api.instance.get('/druid/v2/sql/dart', { cancelToken })).data.queries;
     },
   });
 

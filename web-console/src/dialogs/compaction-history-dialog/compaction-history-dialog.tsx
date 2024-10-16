@@ -63,10 +63,11 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
   const [diffIndex, setDiffIndex] = useState(-1);
   const [historyState] = useQueryManager<string, CompactionHistoryEntry[]>({
     initQuery: datasource,
-    processQuery: async datasource => {
+    processQuery: async (datasource, cancelToken) => {
       try {
         const resp = await Api.instance.get(
           `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}/history?count=20`,
+          { cancelToken },
         );
         return resp.data;
       } catch (e) {
