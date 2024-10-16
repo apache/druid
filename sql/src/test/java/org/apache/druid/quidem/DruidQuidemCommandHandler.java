@@ -27,6 +27,21 @@ import net.hydromatic.quidem.CommandHandler;
 import net.hydromatic.quidem.Quidem.SqlCommand;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.RelShuttleImpl;
+import org.apache.calcite.rel.core.Snapshot;
+import org.apache.calcite.rel.core.TableFunctionScan;
+import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.core.Window;
+import org.apache.calcite.rel.logical.LogicalAggregate;
+import org.apache.calcite.rel.logical.LogicalCorrelate;
+import org.apache.calcite.rel.logical.LogicalFilter;
+import org.apache.calcite.rel.logical.LogicalIntersect;
+import org.apache.calcite.rel.logical.LogicalJoin;
+import org.apache.calcite.rel.logical.LogicalMinus;
+import org.apache.calcite.rel.logical.LogicalProject;
+import org.apache.calcite.rel.logical.LogicalSort;
+import org.apache.calcite.rel.logical.LogicalUnion;
+import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -58,6 +73,9 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
     if (line.startsWith("druidPlan")) {
       return new DruidPlanCommand(lines, content);
+    }
+    if (line.startsWith("hints")) {
+      return new HintPlanCommand(lines, content);
     }
     if (line.startsWith("nativePlan")) {
       return new NativePlanCommand(lines, content);
@@ -202,9 +220,15 @@ public class DruidQuidemCommandHandler implements CommandHandler
         if (node instanceof DruidRel<?>) {
           node = ((DruidRel<?>) node).unwrapLogicalPlan();
         }
-        String str = RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT, SqlExplainLevel.EXPPLAN_ATTRIBUTES);
+        String str = getString(node);
         context.echo(ImmutableList.of(str));
       }
+    }
+
+    protected String getString(RelNode node)
+    {
+      String str = RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT, SqlExplainLevel.EXPPLAN_ATTRIBUTES);
+      return str;
     }
   }
 
@@ -242,6 +266,134 @@ public class DruidQuidemCommandHandler implements CommandHandler
     DruidPlanCommand(List<String> lines, List<String> content)
     {
       super(lines, content, DruidHook.DRUID_PLAN);
+    }
+  }
+
+  static class HintPlanCommand extends AbstractRelPlanCommand
+  {
+    HintPlanCommand(List<String> lines, List<String> content)
+    {
+      super(lines, content, DruidHook.DRUID_PLAN);
+    }
+
+    @Override
+    protected String getString(RelNode node)
+    {
+      final List<String> hintsCollect = new ArrayList<>();
+      final HintCollector collector = new HintCollector(hintsCollect);
+      node.accept(collector);
+      StringBuilder builder = new StringBuilder();
+      for (String hintLine : hintsCollect) {
+        builder.append(hintLine).append("\n");
+      }
+
+      return builder.toString();
+    }
+
+    private static class HintCollector extends RelShuttleImpl
+    {
+      private final List<String> hintsCollect;
+
+      HintCollector(List<String> hintsCollect) {
+        this.hintsCollect = hintsCollect;
+      }
+
+      @Override public RelNode visit(TableScan scan) {
+        if (!scan.getHints().isEmpty()) {
+          this.hintsCollect.add("TableScan:" + scan.getHints());
+        }
+        return super.visit(scan);
+      }
+
+      @Override public RelNode visit(LogicalJoin join) {
+        if (!join.getHints().isEmpty()) {
+          this.hintsCollect.add("LogicalJoin:" + join.getHints());
+        }
+        return super.visit(join);
+      }
+
+      @Override public RelNode visit(LogicalProject project) {
+        if (!project.getHints().isEmpty()) {
+          this.hintsCollect.add("Project:" + project.getHints());
+        }
+        return super.visit(project);
+      }
+
+      @Override public RelNode visit(LogicalAggregate aggregate) {
+        if (!aggregate.getHints().isEmpty()) {
+          this.hintsCollect.add("Aggregate:" + aggregate.getHints());
+        }
+        return super.visit(aggregate);
+      }
+
+      @Override public RelNode visit(LogicalCorrelate correlate) {
+        if (!correlate.getHints().isEmpty()) {
+          this.hintsCollect.add("Correlate:" + correlate.getHints());
+        }
+        return super.visit(correlate);
+      }
+
+      @Override public RelNode visit(LogicalFilter filter) {
+        if (!filter.getHints().isEmpty()) {
+          this.hintsCollect.add("Filter:" + filter.getHints());
+        }
+        return super.visit(filter);
+      }
+
+      @Override public RelNode visit(LogicalUnion union) {
+        if (!union.getHints().isEmpty()) {
+          this.hintsCollect.add("Union:" + union.getHints());
+        }
+        return super.visit(union);
+      }
+
+      @Override public RelNode visit(LogicalIntersect intersect) {
+        if (!intersect.getHints().isEmpty()) {
+          this.hintsCollect.add("Intersect:" + intersect.getHints());
+        }
+        return super.visit(intersect);
+      }
+
+      @Override public RelNode visit(LogicalMinus minus) {
+        if (!minus.getHints().isEmpty()) {
+          this.hintsCollect.add("Minus:" + minus.getHints());
+        }
+        return super.visit(minus);
+      }
+
+      @Override public RelNode visit(LogicalSort sort) {
+        if (!sort.getHints().isEmpty()) {
+          this.hintsCollect.add("Sort:" + sort.getHints());
+        }
+        return super.visit(sort);
+      }
+
+      @Override public RelNode visit(LogicalValues values) {
+        if (!values.getHints().isEmpty()) {
+          this.hintsCollect.add("Values:" + values.getHints());
+        }
+        return super.visit(values);
+      }
+
+      @Override public RelNode visit(RelNode other) {
+        if (other instanceof Window) {
+          Window window = (Window) other;
+          if (!window.getHints().isEmpty()) {
+            this.hintsCollect.add("Window:" + window.getHints());
+          }
+        } else if (other instanceof Snapshot) {
+          Snapshot snapshot = (Snapshot) other;
+          if (!snapshot.getHints().isEmpty()) {
+            this.hintsCollect.add("Snapshot:" + snapshot.getHints());
+          }
+        } else if (other instanceof TableFunctionScan) {
+          TableFunctionScan scan = (TableFunctionScan) other;
+          if (!scan.getHints().isEmpty()) {
+            this.hintsCollect.add("TableFunctionScan:" + scan.getHints());
+          }
+        }
+        return super.visit(other);
+      }
     }
   }
 
