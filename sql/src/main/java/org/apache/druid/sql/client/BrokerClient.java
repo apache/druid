@@ -20,7 +20,7 @@
 package org.apache.druid.sql.client;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.sql.http.ExplainPlanResponse;
+import org.apache.druid.sql.http.ExplainPlanInformation;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
 
@@ -30,5 +30,5 @@ public interface BrokerClient
 {
   ListenableFuture<SqlTaskStatus> submitTask(SqlQuery sqlQuery);
 
-  ListenableFuture<List<ExplainPlanResponse>> explainPlanFor(SqlQuery sqlQuery);
+  ListenableFuture<List<ExplainPlanInformation>> explainPlanFor(SqlQuery sqlQuery);
 }

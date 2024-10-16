@@ -28,8 +28,10 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.sql.calcite.planner.ExplainAttributes;
 import org.apache.druid.sql.client.BrokerClient;
-import org.apache.druid.sql.http.ExplainPlanResponse;
+import org.apache.druid.sql.http.ExplainPlanInformation;
 import org.apache.druid.sql.http.SqlQuery;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -77,13 +79,13 @@ public class ScheduledBatchSupervisorSpecTest
         null
     );
 
-    final ExplainPlanResponse explainPlanResponse = new ExplainPlanResponse(
+    final ExplainPlanInformation explainPlanInfo = new ExplainPlanInformation(
         "",
         "",
-        "{\"statementType\":\"REPLACE\",\"targetDataSource\":\"foo\",\"partitionedBy\":{\"type\":\"all\"},\"replaceTimeChunks\":\"all\"}"
+        new ExplainAttributes("REPLACE", "foo", Granularities.ALL, null, null)
     );
     Mockito.when(brokerClient.explainPlanFor(query))
-           .thenReturn(Futures.immediateFuture(ImmutableList.of(explainPlanResponse)));
+           .thenReturn(Futures.immediateFuture(ImmutableList.of(explainPlanInfo)));
   }
 
   @Test
@@ -197,7 +199,11 @@ public class ScheduledBatchSupervisorSpecTest
 
     Mockito.when(brokerClient.explainPlanFor(query))
            .thenReturn(Futures.immediateFuture(ImmutableList.of(
-               new ExplainPlanResponse("", "", "{\"statementType\":\"SELECT\"}"))
+               new ExplainPlanInformation(
+                   "",
+                   "",
+                   new ExplainAttributes("SELECT", null, null, null, null)
+               ))
            ));
 
     MatcherAssert.assertThat(

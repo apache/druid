@@ -17,27 +17,36 @@
  * under the License.
  */
 
-
 package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.apache.druid.sql.calcite.planner.ExplainAttributes;
 
-public class ExplainPlanResponse
+import java.io.IOException;
+
+public class ExplainPlanInformation
 {
   @JsonProperty("PLAN")
   private final String plan;
+
   @JsonProperty("RESOURCES")
   private final String resources;
-  // TODO: investigate why changing the type from String to ExplainAttributes doesn't work.
+
   @JsonProperty("ATTRIBUTES")
-  private final String attributes;
+  @JsonDeserialize(using = ExplainAttributesDeserializer.class)
+  private final ExplainAttributes attributes;
 
   @JsonCreator
-  public ExplainPlanResponse(
-      @JsonProperty("PLAN") String plan,
-      @JsonProperty("RESOURCES") String resources,
-      @JsonProperty("ATTRIBUTES") String attributes
+  public ExplainPlanInformation(
+      @JsonProperty("PLAN") final String plan,
+      @JsonProperty("RESOURCES") final String resources,
+      @JsonProperty("ATTRIBUTES") final ExplainAttributes attributes
   )
   {
     this.plan = plan;
@@ -55,9 +64,20 @@ public class ExplainPlanResponse
     return resources;
   }
 
-  public String getAttributes()
+  public ExplainAttributes getAttributes()
   {
     return attributes;
   }
+
+  private static class ExplainAttributesDeserializer extends JsonDeserializer<ExplainAttributes>
+  {
+    @Override
+    public ExplainAttributes deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException
+    {
+      final ObjectMapper objectMapper = (ObjectMapper) jsonParser.getCodec();
+      return objectMapper.readValue(jsonParser.getText(), ExplainAttributes.class);
+    }
+  }
 }
+
 

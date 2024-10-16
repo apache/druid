@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -46,6 +47,7 @@ public final class ExplainAttributes
   @Nullable
   private final String replaceTimeChunks;
 
+  @JsonCreator
   public ExplainAttributes(
       @JsonProperty("statementType") final String statementType,
       @JsonProperty("targetDataSource") @Nullable final String targetDataSource,

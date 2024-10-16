@@ -30,7 +30,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
-import org.apache.druid.sql.http.ExplainPlanResponse;
+import org.apache.druid.sql.http.ExplainPlanInformation;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -66,7 +66,7 @@ public class BrokerClientImpl implements BrokerClient
   }
 
   @Override
-  public ListenableFuture<List<ExplainPlanResponse>> explainPlanFor(SqlQuery sqlQuery)
+  public ListenableFuture<List<ExplainPlanInformation>> explainPlanFor(SqlQuery sqlQuery)
   {
     final SqlQuery explainSqlQuery = new SqlQuery(
         StringUtils.format("EXPLAIN PLAN FOR %s", sqlQuery.getQuery()),
@@ -85,7 +85,7 @@ public class BrokerClientImpl implements BrokerClient
                 .jsonContent(jsonMapper, explainSqlQuery),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<ExplainPlanResponse>>() {})
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<ExplainPlanInformation>>() {})
     );
   }
 }

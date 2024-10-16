@@ -26,8 +26,10 @@ import com.google.common.util.concurrent.Futures;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.sql.calcite.planner.ExplainAttributes;
 import org.apache.druid.sql.client.BrokerClient;
-import org.apache.druid.sql.http.ExplainPlanResponse;
+import org.apache.druid.sql.http.ExplainPlanInformation;
 import org.apache.druid.sql.http.SqlQuery;
 import org.junit.Before;
 import org.junit.Test;
@@ -68,10 +70,10 @@ public class ScheduledBatchSupervisorTest
         null
     );
 
-    final ExplainPlanResponse explainPlanResponse = new ExplainPlanResponse(
+    final ExplainPlanInformation explainPlanResponse = new ExplainPlanInformation(
         "",
         "",
-        "{\"statementType\":\"REPLACE\",\"targetDataSource\":\"foo\",\"partitionedBy\":{\"type\":\"all\"},\"replaceTimeChunks\":\"all\"}"
+        new ExplainAttributes("REPLACE", "foo", Granularities.MONTH, null, null)
     );
     Mockito.when(brokerClient.explainPlanFor(query))
            .thenReturn(Futures.immediateFuture(ImmutableList.of(explainPlanResponse)));

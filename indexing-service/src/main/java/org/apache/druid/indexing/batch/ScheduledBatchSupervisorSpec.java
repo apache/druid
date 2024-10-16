@@ -22,7 +22,6 @@ package org.apache.druid.indexing.batch;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.config.Configs;
@@ -32,7 +31,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.calcite.planner.ExplainAttributes;
 import org.apache.druid.sql.client.BrokerClient;
-import org.apache.druid.sql.http.ExplainPlanResponse;
+import org.apache.druid.sql.http.ExplainPlanInformation;
 import org.apache.druid.sql.http.SqlQuery;
 
 import javax.annotation.Nullable;
@@ -95,36 +94,23 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
 
   private String getDatasourceFromQuery()
   {
-    final List<ExplainPlanResponse> explainPlanResponses;
-    final ListenableFuture<List<ExplainPlanResponse>> explainPlanFuture = brokerClient.explainPlanFor(spec);
+    final List<ExplainPlanInformation> explainPlanInfos;
+    final ListenableFuture<List<ExplainPlanInformation>> explainPlanFuture = brokerClient.explainPlanFor(spec);
     try {
-      explainPlanResponses = explainPlanFuture.get();
+      explainPlanInfos = explainPlanFuture.get();
     }
     catch (Exception e) {
       throw InvalidInput.exception("Error getting datasource from query[%s]: [%s]", spec, e);
     }
 
-    if (explainPlanResponses.size() != 1) {
+    if (explainPlanInfos.size() != 1) {
       throw DruidException.defensive(
-          "Received an invalid EXPLAIN PLAN response for query[%s]. Expected a single plan, but got[%d]: [%s].",
-          spec.getQuery(), explainPlanResponses.size(), explainPlanResponses
+          "Received an invalid EXPLAIN PLAN response for query[%s]. Expected a single plan information, but received[%d]: [%s].",
+          spec.getQuery(), explainPlanInfos.size(), explainPlanInfos
       );
     }
 
-    final ExplainPlanResponse explainPlanResponse = explainPlanResponses.get(0);
-    final ExplainAttributes explainAttributes;
-    try {
-      explainAttributes = objectMapper.readValue(
-          explainPlanResponse.getAttributes(),
-          ExplainAttributes.class
-      );
-    }
-    catch (JsonProcessingException e) {
-      throw DruidException.defensive(
-          "Error unmarshaling EXPLAIN PLAN attributes for query[%s] from response[%s]: [%s]",
-          spec.getQuery(), explainPlanResponse, e
-      );
-    }
+    final ExplainAttributes explainAttributes = explainPlanInfos.get(0).getAttributes();
 
     if ("SELECT".equalsIgnoreCase(explainAttributes.getStatementType())) {
       throw InvalidInput.exception(
