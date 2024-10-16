@@ -26,5 +26,14 @@ import java.io.File;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 public interface StorageConnectorProvider
 {
-  StorageConnector createStorageConnector(File tempDir);
+  /**
+   * Returns the storage connector. Takes a parameter defaultTempDir to be possibly used as the temporary directory, if the
+   * storage connector requires one. This StorageConnectorProvider is not guaranteed to use this value, even if the
+   * StorageConnectorProvider requires one, as it gives priority to a value of defaultTempDir configured as a runtime
+   * configuration.
+   * <br>
+   * This value needs to be passed instead of injected by Jackson as the default temporary directory is dependent on the
+   * task id, and such dynamic task specific bindings is not possible on indexers.
+   */
+  StorageConnector createStorageConnector(File defaultTempDir);
 }

@@ -109,7 +109,10 @@ public interface ControllerContext
   /**
    * Fetch a directory for temporary outputs
    */
-  File taskTempDir();
+  default File taskTempDir()
+  {
+    throw new UnsupportedOperationException();
+  }
 
   /**
    * Client for communicating with workers.

@@ -55,9 +55,9 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   }
 
   @Override
-  public StorageConnector createStorageConnector(File tempDir)
+  public StorageConnector createStorageConnector(File defaultTempDir)
   {
-    S3OutputConfig config = this.getTempDir() == null ? this.withTempDir(tempDir) : this;
+    S3OutputConfig config = this.getTempDir() == null ? this.withTempDir(defaultTempDir) : this;
     return new S3StorageConnector(config, s3, s3UploadManager);
   }
 }

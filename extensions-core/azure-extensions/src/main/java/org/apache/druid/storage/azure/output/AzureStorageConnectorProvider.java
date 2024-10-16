@@ -54,9 +54,9 @@ public class AzureStorageConnectorProvider extends AzureOutputConfig implements 
   }
 
   @Override
-  public StorageConnector createStorageConnector(final File tempDir)
+  public StorageConnector createStorageConnector(final File defaultTempDir)
   {
-    AzureOutputConfig config = this.getTempDir() == null ? this.withTempDir(tempDir) : this;
+    AzureOutputConfig config = this.getTempDir() == null ? this.withTempDir(defaultTempDir) : this;
     config.validateTempDirectory();
     return new AzureStorageConnector(config, azureStorage);
   }

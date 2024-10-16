@@ -56,9 +56,9 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
   }
 
   @Override
-  public StorageConnector createStorageConnector(File tempDir)
+  public StorageConnector createStorageConnector(File defaultTempDir)
   {
-    GoogleOutputConfig config = this.getTempDir() == null ? this.withTempDir(tempDir) : this;
+    GoogleOutputConfig config = this.getTempDir() == null ? this.withTempDir(defaultTempDir) : this;
     return new GoogleStorageConnector(config, googleStorage, googleInputDataConfig);
   }
 }

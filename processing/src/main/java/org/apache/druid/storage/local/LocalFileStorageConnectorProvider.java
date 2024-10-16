@@ -45,7 +45,7 @@ public class LocalFileStorageConnectorProvider implements StorageConnectorProvid
   }
 
   @Override
-  public StorageConnector createStorageConnector(File tempDir)
+  public StorageConnector createStorageConnector(File defaultTempDir)
   {
     try {
       return new LocalFileStorageConnector(basePath);
