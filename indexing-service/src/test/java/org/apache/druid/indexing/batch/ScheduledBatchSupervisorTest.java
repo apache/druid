@@ -21,13 +21,14 @@ package org.apache.druid.indexing.batch;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.discovery.BrokerClient;
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.http.client.Request;
+import org.apache.druid.sql.client.BrokerClient;
+import org.apache.druid.sql.http.ExplainPlanResponse;
 import org.apache.druid.sql.http.SqlQuery;
-import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -67,11 +68,13 @@ public class ScheduledBatchSupervisorTest
         null
     );
 
-    final Request request = Mockito.mock(Request.class);
-    Mockito.when(brokerClient.makeRequest(HttpMethod.POST, "/druid/v2/sql/task/"))
-           .thenReturn(request);
-    final String explainPlanResp = "[{\"PLAN\":\"[{\\\"query\\\":{\\\"queryType\\\":\\\"scan\\\",\\\"dataSource\\\":{\\\"type\\\":\\\"inline\\\",\\\"columnNames\\\":[\\\"__time\\\",\\\"c1\\\"],\\\"columnTypes\\\":[\\\"LONG\\\",\\\"STRING\\\"],\\\"rows\\\":[[1672531200000,\\\"insert_1\\\"],[1672531200000,\\\"insert_2\\\"],[1675209600000,\\\"insert3\\\"]]},\\\"intervals\\\":{\\\"type\\\":\\\"intervals\\\",\\\"intervals\\\":[\\\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\\\"]},\\\"resultFormat\\\":\\\"compactedList\\\",\\\"columns\\\":[\\\"__time\\\",\\\"c1\\\"],\\\"context\\\":{\\\"scanSignature\\\":\\\"[{\\\\\\\"name\\\\\\\":\\\\\\\"__time\\\\\\\",\\\\\\\"type\\\\\\\":\\\\\\\"LONG\\\\\\\"},{\\\\\\\"name\\\\\\\":\\\\\\\"c1\\\\\\\",\\\\\\\"type\\\\\\\":\\\\\\\"STRING\\\\\\\"}]\\\",\\\"sqlInsertSegmentGranularity\\\":\\\"{\\\\\\\"type\\\\\\\":\\\\\\\"all\\\\\\\"}\\\",\\\"sqlQueryId\\\":\\\"4d3776b9-8b0d-4ebc-9952-b8db32a546bb\\\",\\\"sqlReplaceTimeChunks\\\":\\\"all\\\"},\\\"columnTypes\\\":[\\\"LONG\\\",\\\"STRING\\\"],\\\"granularity\\\":{\\\"type\\\":\\\"all\\\"},\\\"legacy\\\":false},\\\"signature\\\":[{\\\"name\\\":\\\"__time\\\",\\\"type\\\":\\\"LONG\\\"},{\\\"name\\\":\\\"c1\\\",\\\"type\\\":\\\"STRING\\\"}],\\\"columnMappings\\\":[{\\\"queryColumn\\\":\\\"__time\\\",\\\"outputColumn\\\":\\\"__time\\\"},{\\\"queryColumn\\\":\\\"c1\\\",\\\"outputColumn\\\":\\\"c1\\\"}]}]\",\"RESOURCES\":\"[{\\\"name\\\":\\\"foo\\\",\\\"type\\\":\\\"DATASOURCE\\\"}]\",\"ATTRIBUTES\":\"{\\\"statementType\\\":\\\"REPLACE\\\",\\\"targetDataSource\\\":\\\"foo\\\",\\\"partitionedBy\\\":{\\\"type\\\":\\\"all\\\"},\\\"replaceTimeChunks\\\":\\\"all\\\"}\"}]";
-    Mockito.when(brokerClient.sendQuery(request)).thenReturn(explainPlanResp);
+    final ExplainPlanResponse explainPlanResponse = new ExplainPlanResponse(
+        "",
+        "",
+        "{\"statementType\":\"REPLACE\",\"targetDataSource\":\"foo\",\"partitionedBy\":{\"type\":\"all\"},\"replaceTimeChunks\":\"all\"}"
+    );
+    Mockito.when(brokerClient.explainPlanFor(query))
+           .thenReturn(Futures.immediateFuture(ImmutableList.of(explainPlanResponse)));
   }
 
   @Test
@@ -85,7 +88,7 @@ public class ScheduledBatchSupervisorTest
         null,
         OBJECT_MAPPER,
         scheduler,
-        null
+        brokerClient
     );
     final ScheduledBatchSupervisor supervisor = activeSpec.createSupervisor();
     assertEquals(ScheduledBatchSupervisor.State.RUNNING, supervisor.getState());
@@ -108,7 +111,7 @@ public class ScheduledBatchSupervisorTest
         null,
         OBJECT_MAPPER,
         scheduler,
-        null
+        brokerClient
     );
 
     final ScheduledBatchSupervisor supervisor = suspendedSpec.createSupervisor();
@@ -131,7 +134,7 @@ public class ScheduledBatchSupervisorTest
         null,
         OBJECT_MAPPER,
         scheduler,
-        null
+        brokerClient
     );
     final ScheduledBatchSupervisor supervisor = activeSpec.createSupervisor();
     final SupervisorReport<ScheduledBatchSupervisorSnapshot> observedStatus = supervisor.getStatus();
