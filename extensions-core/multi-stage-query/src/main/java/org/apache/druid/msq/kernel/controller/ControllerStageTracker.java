@@ -63,7 +63,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.stream.IntStream;
 
 /**
  * Controller-side state machine for each stage. Used by {@link ControllerQueryKernel} to form the overall state
@@ -137,7 +136,7 @@ class ControllerStageTracker
     this.workerInputs = workerInputs;
     this.maxRetainedPartitionSketchBytes = maxRetainedPartitionSketchBytes;
 
-    initializeWorkerState(workerCount);
+    initializeWorkerState(workerInputs.workers());
 
     if (stageDef.mustGatherResultKeyStatistics()) {
       this.completeKeyStatisticsInformation =
@@ -149,14 +148,13 @@ class ControllerStageTracker
   }
 
   /**
-   * Initialize stage for each worker to {@link ControllerWorkerStagePhase#NEW}
-   *
-   * @param workerCount
+   * Initialize stage for each worker to {@link ControllerWorkerStagePhase#NEW}.
    */
-  private void initializeWorkerState(int workerCount)
+  private void initializeWorkerState(IntSet workers)
   {
-    IntStream.range(0, workerCount)
-             .forEach(wokerNumber -> workerToPhase.put(wokerNumber, ControllerWorkerStagePhase.NEW));
+    for (int workerNumber : workers) {
+      workerToPhase.put(workerNumber, ControllerWorkerStagePhase.NEW);
+    }
   }
 
   /**
@@ -405,7 +403,7 @@ class ControllerStageTracker
       throw new ISE("Stage does not gather result key statistics");
     }
 
-    if (workerNumber < 0 || workerNumber >= workerCount) {
+    if (!workerInputs.workers().contains(workerNumber)) {
       throw new IAE("Invalid workerNumber [%s]", workerNumber);
     }
 
@@ -524,7 +522,7 @@ class ControllerStageTracker
       throw new ISE("Stage does not gather result key statistics");
     }
 
-    if (workerNumber < 0 || workerNumber >= workerCount) {
+    if (!workerInputs.workers().contains(workerNumber)) {
       throw new IAE("Invalid workerNumber [%s]", workerNumber);
     }
 
@@ -658,7 +656,7 @@ class ControllerStageTracker
       throw new ISE("Stage does not gather result key statistics");
     }
 
-    if (workerNumber < 0 || workerNumber >= workerCount) {
+    if (!workerInputs.workers().contains(workerNumber)) {
       throw new IAE("Invalid workerNumber [%s]", workerNumber);
     }
 
@@ -765,7 +763,7 @@ class ControllerStageTracker
     this.resultPartitionBoundaries = clusterByPartitions;
     this.resultPartitions = ReadablePartitions.striped(
         stageDef.getStageNumber(),
-        workerCount,
+        workerInputs.workers(),
         clusterByPartitions.size()
     );
 
@@ -790,7 +788,7 @@ class ControllerStageTracker
       throw DruidException.defensive("Cannot setDoneReadingInput for stage[%s], it is not sorting", stageDef.getId());
     }
 
-    if (workerNumber < 0 || workerNumber >= workerCount) {
+    if (!workerInputs.workers().contains(workerNumber)) {
       throw new IAE("Invalid workerNumber[%s] for stage[%s]", workerNumber, stageDef.getId());
     }
 
@@ -832,7 +830,7 @@ class ControllerStageTracker
   @SuppressWarnings("unchecked")
   boolean setResultsCompleteForWorker(final int workerNumber, final Object resultObject)
   {
-    if (workerNumber < 0 || workerNumber >= workerCount) {
+    if (!workerInputs.workers().contains(workerNumber)) {
       throw new IAE("Invalid workerNumber [%s]", workerNumber);
     }
 
@@ -949,14 +947,18 @@ class ControllerStageTracker
         resultPartitionBoundaries = maybeResultPartitionBoundaries.valueOrThrow();
         resultPartitions = ReadablePartitions.striped(
             stageNumber,
-            workerCount,
+            workerInputs.workers(),
             resultPartitionBoundaries.size()
         );
-      } else if (shuffleSpec.kind() == ShuffleKind.MIX) {
-        resultPartitionBoundaries = ClusterByPartitions.oneUniversalPartition();
-        resultPartitions = ReadablePartitions.striped(stageNumber, workerCount, shuffleSpec.partitionCount());
       } else {
-        resultPartitions = ReadablePartitions.striped(stageNumber, workerCount, shuffleSpec.partitionCount());
+        if (shuffleSpec.kind() == ShuffleKind.MIX) {
+          resultPartitionBoundaries = ClusterByPartitions.oneUniversalPartition();
+        }
+        resultPartitions = ReadablePartitions.striped(
+            stageNumber,
+            workerInputs.workers(),
+            shuffleSpec.partitionCount()
+        );
       }
     } else {
       // No reshuffling: retain partitioning from nonbroadcast inputs.

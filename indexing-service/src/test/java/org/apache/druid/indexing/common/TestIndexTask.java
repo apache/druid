@@ -33,7 +33,6 @@ import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -62,7 +61,7 @@ public class TestIndexTask extends IndexTask
         id,
         taskResource,
         new IndexIngestionSpec(
-            new DataSchema(dataSource, null, new AggregatorFactory[]{}, null, null, mapper),
+            DataSchema.builder().withDataSource(dataSource).withObjectMapper(mapper).build(),
             new IndexTask.IndexIOConfig(
                 new LocalInputSource(new File("lol"), "rofl"),
                 new JsonInputFormat(null, null, null, null, null),

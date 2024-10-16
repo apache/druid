@@ -115,4 +115,10 @@ public class QueryResultFrameProcessorFactory extends BaseFrameProcessorFactory
         OutputChannels.wrapReadOnly(ImmutableList.copyOf(outputChannels.values()))
     );
   }
+
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
 }

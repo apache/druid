@@ -22,6 +22,8 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.avatica.ColumnMetaData;
+import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
@@ -402,6 +404,53 @@ public class MSQSelectTest extends MSQTestBase
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of())
+        .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectWithDynamicParameters(String contextName, Map<String, Object> context)
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    // Filter [__time >= timestamp '3000-01-01 00:00:00'] matches no segments at all.
+    testSelectQuery()
+        .setSql("select cnt,dim1 from foo where __time >= ?")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(
+                               querySegmentSpec(
+                                   Intervals.utc(
+                                       DateTimes.of("3000").getMillis(),
+                                       Intervals.ETERNITY.getEndMillis()
+                                   )
+                               )
+                           )
+                           .columns("cnt", "dim1")
+                           .context(defaultScanQueryContext(context, resultSignature))
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setDynamicParameters(
+            ImmutableList.of(
+                TypedValue.ofLocal(ColumnMetaData.Rep.JAVA_SQL_TIMESTAMP, DateTimes.of("3000-01-01").getMillis())
+            )
         )
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
@@ -1779,7 +1828,7 @@ public class MSQSelectTest extends MSQTestBase
                                      .setDataSource(
                                          new ExternalDataSource(
                                              new InlineInputSource("dim1\nabc\nxyz\ndef\nxyz\nabc\nxyz\nabc\nxyz\ndef\nbbb\naaa"),
-                                             new CsvInputFormat(null, null, null, true, 0),
+                                             new CsvInputFormat(null, null, null, true, 0, null),
                                              RowSignature.builder().add("dim1", ColumnType.STRING).build()
                                          )
                                      )
@@ -2324,7 +2373,7 @@ public class MSQSelectTest extends MSQTestBase
     if (DURABLE_STORAGE.equals(contextName) || FAULT_TOLERANCE.equals(contextName)) {
       new File(
           localFileStorageDir,
-          DurableStorageUtils.getWorkerOutputSuccessFilePath("query-test-query", 0, 0)
+          DurableStorageUtils.getWorkerOutputSuccessFilePath(TEST_CONTROLLER_TASK_ID, 0, 0)
       );
 
       Mockito.verify(localFileStorageConnector, Mockito.times(2))
@@ -2376,7 +2425,7 @@ public class MSQSelectTest extends MSQTestBase
                                    Collections.nCopies(numFiles, toRead),
                                    SystemFields.none()
                                ),
-                               new CsvInputFormat(null, null, null, true, 0),
+                               new CsvInputFormat(null, null, null, true, 0, null),
                                RowSignature.builder().add("timestamp", ColumnType.STRING).build()
                            ))
                            .intervals(querySegmentSpec(Filtration.eternity()))

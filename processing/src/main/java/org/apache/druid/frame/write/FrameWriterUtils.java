@@ -144,60 +144,16 @@ public class FrameWriterUtils
       @SuppressWarnings("rawtypes") final BaseObjectColumnValueSelector selector
   )
   {
-    Object row = selector.getObject();
+    final Object[] row = (Object[]) selector.getObject();
     if (row == null) {
       return null;
-    } else if (row instanceof String) {
-      return Collections.singletonList(getUtf8ByteBufferFromString((String) row));
-    }
-
-    final List<ByteBuffer> retVal = new ArrayList<>();
-    if (row instanceof List) {
-      for (int i = 0; i < ((List<?>) row).size(); i++) {
-        retVal.add(getUtf8ByteBufferFromString(((List<String>) row).get(i)));
-      }
-    } else if (row instanceof Object[]) {
-      for (Object value : (Object[]) row) {
+    } else {
+      final List<ByteBuffer> retVal = new ArrayList<>();
+      for (Object value : row) {
         retVal.add(getUtf8ByteBufferFromString((String) value));
       }
-    } else {
-      throw new ISE("Unexpected type %s found", row.getClass().getName());
+      return retVal;
     }
-    return retVal;
-  }
-
-  /**
-   * Retrieves a numeric list from a Java object, given that the object is an instance of something that can be returned
-   * from {@link ColumnValueSelector#getObject()} of valid numeric array selectors representations
-   *
-   * While {@link BaseObjectColumnValueSelector} specifies that only instances of {@code Object[]} can be returned from
-   * the numeric array selectors, this method also handles a few more cases which can be encountered if the selector is
-   * directly implemented on top of the group by stuff
-   */
-  @Nullable
-  public static List<? extends Number> getNumericArrayFromObject(Object row)
-  {
-    if (row == null) {
-      return null;
-    } else if (row instanceof Number) {
-      return Collections.singletonList((Number) row);
-    }
-
-    final List<Number> retVal = new ArrayList<>();
-
-    if (row instanceof List) {
-      for (int i = 0; i < ((List<?>) row).size(); i++) {
-        retVal.add((Number) ((List<?>) row).get(i));
-      }
-    } else if (row instanceof Object[]) {
-      for (Object value : (Object[]) row) {
-        retVal.add((Number) value);
-      }
-    } else {
-      throw new ISE("Unexpected type %s found", row.getClass().getName());
-    }
-
-    return retVal;
   }
 
   /**
@@ -256,9 +212,11 @@ public class FrameWriterUtils
 
   /**
    * Copies {@code src} to {@code dst}, disallowing null bytes to be written to the destination. If {@code removeNullBytes}
-   * is true, the method will drop the null bytes, and if it is false, the method will throw an exception.
+   * is true, the method will drop the null bytes, and if it is false, the method will throw an exception. The written bytes
+   * can be less than "len" if the null bytes are dropped, and the callers must evaluate the return value to see the actual
+   * length of the buffer that is copied
    */
-  public static void copyByteBufferToMemoryDisallowingNullBytes(
+  public static int copyByteBufferToMemoryDisallowingNullBytes(
       final ByteBuffer src,
       final WritableMemory dst,
       final long dstPosition,
@@ -266,18 +224,24 @@ public class FrameWriterUtils
       final boolean removeNullBytes
   )
   {
-    copyByteBufferToMemory(src, dst, dstPosition, len, false, removeNullBytes);
+    return copyByteBufferToMemory(src, dst, dstPosition, len, false, removeNullBytes);
   }
 
   /**
-   * Copies "len" bytes from {@code src.position()} to "dstPosition" in "memory". Does not update the position of src.
+   * Tries to copy "len" bytes from {@code src.position()} to "dstPosition" in "memory". If removeNullBytes is set to true,
+   * it will remove the U+0000 bytes from the src buffer, and the written bytes will be less than "len". It is imperative that the
+   * callers check the number of written bytes when "removeNullBytes" can be set to true, i.e. this method is invoked via
+   * {@link #copyByteBufferToMemoryDisallowingNullBytes}
+   * <p>
+   * Does not update the position of src.
    * <p>
    * Whenever "allowNullBytes" is true, "removeNullBytes" must be false. Use the methods {@link #copyByteBufferToMemoryAllowingNullBytes}
    * and {@link #copyByteBufferToMemoryDisallowingNullBytes} to copy between the memory
    * <p>
+   *
    * @throws InvalidNullByteException if "allowNullBytes" and "removeNullBytes" is false and a null byte is encountered
    */
-  private static void copyByteBufferToMemory(
+  private static int copyByteBufferToMemory(
       final ByteBuffer src,
       final WritableMemory dst,
       final long dstPosition,
@@ -294,6 +258,7 @@ public class FrameWriterUtils
     }
 
     final int srcEnd = src.position() + len;
+    int writtenLength = 0;
 
     if (allowNullBytes) {
       if (src.hasArray()) {
@@ -307,6 +272,8 @@ public class FrameWriterUtils
           dst.putByte(q, b);
         }
       }
+      // The method does not alter the length of the memory copied if null bytes are allowed
+      writtenLength = len;
     } else {
       long q = dstPosition;
       for (int p = src.position(); p < srcEnd; p++) {
@@ -325,9 +292,11 @@ public class FrameWriterUtils
         } else {
           dst.putByte(q, b);
           q++;
+          writtenLength++;
         }
       }
     }
+    return writtenLength;
   }
 
   /**

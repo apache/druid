@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Code, Dialog, Intent, Switch, Tooltip } from '@blueprintjs/core';
+import { Button, Callout, Classes, Code, Dialog, Intent, Switch } from '@blueprintjs/core';
 import React, { useState } from 'react';
 
 import type { FormJsonTabs } from '../../components';
@@ -163,9 +163,12 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
           {compactionConfig ? (
             <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />
           ) : (
-            <Tooltip content="There is no compaction config currently set for this datasource">
-              <Button text="Delete" disabled intent={Intent.DANGER} />
-            </Tooltip>
+            <Button
+              text="Delete"
+              disabled
+              intent={Intent.DANGER}
+              data-tooltip="There is no compaction config currently set for this datasource"
+            />
           )}
           <Button text="Close" onClick={onClose} />
           <Button

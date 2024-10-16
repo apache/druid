@@ -166,8 +166,8 @@ The indexing service also uses its own set of paths. These configs can be includ
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.zk.paths.indexer.base`|Base ZooKeeper path for |`${druid.zk.paths.base}/indexer`|
-|`druid.zk.paths.indexer.announcementsPath`|MiddleManagers announce themselves here.|`${druid.zk.paths.indexer.base}/announcements`|
-|`druid.zk.paths.indexer.tasksPath`|Used to assign tasks to MiddleManagers.|`${druid.zk.paths.indexer.base}/tasks`|
+|`druid.zk.paths.indexer.announcementsPath`|Middle Managers announce themselves here.|`${druid.zk.paths.indexer.base}/announcements`|
+|`druid.zk.paths.indexer.tasksPath`|Used to assign tasks to Middle Managers.|`${druid.zk.paths.indexer.base}/tasks`|
 |`druid.zk.paths.indexer.statusPath`|Parent path for announcement of task statuses.|`${druid.zk.paths.indexer.base}/status`|
 
 If `druid.zk.paths.base` and `druid.zk.paths.indexer.base` are both set, and none of the other `druid.zk.paths.*` or `druid.zk.paths.indexer.*` values are set, then the other properties will be evaluated relative to their respective `base`.
@@ -396,6 +396,9 @@ Metric monitoring is an essential part of Druid operations. The following monito
 |`org.apache.druid.java.util.metrics.CgroupCpuSetMonitor`|Reports CPU core/HT and memory node allocations as per the `cpuset` cgroup.|
 |`org.apache.druid.java.util.metrics.CgroupDiskMonitor`|Reports disk statistic as per the blkio cgroup.|
 |`org.apache.druid.java.util.metrics.CgroupMemoryMonitor`|Reports memory statistic as per the memory cgroup.|
+|`org.apache.druid.java.util.metrics.CgroupV2CpuMonitor`| **EXPERIMENTAL** Reports CPU usage from `cpu.stat` file. Only applicable to `cgroupv2`.|
+|`org.apache.druid.java.util.metrics.CgroupV2DiskMonitor`| **EXPERIMENTAL** Reports disk usage from `io.stat` file. Only applicable to `cgroupv2`.|
+|`org.apache.druid.java.util.metrics.CgroupV2MemoryMonitor`| **EXPERIMENTAL** Reports memory usage from `memory.current` and `memory.max` files. Only applicable to `cgroupv2`.|
 |`org.apache.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical services. Available only on Historical services.|
 |`org.apache.druid.server.metrics.SegmentStatsMonitor` | **EXPERIMENTAL** Reports statistics about segments on Historical services. Available only on Historical services. Not to be used when lazy loading is configured.|
 |`org.apache.druid.server.metrics.QueryCountStatsMonitor`|Reports how many queries have been successful/failed/interrupted.|
@@ -403,7 +406,7 @@ Metric monitoring is an essential part of Druid operations. The following monito
 |`org.apache.druid.server.emitter.HttpEmittingMonitor`|Reports internal metrics of `http` or `parametrized` emitter (see below). Must not be used with another emitter type. See the description of the metrics here: <https://github.com/apache/druid/pull/4973>.|
 |`org.apache.druid.server.metrics.TaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting and also the number of successful/failed tasks per emission period.|
 |`org.apache.druid.server.metrics.TaskSlotCountStatsMonitor`|Reports metrics about task slot usage per emission period.|
-|`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. Only supported by MiddleManager node types.|
+|`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. Only supported by Middle Manager node types.|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|
 
 For example, you might configure monitors on all services for system and JVM information within `common.runtime.properties` as follows:
@@ -594,7 +597,7 @@ need arises.
 |Property|Description|Default|Required|
 |-----|-----------|-------|--------|
 |`druid.centralizedDatasourceSchema.enabled`|Boolean flag for enabling datasource schema building in the Coordinator, this should be specified in the common runtime properties.|false|No.|
-|`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when CentralizedDatasourceSchema feature is enabled. This should be specified in the MiddleManager runtime properties.|false|No.|
+|`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when CentralizedDatasourceSchema feature is enabled. This should be specified in the Middle Manager runtime properties.|false|No.|
 
 If you enable this feature, you can query datasources that are only stored in deep storage and are not loaded on a Historical. For more information, see [Query from deep storage](../querying/query-from-deep-storage.md).
 
@@ -616,9 +619,10 @@ the [HDFS input source](../ingestion/input-sources.md#hdfs-input-source).
 You can set the following property to specify permissible protocols for
 the [HTTP input source](../ingestion/input-sources.md#http-input-source).
 
-|Property|Possible values|Description|Default|
-|--------|---------------|-----------|-------|
-|`druid.ingestion.http.allowedProtocols`|List of protocols|Allowed protocols for the HTTP input source.|`["http", "https"]`|
+|Property| Possible values                                                                                                                                                  | Description                                                                                                                               |Default|
+|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------|-------|
+|`druid.ingestion.http.allowedProtocols`| List of protocols                                                                                                                                                | Allowed protocols for the HTTP input source.                                                                                              |`["http", "https"]`|
+|`druid.ingestion.http.allowedHeaders`| A list of permitted request headers for the HTTP input source. By default, the list is empty, which means no headers are allowed in the ingestion specification. |`[]`|
 
 ### External data access security configuration
 
@@ -1132,17 +1136,17 @@ The following configs only apply if the Overlord is running in remote mode. For 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.indexer.runner.taskAssignmentTimeout`|How long to wait after a task has been assigned to a MiddleManager before throwing an error.|`PT5M`|
-|`druid.indexer.runner.minWorkerVersion`|The minimum MiddleManager version to send tasks to. The version number is a string. This affects the expected behavior during certain operations like comparison against `druid.worker.version`. Specifically, the version comparison follows dictionary order. Use ISO8601 date format for the version to accommodate date comparisons. |"0"|
+|`druid.indexer.runner.taskAssignmentTimeout`|How long to wait after a task has been assigned to a Middle Manager before throwing an error.|`PT5M`|
+|`druid.indexer.runner.minWorkerVersion`|The minimum Middle Manager version to send tasks to. The version number is a string. This affects the expected behavior during certain operations like comparison against `druid.worker.version`. Specifically, the version comparison follows dictionary order. Use ISO8601 date format for the version to accommodate date comparisons. |"0"|
 | `druid.indexer.runner.parallelIndexTaskSlotRatio`| The ratio of task slots available for parallel indexing supervisor tasks per worker. The specified value must be in the range `[0, 1]`. |1|
-|`druid.indexer.runner.compressZnodes`|Indicates whether or not the Overlord should expect MiddleManagers to compress Znodes.|true|
+|`druid.indexer.runner.compressZnodes`|Indicates whether or not the Overlord should expect Middle Managers to compress Znodes.|true|
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in ZooKeeper, should be in the range of `[10KiB, 2GiB)`. [Human-readable format](human-readable-byte.md) is supported.| 512 KiB |
-|`druid.indexer.runner.taskCleanupTimeout`|How long to wait before failing a task after a MiddleManager is disconnected from ZooKeeper.|`PT15M`|
-|`druid.indexer.runner.taskShutdownLinkTimeout`|How long to wait on a shutdown request to a MiddleManager before timing out|`PT1M`|
+|`druid.indexer.runner.taskCleanupTimeout`|How long to wait before failing a task after a Middle Manager is disconnected from ZooKeeper.|`PT15M`|
+|`druid.indexer.runner.taskShutdownLinkTimeout`|How long to wait on a shutdown request to a Middle Manager before timing out|`PT1M`|
 |`druid.indexer.runner.pendingTasksRunnerNumThreads`|Number of threads to allocate pending-tasks to workers, must be at least 1.|1|
-|`druid.indexer.runner.maxRetriesBeforeBlacklist`|Number of consecutive times the MiddleManager can fail tasks,  before the worker is blacklisted, must be at least 1|5|
+|`druid.indexer.runner.maxRetriesBeforeBlacklist`|Number of consecutive times the Middle Manager can fail tasks,  before the worker is blacklisted, must be at least 1|5|
 |`druid.indexer.runner.workerBlackListBackoffTime`|How long to wait before a task is whitelisted again. This value should be greater that the value set for taskBlackListCleanupPeriod.|`PT15M`|
-|`druid.indexer.runner.workerBlackListCleanupPeriod`|A duration after which the cleanup thread will startup to clean blacklisted workers.|`PT5M`|
+|`druid.indexer.runner.workerBlackListCleanupPeriod`|A duration after which the cleanup thread will start up to clean blacklisted workers.|`PT5M`|
 |`druid.indexer.runner.maxPercentageBlacklistWorkers`|The maximum percentage of workers to blacklist, this must be between 0 and 100.|20|
 
 If autoscaling is enabled, you can set these additional configs:
@@ -1151,16 +1155,16 @@ If autoscaling is enabled, you can set these additional configs:
 |--------|-----------|-------|
 |`druid.indexer.autoscale.strategy`|Sets the strategy to run when autoscaling is required. One of `noop`, `ec2` or `gce`.|`noop`|
 |`druid.indexer.autoscale.doAutoscale`|If set to true, autoscaling will be enabled.|false|
-|`druid.indexer.autoscale.provisionPeriod`|How often to check whether or not new MiddleManagers should be added.|`PT1M`|
-|`druid.indexer.autoscale.terminatePeriod`|How often to check when MiddleManagers should be removed.|`PT5M`|
+|`druid.indexer.autoscale.provisionPeriod`|How often to check whether or not new Middle Managers should be added.|`PT1M`|
+|`druid.indexer.autoscale.terminatePeriod`|How often to check when Middle Managers should be removed.|`PT5M`|
 |`druid.indexer.autoscale.originTime`|The starting reference timestamp that the terminate period increments upon.|`2012-01-01T00:55:00.000Z`|
 |`druid.indexer.autoscale.workerIdleTimeout`|How long can a worker be idle (not a run task) before it can be considered for termination.|`PT90M`|
-|`druid.indexer.autoscale.maxScalingDuration`|How long the Overlord will wait around for a MiddleManager to show up before giving up.|`PT15M`|
+|`druid.indexer.autoscale.maxScalingDuration`|How long the Overlord will wait around for a Middle Manager to show up before giving up.|`PT15M`|
 |`druid.indexer.autoscale.numEventsToTrack`|The number of autoscaling related events (node creation and termination) to track.|10|
 |`druid.indexer.autoscale.pendingTaskTimeout`|How long a task can be in "pending" state before the Overlord tries to scale up.|`PT30S`|
 |`druid.indexer.autoscale.workerVersion`|If set, will only create nodes of set version during autoscaling. Overrides dynamic configuration. |null|
-|`druid.indexer.autoscale.workerPort`|The port that MiddleManagers will run on.|8080|
-|`druid.indexer.autoscale.workerCapacityHint`| An estimation of the number of task slots available for each worker launched by the auto scaler when there are no workers running. The auto scaler uses the worker capacity hint to launch workers with an adequate capacity to handle pending tasks. When unset or set to a value less than or equal to 0, the auto scaler scales workers equal to the value for `minNumWorkers` in autoScaler config instead. The auto scaler assumes that each worker, either a MiddleManager or indexer, has the same amount of task slots. Therefore, when all your workers have the same capacity (homogeneous capacity), set the value for `autoscale.workerCapacityHint` equal to `druid.worker.capacity`. If your workers have different capacities (heterogeneous capacity), set the value to the average of `druid.worker.capacity` across the workers. For example, if two workers have `druid.worker.capacity=10`, and one has `druid.worker.capacity=4`, set `autoscale.workerCapacityHint=8`. Only applies to `pendingTaskBased` provisioning strategy.|-1|
+|`druid.indexer.autoscale.workerPort`|The port that Middle Managers will run on.|8080|
+|`druid.indexer.autoscale.workerCapacityHint`| An estimation of the number of task slots available for each worker launched by the auto scaler when there are no workers running. The auto scaler uses the worker capacity hint to launch workers with an adequate capacity to handle pending tasks. When unset or set to a value less than or equal to 0, the auto scaler scales workers equal to the value for `minNumWorkers` in autoScaler config instead. The auto scaler assumes that each worker, either a Middle Manager or indexer, has the same amount of task slots. Therefore, when all your workers have the same capacity (homogeneous capacity), set the value for `autoscale.workerCapacityHint` equal to `druid.worker.capacity`. If your workers have different capacities (heterogeneous capacity), set the value to the average of `druid.worker.capacity` across the workers. For example, if two workers have `druid.worker.capacity=10`, and one has `druid.worker.capacity=4`, set `autoscale.workerCapacityHint=8`. Only applies to `pendingTaskBased` provisioning strategy.|-1|
 
 ##### Supervisors
 
@@ -1186,7 +1190,7 @@ The following table shows the dynamic configuration properties for the Overlord.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`selectStrategy`| Describes how to assign tasks to MiddleManagers. The type can be `equalDistribution`, `equalDistributionWithCategorySpec`, `fillCapacity`, `fillCapacityWithCategorySpec`, and `javascript`. | `{"type":"equalDistribution"}` |
+|`selectStrategy`| Describes how to assign tasks to Middle Managers. The type can be `equalDistribution`, `equalDistributionWithCategorySpec`, `fillCapacity`, `fillCapacityWithCategorySpec`, and `javascript`. | `{"type":"equalDistribution"}` |
 |`autoScaler`| Only used if [autoscaling](#autoscaler) is enabled.| null |
 
 The following is an example of an Overlord dynamic config:
@@ -1233,7 +1237,7 @@ The following is an example of an Overlord dynamic config:
 
 ##### Worker select strategy
 
-The select strategy controls how Druid assigns tasks to workers (MiddleManagers).
+The select strategy controls how Druid assigns tasks to workers (Middle Managers).
 At a high level, the select strategy determines the list of eligible workers for a given task using
 either an `affinityConfig` or a `categorySpec`. Then, Druid assigns the task by either trying to distribute load equally
 (`equalDistribution`) or to fill as many workers as possible to capacity (`fillCapacity`).
@@ -1270,8 +1274,8 @@ not be assigned a category, and you want the work to be concentrated on the fewe
 
 ###### `equalDistribution`
 
-Tasks are assigned to the MiddleManager with the most free slots at the time the task begins running.
-This evenly distributes work across your MiddleManagers.
+Tasks are assigned to the Middle Manager with the most free slots at the time the task begins running.
+This evenly distributes work across your Middle Managers.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1281,7 +1285,7 @@ This evenly distributes work across your MiddleManagers.
 ###### `equalDistributionWithCategorySpec`
 
 This strategy is a variant of `equalDistribution`, which supports `workerCategorySpec` field rather than `affinityConfig`.
-By specifying `workerCategorySpec`, you can assign tasks to run on different categories of MiddleManagers based on the **type** and **dataSource** of the task.
+By specifying `workerCategorySpec`, you can assign tasks to run on different categories of Middle Managers based on the **type** and **dataSource** of the task.
 This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 
 |Property|Description|Default|
@@ -1289,7 +1293,7 @@ This strategy doesn't work with `AutoScaler` since the behavior is undefined.
 |`type`|`equalDistributionWithCategorySpec`|required; must be `equalDistributionWithCategorySpec`|
 |`workerCategorySpec`|[`WorkerCategorySpec`](#workercategoryspec) object|null (no worker category spec)|
 
-The following example shows tasks of type `index_kafka` that default to running on MiddleManagers of category `c1`, except for tasks that write to datasource `ds1`, which run on MiddleManagers of category `c2`.
+The following example shows tasks of type `index_kafka` that default to running on Middle Managers of category `c1`, except for tasks that write to datasource `ds1`, which run on Middle Managers of category `c2`.
 
 ```json
 {
@@ -1313,11 +1317,11 @@ The following example shows tasks of type `index_kafka` that default to running 
 ###### `fillCapacity`
 
 Tasks are assigned to the worker with the most currently-running tasks. This is
-useful when you are auto-scaling MiddleManagers since it tends to pack some full and
+useful when you are auto-scaling Middle Managers since it tends to pack some full and
 leave others empty. The empty ones can be safely terminated.
 
 Note that if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to _N_ > 1, then this strategy will fill _N_
-MiddleManagers up to capacity simultaneously, rather than a single MiddleManager.
+Middle Managers up to capacity simultaneously, rather than a single Middle Manager.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1370,8 +1374,8 @@ If not provided, the default is to have no affinity.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`affinity`|JSON object mapping a datasource String name to a list of indexing service MiddleManager `host:port` values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the MiddleManager and what the MiddleManager announces itself as (examine the Overlord logs to see what your MiddleManager announces itself as).|`{}`|
-|`strong`|When `true` tasks for a datasource must be assigned to affinity-mapped MiddleManagers. Tasks remain queued until a slot becomes available. When `false`, Druid may assign tasks for a datasource to other MiddleManagers when affinity-mapped MiddleManagers are unavailable to run queued tasks.|false|
+|`affinity`|JSON object mapping a datasource String name to a list of indexing service Middle Manager `host:port` values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the Middle Manager and what the Middle Manager announces itself as (examine the Overlord logs to see what your Middle Manager announces itself as).|`{}`|
+|`strong`|When `true` tasks for a datasource must be assigned to affinity-mapped Middle Managers. Tasks remain queued until a slot becomes available. When `false`, Druid may assign tasks for a datasource to other Middle Managers when affinity-mapped Middle Managers are unavailable to run queued tasks.|false|
 
 ###### workerCategorySpec
 
@@ -1381,14 +1385,14 @@ field. If not provided, the default is to not use it at all.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`categoryMap`|A JSON map object mapping a task type String name to a [CategoryConfig](#categoryconfig) object, by which you can specify category config for different task type.|`{}`|
-|`strong`|With weak workerCategorySpec (the default), tasks for a dataSource may be assigned to other MiddleManagers if the MiddleManagers specified in `categoryMap` are not able to run all pending tasks in the queue for that dataSource. With strong workerCategorySpec, tasks for a dataSource will only ever be assigned to their specified MiddleManagers, and will wait in the pending queue if necessary.|false|
+|`strong`|With weak workerCategorySpec (the default), tasks for a dataSource may be assigned to other Middle Managers if the Middle Managers specified in `categoryMap` are not able to run all pending tasks in the queue for that dataSource. With strong workerCategorySpec, tasks for a dataSource will only ever be assigned to their specified Middle Managers, and will wait in the pending queue if necessary.|false|
 
 ###### CategoryConfig
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`defaultCategory`|Specify default category for a task type.|null|
-|`categoryAffinity`|A JSON map object mapping a datasource String name to a category String name of the MiddleManager. If category isn't specified for a datasource, then using the `defaultCategory`. If no specified category and the `defaultCategory` is also null, then tasks can run on any available MiddleManagers.|null|
+|`categoryAffinity`|A JSON map object mapping a datasource String name to a category String name of the Middle Manager. If category isn't specified for a datasource, then using the `defaultCategory`. If no specified category and the `defaultCategory` is also null, then tasks can run on any available Middle Managers.|null|
 
 ##### Autoscaler
 
@@ -1409,15 +1413,15 @@ For GCE's properties, please refer to the [gce-extensions](../development/extens
 
 ## Data server
 
-This section contains the configuration options for the services that reside on Data servers (MiddleManagers/Peons and Historicals) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
+This section contains the configuration options for the services that reside on Data servers (Middle Managers/Peons and Historicals) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
 Configuration options for the [Indexer process](../design/indexer.md) are also provided here.
 
-### MiddleManager and Peons
+### Middle Manager and Peon
 
-These MiddleManager and Peon configurations can be defined in the `middleManager/runtime.properties` file.
+These Middle Manager and Peon configurations can be defined in the `middleManager/runtime.properties` file.
 
-#### MiddleManager service config
+#### Middle Manager service config
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1427,14 +1431,14 @@ These MiddleManager and Peon configurations can be defined in the `middleManager
 |`druid.tlsPort`|TLS port for HTTPS connector, if [druid.enableTlsPort](../operations/tls-support.md) is set then this config will be used. If `druid.host` contains port then that port will be ignored. This should be a non-negative Integer.|8291|
 |`druid.service`|The name of the service. This is used as a dimension when emitting metrics and alerts to differentiate between the various services|`druid/middlemanager`|
 
-#### MiddleManager configuration
+#### Middle Manager configuration
 
-MiddleManagers pass their configurations down to their child peons. The MiddleManager requires the following configs:
+Middle Managers pass their configurations down to their child peons. The Middle Manager requires the following configs:
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.indexer.runner.allowedPrefixes`|Whitelist of prefixes for configs that can be passed down to child peons.|`com.metamx`, `druid`, `org.apache.druid`, `user.timezone`, `file.encoding`, `java.io.tmpdir`, `hadoop`|
-|`druid.indexer.runner.compressZnodes`|Indicates whether or not the MiddleManagers should compress Znodes.|true|
+|`druid.indexer.runner.compressZnodes`|Indicates whether or not the Middle Managers should compress Znodes.|true|
 |`druid.indexer.runner.classpath`|Java classpath for the peon.|`System.getProperty("java.class.path")`|
 |`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
 |`druid.indexer.runner.javaOpts`|_DEPRECATED_ A string of -X Java options to pass to the peon's JVM. Quotable parameters or parameters with spaces are encouraged to use javaOptsArray|`''`|
@@ -1444,16 +1448,16 @@ MiddleManagers pass their configurations down to their child peons. The MiddleMa
 |`druid.indexer.runner.endPort`|Ending port used for Peon services, should be greater than or equal to `druid.indexer.runner.startPort` and less than 65536.|65535|
 |`druid.indexer.runner.ports`|A JSON array of integers to specify ports that used for Peon services. If provided and non-empty, ports for Peon services will be chosen from these ports. And `druid.indexer.runner.startPort/druid.indexer.runner.endPort` will be completely ignored.|`[]`|
 |`druid.worker.ip`|The IP of the worker.|`localhost`|
-|`druid.worker.version`|Version identifier for the MiddleManager. The version number is a string. This affects the expected behavior during certain operations like comparison against `druid.indexer.runner.minWorkerVersion`. Specifically, the version comparison follows dictionary order. Use ISO8601 date format for the version to accommodate date comparisons.|0|
-|`druid.worker.capacity`|Maximum number of tasks the MiddleManager can accept.|Number of CPUs on the machine - 1|
+|`druid.worker.version`|Version identifier for the Middle Manager. The version number is a string. This affects the expected behavior during certain operations like comparison against `druid.indexer.runner.minWorkerVersion`. Specifically, the version comparison follows dictionary order. Use ISO8601 date format for the version to accommodate date comparisons.|0|
+|`druid.worker.capacity`|Maximum number of tasks the Middle Manager can accept.|Number of CPUs on the machine - 1|
 |`druid.worker.baseTaskDirs`|List of base temporary working directories, one of which is assigned per task in a round-robin fashion. This property can be used to allow usage of multiple disks for indexing. This property is recommended in place of and takes precedence over `${druid.indexer.task.baseTaskDir}`.  If this configuration is not set, `${druid.indexer.task.baseTaskDir}` is used. For example, `druid.worker.baseTaskDirs=[\"PATH1\",\"PATH2\",...]`.|null|
 |`druid.worker.baseTaskDirSize`|The total amount of bytes that can be used by tasks on any single task dir. This value is treated symmetrically across all directories, that is, if this is 500 GB and there are 3 `baseTaskDirs`, then each of those task directories is assumed to allow for 500 GB to be used and a total of 1.5 TB will potentially be available across all tasks. The actual amount of memory assigned to each task is discussed in [Configuring task storage sizes](../ingestion/tasks.md#configuring-task-storage-sizes)|`Long.MAX_VALUE`|
-|`druid.worker.category`|A string to name the category that the MiddleManager node belongs to.|`_default_worker_category`|
+|`druid.worker.category`|A string to name the category that the Middle Manager node belongs to.|`_default_worker_category`|
 |`druid.indexer.fork.property.druid.centralizedDatasourceSchema.enabled`| This config should be set when [Centralized Datasource Schema](#centralized-datasource-schema) feature is enabled. |false|
 
 #### Peon processing
 
-Processing properties set on the MiddleManager are passed through to Peons.
+Processing properties set on the Middle Manager are passed through to Peons.
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -1464,7 +1468,7 @@ Processing properties set on the MiddleManager are passed through to Peons.
 |`druid.processing.numThreads`|The number of processing threads to have available for parallel processing of segments. Our rule of thumb is `num_cores - 1`, which means that even under heavy load there will still be one core available to do background tasks like talking with ZooKeeper and pulling down segments. If only one core is available, this property defaults to the value `1`.|Number of cores - 1 (or 1)|
 |`druid.processing.fifo`|Enables the processing queue to treat tasks of equal priority in a FIFO manner.|`true`|
 |`druid.processing.tmpDir`|Path where temporary files created while processing a query should be stored. If specified, this configuration takes priority over the default `java.io.tmpdir` path.|path represented by `java.io.tmpdir`|
-|`druid.processing.intermediaryData.storage.type`|Storage type for intermediary segments of data shuffle between native parallel index tasks. <br />Set to `local` to store segment files in the local storage of the MiddleManager or Indexer. <br />Set to `deepstore` to use configured deep storage for better fault tolerance during rolling updates. When the storage type is `deepstore`, Druid stores the data in the `shuffle-data` directory under the configured deep storage path. Druid does not support automated cleanup for the `shuffle-data` directory. You can set up cloud storage lifecycle rules for automated cleanup of data at the `shuffle-data` prefix location.|`local`|
+|`druid.processing.intermediaryData.storage.type`|Storage type for intermediary segments of data shuffle between native parallel index tasks. <br />Set to `local` to store segment files in the local storage of the Middle Manager or Indexer. <br />Set to `deepstore` to use configured deep storage for better fault tolerance during rolling updates. When the storage type is `deepstore`, Druid stores the data in the `shuffle-data` directory under the configured deep storage path. Druid does not support automated cleanup for the `shuffle-data` directory. You can set up cloud storage lifecycle rules for automated cleanup of data at the `shuffle-data` prefix location.|`local`|
 
 The amount of direct memory needed by Druid is at least
 `druid.processing.buffer.sizeBytes * (druid.processing.numMergeBuffers + druid.processing.numThreads + 1)`. You can
@@ -1490,7 +1494,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 #### Additional Peon configuration
 
-Although Peons inherit the configurations of their parent MiddleManagers, explicit child Peon configs in MiddleManager can be set by prefixing them with:
+Although Peons inherit the configurations of their parent Middle Managers, explicit child Peon configs in Middle Manager can be set by prefixing them with:
 
 ```properties
 druid.indexer.fork.property
@@ -1506,9 +1510,9 @@ Additional Peon configs include:
 |`druid.indexer.task.defaultHadoopCoordinates`|Hadoop version to use with HadoopIndexTasks that do not request a particular version.|`org.apache.hadoop:hadoop-client-api:3.3.6`, `org.apache.hadoop:hadoop-client-runtime:3.3.6`|
 |`druid.indexer.task.defaultRowFlushBoundary`|Highest row count before persisting to disk. Used for indexing generating tasks.|75000|
 |`druid.indexer.task.directoryLockTimeout`|Wait this long for zombie Peons to exit before giving up on their replacements.|PT10M|
-|`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on MiddleManager restart for restorable tasks to gracefully exit.|PT5M|
+|`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on Middle Manager restart for restorable tasks to gracefully exit.|PT5M|
 |`druid.indexer.task.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|`/tmp/druid-indexing`|
-|`druid.indexer.task.restoreTasksOnRestart`|If true, MiddleManagers will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
+|`druid.indexer.task.restoreTasksOnRestart`|If true, Middle Managers will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
 |`druid.indexer.task.ignoreTimestampSpecForDruidInputSource`|If true, tasks using the [Druid input source](../ingestion/input-sources.md) will ignore the provided timestampSpec, and will use the `__time` column of the input datasource. This option is provided for compatibility with ingestion specs written before Druid 0.22.0.|false|
 |`druid.indexer.task.storeEmptyColumns`|Boolean value for whether or not to store empty columns during ingestion. When set to true, Druid stores every column specified in the [`dimensionsSpec`](../ingestion/ingestion-spec.md#dimensionsspec). If you use the string-based schemaless ingestion and don't specify any dimensions to ingest, you must also set [`includeAllDimensions`](../ingestion/ingestion-spec.md#dimensionsspec) for Druid to store empty columns.<br/><br/>If you set `storeEmptyColumns` to false, Druid SQL queries referencing empty columns will fail. If you intend to leave `storeEmptyColumns` disabled, you should either ingest placeholder data for empty columns or else not query on empty columns.<br/><br/>You can overwrite this configuration  by setting `storeEmptyColumns` in the [task context](../ingestion/tasks.md#context-parameters).|true|
 |`druid.indexer.task.tmpStorageBytesPerTask`|Maximum number of bytes per task to be used to store temporary files on disk. This config is generally intended for internal usage. Attempts to set it are very likely to be overwritten by the TaskRunner that executes the task, so be sure of what you expect to happen before directly adjusting this configuration parameter. The config is documented here primarily to provide an understanding of what it means if/when someone sees that it has been set. A value of -1 disables this limit.  |-1|
@@ -1795,6 +1799,7 @@ This strategy can be enabled by setting `druid.query.scheduler.prioritization.st
 |`druid.query.scheduler.prioritization.periodThreshold`|ISO duration threshold for how old data can be queried before automatically adjusting query priority.|none|
 |`druid.query.scheduler.prioritization.durationThreshold`|ISO duration threshold for maximum duration a queries interval can span before the priority is automatically adjusted.|none|
 |`druid.query.scheduler.prioritization.segmentCountThreshold`|Number threshold for maximum number of segments that can take part in a query before its priority is automatically adjusted.|none|
+|`druid.query.scheduler.prioritization.segmentRangeThreshold`|ISO duration threshold for maximum segment range a query can span before the priority is automatically adjusted.|none|
 |`druid.query.scheduler.prioritization.adjustment`|Amount to reduce the priority of queries which cross any threshold.|none|
 
 ##### Laning strategies
@@ -2007,9 +2012,9 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 ## Cache configuration
 
-This section describes caching configuration that is common to Broker, Historical, and MiddleManager/Peon processes.
+This section describes caching configuration that is common to Broker, Historical, and Middle Manager/Peon processes.
 
-Caching could optionally be enabled on the Broker, Historical, and MiddleManager/Peon processes. See
+Caching could optionally be enabled on the Broker, Historical, and Middle Manager/Peon processes. See
 [Broker](#broker-caching), [Historical](#historical-caching), and [Peon](#peon-caching) configuration options for how to
 enable it for different processes.
 
@@ -2112,7 +2117,7 @@ If there is an L1 miss and L2 hit, it will also populate L1.
 
 ## General query configuration
 
-This section describes configurations that control behavior of Druid's query types, applicable to Broker, Historical, and MiddleManager processes.
+This section describes configurations that control behavior of Druid's query types, applicable to Broker, Historical, and Middle Manager processes.
 
 ### Overriding default query context values
 
@@ -2163,7 +2168,7 @@ context). If query does have `maxQueuedBytes` in the context, then that value is
 
 ### GroupBy query config
 
-This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and MiddleManager processes. You can set the query context parameters through the [query context](../querying/query-context.md).
+This section describes the configurations for groupBy queries. You can set the runtime properties in the `runtime.properties` file on Broker, Historical, and Middle Manager processes. You can set the query context parameters through the [query context](../querying/query-context.md).
 
 Supported runtime properties:
 
@@ -2213,7 +2218,6 @@ Supported query contexts:
 |Key|Description|Default|
 |---|-----------|-------|
 |`druid.expressions.useStrictBooleans`|Controls the behavior of Druid boolean operators and functions, if set to `true` all boolean values are either `1` or `0`. This configuration has been deprecated and will be removed in a future release, taking on the `true` behavior. See [expression documentation](../querying/math-expr.md#logical-operator-modes) for more information.|true|
-|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays. This configuration has been deprecated and will be removed in a future release, taking on the `true` behavior.|true|
 
 ### Router
 

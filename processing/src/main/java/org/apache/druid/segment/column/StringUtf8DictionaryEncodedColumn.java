@@ -20,6 +20,7 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidObjectPredicate;
@@ -52,6 +53,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
  * {@link DictionaryEncodedColumn<String>} for a column which has a {@link ByteBuffer} based UTF-8 dictionary.
@@ -62,6 +65,9 @@ import java.util.List;
  */
 public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColumn<String>, NestedCommonFormatColumn
 {
+  private static final Map<Class<?>, Function<StringUtf8DictionaryEncodedColumn, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(StringUtf8DictionaryEncodedColumn.class);
+
   @Nullable
   private final ColumnarInts column;
   @Nullable
@@ -496,6 +502,15 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
       }
       return new MultiStringVectorSelector();
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(Class<? extends T> clazz)
+  {
+    //noinspection ReturnOfNull
+    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
   }
 
   @Override

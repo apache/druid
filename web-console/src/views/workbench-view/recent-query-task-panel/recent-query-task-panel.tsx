@@ -69,17 +69,6 @@ interface RecentQueryEntry {
   errorMessage?: string;
 }
 
-function formatDetail(entry: RecentQueryEntry): string | undefined {
-  const lines: string[] = [];
-  if (entry.datasource !== Execution.INLINE_DATASOURCE_MARKER) {
-    lines.push(`Datasource: ${entry.datasource}`);
-  }
-  if (entry.errorMessage) {
-    lines.push(entry.errorMessage);
-  }
-  return lines.length ? lines.join('\n\n') : undefined;
-}
-
 export interface RecentQueryTaskPanelProps {
   onClose(): void;
   onExecutionDetails(id: string): void;
@@ -227,12 +216,16 @@ LIMIT 100`,
             const [icon, color] = statusToIconAndColor(w.taskStatus);
             return (
               <Popover className="work-entry" key={w.taskId} position="left" content={menu}>
-                <div title={formatDetail(w)} onDoubleClick={() => onExecutionDetails(w.taskId)}>
+                <div
+                  data-tooltip={w.errorMessage}
+                  onDoubleClick={() => onExecutionDetails(w.taskId)}
+                >
                   <div className="line1">
                     <Icon
                       className={'status-icon ' + w.taskStatus.toLowerCase()}
                       icon={icon}
                       style={{ color }}
+                      data-tooltip={`Task status: ${w.taskStatus}`}
                     />
                     <div className="timing">
                       {prettyFormatIsoDate(w.createdTime) +

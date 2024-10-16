@@ -118,6 +118,12 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
   }
 
   @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
+
+  @Override
   public ProcessorsAndChannels<Object, Object> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,

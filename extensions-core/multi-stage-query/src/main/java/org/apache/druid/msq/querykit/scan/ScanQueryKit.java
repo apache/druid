@@ -33,13 +33,13 @@ import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -86,24 +86,20 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
   // partition without a ClusterBy, we don't need to necessarily create it via the resultShuffleSpecFactory provided
   @Override
   public QueryDefinition makeQueryDefinition(
-      final String queryId,
+      final QueryKitSpec queryKitSpec,
       final ScanQuery originalQuery,
-      final QueryKit<Query<?>> queryKit,
       final ShuffleSpecFactory resultShuffleSpecFactory,
-      final int maxWorkerCount,
       final int minStageNumber
   )
   {
-    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
+    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
-        queryKit,
-        queryId,
+        queryKitSpec,
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
         null,
-        maxWorkerCount,
         minStageNumber,
         false
     );
@@ -177,7 +173,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
                        .shuffleSpec(scanShuffleSpec)
                        .signature(signatureToUse)
-                       .maxWorkerCount(dataSourcePlan.isSingleWorker() ? 1 : maxWorkerCount)
+                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount(queryKitSpec))
                        .processorFactory(new ScanQueryFrameProcessorFactory(queryToRun))
     );
 

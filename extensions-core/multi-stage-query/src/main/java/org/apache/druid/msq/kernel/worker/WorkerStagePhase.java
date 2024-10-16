@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.kernel.worker;
 
+import org.apache.druid.msq.exec.ProcessingBuffers;
+
 /**
  * Phases that a stage can be in, as far as the worker is concerned.
  *
@@ -82,7 +84,7 @@ public enum WorkerStagePhase
     @Override
     public boolean canTransitionFrom(final WorkerStagePhase priorPhase)
     {
-      return true;
+      return !priorPhase.isTerminal();
     }
   };
 
@@ -98,6 +100,8 @@ public enum WorkerStagePhase
 
   /**
    * Whether this phase indicates a stage is running and consuming its full complement of resources.
+   *
+   * Importantly, stages that are not running are not holding {@link ProcessingBuffers}.
    *
    * There are still some resources that can be consumed by stages that are not running. For example, in the
    * {@link #FINISHED} state, stages can still have data on disk that has not been cleaned-up yet, some pointers

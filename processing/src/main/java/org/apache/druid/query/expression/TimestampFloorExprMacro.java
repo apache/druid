@@ -134,7 +134,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     {
       ExprVectorProcessor<?> processor;
       processor = new LongOutLongInFunctionVectorValueProcessor(
-          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
+          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG, inspector.getMaxVectorSize()),
           inspector.getMaxVectorSize()
       )
       {

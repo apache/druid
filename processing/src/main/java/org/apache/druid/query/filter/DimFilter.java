@@ -77,7 +77,7 @@ public interface DimFilter extends Cacheable
    *
    * The Filter returned by this method across multiple calls must be the same object: parts of the query stack
    * compare Filters, and returning the same object allows these checks to avoid deep comparisons.
-   * (see {@link org.apache.druid.segment.join.HashJoinSegmentStorageAdapter#makeCursorHolder(CursorBuildSpec)}
+   * (see {@link org.apache.druid.segment.join.HashJoinSegmentCursorFactory#makeCursorHolder(CursorBuildSpec)}
    * for an example}
    *
    * @param mayIncludeUnknown whether the optimized filter may need to operate in "includeUnknown" mode.

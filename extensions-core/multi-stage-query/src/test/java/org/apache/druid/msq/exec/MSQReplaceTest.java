@@ -22,6 +22,8 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.avatica.ColumnMetaData;
+import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -660,6 +662,71 @@ public class MSQReplaceTest extends MSQTestBase
                          + "FROM foo "
                          + "WHERE __time >= TIMESTAMP '2000-01-02' AND __time < TIMESTAMP '2000-01-03' "
                          + "PARTITIONED by DAY ")
+                     .setExpectedDataSource("foo")
+                     .setExpectedDestinationIntervals(ImmutableList.of(Intervals.of(
+                         "2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")))
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegments(ImmutableSet.of(SegmentId.of(
+                         "foo",
+                         Intervals.of("2000-01-02T/P1D"),
+                         "test",
+                         0
+                     )))
+                     .setExpectedResultRows(ImmutableList.of(new Object[]{946771200000L, 2.0f}))
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
+                         0, 0, "shuffle"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().rows(1).frames(1),
+                         1, 0, "input0"
+                     )
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(1),
+                         1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             context,
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
+                             GranularityType.DAY,
+                             Intervals.of("2000-01-02T/P1D")
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceWithDynamicParameters(String contextName, Map<String, Object> context)
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         " REPLACE INTO foo OVERWRITE WHERE __time >= ? AND __time < ? "
+                         + "SELECT __time, m1 "
+                         + "FROM foo "
+                         + "WHERE __time >= ? AND __time < ? "
+                         + "PARTITIONED by DAY ")
+                     .setDynamicParameters(ImmutableList.of(
+                         TypedValue.ofLocal(ColumnMetaData.Rep.JAVA_SQL_TIMESTAMP, DateTimes.of("2000-01-02").getMillis()),
+                         TypedValue.ofLocal(ColumnMetaData.Rep.JAVA_SQL_TIMESTAMP, DateTimes.of("2000-01-03").getMillis()),
+                         TypedValue.ofLocal(ColumnMetaData.Rep.JAVA_SQL_TIMESTAMP, DateTimes.of("2000-01-02").getMillis()),
+                         TypedValue.ofLocal(ColumnMetaData.Rep.JAVA_SQL_TIMESTAMP, DateTimes.of("2000-01-03").getMillis())
+                     ))
                      .setExpectedDataSource("foo")
                      .setExpectedDestinationIntervals(ImmutableList.of(Intervals.of(
                          "2000-01-02T00:00:00.000Z/2000-01-03T00:00:00.000Z")))
@@ -2643,8 +2710,8 @@ public class MSQReplaceTest extends MSQTestBase
       );
     } else {
       partitionsSpec = new DimensionRangePartitionsSpec(
-          MultiStageQueryContext.getRowsPerSegment(QueryContext.of(context)),
           null,
+          MultiStageQueryContext.getRowsPerSegment(QueryContext.of(context)),
           partitionDimensions,
           false
       );

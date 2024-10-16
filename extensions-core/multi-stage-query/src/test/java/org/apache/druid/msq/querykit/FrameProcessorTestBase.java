@@ -20,6 +20,7 @@
 package org.apache.druid.msq.querykit;
 
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
@@ -27,15 +28,13 @@ import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.StagePartition;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -49,30 +48,32 @@ public class FrameProcessorTestBase extends InitializedNullHandlingTest
 {
   protected static final StagePartition STAGE_PARTITION = new StagePartition(new StageId("q", 0), 0);
 
+  private ListeningExecutorService innerExec;
   protected FrameProcessorExecutor exec;
 
   @Before
   public void setUp()
   {
-    exec = new FrameProcessorExecutor(MoreExecutors.listeningDecorator(Execs.singleThreaded("test-exec")));
+    innerExec = MoreExecutors.listeningDecorator(Execs.singleThreaded("test-exec"));
+    exec = new FrameProcessorExecutor(innerExec);
   }
 
   @After
   public void tearDown() throws Exception
   {
-    exec.getExecutorService().shutdownNow();
-    exec.getExecutorService().awaitTermination(10, TimeUnit.MINUTES);
+    innerExec.shutdownNow();
+    innerExec.awaitTermination(10, TimeUnit.MINUTES);
   }
 
-  protected ReadableInput makeChannelFromAdapter(
-      final StorageAdapter adapter,
+  protected ReadableInput makeChannelFromCursorFactory(
+      final CursorFactory cursorFactory,
       final List<KeyColumn> keyColumns,
       int rowsPerInputFrame
   ) throws IOException
   {
     // Create a single, sorted frame.
     final FrameSequenceBuilder singleFrameBuilder =
-        FrameSequenceBuilder.fromAdapter(adapter)
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .frameType(FrameType.ROW_BASED)
                             .maxRowsPerFrame(Integer.MAX_VALUE)
                             .sortBy(keyColumns);
@@ -86,7 +87,7 @@ public class FrameProcessorTestBase extends InitializedNullHandlingTest
     final FrameReader frameReader = FrameReader.create(signature);
 
     final FrameSequenceBuilder frameSequenceBuilder =
-        FrameSequenceBuilder.fromAdapter(new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY))
+        FrameSequenceBuilder.fromCursorFactory(frameReader.makeCursorFactory(frame))
                             .frameType(FrameType.ROW_BASED)
                             .maxRowsPerFrame(rowsPerInputFrame);
 

@@ -80,7 +80,6 @@ import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
@@ -323,6 +322,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctHllSketch()
   {
+    cannotVectorizeUnlessFallback();
     final String sql = "SELECT\n"
                        + "  SUM(cnt),\n"
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2),\n" // uppercase
@@ -1139,6 +1139,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testHllEstimateAsVirtualColumnWithGroupByOrderBy()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT"
         + " HLL_SKETCH_ESTIMATE(hllsketch_dim1), count(*)"
@@ -1213,7 +1214,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   public void testHllWithOrderedWindowing()
   {
     testBuilder()
-        .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
         .sql(
             "SELECT dim1,coalesce(cast(l1 as integer),-999),"
                 + " HLL_SKETCH_ESTIMATE( DS_HLL(dim1) OVER ( ORDER BY l1 ), true)"
@@ -1238,7 +1238,6 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     for (int i = 0; i < 2; i++) {
       testBuilder()
-          .queryContext(ImmutableMap.of(PlannerContext.CTX_ENABLE_WINDOW_FNS, true))
           .sql(
               "SELECT "
                   + " TIME_FLOOR(__time, 'P1D') as dayLvl,\n"

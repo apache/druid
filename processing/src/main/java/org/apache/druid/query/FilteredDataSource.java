@@ -25,9 +25,8 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.FilteredStorageAdapter;
+import org.apache.druid.segment.FilteredSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.WrappedSegmentReference;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -52,7 +51,6 @@ import java.util.function.Function;
  */
 public class FilteredDataSource implements DataSource
 {
-
   private final DataSource base;
   private final DimFilter filter;
 
@@ -135,12 +133,7 @@ public class FilteredDataSource implements DataSource
     );
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () ->
-            baseSegment ->
-                new WrappedSegmentReference(
-                    segmentMapFn.apply(baseSegment),
-                    storageAdapter -> new FilteredStorageAdapter(storageAdapter, filter)
-                )
+        () -> baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter)
     );
   }
 

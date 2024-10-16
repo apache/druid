@@ -113,7 +113,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     CalcitePlanner planner = handlerContext.planner();
     SqlNode validatedQueryNode;
     try {
-      validatedQueryNode = planner.validate(rewriteParameters(root));
+      validatedQueryNode = planner.validate(root);
     }
     catch (ValidationException e) {
       throw DruidPlanner.translateException(e);
@@ -127,24 +127,6 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
     validatedQueryNode.accept(resourceCollectorShuttle);
     resourceActions = resourceCollectorShuttle.getResourceActions();
     return validatedQueryNode;
-  }
-
-  private SqlNode rewriteParameters(SqlNode original)
-  {
-    // Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
-    // {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link SqlLiteral}
-    // replacement.
-    //
-    // Parameter replacement is done only if the client provides parameter values.
-    // If this is a PREPARE-only, then there will be no values even if the statement contains
-    // parameters. If this is a PLAN, then we'll catch later the case that the statement
-    // contains parameters, but no values were provided.
-    PlannerContext plannerContext = handlerContext.plannerContext();
-    if (plannerContext.getParameters().isEmpty()) {
-      return original;
-    } else {
-      return original.accept(new SqlParameterizerShuttle(plannerContext));
-    }
   }
 
   @Override
@@ -406,7 +388,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
         if (plannerContext.getPlannerConfig().isUseNativeQueryExplain()) {
           DruidRel<?> druidRel = (DruidRel<?>) rel;
           try {
-            explanation = explainSqlPlanAsNativeQueries(relRoot, druidRel);
+            explanation = explainSqlPlanAsNativeQueries(plannerContext, relRoot, druidRel);
           }
           catch (Exception ex) {
             log.warn(ex, "Unable to translate to a native Druid query. Resorting to legacy Druid explain plan.");
@@ -453,7 +435,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
    * @return A string representing an array of native queries that correspond to the given SQL query, in JSON format
    * @throws JsonProcessingException
    */
-  private String explainSqlPlanAsNativeQueries(final RelRoot relRoot, DruidRel<?> rel) throws JsonProcessingException
+  private String explainSqlPlanAsNativeQueries(PlannerContext plannerContext, final RelRoot relRoot, DruidRel<?> rel) throws JsonProcessingException
   {
     ObjectMapper jsonMapper = handlerContext.jsonMapper();
     List<DruidQuery> druidQueryList;
@@ -470,6 +452,9 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
     for (DruidQuery druidQuery : druidQueryList) {
       Query<?> nativeQuery = druidQuery.getQuery();
+
+      plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, nativeQuery);
+
       ObjectNode objectNode = jsonMapper.createObjectNode();
       objectNode.set("query", jsonMapper.convertValue(nativeQuery, ObjectNode.class));
       objectNode.set("signature", jsonMapper.convertValue(druidQuery.getOutputRowSignature(), ArrayNode.class));
@@ -581,6 +566,11 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       }
       DruidQuery finalBaseQuery = baseQuery;
       final Supplier<QueryResponse<Object[]>> resultsSupplier = () -> plannerContext.getQueryMaker().runQuery(finalBaseQuery);
+
+      if (explain != null) {
+        plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, finalBaseQuery.getQuery());
+        return planExplanation(possiblyLimitedRoot, newRoot, true);
+      }
 
       return new PlannerResult(resultsSupplier, finalBaseQuery.getOutputRowType());
     } else {
@@ -736,7 +726,8 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
       final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
       return handlerContext.engine().resultTypeForSelect(
           typeFactory,
-          rootQueryRel.validatedRowType
+          rootQueryRel.validatedRowType,
+          handlerContext.plannerContext().queryContextMap()
       );
     }
 

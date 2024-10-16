@@ -36,7 +36,7 @@ Imagine you are interested in the number of visitors that watched episodes of a 
 
 There is no way to answer these questions by just looking at the aggregated numbers. You would have to go back to the detail data and scan every single row. If the data volume is high enough, this may take a very long time, meaning that an interactive data exploration is not possible.
 
-An additional nuisance is that unique counts don't work well with rollups. For this example, it would be great if you could have just one row of data per 15 minute interval[^1], show, and episode. After all, you are not interested in the individual user IDs, just the unique counts.
+An additional nuisance is that unique counts don't work well with rollups. For this example, it would be great if you could have just one row of data per 15 minute interval<sup>[^1]</sup>, show, and episode. After all, you are not interested in the individual user IDs, just the unique counts.
 
 [^1]: Why 15 minutes and not just 1 hour? Intervals of 15 minutes work better with international timezones because those are not always aligned by hour. India, for instance, is 30 minutes off, and Nepal is even 45 minutes off. With 15 minute aggregates, you can get hourly sums for any of those timezones, too!
 
@@ -60,9 +60,11 @@ In this tutorial, you will learn how to do the following:
 
 ## Prerequisites
 
-For this tutorial, you should have already downloaded Druid as described in
-the [single-machine quickstart](index.md) and have it running on your local machine.
-It will also be helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
+Before proceeding, download Druid as described in the [single-machine quickstart](index.md) and have it running on your local machine. You don't need to load any data into the Druid cluster.
+
+It's helpful to have finished [Tutorial: Loading a file](../tutorials/tutorial-batch.md) and [Tutorial: Querying data](../tutorials/tutorial-query.md).
+
+## Sample data
 
 This tutorial works with the following data:
 - **date**: a timestamp. In this case it's just dates but as mentioned earlier, a finer granularity makes sense in real life.
@@ -95,103 +97,35 @@ date,uid,show,episode
 
 ## Ingest data using Theta sketches
 
-1. Navigate to the **Load data** wizard in the web console.
-2. Select `Paste data` as the data source and paste the given data:
-
-![Load data view with pasted data](../assets/tutorial-theta-01.png)
-
-3. Leave the source type as `inline` and click **Apply** and **Next: Parse data**.
-4. Parse the data as CSV, with included headers:
-
-![Parse raw data](../assets/tutorial-theta-02.png)
-
-5. Accept the default values in the **Parse time**, **Transform**, and **Filter** stages.
-6. In the **Configure schema** stage, enable rollup and confirm your choice in the dialog. Then set the query granularity to `day`.
-
-![Configure schema for rollup and query granularity](../assets/tutorial-theta-03.png)
-
-7. Add the Theta sketch during this stage. Select **Add metric**.
-8. Define the new metric as a Theta sketch with the following details:
-   * **Name**: `theta_uid`
-   * **Type**: `thetaSketch`
-   * **Field name**: `uid`
-   * **Size**: Accept the default value, `16384`.
-   * **Is input theta sketch**: Accept the default value, `False`.
-
-![Create Theta sketch metric](../assets/tutorial-theta-04.png)
-
-9. Click **Apply** to add the new metric to the data model.
+Load the sample dataset using the [`INSERT INTO`](../multi-stage-query/reference.md/#insert) statement and the [`EXTERN`](../multi-stage-query/reference.md/#extern-function) function to ingest the sample data inline. In the [Druid web console](../operations/web-console.md), go to the **Query** view and run the following query:
 
 
-10. You are not interested in individual user ID's, only the unique counts. Right now, `uid` is still in the data model. To remove it, click on the `uid` column in the data model and delete it using the trashcan icon on the right:
-
-![Delete uid column](../assets/tutorial-theta-05.png)
-
-11. For the remaining stages of the **Load data** wizard, set the following options:
-    * **Partition**: Set **Segment granularity** to `day`.
-    * **Tune**: Leave the default options.
-    * **Publish**: Set the datasource name to `ts_tutorial`.
-
-On the **Edit spec** page, your final input spec should match the following:
-
-```json
-{
-  "type": "index_parallel",
-  "spec": {
-    "ioConfig": {
-      "type": "index_parallel",
-      "inputSource": {
-        "type": "inline",
-        "data": "date,uid,show,episode\n2022-05-19,alice,Game of Thrones,S1E1\n2022-05-19,alice,Game of Thrones,S1E2\n2022-05-19,alice,Game of Thrones,S1E1\n2022-05-19,bob,Bridgerton,S1E1\n2022-05-20,alice,Game of Thrones,S1E1\n2022-05-20,carol,Bridgerton,S1E2\n2022-05-20,dan,Bridgerton,S1E1\n2022-05-21,alice,Game of Thrones,S1E1\n2022-05-21,carol,Bridgerton,S1E1\n2022-05-21,erin,Game of Thrones,S1E1\n2022-05-21,alice,Bridgerton,S1E1\n2022-05-22,bob,Game of Thrones,S1E1\n2022-05-22,bob,Bridgerton,S1E1\n2022-05-22,carol,Bridgerton,S1E2\n2022-05-22,bob,Bridgerton,S1E1\n2022-05-22,erin,Game of Thrones,S1E1\n2022-05-22,erin,Bridgerton,S1E2\n2022-05-23,erin,Game of Thrones,S1E1\n2022-05-23,alice,Game of Thrones,S1E1"
-      },
-      "inputFormat": {
-        "type": "csv",
-        "findColumnsFromHeader": true
-      }
-    },
-    "tuningConfig": {
-      "type": "index_parallel",
-      "partitionsSpec": {
-        "type": "hashed"
-      },
-      "forceGuaranteedRollup": true
-    },
-    "dataSchema": {
-      "dataSource": "ts_tutorial",
-      "timestampSpec": {
-        "column": "date",
-        "format": "auto"
-      },
-      "dimensionsSpec": {
-        "dimensions": [
-          "show",
-          "episode"
-        ]
-      },
-      "granularitySpec": {
-        "queryGranularity": "day",
-        "rollup": true,
-        "segmentGranularity": "day"
-      },
-      "metricsSpec": [
-        {
-          "name": "count",
-          "type": "count"
-        },
-        {
-          "type": "thetaSketch",
-          "name": "theta_uid",
-          "fieldName": "uid"
-        }
-      ]
-    }
-  }
-}
+```sql
+INSERT INTO "ts_tutorial"
+WITH "source" AS (SELECT * FROM TABLE(
+  EXTERN(
+    '{"type":"inline","data":"date,uid,show,episode\n2022-05-19,alice,Game of Thrones,S1E1\n2022-05-19,alice,Game of Thrones,S1E2\n2022-05-19,alice,Game of Thrones,S1E1\n2022-05-19,bob,Bridgerton,S1E1\n2022-05-20,alice,Game of Thrones,S1E1\n2022-05-20,carol,Bridgerton,S1E2\n2022-05-20,dan,Bridgerton,S1E1\n2022-05-21,alice,Game of Thrones,S1E1\n2022-05-21,carol,Bridgerton,S1E1\n2022-05-21,erin,Game of Thrones,S1E1\n2022-05-21,alice,Bridgerton,S1E1\n2022-05-22,bob,Game of Thrones,S1E1\n2022-05-22,bob,Bridgerton,S1E1\n2022-05-22,carol,Bridgerton,S1E2\n2022-05-22,bob,Bridgerton,S1E1\n2022-05-22,erin,Game of Thrones,S1E1\n2022-05-22,erin,Bridgerton,S1E2\n2022-05-23,erin,Game of Thrones,S1E1\n2022-05-23,alice,Game of Thrones,S1E1"}',
+    '{"type":"csv","findColumnsFromHeader":true}'
+  )
+) EXTEND ("date" VARCHAR, "show" VARCHAR, "episode" VARCHAR, "uid" VARCHAR))
+SELECT
+  TIME_FLOOR(TIME_PARSE("date"), 'P1D') AS "__time",
+  "show",
+  "episode",
+  COUNT(*) AS "count",
+  DS_THETA("uid") AS "theta_uid"
+FROM "source"
+GROUP BY 1, 2, 3
+PARTITIONED BY DAY
 ```
 
-Notice the `theta_uid` object in the `metricsSpec` list, that defines the `thetaSketch` aggregator on the `uid` column during ingestion.
+Notice the `theta_uid` column in the `SELECT` statement. It defines the `thetaSketch` aggregator on the `uid` column during ingestion.
+In this scenario you are not interested in individual user IDs, only the unique counts.
+Instead you create Theta sketches on the values of `uid` using the `DS_THETA` function.
 
-Click **Submit** to start the ingestion.
+[`DS_THETA`](../development/extensions-core/datasketches-theta.md#aggregator) has an optional second parameter that controls the accuracy and size of the sketches.
+
+The `GROUP BY` statement groups the entries for each episode of a show watched on the same day.
 
 ## Query the Theta sketch column
 
@@ -209,36 +143,22 @@ Let's first see what the data looks like in Druid. Run the following SQL stateme
 SELECT * FROM ts_tutorial
 ```
 
-![View data with SELECT all query](../assets/tutorial-theta-06.png)
+![View data with SELECT all query](../assets/tutorial-theta-03.png)
 
 The Theta sketch column `theta_uid` appears as a Base64-encoded string; behind it is a bitmap.
 
-The following query to compute the distinct counts of user IDs uses `APPROX_COUNT_DISTINCT_DS_THETA` and groups by the other dimensions:
-```sql
-SELECT __time,
-       "show",
-       "episode",
-       APPROX_COUNT_DISTINCT_DS_THETA(theta_uid) AS users
-FROM   ts_tutorial
-GROUP  BY 1, 2, 3
-```
-
-![Count distinct with Theta sketches](../assets/tutorial-theta-07.png)
-
-In the preceding query, `APPROX_COUNT_DISTINCT_DS_THETA` is equivalent to calling `DS_THETA` and `THETA_SKETCH_ESIMATE` as follows:
+The following query uses `THETA_SKETCH_ESTIMATE` to compute the distinct counts of user IDs and groups by the other dimensions:
 
 ```sql
-SELECT __time,
-       "show", 
-       "episode",
-       THETA_SKETCH_ESTIMATE(DS_THETA(theta_uid)) AS users
-FROM   ts_tutorial
-GROUP  BY 1, 2, 3
+SELECT
+  __time,
+  "show",
+  "episode",
+  THETA_SKETCH_ESTIMATE(theta_uid) AS users
+FROM ts_tutorial
 ```
 
-That is, `APPROX_COUNT_DISTINCT_DS_THETA` applies the following:
-* `DS_THETA`: Creates a new Theta sketch from the column of Theta sketches
-* `THETA_SKETCH_ESTIMATE`: Calculates the distinct count estimate from the output of `DS_THETA`
+![Count distinct with Theta sketches](../assets/tutorial-theta-04.png)
 
 ### Filtered metrics
 
@@ -247,7 +167,17 @@ Druid has the capability to use [filtered metrics](../querying/sql-aggregations.
  In the case of Theta sketches, the filter clause has to be inserted between the aggregator and the estimator.
 :::
 
-As an example, query the total unique users that watched _Bridgerton:_
+As an example, query the total unique users that watched _Bridgerton_:
+
+```sql
+SELECT APPROX_COUNT_DISTINCT_DS_THETA(theta_uid) FILTER(WHERE "show" = 'Bridgerton') AS users
+FROM ts_tutorial
+```
+
+![Count distinct with Theta sketches and filters](../assets/tutorial-theta-05.png)
+
+
+In the preceding query, `APPROX_COUNT_DISTINCT_DS_THETA` is equivalent to calling `DS_THETA` and `THETA_SKETCH_ESIMATE` as follows:
 
 ```sql
 SELECT THETA_SKETCH_ESTIMATE(
@@ -256,7 +186,12 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-![Count distinct with Theta sketches and filters](../assets/tutorial-theta-08.png)
+The `APPROX_COUNT_DISTINCT_DS_THETA` function applies the following:
+
+* `DS_THETA`: Creates a new Theta sketch from the column of Theta sketches.
+* `THETA_SKETCH_ESTIMATE`: Calculates the distinct count estimate from the output of `DS_THETA`.
+
+Note that the filter clause limits an aggregation query to only the rows that match the filter.
 
 ### Set operations
 
@@ -274,7 +209,7 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-09.png)
+![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-06.png)
 
 Again, the set function is spliced in between the aggregator and the estimator.
 
@@ -290,7 +225,7 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-10.png)
+![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-07.png)
 
 And finally, there is `THETA_SKETCH_NOT` which computes the set difference of two or more segments.
 The result describes how many visitors watched episode 1 of Bridgerton but not episode 2.
@@ -306,7 +241,7 @@ SELECT THETA_SKETCH_ESTIMATE(
 FROM ts_tutorial
 ```
 
-![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-11.png)
+![Count distinct with Theta sketches, filters, and set operations](../assets/tutorial-theta-08.png)
 
 ## Conclusions
 
@@ -314,7 +249,7 @@ FROM ts_tutorial
 - This allows us to use rollup and discard the individual values, just retaining statistical approximations in the sketches.
 - With Theta sketch set operations, affinity analysis is easier, for example, to answer questions such as which segments correlate or overlap by how much.
 
-## Further reading
+## Learn more
 
 See the following topics for more information:
 * [Theta sketch](../development/extensions-core/datasketches-theta.md) for reference on ingestion and native queries on Theta sketches in Druid.
@@ -326,4 +261,3 @@ See the following topics for more information:
 ## Acknowledgments
 
 This tutorial is adapted from a [blog post](https://blog.hellmar-becker.de/2022/06/05/druid-data-cookbook-counting-unique-visitors-for-overlapping-segments/) by community member Hellmar Becker.
-

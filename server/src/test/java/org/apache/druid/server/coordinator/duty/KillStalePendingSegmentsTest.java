@@ -175,7 +175,7 @@ public class KillStalePendingSegmentsTest
 
   private DruidCoordinatorRuntimeParams.Builder createParamsWithDatasources(String... datasources)
   {
-    DruidCoordinatorRuntimeParams.Builder builder = DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc());
+    DruidCoordinatorRuntimeParams.Builder builder = DruidCoordinatorRuntimeParams.builder();
 
     // Create a dummy for each of the datasources so that they get added to the timeline
     Set<DataSegment> usedSegments = new HashSet<>();

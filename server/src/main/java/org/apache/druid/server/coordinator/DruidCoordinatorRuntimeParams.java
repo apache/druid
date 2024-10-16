@@ -20,10 +20,9 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
-import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
+import org.apache.druid.server.coordinator.loading.SegmentHolder;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.SegmentLoadingConfig;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
@@ -32,7 +31,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -46,26 +44,10 @@ import java.util.TreeSet;
  */
 public class DruidCoordinatorRuntimeParams
 {
-  /**
-   * Creates a Set to be assigned into {@link Builder#usedSegments} from the given {@link Iterable} of segments.
-   *
-   * Creates a TreeSet sorted in {@link DruidCoordinator#SEGMENT_COMPARATOR_RECENT_FIRST} order and populates it with
-   * the segments from the given iterable. The given iterable is iterated exactly once. No special action is taken if
-   * duplicate segments are encountered in the iterable.
-   */
-  private static TreeSet<DataSegment> createUsedSegmentsSet(Iterable<DataSegment> usedSegments)
-  {
-    TreeSet<DataSegment> segmentsSet = new TreeSet<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
-    usedSegments.forEach(segmentsSet::add);
-    return segmentsSet;
-  }
-
-  private final DateTime coordinatorStartTime;
   private final DruidCluster druidCluster;
-  private final MetadataRuleManager databaseRuleManager;
   private final StrategicSegmentAssigner segmentAssigner;
-  private final @Nullable TreeSet<DataSegment> usedSegments;
-  private final @Nullable DataSourcesSnapshot dataSourcesSnapshot;
+  private final TreeSet<DataSegment> usedSegmentsNewestFirst;
+  private final DataSourcesSnapshot dataSourcesSnapshot;
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
   private final DruidCompactionConfig compactionConfig;
   private final SegmentLoadingConfig segmentLoadingConfig;
@@ -74,12 +56,10 @@ public class DruidCoordinatorRuntimeParams
   private final Set<String> broadcastDatasources;
 
   private DruidCoordinatorRuntimeParams(
-      DateTime coordinatorStartTime,
       DruidCluster druidCluster,
-      MetadataRuleManager databaseRuleManager,
       StrategicSegmentAssigner segmentAssigner,
-      @Nullable TreeSet<DataSegment> usedSegments,
-      @Nullable DataSourcesSnapshot dataSourcesSnapshot,
+      TreeSet<DataSegment> usedSegmentsNewestFirst,
+      DataSourcesSnapshot dataSourcesSnapshot,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       DruidCompactionConfig compactionConfig,
       SegmentLoadingConfig segmentLoadingConfig,
@@ -88,11 +68,9 @@ public class DruidCoordinatorRuntimeParams
       Set<String> broadcastDatasources
   )
   {
-    this.coordinatorStartTime = coordinatorStartTime;
     this.druidCluster = druidCluster;
-    this.databaseRuleManager = databaseRuleManager;
     this.segmentAssigner = segmentAssigner;
-    this.usedSegments = usedSegments;
+    this.usedSegmentsNewestFirst = usedSegmentsNewestFirst;
     this.dataSourcesSnapshot = dataSourcesSnapshot;
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
     this.compactionConfig = compactionConfig;
@@ -102,19 +80,9 @@ public class DruidCoordinatorRuntimeParams
     this.broadcastDatasources = broadcastDatasources;
   }
 
-  public DateTime getCoordinatorStartTime()
-  {
-    return coordinatorStartTime;
-  }
-
   public DruidCluster getDruidCluster()
   {
     return druidCluster;
-  }
-
-  public MetadataRuleManager getDatabaseRuleManager()
-  {
-    return databaseRuleManager;
   }
 
   @Nullable
@@ -140,10 +108,29 @@ public class DruidCoordinatorRuntimeParams
     return dataSourcesSnapshot.getUsedSegmentsTimelinesPerDataSource();
   }
 
-  public TreeSet<DataSegment> getUsedSegments()
+  /**
+   * Used segments ordered by {@link SegmentHolder#NEWEST_SEGMENT_FIRST}.
+   */
+  public TreeSet<DataSegment> getUsedSegmentsNewestFirst()
   {
-    Preconditions.checkState(usedSegments != null, "usedSegments or dataSourcesSnapshot must be set");
-    return usedSegments;
+    return usedSegmentsNewestFirst;
+  }
+
+  /**
+   * @return true if the given segment is marked as a "used" segment in the
+   * metadata store.
+   */
+  public boolean isUsedSegment(DataSegment segment)
+  {
+    return usedSegmentsNewestFirst.contains(segment);
+  }
+
+  /**
+   * Number of used segments in metadata store.
+   */
+  public int getUsedSegmentCount()
+  {
+    return usedSegmentsNewestFirst.size();
   }
 
   public CoordinatorDynamicConfig getCoordinatorDynamicConfig()
@@ -182,19 +169,17 @@ public class DruidCoordinatorRuntimeParams
     return dataSourcesSnapshot;
   }
 
-  public static Builder newBuilder(DateTime coordinatorStartTime)
+  public static Builder builder()
   {
-    return new Builder(coordinatorStartTime);
+    return new Builder();
   }
 
   public Builder buildFromExisting()
   {
     return new Builder(
-        coordinatorStartTime,
         druidCluster,
-        databaseRuleManager,
         segmentAssigner,
-        usedSegments,
+        usedSegmentsNewestFirst,
         dataSourcesSnapshot,
         coordinatorDynamicConfig,
         compactionConfig,
@@ -207,13 +192,11 @@ public class DruidCoordinatorRuntimeParams
 
   public static class Builder
   {
-    private final DateTime coordinatorStartTime;
     private DruidCluster druidCluster;
-    private MetadataRuleManager databaseRuleManager;
     private SegmentLoadQueueManager loadQueueManager;
     private StrategicSegmentAssigner segmentAssigner;
-    private @Nullable TreeSet<DataSegment> usedSegments;
-    private @Nullable DataSourcesSnapshot dataSourcesSnapshot;
+    private TreeSet<DataSegment> usedSegmentsNewestFirst;
+    private DataSourcesSnapshot dataSourcesSnapshot;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private DruidCompactionConfig compactionConfig;
     private SegmentLoadingConfig segmentLoadingConfig;
@@ -221,21 +204,18 @@ public class DruidCoordinatorRuntimeParams
     private BalancerStrategy balancerStrategy;
     private Set<String> broadcastDatasources;
 
-    private Builder(DateTime coordinatorStartTime)
+    private Builder()
     {
-      this.coordinatorStartTime = coordinatorStartTime;
       this.coordinatorDynamicConfig = CoordinatorDynamicConfig.builder().build();
       this.compactionConfig = DruidCompactionConfig.empty();
       this.broadcastDatasources = Collections.emptySet();
     }
 
     private Builder(
-        DateTime coordinatorStartTime,
         DruidCluster cluster,
-        MetadataRuleManager databaseRuleManager,
         StrategicSegmentAssigner segmentAssigner,
-        @Nullable TreeSet<DataSegment> usedSegments,
-        @Nullable DataSourcesSnapshot dataSourcesSnapshot,
+        TreeSet<DataSegment> usedSegmentsNewestFirst,
+        DataSourcesSnapshot dataSourcesSnapshot,
         CoordinatorDynamicConfig coordinatorDynamicConfig,
         DruidCompactionConfig compactionConfig,
         SegmentLoadingConfig segmentLoadingConfig,
@@ -244,11 +224,9 @@ public class DruidCoordinatorRuntimeParams
         Set<String> broadcastDatasources
     )
     {
-      this.coordinatorStartTime = coordinatorStartTime;
       this.druidCluster = cluster;
-      this.databaseRuleManager = databaseRuleManager;
       this.segmentAssigner = segmentAssigner;
-      this.usedSegments = usedSegments;
+      this.usedSegmentsNewestFirst = usedSegmentsNewestFirst;
       this.dataSourcesSnapshot = dataSourcesSnapshot;
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
       this.compactionConfig = compactionConfig;
@@ -260,15 +238,16 @@ public class DruidCoordinatorRuntimeParams
 
     public DruidCoordinatorRuntimeParams build()
     {
+      Preconditions.checkNotNull(dataSourcesSnapshot);
+      Preconditions.checkNotNull(usedSegmentsNewestFirst);
+
       initStatsIfRequired();
       initSegmentAssignerIfRequired();
 
       return new DruidCoordinatorRuntimeParams(
-          coordinatorStartTime,
           druidCluster,
-          databaseRuleManager,
           segmentAssigner,
-          usedSegments,
+          usedSegmentsNewestFirst,
           dataSourcesSnapshot,
           coordinatorDynamicConfig,
           compactionConfig,
@@ -298,11 +277,10 @@ public class DruidCoordinatorRuntimeParams
 
       Preconditions.checkNotNull(druidCluster);
       Preconditions.checkNotNull(balancerStrategy);
-      Preconditions.checkNotNull(usedSegments);
       Preconditions.checkNotNull(stats);
 
       if (segmentLoadingConfig == null) {
-        segmentLoadingConfig = SegmentLoadingConfig.create(coordinatorDynamicConfig, usedSegments.size());
+        segmentLoadingConfig = SegmentLoadingConfig.create(coordinatorDynamicConfig, usedSegmentsNewestFirst.size());
       }
 
       segmentAssigner = new StrategicSegmentAssigner(
@@ -314,15 +292,16 @@ public class DruidCoordinatorRuntimeParams
       );
     }
 
+    private static TreeSet<DataSegment> createUsedSegmentsSet(Iterable<DataSegment> usedSegments)
+    {
+      TreeSet<DataSegment> segmentsSet = new TreeSet<>(SegmentHolder.NEWEST_SEGMENT_FIRST);
+      usedSegments.forEach(segmentsSet::add);
+      return segmentsSet;
+    }
+
     public Builder withDruidCluster(DruidCluster cluster)
     {
       this.druidCluster = cluster;
-      return this;
-    }
-
-    public Builder withDatabaseRuleManager(MetadataRuleManager databaseRuleManager)
-    {
-      this.databaseRuleManager = databaseRuleManager;
       return this;
     }
 
@@ -338,7 +317,7 @@ public class DruidCoordinatorRuntimeParams
 
     public Builder withDataSourcesSnapshot(DataSourcesSnapshot snapshot)
     {
-      this.usedSegments = createUsedSegmentsSet(snapshot.iterateAllUsedSegmentsInSnapshot());
+      this.usedSegmentsNewestFirst = createUsedSegmentsSet(snapshot.iterateAllUsedSegmentsInSnapshot());
       this.dataSourcesSnapshot = snapshot;
       return this;
     }
@@ -350,8 +329,8 @@ public class DruidCoordinatorRuntimeParams
 
     public Builder withUsedSegments(Collection<DataSegment> usedSegments)
     {
-      this.usedSegments = createUsedSegmentsSet(usedSegments);
-      this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments, ImmutableMap.of());
+      this.usedSegmentsNewestFirst = createUsedSegmentsSet(usedSegments);
+      this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments);
       return this;
     }
 

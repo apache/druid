@@ -1,0 +1,158 @@
+# testNestedGroupByOnInlineDataSourceWithFilter@join-to-filter@NullHandling=sql case-crc:6cf62e05
+# quidem testcase reason: SCAN_QUERY_ON_FILTERED_DS_DOING_FILTERING
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite false
+!set enableJoinFilterRewriteValueColumnFilters false
+!set enableRewriteJoinToFilter true
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+with abc as(  SELECT dim1, m2 from druid.foo where "__time" >= '2001-01-02'), def as(  SELECT t1.dim1, SUM(t2.m2) as "metricSum"   from abc as t1 inner join abc as t2 on t1.dim1 = t2.dim1  where t1.dim1='def'  group by 1)SELECT count(*) from def;
++--------+
+| EXPR$0 |
++--------+
+|      1 |
++--------+
+(1 row)
+
+!ok
+LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+  LogicalAggregate(group=[{0}])
+    LogicalProject(dim1=[CAST('def':VARCHAR):VARCHAR])
+      LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+        LogicalFilter(condition=[=($0, 'def')])
+          LogicalProject(dim1=[$1])
+            LogicalFilter(condition=[>=($0, 2001-01-02 00:00:00)])
+              LogicalTableScan(table=[[druid, foo]])
+        LogicalProject(dim1=[$1], m2=[$6])
+          LogicalFilter(condition=[>=($0, 2001-01-02 00:00:00)])
+            LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidAggregate(group=[{}], EXPR$0=[COUNT()], druid=[logical])
+  DruidAggregate(group=[{0}], druid=[logical])
+    DruidProject(dim1=[CAST('def':VARCHAR):VARCHAR], druid=[logical])
+      DruidJoin(condition=[=($0, $1)], joinType=[inner])
+        DruidFilter(condition=[=($0, 'def')])
+          DruidProject(dim1=[$1], druid=[logical])
+            DruidFilter(condition=[>=($0, 2001-01-02 00:00:00)])
+              DruidTableScan(table=[[druid, foo]], druid=[logical])
+        DruidProject(dim1=[$1], m2=[$6], druid=[logical])
+          DruidFilter(condition=[>=($0, 2001-01-02 00:00:00)])
+            DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "join",
+        "left" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "scan",
+            "dataSource" : {
+              "type" : "filter",
+              "base" : {
+                "type" : "table",
+                "name" : "foo"
+              },
+              "filter" : {
+                "type" : "range",
+                "column" : "__time",
+                "matchValueType" : "LONG",
+                "lower" : 978393600000
+              }
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "resultFormat" : "compactedList",
+            "filter" : {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "def"
+            },
+            "columns" : [ "dim1" ],
+            "columnTypes" : [ "STRING" ],
+            "granularity" : {
+              "type" : "all"
+            },
+            "legacy" : false
+          }
+        },
+        "right" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "scan",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "foo"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "2001-01-02T00:00:00.000Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "resultFormat" : "compactedList",
+            "columns" : [ "dim1", "m2" ],
+            "columnTypes" : [ "STRING", "DOUBLE" ],
+            "granularity" : {
+              "type" : "all"
+            },
+            "legacy" : false
+          }
+        },
+        "rightPrefix" : "j0.",
+        "condition" : "(\"dim1\" == \"j0.dim1\")",
+        "joinType" : "INNER"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "virtualColumns" : [ {
+        "type" : "expression",
+        "name" : "v0",
+        "expression" : "'def'",
+        "outputType" : "STRING"
+      } ],
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "v0",
+        "outputName" : "d0",
+        "outputType" : "STRING"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan

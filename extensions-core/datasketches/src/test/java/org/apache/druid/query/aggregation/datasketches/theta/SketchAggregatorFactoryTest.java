@@ -24,6 +24,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.oldapi.OldSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.oldapi.OldSketchMergeAggregatorFactory;
@@ -212,5 +213,19 @@ public class SketchAggregatorFactoryTest
   {
     Throwable exception = Assert.assertThrows(DruidException.class, () -> AGGREGATOR_16384.factorizeVector(vectorFactory));
     Assert.assertEquals("Unsupported input [x] of type [COMPLEX<json>] for aggregator [COMPLEX<thetaSketchBuild>].", exception.getMessage());
+  }
+
+  @Test
+  public void testCanSubstitute()
+  {
+    AggregatorFactory sketch1 = new SketchMergeAggregatorFactory("sketch", "x", 16, true, false, 2);
+    AggregatorFactory sketch2 = new SketchMergeAggregatorFactory("other", "x", null, false, false, null);
+    AggregatorFactory sketch3 = new SketchMergeAggregatorFactory("sketch", "x", null, false, false, 3);
+    AggregatorFactory sketch4 = new SketchMergeAggregatorFactory("sketch", "y", null, false, false, null);
+
+    Assert.assertNotNull(sketch1.substituteCombiningFactory(sketch2));
+    Assert.assertNotNull(sketch1.substituteCombiningFactory(sketch3));
+    Assert.assertNull(sketch1.substituteCombiningFactory(sketch4));
+    Assert.assertNull(sketch2.substituteCombiningFactory(sketch1));
   }
 }

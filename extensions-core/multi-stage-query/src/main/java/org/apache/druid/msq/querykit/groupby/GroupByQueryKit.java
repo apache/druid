@@ -34,12 +34,12 @@ import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.querykit.DataSourcePlan;
 import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.common.OffsetLimitFrameProcessorFactory;
 import org.apache.druid.query.DimensionComparisonUtils;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.having.AlwaysHavingSpec;
@@ -66,26 +66,22 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
 
   @Override
   public QueryDefinition makeQueryDefinition(
-      final String queryId,
+      final QueryKitSpec queryKitSpec,
       final GroupByQuery originalQuery,
-      final QueryKit<Query<?>> queryKit,
       final ShuffleSpecFactory resultShuffleSpecFactory,
-      final int maxWorkerCount,
       final int minStageNumber
   )
   {
     validateQuery(originalQuery);
 
-    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
+    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
-        queryKit,
-        queryId,
+        queryKitSpec,
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
         null,
-        maxWorkerCount,
         minStageNumber,
         false
     );
@@ -139,9 +135,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       // __time in such queries is generated using either an aggregator (e.g. sum(metric) as __time) or using a
       // post-aggregator (e.g. TIMESTAMP '2000-01-01' as __time)
       // For example: INSERT INTO foo SELECT COUNT(*), TIMESTAMP '2000-01-01' AS __time FROM bar PARTITIONED BY DAY
-      shuffleSpecFactoryPreAggregation = intermediateClusterBy.isEmpty()
-                                         ? ShuffleSpecFactories.singlePartition()
-                                         : ShuffleSpecFactories.globalSortWithMaxPartitionCount(maxWorkerCount);
+      shuffleSpecFactoryPreAggregation =
+          intermediateClusterBy.isEmpty()
+          ? ShuffleSpecFactories.singlePartition()
+          : ShuffleSpecFactories.globalSortWithMaxPartitionCount(queryKitSpec.getNumPartitionsForShuffle());
 
       if (doLimitOrOffset) {
         shuffleSpecFactoryPostAggregation = ShuffleSpecFactories.singlePartitionWithLimit(postAggregationLimitHint);
@@ -166,7 +163,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
                        .signature(intermediateSignature)
                        .shuffleSpec(shuffleSpecFactoryPreAggregation.build(intermediateClusterBy, true))
-                       .maxWorkerCount(dataSourcePlan.isSingleWorker() ? 1 : maxWorkerCount)
+                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount(queryKitSpec))
                        .processorFactory(new GroupByPreShuffleFrameProcessorFactory(queryToRun))
     );
 
@@ -186,7 +183,7 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
         StageDefinition.builder(firstStageNumber + 1)
                        .inputs(new StageInputSpec(firstStageNumber))
                        .signature(resultSignature)
-                       .maxWorkerCount(maxWorkerCount)
+                       .maxWorkerCount(queryKitSpec.getMaxNonLeafWorkerCount())
                        .shuffleSpec(
                            shuffleSpecFactoryPostAggregation != null
                            ? shuffleSpecFactoryPostAggregation.build(resultClusterBy, false)
@@ -387,7 +384,10 @@ public class GroupByQueryKit implements QueryKit<GroupByQuery>
       for (final OrderByColumnSpec column : defaultLimitSpec.getColumns()) {
         final Optional<ColumnType> type = resultSignature.getColumnType(column.getDimension());
 
-        if (!type.isPresent() || !DimensionComparisonUtils.isNaturalComparator(type.get().getType(), column.getDimensionComparator())) {
+        if (!type.isPresent() || !DimensionComparisonUtils.isNaturalComparator(
+            type.get().getType(),
+            column.getDimensionComparator()
+        )) {
           throw new ISE(
               "Must use natural comparator for column [%s] of type [%s]",
               column.getDimension(),

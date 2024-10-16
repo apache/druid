@@ -1,0 +1,58 @@
+// Licensed to the Apache Software Foundation (ASF) under one or more
+// contributor license agreements.  See the NOTICE file distributed with
+// this work for additional information regarding copyright ownership.
+// The ASF licenses this file to You under the Apache License, Version 2.0
+// (the "License"); you may not use this file except in compliance with
+// the License.  You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+package org.apache.druid.grpc.results;
+option java_package = "org.apache.druid.grpc.proto";
+
+message QueryResult {
+  string dim1 = 1;
+  string dim2 = 2;
+  string dim3 = 3;
+  int64 cnt = 4;
+  float m1 = 5;
+  double m2 = 6;
+  bytes unique_dim1 = 7;
+  google.protobuf.Timestamp date = 8;
+}
+
+message NativeQueryResultTimeSeries {
+  int64 timeseries = 1;
+  google.protobuf.Timestamp time = 2;
+}
+
+message NativeQueryResultTimeSeriesSkipTime {
+  int64 timeseries = 1;
+}
+
+message NativeQueryResultGroupby {
+  int64 aggregate = 1;
+  string countryName = 2;
+  google.protobuf.Timestamp date = 3;
+}
+
+message NativeQueryResultGroupbyTimeRenamed {
+  int64 aggregate = 1;
+  string countryName = 2;
+  google.protobuf.Timestamp timeCol = 3;
+}
+
+message NativeQueryResultGroupbyWithoutTime {
+  int64 aggregate = 1;
+  string countryName = 2;
+}
