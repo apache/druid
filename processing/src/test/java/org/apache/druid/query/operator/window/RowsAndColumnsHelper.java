@@ -19,13 +19,16 @@
 
 package org.apache.druid.query.operator.window;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 
@@ -127,6 +130,18 @@ public class RowsAndColumnsHelper
       helper.setNulls(nullPositions.toIntArray());
     }
     return this;
+  }
+
+  public static RowsAndColumns makeSingleColumnRac(int... values)
+  {
+    return MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of("column", new IntArrayColumn(values))
+    );
+  }
+
+  public static RowsAndColumnsHelper expectedSingleColumnRac(int... values)
+  {
+    return new RowsAndColumnsHelper().expectColumn("column", values).allColumnsRegistered();
   }
 
   public ColumnHelper columnHelper(String column, int expectedSize, ColumnType expectedType)

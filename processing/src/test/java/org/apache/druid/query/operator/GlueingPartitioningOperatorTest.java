@@ -20,12 +20,8 @@
 package org.apache.druid.query.operator;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
-import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
-import org.apache.druid.query.rowsandcols.RowsAndColumns;
-import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,7 +33,7 @@ public class GlueingPartitioningOperatorTest
   public void testPartitioning()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(1, 1, 1, 2, 2, 1)
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1, 1, 2, 2, 1)
     );
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
@@ -47,9 +43,9 @@ public class GlueingPartitioningOperatorTest
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            expectedSimpleRac(1, 1, 1),
-            expectedSimpleRac(2, 2),
-            expectedSimpleRac(1)
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1, 1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2, 2),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1)
         )
         .runToCompletion(op);
   }
@@ -58,9 +54,9 @@ public class GlueingPartitioningOperatorTest
   public void testPartitioningWithMultipleRACs()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(1, 1, 1, 2, 2, 1),
-        makeSimpleRac(1, 1, 1, 2, 2, 1),
-        makeSimpleRac(1, 1, 2, 2, 1)
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1, 1, 2, 2, 1),
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1, 1, 2, 2, 1),
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1, 2, 2, 1)
     );
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
@@ -70,13 +66,13 @@ public class GlueingPartitioningOperatorTest
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            expectedSimpleRac(1, 1, 1),
-            expectedSimpleRac(2, 2),
-            expectedSimpleRac(1, 1, 1, 1),
-            expectedSimpleRac(2, 2),
-            expectedSimpleRac(1, 1, 1),
-            expectedSimpleRac(2, 2),
-            expectedSimpleRac(1)
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1, 1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2, 2),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1, 1, 1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2, 2),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1, 1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2, 2),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1)
         )
         .runToCompletion(op);
   }
@@ -85,9 +81,9 @@ public class GlueingPartitioningOperatorTest
   public void testPartitioningWithMultipleConcatenationBetweenRACs()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(1, 1),
-        makeSimpleRac(1, 1),
-        makeSimpleRac(1, 2)
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1),
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1),
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 2)
     );
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
@@ -97,8 +93,8 @@ public class GlueingPartitioningOperatorTest
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            expectedSimpleRac(1, 1, 1, 1, 1),
-            expectedSimpleRac(2)
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1, 1, 1, 1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2)
         )
         .runToCompletion(op);
   }
@@ -107,9 +103,9 @@ public class GlueingPartitioningOperatorTest
   public void testPartitioningWithNoGlueing()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(1, 2, 3),
-        makeSimpleRac(4, 5, 6),
-        makeSimpleRac(7, 8, 9)
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 2, 3),
+        RowsAndColumnsHelper.makeSingleColumnRac(4, 5, 6),
+        RowsAndColumnsHelper.makeSingleColumnRac(7, 8, 9)
     );
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
@@ -119,15 +115,15 @@ public class GlueingPartitioningOperatorTest
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            expectedSimpleRac(1),
-            expectedSimpleRac(2),
-            expectedSimpleRac(3),
-            expectedSimpleRac(4),
-            expectedSimpleRac(5),
-            expectedSimpleRac(6),
-            expectedSimpleRac(7),
-            expectedSimpleRac(8),
-            expectedSimpleRac(9)
+            RowsAndColumnsHelper.expectedSingleColumnRac(1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2),
+            RowsAndColumnsHelper.expectedSingleColumnRac(3),
+            RowsAndColumnsHelper.expectedSingleColumnRac(4),
+            RowsAndColumnsHelper.expectedSingleColumnRac(5),
+            RowsAndColumnsHelper.expectedSingleColumnRac(6),
+            RowsAndColumnsHelper.expectedSingleColumnRac(7),
+            RowsAndColumnsHelper.expectedSingleColumnRac(8),
+            RowsAndColumnsHelper.expectedSingleColumnRac(9)
         )
         .runToCompletion(op);
   }
@@ -136,8 +132,8 @@ public class GlueingPartitioningOperatorTest
   public void testPartitioningWithNoPartitionColumns()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(1, 1, 1, 2, 2, 1),
-        makeSimpleRac(1, 1, 1, 2, 2, 1)
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1, 1, 2, 2, 1),
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1, 1, 2, 2, 1)
     );
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
@@ -147,7 +143,7 @@ public class GlueingPartitioningOperatorTest
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            expectedSimpleRac(1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1)
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1, 1, 2, 2, 1, 1, 1, 1, 2, 2, 1)
         )
         .runToCompletion(op);
   }
@@ -156,7 +152,7 @@ public class GlueingPartitioningOperatorTest
   public void testMaxRowsConstraintViolation()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(1, 1, 1)
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1, 1)
     );
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
@@ -176,8 +172,8 @@ public class GlueingPartitioningOperatorTest
   public void testMaxRowsConstraintViolationWhenGlueing()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(1, 1, 1),
-        makeSimpleRac(1, 2, 3)
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1, 1),
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 2, 3)
     );
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
@@ -197,8 +193,8 @@ public class GlueingPartitioningOperatorTest
   public void testMaxRowsConstraintWhenGlueing()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(1, 1, 1),
-        makeSimpleRac(2, 2, 2)
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1, 1),
+        RowsAndColumnsHelper.makeSingleColumnRac(2, 2, 2)
     );
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
@@ -209,8 +205,8 @@ public class GlueingPartitioningOperatorTest
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            expectedSimpleRac(1, 1, 1),
-            expectedSimpleRac(2, 2, 2)
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1, 1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2, 2, 2)
         )
         .runToCompletion(op);
   }
@@ -219,7 +215,7 @@ public class GlueingPartitioningOperatorTest
   public void testStopMidStream()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(1, 1, 1, 2, 2, 1)
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 1, 1, 2, 2, 1)
     );
 
     GlueingPartitioningOperator op = new GlueingPartitioningOperator(
@@ -229,23 +225,9 @@ public class GlueingPartitioningOperatorTest
 
     new OperatorTestHelper()
         .expectAndStopAfter(
-            expectedSimpleRac(1, 1, 1),
-            expectedSimpleRac(2, 2)
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1, 1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2, 2)
         )
         .runToCompletion(op);
-  }
-
-  private RowsAndColumns makeSimpleRac(int... values)
-  {
-    return MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of("column", new IntArrayColumn(values))
-    );
-  }
-
-  private RowsAndColumnsHelper expectedSimpleRac(int... values)
-  {
-    return new RowsAndColumnsHelper()
-        .expectColumn("column", values)
-        .allColumnsRegistered();
   }
 }

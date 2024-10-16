@@ -78,7 +78,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   private final VirtualColumns frameWriterVirtualColumns;
   private final SettableLongVirtualColumn partitionBoostVirtualColumn;
 
-  private Operator op = null;
+  private Operator operator = null;
 
   final AtomicInteger rowId = new AtomicInteger(0);
 
@@ -144,12 +144,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
       if (needToProcessBatch()) {
         runAllOpsOnBatch();
-        try {
-          flushAllRowsAndCols();
-        }
-        catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+        flushAllRowsAndCols();
       }
       return ReturnOrAwait.runAgain();
     } else if (inputChannel.isFinished()) {
@@ -169,7 +164,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
   private void initialiseOperator()
   {
-    op = new Operator()
+    operator = new Operator()
     {
       @Nullable
       @Override
@@ -191,13 +186,13 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
       }
     };
     for (OperatorFactory of : operatorFactoryList) {
-      op = of.wrap(op);
+      operator = of.wrap(operator);
     }
   }
 
   private void runAllOpsOnBatch()
   {
-    op.goOrContinue(null, new Operator.Receiver()
+    operator.goOrContinue(null, new Operator.Receiver()
     {
       @Override
       public Operator.Signal push(RowsAndColumns rac)

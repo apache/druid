@@ -21,7 +21,6 @@ package org.apache.druid.query.operator;
 
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
-import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 
 import java.util.Iterator;
 import java.util.List;
@@ -72,10 +71,7 @@ public class NaivePartitioningOperator extends AbstractPartitioningOperator
     @Override
     protected Iterator<RowsAndColumns> getIteratorForRAC(RowsAndColumns rac)
     {
-      ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
-      if (groupPartitioner == null) {
-        groupPartitioner = new DefaultClusteredGroupPartitioner(rac);
-      }
+      final ClusteredGroupPartitioner groupPartitioner = ClusteredGroupPartitioner.fromRAC(rac);
       return groupPartitioner.partitionOnBoundaries(partitionColumns).iterator();
     }
   }

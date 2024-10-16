@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.operator;
 
+import com.google.common.base.Preconditions;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
@@ -28,7 +29,6 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.Column;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
-import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -67,6 +67,7 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
   )
   {
     super(partitionColumns, child);
+    Preconditions.checkNotNull(maxRowsMaterialized, "maxRowsMaterialized cannot be null");
     this.maxRowsMaterialized = maxRowsMaterialized;
   }
 
@@ -170,10 +171,7 @@ public class GlueingPartitioningOperator extends AbstractPartitioningOperator
     public GluedRACsIterator(RowsAndColumns rac, AtomicReference<RowsAndColumns> previousRacRef, List<String> partitionColumns, int maxRowsMaterialized)
     {
       this.rac = rac;
-      ClusteredGroupPartitioner groupPartitioner = rac.as(ClusteredGroupPartitioner.class);
-      if (groupPartitioner == null) {
-        groupPartitioner = new DefaultClusteredGroupPartitioner(rac);
-      }
+      final ClusteredGroupPartitioner groupPartitioner = ClusteredGroupPartitioner.fromRAC(rac);
       this.boundaries = groupPartitioner.computeBoundaries(partitionColumns);
       this.previousRacRef = previousRacRef;
       this.partitionColumns = partitionColumns;

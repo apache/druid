@@ -35,7 +35,7 @@ public class NaivePartitioningOperatorTest
   public void testPartitioning()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(0, 0, 0, 1, 1, 2, 4, 4, 4)
+        RowsAndColumnsHelper.makeSingleColumnRac(0, 0, 0, 1, 1, 2, 4, 4, 4)
     );
 
     NaivePartitioningOperator op = new NaivePartitioningOperator(
@@ -45,10 +45,10 @@ public class NaivePartitioningOperatorTest
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            expectedSimpleRac(0, 0, 0),
-            expectedSimpleRac(1, 1),
-            expectedSimpleRac(2),
-            expectedSimpleRac(4, 4, 4)
+            RowsAndColumnsHelper.expectedSingleColumnRac(0, 0, 0),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2),
+            RowsAndColumnsHelper.expectedSingleColumnRac(4, 4, 4)
         )
         .runToCompletion(op);
   }
@@ -57,8 +57,8 @@ public class NaivePartitioningOperatorTest
   public void testPartitioningWithMultipleRACs()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(0, 0, 0, 1, 1),
-        makeSimpleRac(1, 2, 2, 2)
+        RowsAndColumnsHelper.makeSingleColumnRac(0, 0, 0, 1, 1),
+        RowsAndColumnsHelper.makeSingleColumnRac(1, 2, 2, 2)
     );
 
     NaivePartitioningOperator op = new NaivePartitioningOperator(
@@ -68,10 +68,10 @@ public class NaivePartitioningOperatorTest
 
     new OperatorTestHelper()
         .expectRowsAndColumns(
-            expectedSimpleRac(0, 0, 0),
-            expectedSimpleRac(1, 1),
-            expectedSimpleRac(1),
-            expectedSimpleRac(2, 2, 2)
+            RowsAndColumnsHelper.expectedSingleColumnRac(0, 0, 0),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1),
+            RowsAndColumnsHelper.expectedSingleColumnRac(2, 2, 2)
         )
         .runToCompletion(op);
   }
@@ -80,7 +80,7 @@ public class NaivePartitioningOperatorTest
   public void testStopMidStream()
   {
     InlineScanOperator inlineScanOperator = InlineScanOperator.make(
-        makeSimpleRac(0, 0, 0, 1, 1, 2, 4, 4, 4)
+        RowsAndColumnsHelper.makeSingleColumnRac(0, 0, 0, 1, 1, 2, 4, 4, 4)
     );
 
     NaivePartitioningOperator op = new NaivePartitioningOperator(
@@ -90,8 +90,8 @@ public class NaivePartitioningOperatorTest
 
     new OperatorTestHelper()
         .expectAndStopAfter(
-            expectedSimpleRac(0, 0, 0),
-            expectedSimpleRac(1, 1)
+            RowsAndColumnsHelper.expectedSingleColumnRac(0, 0, 0),
+            RowsAndColumnsHelper.expectedSingleColumnRac(1, 1)
         )
         .runToCompletion(op);
   }
@@ -131,19 +131,5 @@ public class NaivePartitioningOperatorTest
             singleHelperMaker.apply(4, 92)
         )
         .runToCompletion(op);
-  }
-
-  private RowsAndColumns makeSimpleRac(int... values)
-  {
-    return MapOfColumnsRowsAndColumns.fromMap(
-        ImmutableMap.of("column", new IntArrayColumn(values))
-    );
-  }
-
-  private RowsAndColumnsHelper expectedSimpleRac(int... values)
-  {
-    return new RowsAndColumnsHelper()
-        .expectColumn("column", values)
-        .allColumnsRegistered();
   }
 }
