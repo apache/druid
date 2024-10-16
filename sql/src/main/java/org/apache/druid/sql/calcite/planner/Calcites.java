@@ -206,7 +206,7 @@ public class Calcites
       return ColumnType.DOUBLE;
     } else if (isLongType(sqlTypeName)) {
       return ColumnType.LONG;
-    } else if (isStringType(sqlTypeName)) {
+    } else if (isStringType(sqlTypeName) || sqlTypeName == SqlTypeName.NULL) {
       return ColumnType.STRING;
     } else if (SqlTypeName.OTHER == sqlTypeName) {
       if (type instanceof RowSignatures.ComplexSqlType) {
@@ -247,12 +247,22 @@ public class Calcites
   }
 
   /**
-   * Returns the natural StringComparator associated with the RelDataType
+   * Returns the natural StringComparator associated with the RelDataType, or null if the type is not convertible to
+   * {@link ColumnType} by {@link #getColumnTypeForRelDataType(RelDataType)}.
    */
+  @Nullable
   public static StringComparator getStringComparatorForRelDataType(RelDataType dataType)
   {
-    final ColumnType valueType = getColumnTypeForRelDataType(dataType);
-    return getStringComparatorForValueType(valueType);
+    if (dataType.getSqlTypeName() == SqlTypeName.NULL) {
+      return StringComparators.NATURAL;
+    } else {
+      final ColumnType valueType = getColumnTypeForRelDataType(dataType);
+      if (valueType == null) {
+        return null;
+      }
+
+      return getStringComparatorForValueType(valueType);
+    }
   }
 
   /**
