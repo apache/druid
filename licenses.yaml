@@ -5563,10 +5563,10 @@ license_file_path: licenses/bin/d3-axis.BSD3
 name: "d3-color"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 2.0.0
-license_file_path: licenses/bin/d3-color.BSD3
+version: 3.1.0
+license_file_path: licenses/bin/d3-color.ISC
 
 ---
 
@@ -5593,10 +5593,10 @@ license_file_path: licenses/bin/d3-format.BSD3
 name: "d3-interpolate"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 2.0.1
-license_file_path: licenses/bin/d3-interpolate.BSD3
+version: 3.0.1
+license_file_path: licenses/bin/d3-interpolate.ISC
 
 ---
 
@@ -5613,10 +5613,10 @@ license_file_path: licenses/bin/d3-scale-chromatic.ISC
 name: "d3-scale"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 3.3.0
-license_file_path: licenses/bin/d3-scale.BSD3
+version: 4.0.2
+license_file_path: licenses/bin/d3-scale.ISC
 
 ---
 
@@ -5803,7 +5803,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Raynos
-version: 1.1.1
+version: 1.1.2
 license_file_path: licenses/bin/function-bind.MIT
 
 ---
@@ -6211,7 +6211,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Blake Embrey (hello@blakeembrey.com)
-version: 1.7.0
+version: 1.9.0
 license_file_path: licenses/bin/path-to-regexp.MIT
 
 ---
