@@ -16,26 +16,24 @@
  * limitations under the License.
  */
 
-module.exports = {
-  env: {
-    browser: true,
-  },
-  extends: ['@awesome-code-style', '@awesome-code-style/eslint-config/react'],
-  parserOptions: {
-    project: 'tsconfig.json',
-  },
-  settings: {
-    react: {
-      version: 'detect',
+import awesomeCodeStyle, { configs } from '@awesome-code-style/eslint-config';
+import awesomeCodeStyleReact, { reactConfigs } from '@awesome-code-style/eslint-config/react';
+import notice from 'eslint-plugin-notice';
+
+const TYPESCRIPT_FILES = ['**/*.ts', '**/*.tsx'];
+
+export default [
+  ...awesomeCodeStyle,
+  ...awesomeCodeStyleReact,
+  ...configs.typeChecked.map(config => ({ ...config, files: TYPESCRIPT_FILES })),
+  ...reactConfigs.reactTypeChecked.map(config => ({ ...config, files: TYPESCRIPT_FILES })),
+  {
+    plugins: {
+      notice,
+    },
+    rules: {
+      'notice/notice': [2, { mustMatch: 'Licensed to the Apache Software Foundation \\(ASF\\).+' }],
+      'react/jsx-no-bind': [2, { allowArrowFunctions: true, allowFunctions: true }],
     },
   },
-  rules: {
-    '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
-    'header/header': [
-      2,
-      'block',
-      { pattern: 'Licensed to the Apache Software Foundation \\(ASF\\).+' },
-    ],
-    'react/jsx-no-bind': [2, { allowArrowFunctions: true, allowFunctions: true }],
-  },
-};
+];
