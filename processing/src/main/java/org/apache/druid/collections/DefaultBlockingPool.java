@@ -119,7 +119,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       throw new RuntimeException(e);
     }
     finally {
-      pendingRequests.incrementAndGet();
+      pendingRequests.decrementAndGet();
     }
   }
 

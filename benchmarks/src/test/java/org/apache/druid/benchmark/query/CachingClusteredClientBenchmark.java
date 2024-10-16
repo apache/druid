@@ -358,7 +358,7 @@ public class CachingClusteredClientBenchmark
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
     );
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergeBufferPool);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergeBufferPool, config, groupByStatsProvider);
     final GroupingEngine groupingEngine = new GroupingEngine(

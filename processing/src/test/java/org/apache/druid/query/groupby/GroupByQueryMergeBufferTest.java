@@ -124,7 +124,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(MERGE_BUFFER_POOL);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(MERGE_BUFFER_POOL, config, groupByStatsProvider);
 

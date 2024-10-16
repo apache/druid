@@ -326,8 +326,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
 
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergePool);
-    final GroupByStatsProvider tooSmallGroupByStatsProvider = new GroupByStatsProvider(tooSmallMergePool);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
 
     final GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(
         mergePool,
@@ -337,7 +336,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     final GroupByResourcesReservationPool tooSmallGroupByResourcesReservationPool = new GroupByResourcesReservationPool(
         tooSmallMergePool,
         config,
-        tooSmallGroupByStatsProvider
+        groupByStatsProvider
     );
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,

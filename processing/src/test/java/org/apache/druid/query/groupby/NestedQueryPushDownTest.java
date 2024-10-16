@@ -287,7 +287,7 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergePool);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergePool, config, groupByStatsProvider);
     final GroupByResourcesReservationPool groupByResourcesReservationPool2 =

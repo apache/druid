@@ -19,12 +19,10 @@
 
 package org.apache.druid.query.groupby;
 
-import org.apache.druid.collections.BlockingPool;
-import org.apache.druid.guice.annotations.Merging;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.query.groupby.epinephelinae.LimitedTemporaryStorage;
 
 import javax.inject.Inject;
-import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,40 +30,35 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Collects stats for group by queries like used merged buffer count, spilled bytes and group by resource acquisition time.
  */
+@LazySingleton
 public class GroupByStatsProvider
 {
-  private final AtomicLong groupByResourceAcquisitionTimeNs = new AtomicLong(0);
-  private final AtomicLong groupByResourceAcquisitionCount = new AtomicLong(0);
+  private final AtomicLong resourceAcquisitionTimeNs = new AtomicLong(0);
+  private final AtomicLong resourceAcquisitionCount = new AtomicLong(0);
 
-  private final BlockingPool<ByteBuffer> blockingPool;
   private final ConcurrentLinkedQueue<LimitedTemporaryStorage> temporaryStorages;
 
   @Inject
-  public GroupByStatsProvider(@Merging BlockingPool<ByteBuffer> blockingPool)
+  public GroupByStatsProvider()
   {
-    this.blockingPool = blockingPool;
     this.temporaryStorages = new ConcurrentLinkedQueue<>();
   }
 
   public synchronized void groupByResourceAcquisitionTimeNs(long delayNs)
   {
-    groupByResourceAcquisitionTimeNs.addAndGet(delayNs);
-    groupByResourceAcquisitionCount.incrementAndGet();
+    resourceAcquisitionTimeNs.addAndGet(delayNs);
+    resourceAcquisitionCount.incrementAndGet();
   }
 
   public synchronized long getAndResetGroupByResourceAcquisitionStats()
   {
-    long average = (groupByResourceAcquisitionTimeNs.get() / groupByResourceAcquisitionCount.get());
+    long average = resourceAcquisitionCount.get() != 0 ?
+                   (resourceAcquisitionTimeNs.get() / resourceAcquisitionCount.get()) : 0;
 
-    groupByResourceAcquisitionTimeNs.set(0);
-    groupByResourceAcquisitionCount.set(0);
+    resourceAcquisitionTimeNs.set(0);
+    resourceAcquisitionCount.set(0);
 
     return average;
-  }
-
-  public long getAcquiredMergeBufferCount()
-  {
-    return blockingPool.getUsedBufferCount();
   }
 
   public void registerTemporaryStorage(LimitedTemporaryStorage temporaryStorage)

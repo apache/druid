@@ -75,7 +75,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
 
     final BlockingPool<ByteBuffer> mergePool =
         new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergePool);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
 
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergePool, config, groupByStatsProvider);

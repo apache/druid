@@ -113,6 +113,7 @@ public class GroupByRowProcessor
 
     closeOnExit.register(temporaryStorage);
 
+
     groupByStatsProvider.registerTemporaryStorage(temporaryStorage);
 
     Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(

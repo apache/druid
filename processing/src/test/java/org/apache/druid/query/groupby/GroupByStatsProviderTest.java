@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.groupby;
 
-import org.apache.druid.collections.BlockingPool;
-import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.query.groupby.epinephelinae.LimitedTemporaryStorage;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -28,7 +26,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 public class GroupByStatsProviderTest
 {
@@ -36,20 +33,9 @@ public class GroupByStatsProviderTest
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   @Test
-  public void testMergeBufferCount()
-  {
-    BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 10);
-
-    GroupByStatsProvider statsProvider = new GroupByStatsProvider(mergeBufferPool);
-    mergeBufferPool.takeBatch(5);
-
-    Assert.assertEquals(5, statsProvider.getAcquiredMergeBufferCount());
-  }
-
-  @Test
   public void testMergeBufferAcquisitionTime()
   {
-    GroupByStatsProvider statsProvider = new GroupByStatsProvider(null);
+    GroupByStatsProvider statsProvider = new GroupByStatsProvider();
 
     statsProvider.groupByResourceAcquisitionTimeNs(100);
     statsProvider.groupByResourceAcquisitionTimeNs(300);
@@ -60,7 +46,7 @@ public class GroupByStatsProviderTest
   @Test
   public void testSpilledBytes() throws IOException
   {
-    GroupByStatsProvider statsProvider = new GroupByStatsProvider(null);
+    GroupByStatsProvider statsProvider = new GroupByStatsProvider();
 
     LimitedTemporaryStorage temporaryStorage1 =
         new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024);

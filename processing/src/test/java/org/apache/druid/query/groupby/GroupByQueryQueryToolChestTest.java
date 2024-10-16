@@ -1295,7 +1295,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
     );
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergeBufferPool);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergeBufferPool, queryConfig, groupByStatsProvider);
     final GroupingEngine groupingEngine = new GroupingEngine(

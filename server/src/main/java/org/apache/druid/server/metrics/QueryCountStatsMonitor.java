@@ -82,7 +82,7 @@ public class QueryCountStatsMonitor extends AbstractMonitor
     emitter.emit(
         builder.setMetric(
             "mergeBuffer/acquiredCount",
-            groupByStatsProvider.getAcquiredMergeBufferCount()
+            this.mergeBufferPool.getUsedBufferCount()
         )
     );
     emitter.emit(

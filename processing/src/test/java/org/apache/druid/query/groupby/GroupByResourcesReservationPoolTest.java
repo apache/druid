@@ -94,7 +94,7 @@ public class GroupByResourcesReservationPoolTest
     // Blocking pool with a single buffer, which means only one of the queries can succeed at a time
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
 
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergeBufferPool);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
 
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergeBufferPool, CONFIG, groupByStatsProvider);
@@ -194,7 +194,7 @@ public class GroupByResourcesReservationPoolTest
   public void testMultipleSimultaneousAllocationAttemptsFail()
   {
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergeBufferPool);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergeBufferPool, CONFIG, groupByStatsProvider);
     QueryResourceId queryResourceId = new QueryResourceId("test-id");
@@ -211,7 +211,7 @@ public class GroupByResourcesReservationPoolTest
   public void testMultipleSequentialAllocationAttemptsSucceed()
   {
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergeBufferPool);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergeBufferPool, CONFIG, groupByStatsProvider);
     QueryResourceId queryResourceId = new QueryResourceId("test-id");

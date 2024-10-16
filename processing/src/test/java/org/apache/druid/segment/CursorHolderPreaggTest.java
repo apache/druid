@@ -90,7 +90,7 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
             () -> ByteBuffer.allocate(50000),
             4
         );
-    GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider(mergePool);
+    GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     groupingEngine = new GroupingEngine(
         new DruidProcessingConfig(),
         GroupByQueryConfig::new,

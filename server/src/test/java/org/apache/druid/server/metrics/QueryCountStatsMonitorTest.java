@@ -32,8 +32,11 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class QueryCountStatsMonitorTest
@@ -82,18 +85,12 @@ public class QueryCountStatsMonitorTest
       }
     };
 
-    groupByStatsProvider = new GroupByStatsProvider(mergeBufferPool)
+    groupByStatsProvider = new GroupByStatsProvider()
     {
       @Override
       public synchronized long getAndResetGroupByResourceAcquisitionStats()
       {
         return 1L;
-      }
-
-      @Override
-      public long getAcquiredMergeBufferCount()
-      {
-        return 2L;
       }
 
       @Override
@@ -104,7 +101,7 @@ public class QueryCountStatsMonitorTest
     };
 
 
-    mergeBufferPool = new DefaultBlockingPool(() -> ByteBuffer.allocate(1024), 1);
+    mergeBufferPool = new DefaultBlockingPool(() -> ByteBuffer.allocate(1024), 5);
     executorService = Executors.newSingleThreadExecutor();
   }
 
@@ -137,13 +134,32 @@ public class QueryCountStatsMonitorTest
     Assert.assertEquals(4L, (long) resultMap.get("query/timeout/count"));
     Assert.assertEquals(10L, (long) resultMap.get("query/count"));
     Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/pendingRequests"));
-    Assert.assertEquals(1, (long) resultMap.get("mergeBuffer/acquisitionTimeNs"));
-    Assert.assertEquals(2, (long) resultMap.get("groupBy/acquiredCount"));
+    Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/acquiredCount"));
+    Assert.assertEquals(1, (long) resultMap.get("groupBy/acquisitionTimeNs"));
     Assert.assertEquals(3, (long) resultMap.get("groupBy/spilledBytes"));
   }
 
-  @Test(timeout = 2_000L)
-  public void testMonitoringMergeBuffer()
+  @Test
+  public void testMonitoringMergeBuffer_acquiredCount()
+      throws ExecutionException, InterruptedException, TimeoutException
+  {
+    executorService.submit(() -> {
+      mergeBufferPool.takeBatch(4);
+    }).get(1, TimeUnit.SECONDS);
+
+    final QueryCountStatsMonitor monitor =
+        new QueryCountStatsMonitor(queryCountStatsProvider, groupByStatsProvider, mergeBufferPool);
+    final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
+    boolean ret = monitor.doMonitor(emitter);
+    Assert.assertTrue(ret);
+
+    List<Number> numbers = emitter.getMetricValues("mergeBuffer/acquiredCount", Collections.emptyMap());
+    Assert.assertEquals(1, numbers.size());
+    Assert.assertEquals(4, numbers.get(0).intValue());
+  }
+
+  @Test
+  public void testMonitoringMergeBuffer_pendingRequests()
   {
     executorService.submit(() -> {
       mergeBufferPool.takeBatch(10);
