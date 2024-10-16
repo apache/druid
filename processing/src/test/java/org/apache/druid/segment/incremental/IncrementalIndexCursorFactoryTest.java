@@ -56,6 +56,7 @@ import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.topn.TopNQueryBuilder;
@@ -171,12 +172,14 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
                     5
                 )
             ),
-            new GroupByQueryConfig()
+            new GroupByQueryConfig(),
+            new GroupByStatsProvider()
         ),
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
         (query, future) -> {
-        }
+        },
+        new GroupByStatsProvider()
     );
     topnQueryEngine = new TopNQueryEngine(nonBlockingPool);
   }
