@@ -301,13 +301,18 @@ public class SqlTestFrameworkConfig
       setConfig(context);
     }
 
-    private void setConfig(ExtensionContext context)
+    public void setConfig(ExtensionContext context)
     {
       testName = buildTestCaseName(context);
       method = context.getTestMethod().get();
       Class<?> testClass = context.getTestClass().get();
       List<Annotation> annotations = collectAnnotations(testClass, method);
       config = new SqlTestFrameworkConfig(annotations);
+    }
+
+    public void setConfig(SqlTestFrameworkConfig config)
+    {
+      this.config = config;
     }
 
     /**
