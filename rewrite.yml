@@ -20,6 +20,7 @@ recipeList:
   - org.openrewrite.java.testing.junit5.RemoveObsoleteRunners:
       obsoleteRunners:
         - org.junit.experimental.runners.Enclosed
+  - org.openrewrite.apache.commons.lang.UpgradeApacheCommonsLang_2_3
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: org.apache.druid.UpgradeCalciteTestsToJunit5

@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -1132,6 +1133,82 @@ public class NewestSegmentFirstPolicyTest
             new UserCompactionTaskDimensionsConfig(null)
         ).build(),
         timeline
+    );
+    // No more
+    Assert.assertFalse(iterator.hasNext());
+  }
+
+  @Test
+  public void testIteratorDoesNotReturnsSegmentsWhenPartitionDimensionsPrefixed()
+  {
+    // Same indexSpec as what is set in the auto compaction config
+    Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
+    // Set range partitions spec with dimensions ["dim2", "dim4"] -- the same as what is set in the auto compaction config
+    PartitionsSpec partitionsSpec = new DimensionRangePartitionsSpec(
+        null,
+        Integer.MAX_VALUE,
+        ImmutableList.of("dim2", "dim4"),
+        false
+    );
+
+    // Create segments that were compacted (CompactionState != null) and have
+    // Dimensions=["dim2", "dim4", "dim3", "dim1"] with ["dim2", "dim4"] as partition dimensions for interval 2017-10-01T00:00:00/2017-10-02T00:00:00,
+    // Dimensions=["dim2", "dim4", "dim1", "dim3"] with ["dim2", "dim4"] as partition dimensions for interval 2017-10-02T00:00:00/2017-10-03T00:00:00,
+    final SegmentTimeline timeline = createTimeline(
+        createSegments()
+            .startingAt("2017-10-01")
+            .withNumPartitions(4)
+            .withCompactionState(
+                new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim2", "dim4", "dim3", "dim1"))), null, null, indexSpec, null)
+            ),
+        createSegments()
+            .startingAt("2017-10-02")
+            .withNumPartitions(4)
+            .withCompactionState(
+                new CompactionState(partitionsSpec, new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim2", "dim4", "dim1", "dim3"))), null, null, indexSpec, null)
+            )
+    );
+
+    // Auto compaction config sets Dimensions=["dim1", "dim2", "dim3", "dim4"] and partition dimensions as ["dim2", "dim4"]
+    CompactionSegmentIterator iterator = createIterator(
+        configBuilder().withDimensionsSpec(
+                           new UserCompactionTaskDimensionsConfig(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3", "dim4")))
+                       )
+                       .withTuningConfig(
+                           new UserCompactionTaskQueryTuningConfig(
+                               null,
+                               null,
+                               null,
+                               1000L,
+                               null,
+                               partitionsSpec,
+                               IndexSpec.DEFAULT,
+                               null,
+                               null,
+                               null,
+                               null,
+                               null,
+                               null,
+                               null,
+                               null,
+                               null,
+                               null,
+                               null,
+                               null
+                           )
+                       )
+                       .build(),
+        timeline
+    );
+    // We should get only interval 2017-10-01T00:00:00/2017-10-02T00:00:00 since 2017-10-02T00:00:00/2017-10-03T00:00:00
+    // has dimension order as expected post reordering of partition dimensions.
+    Assert.assertTrue(iterator.hasNext());
+    List<DataSegment> expectedSegmentsToCompact = new ArrayList<>(
+        timeline.findNonOvershadowedObjectsInInterval(Intervals.of("2017-10-01T00:00:00/2017-10-02T00:00:00"), Partitions.ONLY_COMPLETE)
+    );
+    Assert.assertEquals(
+        ImmutableSet.copyOf(expectedSegmentsToCompact),
+        ImmutableSet.copyOf(iterator.next().getSegments())
     );
     // No more
     Assert.assertFalse(iterator.hasNext());

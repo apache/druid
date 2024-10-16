@@ -213,6 +213,7 @@ exports[`HeaderBar matches snapshot 1`] = `
         Capabilities {
           "coordinator": true,
           "maxTaskSlots": undefined,
+          "multiStageQueryDart": true,
           "multiStageQueryTask": true,
           "overlord": true,
           "queryType": "nativeAndSql",

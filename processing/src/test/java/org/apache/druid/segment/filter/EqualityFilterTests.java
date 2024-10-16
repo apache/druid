@@ -1629,6 +1629,100 @@ public class EqualityFilterTests
           : ImmutableList.of("0", "1", "2", "3", "4", "5")
       );
     }
+
+    @Test
+    public void testArraysAsMvds()
+    {
+      Assume.assumeTrue(canTestArrayColumns());
+      /*
+          dim0 .. arrayString               arrayLong             arrayDouble
+          "0", .. ["a", "b", "c"],          [1L, 2L, 3L],         [1.1, 2.2, 3.3]
+          "1", .. [],                       [],                   [1.1, 2.2, 3.3]
+          "2", .. null,                     [1L, 2L, 3L],         [null]
+          "3", .. ["a", "b", "c"],          null,                 []
+          "4", .. ["c", "d"],               [null],               [-1.1, -333.3]
+          "5", .. [null],                   [123L, 345L],         null
+       */
+
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          new EqualityFilter(
+              "arrayStringAsMvd",
+              ColumnType.STRING,
+              "b",
+              null
+          ),
+          ImmutableList.of("0", "3")
+      );
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayStringAsMvd",
+                  ColumnType.STRING,
+                  "b",
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("1", "4")
+          : ImmutableList.of("1", "2", "4", "5")
+      );
+
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          new EqualityFilter(
+              "arrayLongAsMvd",
+              ColumnType.STRING,
+              "2",
+              null
+          ),
+          ImmutableList.of("0", "2")
+      );
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayLongAsMvd",
+                  ColumnType.STRING,
+                  "2",
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("1", "5")
+          : ImmutableList.of("1", "3", "4", "5")
+      );
+
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          new EqualityFilter(
+              "arrayDoubleAsMvd",
+              ColumnType.STRING,
+              "3.3",
+              null
+          ),
+          ImmutableList.of("0", "1")
+      );
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          NotDimFilter.of(
+              new EqualityFilter(
+                  "arrayDoubleAsMvd",
+                  ColumnType.STRING,
+                  "3.3",
+                  null
+              )
+          ),
+          NullHandling.sqlCompatible()
+          ? ImmutableList.of("3", "4")
+          : ImmutableList.of("2", "3", "4", "5")
+      );
+
+      assertFilterMatchesSkipVectorizeUnlessFallback(
+          new EqualityFilter(
+              "arrayConstantAsMvd",
+              ColumnType.STRING,
+              "3",
+              null
+          ),
+          ImmutableList.of("0", "1", "2", "3", "4", "5")
+      );
+    }
   }
 
   public static class EqualityFilterNonParameterizedTests extends InitializedNullHandlingTest

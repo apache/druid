@@ -48,6 +48,7 @@ import org.apache.druid.java.util.common.io.smoosh.Smoosh;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -64,6 +65,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedIterable;
 import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.VSizeColumnarMultiInts;
+import org.apache.druid.segment.projections.Projections;
 import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.FloatNumericColumnSupplier;
 import org.apache.druid.segment.serde.LongNumericColumnSupplier;
@@ -621,6 +623,7 @@ public class IndexIO
           mapper,
           timeBuffer,
           smooshedFiles,
+          null,
           loadFailed
       );
 
@@ -643,6 +646,22 @@ public class IndexIO
           smooshedFiles,
           loadFailed
       );
+      final Map<String, Map<String, Supplier<ColumnHolder>>> projectionsColumns = new LinkedHashMap<>();
+      final Metadata metadata = getMetdata(smooshedFiles, mapper, inDir);
+      if (metadata != null && metadata.getProjections() != null) {
+        for (AggregateProjectionMetadata projectionSpec : metadata.getProjections()) {
+          final Map<String, Supplier<ColumnHolder>> projectionColumns = readProjectionColumns(
+              mapper,
+              loadFailed,
+              projectionSpec,
+              smooshedFiles,
+              columns,
+              dataInterval
+          );
+
+          projectionsColumns.put(projectionSpec.getSchema().getName(), projectionColumns);
+        }
+      }
 
       final QueryableIndex index = new SimpleQueryableIndex(
           dataInterval,
@@ -650,36 +669,102 @@ public class IndexIO
           segmentBitmapSerdeFactory.getBitmapFactory(),
           columns,
           smooshedFiles,
-          lazy
+          lazy,
+          metadata,
+          projectionsColumns
       )
       {
         @Override
         public Metadata getMetadata()
         {
-          try {
-            ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
-            if (metadataBB != null) {
-              return mapper.readValue(
-                  SERIALIZER_UTILS.readBytes(metadataBB, metadataBB.remaining()),
-                  Metadata.class
-              );
-            }
-          }
-          catch (JsonParseException | JsonMappingException ex) {
-            // Any jackson deserialization errors are ignored e.g. if metadata contains some aggregator which
-            // is no longer supported then it is OK to not use the metadata instead of failing segment loading
-            log.warn(ex, "Failed to load metadata for segment [%s]", inDir);
-          }
-          catch (IOException ex) {
-            log.warn(ex, "Failed to read metadata for segment [%s]", inDir);
-          }
-          return null;
+          return getMetdata(smooshedFiles, mapper, inDir);
         }
       };
 
       log.debug("Mapped v9 index[%s] in %,d millis", inDir, System.currentTimeMillis() - startTime);
 
       return index;
+    }
+
+    private Map<String, Supplier<ColumnHolder>> readProjectionColumns(
+        ObjectMapper mapper,
+        SegmentLazyLoadFailCallback loadFailed,
+        AggregateProjectionMetadata projectionSpec,
+        SmooshedFileMapper smooshedFiles,
+        Map<String, Supplier<ColumnHolder>> columns,
+        Interval dataInterval
+    ) throws IOException
+    {
+      final Map<String, Supplier<ColumnHolder>> projectionColumns = new LinkedHashMap<>();
+      for (String groupingColumn : projectionSpec.getSchema().getGroupingColumns()) {
+        final String smooshName = Projections.getProjectionSmooshV9FileName(projectionSpec, groupingColumn);
+        final ByteBuffer colBuffer = smooshedFiles.mapFile(smooshName);
+
+        final ColumnHolder parentColumn;
+        if (columns.containsKey(groupingColumn)) {
+          parentColumn = columns.get(groupingColumn).get();
+        } else {
+          parentColumn = null;
+        }
+        registerColumnHolder(
+            true,
+            projectionColumns,
+            groupingColumn,
+            mapper,
+            colBuffer,
+            smooshedFiles,
+            parentColumn,
+            loadFailed
+        );
+
+        if (groupingColumn.equals(projectionSpec.getSchema().getTimeColumnName())) {
+          projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(groupingColumn));
+        }
+      }
+      for (AggregatorFactory aggregator : projectionSpec.getSchema().getAggregators()) {
+        final String smooshName = Projections.getProjectionSmooshV9FileName(projectionSpec, aggregator.getName());
+        final ByteBuffer aggBuffer = smooshedFiles.mapFile(smooshName);
+        registerColumnHolder(
+            true,
+            projectionColumns,
+            aggregator.getName(),
+            mapper,
+            aggBuffer,
+            smooshedFiles,
+            null,
+            loadFailed
+        );
+      }
+      if (projectionSpec.getSchema().getTimeColumnName() == null) {
+        projectionColumns.put(
+            ColumnHolder.TIME_COLUMN_NAME,
+            Projections.makeConstantTimeSupplier(projectionSpec.getNumRows(), dataInterval.getStartMillis())
+        );
+      }
+      return projectionColumns;
+    }
+
+    @Nullable
+    private Metadata getMetdata(SmooshedFileMapper smooshedFiles, ObjectMapper mapper, File inDir)
+    {
+      try {
+        ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
+        if (metadataBB != null) {
+          return mapper.readValue(
+              SERIALIZER_UTILS.readBytes(metadataBB, metadataBB.remaining()),
+              Metadata.class
+          );
+        }
+      }
+      catch (JsonParseException | JsonMappingException ex) {
+        // Any jackson deserialization errors are ignored e.g. if metadata contains some aggregator which
+        // is no longer supported then it is OK to not use the metadata instead of failing segment loading
+        log.warn(ex, "Failed to load metadata for segment [%s]", inDir);
+      }
+      catch (IOException ex) {
+        log.warn(ex, "Failed to read metadata for segment [%s]", inDir);
+      }
+      return null;
     }
 
     /**
@@ -740,6 +825,7 @@ public class IndexIO
             mapper,
             colBuffer,
             smooshedFiles,
+            null,
             loadFailed
         );
       }
@@ -752,6 +838,7 @@ public class IndexIO
         ObjectMapper mapper,
         ByteBuffer colBuffer,
         SmooshedFileMapper smooshedFiles,
+        @Nullable ColumnHolder parentColumn,
         SegmentLazyLoadFailCallback loadFailed
     ) throws IOException
     {
@@ -767,7 +854,8 @@ public class IndexIO
                     internedColumnName,
                     mapper,
                     colBuffer,
-                    smooshedFiles
+                    smooshedFiles,
+                    parentColumn
                 );
               }
               catch (IOException | RuntimeException e) {
@@ -782,7 +870,8 @@ public class IndexIO
             internedColumnName,
             mapper,
             colBuffer,
-            smooshedFiles
+            smooshedFiles,
+            parentColumn
         );
         columns.put(internedColumnName, () -> columnHolder);
       }
@@ -797,11 +886,12 @@ public class IndexIO
         String columnName, // columnName is not used in this method, but used in tests.
         ObjectMapper mapper,
         ByteBuffer byteBuffer,
-        SmooshedFileMapper smooshedFiles
+        SmooshedFileMapper smooshedFiles,
+        @Nullable ColumnHolder parentColumn
     ) throws IOException
     {
       ColumnDescriptor serde = mapper.readValue(SERIALIZER_UTILS.readString(byteBuffer), ColumnDescriptor.class);
-      return serde.read(byteBuffer, columnConfig, smooshedFiles);
+      return serde.read(byteBuffer, columnConfig, smooshedFiles, parentColumn);
     }
   }
 

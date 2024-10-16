@@ -21,6 +21,7 @@ package org.apache.druid.java.util.common.logger;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -103,8 +104,9 @@ public class Logger
   }
 
   /**
-   * Returns a copy of this Logger that does not log exception stack traces, unless the log level is DEBUG or lower.
-   * Useful for writing code like: {@code log.noStackTrace().warn(e, "Something happened.");}
+   * Returns a copy of this Logger that does not log exception stack traces or {@link DruidException#getContext()},
+   * unless the log level is DEBUG or lower. Useful for writing code like:
+   * {@code log.noStackTrace().warn(e, "Something happened.");}
    */
   public Logger noStackTrace()
   {
@@ -270,7 +272,14 @@ public class Logger
 
   private void logException(BiConsumer<String, Throwable> fn, Throwable t, String message)
   {
-    if (stackTraces || log.isDebugEnabled()) {
+    final boolean logStackTrace = stackTraces || log.isDebugEnabled();
+
+    if (logStackTrace) {
+      // If logging stack traces, *also* log extra context information about DruidExceptions.
+      if (t instanceof DruidException && !((DruidException) t).getContext().isEmpty()) {
+        message = (message == null ? "" : message + "\nDruidException context: " + ((DruidException) t).getContext());
+      }
+
       fn.accept(message, t);
     } else {
       if (message.isEmpty()) {

@@ -469,6 +469,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringLength()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT dim1, MV_LENGTH(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1, 2 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -629,6 +630,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringPrependAppend()
   {
+    cannotVectorizeUnlessFallback();
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
@@ -812,6 +814,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOffset()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT MV_OFFSET(dim3, 1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -848,6 +851,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOrdinal()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT MV_ORDINAL(dim3, 2), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -888,6 +892,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOffsetOf()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT MV_OFFSET_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -934,6 +939,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOrdinalOf()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT MV_ORDINAL_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -981,6 +987,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringToString()
   {
+    cannotVectorizeUnlessFallback();
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(

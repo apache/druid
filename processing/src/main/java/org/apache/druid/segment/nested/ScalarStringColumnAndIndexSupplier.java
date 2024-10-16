@@ -49,7 +49,8 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
-      ColumnBuilder columnBuilder
+      ColumnBuilder columnBuilder,
+      @Nullable ScalarStringColumnAndIndexSupplier parent
   )
   {
     final byte version = bb.get();
@@ -61,17 +62,22 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
         final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
 
-        final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
-        );
+        if (parent != null) {
+          dictionarySupplier = parent.dictionarySupplier;
+        } else {
+          final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
+          );
 
-        dictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
-            mapper,
-            stringDictionaryBuffer,
-            byteOrder
-        );
+          dictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
+              mapper,
+              stringDictionaryBuffer,
+              byteOrder
+          );
+        }
+
         final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
@@ -105,6 +111,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
       throw new RE("Unknown version " + version);
     }
   }
+
 
   private final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
   private final Supplier<ColumnarInts> encodedColumnSupplier;

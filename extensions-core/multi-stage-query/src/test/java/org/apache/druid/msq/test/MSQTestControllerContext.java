@@ -37,6 +37,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -106,6 +107,7 @@ public class MSQTestControllerContext implements ControllerContext
 
   private Controller controller;
   private final WorkerMemoryParameters workerMemoryParameters;
+  private final TaskLockType taskLockType;
   private final QueryContext queryContext;
 
   public MSQTestControllerContext(
@@ -114,6 +116,7 @@ public class MSQTestControllerContext implements ControllerContext
       TaskActionClient taskActionClient,
       WorkerMemoryParameters workerMemoryParameters,
       List<ImmutableSegmentLoadInfo> loadedSegments,
+      TaskLockType taskLockType,
       QueryContext queryContext
   )
   {
@@ -134,6 +137,7 @@ public class MSQTestControllerContext implements ControllerContext
                                              .collect(Collectors.toList())
     );
     this.workerMemoryParameters = workerMemoryParameters;
+    this.taskLockType = taskLockType;
     this.queryContext = queryContext;
   }
 
@@ -320,6 +324,12 @@ public class MSQTestControllerContext implements ControllerContext
   public TaskActionClient taskActionClient()
   {
     return taskActionClient;
+  }
+
+  @Override
+  public TaskLockType taskLockType()
+  {
+    return taskLockType;
   }
 
   @Override

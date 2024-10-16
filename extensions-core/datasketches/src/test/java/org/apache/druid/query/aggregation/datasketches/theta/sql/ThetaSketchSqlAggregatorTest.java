@@ -177,6 +177,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctThetaSketch()
   {
+    cannotVectorizeUnlessFallback();
     final String sql = "SELECT\n"
                        + "  SUM(cnt),\n"
                        + "  APPROX_COUNT_DISTINCT_DS_THETA(dim2),\n"
@@ -1157,6 +1158,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testThetaEstimateAsVirtualColumnWithGroupByOrderBy()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT"
         + " THETA_SKETCH_ESTIMATE(thetasketch_dim1), count(*)"
