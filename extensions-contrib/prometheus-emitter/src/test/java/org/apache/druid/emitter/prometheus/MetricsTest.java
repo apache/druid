@@ -96,14 +96,16 @@ public class MetricsTest
   }
 
   @Test
-  public void testMetricsConfigurationWithNonExistentMetric() {
+  public void testMetricsConfigurationWithNonExistentMetric()
+  {
     Metrics metrics = new Metrics("test_4", null, true, true, null);
     DimensionsAndCollector nonExistentDimsCollector = metrics.getByName("non/existent", "historical");
     Assert.assertNull(nonExistentDimsCollector);
   }
 
   @Test
-  public void testMetricsConfigurationWithUnSupportedType() {
+  public void testMetricsConfigurationWithUnSupportedType()
+  {
     Assert.assertThrows(ISE.class, () -> {
       new Metrics("test_5", "src/test/resources/defaultMetricsTest.json", true, true, null);
     });
