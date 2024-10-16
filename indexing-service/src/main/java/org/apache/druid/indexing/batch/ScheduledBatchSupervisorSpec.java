@@ -40,12 +40,12 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-public class BatchSupervisorSpec implements SupervisorSpec
+public class ScheduledBatchSupervisorSpec implements SupervisorSpec
 {
   public static final String TYPE = "scheduled_batch";
   public static final String ID_PREFIX = "scheduled_batch__";
 
-  private static final Logger log = new Logger(BatchSupervisor.class);
+  private static final Logger log = new Logger(ScheduledBatchSupervisor.class);
 
   @JsonProperty
   private final SqlQuery spec;
@@ -71,7 +71,7 @@ public class BatchSupervisorSpec implements SupervisorSpec
   private final BrokerClient brokerClient;
 
   @JsonCreator
-  public BatchSupervisorSpec(
+  public ScheduledBatchSupervisorSpec(
       @JsonProperty("spec") final SqlQuery spec,
       @JsonProperty("schedulerConfig") final CronSchedulerConfig schedulerConfig,
       @JsonProperty("suspended") @Nullable Boolean suspended,
@@ -142,9 +142,9 @@ public class BatchSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public BatchSupervisor createSupervisor()
+  public ScheduledBatchSupervisor createSupervisor()
   {
-    return new BatchSupervisor(this, batchScheduler);
+    return new ScheduledBatchSupervisor(this, batchScheduler);
   }
 
   @Override
@@ -154,9 +154,9 @@ public class BatchSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public BatchSupervisorSpec createSuspendedSpec()
+  public ScheduledBatchSupervisorSpec createSuspendedSpec()
   {
-    return new BatchSupervisorSpec(
+    return new ScheduledBatchSupervisorSpec(
         spec,
         schedulerConfig,
         true,
@@ -168,9 +168,9 @@ public class BatchSupervisorSpec implements SupervisorSpec
   }
 
   @Override
-  public BatchSupervisorSpec createRunningSpec()
+  public ScheduledBatchSupervisorSpec createRunningSpec()
   {
-    return new BatchSupervisorSpec(
+    return new ScheduledBatchSupervisorSpec(
         spec,
         schedulerConfig,
         false,

@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.sql.http.SqlTaskStatus;
 import org.apache.druid.query.QueryException;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -48,6 +47,7 @@ import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
+import org.apache.druid.sql.http.SqlTaskStatus;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;

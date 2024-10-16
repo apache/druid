@@ -28,14 +28,14 @@ import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 
-public class BatchSupervisor implements Supervisor
+public class ScheduledBatchSupervisor implements Supervisor
 {
-  private static final Logger log = new Logger(BatchSupervisor.class);
-  private final BatchSupervisorSpec supervisorSpec;
+  private static final Logger log = new Logger(ScheduledBatchSupervisor.class);
+  private final ScheduledBatchSupervisorSpec supervisorSpec;
   private final ScheduledBatchScheduler scheduler;
 
-  public BatchSupervisor(
-      final BatchSupervisorSpec supervisorSpec,
+  public ScheduledBatchSupervisor(
+      final ScheduledBatchSupervisorSpec supervisorSpec,
       final ScheduledBatchScheduler scheduler
   )
   {
@@ -67,7 +67,7 @@ public class BatchSupervisor implements Supervisor
   }
 
   @Override
-  public SupervisorReport<BatchSupervisorSnapshot> getStatus()
+  public SupervisorReport<ScheduledBatchSupervisorSnapshot> getStatus()
   {
     return new SupervisorReport<>(
         supervisorSpec.getId(),

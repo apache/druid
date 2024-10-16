@@ -77,7 +77,7 @@ public class BatchSupervisorTest
   @Test
   public void testStartStopSupervisorForActiveSpec()
   {
-    final BatchSupervisorSpec activeSpec = new BatchSupervisorSpec(
+    final ScheduledBatchSupervisorSpec activeSpec = new ScheduledBatchSupervisorSpec(
         query,
         new UnixCronSchedulerConfig("* * * * *"),
         false,
@@ -87,8 +87,8 @@ public class BatchSupervisorTest
         scheduler,
         null
     );
-    final BatchSupervisor supervisor = activeSpec.createSupervisor();
-    assertEquals(BatchSupervisor.State.RUNNING, supervisor.getState());
+    final ScheduledBatchSupervisor supervisor = activeSpec.createSupervisor();
+    assertEquals(ScheduledBatchSupervisor.State.RUNNING, supervisor.getState());
 
     supervisor.start();
     supervisor.stop(false);
@@ -100,7 +100,7 @@ public class BatchSupervisorTest
   @Test
   public void testStartStopSupervisorForSuspendedSpec()
   {
-    final BatchSupervisorSpec suspendedSpec = new BatchSupervisorSpec(
+    final ScheduledBatchSupervisorSpec suspendedSpec = new ScheduledBatchSupervisorSpec(
         query,
         new UnixCronSchedulerConfig("* * * * *"),
         true,
@@ -111,8 +111,8 @@ public class BatchSupervisorTest
         null
     );
 
-    final BatchSupervisor supervisor = suspendedSpec.createSupervisor();
-    assertEquals(BatchSupervisor.State.SUSPENDED, supervisor.getState());
+    final ScheduledBatchSupervisor supervisor = suspendedSpec.createSupervisor();
+    assertEquals(ScheduledBatchSupervisor.State.SUSPENDED, supervisor.getState());
 
     supervisor.start();
     supervisor.stop(false);
@@ -123,7 +123,7 @@ public class BatchSupervisorTest
   @Test
   public void testGetStatus()
   {
-    final BatchSupervisorSpec activeSpec = new BatchSupervisorSpec(
+    final ScheduledBatchSupervisorSpec activeSpec = new ScheduledBatchSupervisorSpec(
         query,
         new UnixCronSchedulerConfig("* * * * *"),
         false,
@@ -133,8 +133,8 @@ public class BatchSupervisorTest
         scheduler,
         null
     );
-    final BatchSupervisor supervisor = activeSpec.createSupervisor();
-    final SupervisorReport<BatchSupervisorSnapshot> observedStatus = supervisor.getStatus();
+    final ScheduledBatchSupervisor supervisor = activeSpec.createSupervisor();
+    final SupervisorReport<ScheduledBatchSupervisorSnapshot> observedStatus = supervisor.getStatus();
     assertEquals(activeSpec.getId(), observedStatus.getId());
     Mockito.verify(scheduler, Mockito.times(1)).getSchedulerSnapshot(activeSpec.getId());
   }

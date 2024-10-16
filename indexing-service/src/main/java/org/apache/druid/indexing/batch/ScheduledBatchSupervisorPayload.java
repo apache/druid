@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
 
-public class BatchSupervisorPayload
+public class ScheduledBatchSupervisorPayload
 {
   public enum BatchSupervisorStatus
   {
@@ -44,7 +44,7 @@ public class BatchSupervisorPayload
   private final String detailedStatus;
 
   @JsonCreator
-  public BatchSupervisorPayload(
+  public ScheduledBatchSupervisorPayload(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("status") BatchSupervisorStatus status,
       @JsonProperty("previousTaskExecutionTime") DateTime previousTaskExecutionTime,

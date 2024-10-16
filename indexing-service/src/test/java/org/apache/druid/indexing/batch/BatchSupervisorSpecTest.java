@@ -90,7 +90,7 @@ public class BatchSupervisorSpecTest
   public void testSerdeOfActiveSpec()
   {
     testSerde(
-        new BatchSupervisorSpec(
+        new ScheduledBatchSupervisorSpec(
             query,
             new UnixCronSchedulerConfig("* * * * *"),
             false,
@@ -107,7 +107,7 @@ public class BatchSupervisorSpecTest
   public void testSerdeOfSuspendedSpec()
   {
     testSerde(
-        new BatchSupervisorSpec(
+        new ScheduledBatchSupervisorSpec(
             query,
             new UnixCronSchedulerConfig("* * * * *"),
             true,
@@ -123,7 +123,7 @@ public class BatchSupervisorSpecTest
   @Test
   public void testGetIdAndDataSources()
   {
-    final BatchSupervisorSpec activeSpec = new BatchSupervisorSpec(
+    final ScheduledBatchSupervisorSpec activeSpec = new ScheduledBatchSupervisorSpec(
         query,
         new UnixCronSchedulerConfig("* * * * *"),
         false,
@@ -133,7 +133,7 @@ public class BatchSupervisorSpecTest
         scheduler,
         brokerClient
     );
-    assertTrue(activeSpec.getId().startsWith(BatchSupervisorSpec.TYPE));
+    assertTrue(activeSpec.getId().startsWith(ScheduledBatchSupervisorSpec.TYPE));
     assertEquals(Collections.singletonList("foo"), activeSpec.getDataSources());
     assertFalse(activeSpec.isSuspended());
   }
@@ -141,7 +141,7 @@ public class BatchSupervisorSpecTest
   @Test
   public void testCreateSuspendedSpec()
   {
-    final BatchSupervisorSpec activeSpec = new BatchSupervisorSpec(
+    final ScheduledBatchSupervisorSpec activeSpec = new ScheduledBatchSupervisorSpec(
         query,
         new UnixCronSchedulerConfig("* * * * *"),
         false,
@@ -153,7 +153,7 @@ public class BatchSupervisorSpecTest
     );
     Assert.assertFalse(activeSpec.isSuspended());
 
-    final BatchSupervisorSpec suspendedSpec = activeSpec.createSuspendedSpec();
+    final ScheduledBatchSupervisorSpec suspendedSpec = activeSpec.createSuspendedSpec();
     Assert.assertTrue(suspendedSpec.isSuspended());
     Assert.assertEquals(activeSpec.getId(), suspendedSpec.getId());
     Assert.assertEquals(activeSpec.getSpec(), suspendedSpec.getSpec());
@@ -163,7 +163,7 @@ public class BatchSupervisorSpecTest
   @Test
   public void testCreateRunningSpec()
   {
-    final BatchSupervisorSpec suspendedSpec = new BatchSupervisorSpec(
+    final ScheduledBatchSupervisorSpec suspendedSpec = new ScheduledBatchSupervisorSpec(
         query,
         new UnixCronSchedulerConfig("* * * * *"),
         true,
@@ -175,7 +175,7 @@ public class BatchSupervisorSpecTest
     );
     Assert.assertTrue(suspendedSpec.isSuspended());
 
-    final BatchSupervisorSpec activeSpec = suspendedSpec.createRunningSpec();
+    final ScheduledBatchSupervisorSpec activeSpec = suspendedSpec.createRunningSpec();
     Assert.assertFalse(activeSpec.isSuspended());
     Assert.assertEquals(activeSpec.getId(), suspendedSpec.getId());
     Assert.assertEquals(activeSpec.getSpec(), suspendedSpec.getSpec());
@@ -203,7 +203,7 @@ public class BatchSupervisorSpecTest
     MatcherAssert.assertThat(
         assertThrows(
             DruidException.class,
-            () -> new BatchSupervisorSpec(
+            () -> new ScheduledBatchSupervisorSpec(
               query,
               new UnixCronSchedulerConfig("* * * * *"),
               true,
@@ -220,14 +220,14 @@ public class BatchSupervisorSpecTest
     );
   }
 
-  private void testSerde(final BatchSupervisorSpec spec)
+  private void testSerde(final ScheduledBatchSupervisorSpec spec)
   {
     try {
       final String json = OBJECT_MAPPER.writeValueAsString(spec);
       final SupervisorSpec deserialized = OBJECT_MAPPER.readValue(json, SupervisorSpec.class);
-      assertTrue(deserialized instanceof BatchSupervisorSpec);
+      assertTrue(deserialized instanceof ScheduledBatchSupervisorSpec);
 
-      final BatchSupervisorSpec observedSpec = (BatchSupervisorSpec) deserialized;
+      final ScheduledBatchSupervisorSpec observedSpec = (ScheduledBatchSupervisorSpec) deserialized;
       assertEquals(spec.isSuspended(), observedSpec.isSuspended());
       assertEquals(spec.getSpec(), observedSpec.getSpec());
       assertEquals(spec.getId(), observedSpec.getId());

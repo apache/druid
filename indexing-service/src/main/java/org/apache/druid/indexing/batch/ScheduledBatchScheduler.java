@@ -56,7 +56,7 @@ public class ScheduledBatchScheduler
   private final ObjectMapper objectMapper;
   private final TaskRunnerListener taskRunnerListener;
   private final TaskMaster taskMaster;
-  private final BatchSupervisorStatusTracker statusTracker;
+  private final ScheduledBatchStatusTracker statusTracker;
 
   private final ConcurrentHashMap<String, SchedulerManager> supervisorToManager
       = new ConcurrentHashMap<>();
@@ -79,7 +79,7 @@ public class ScheduledBatchScheduler
     this.objectMapper = objectMapper;
     this.taskMaster = taskMaster;
     this.cronExecutor = executorFactory.create(1, "GlobalBatchCronScheduler-%s");
-    this.statusTracker = new BatchSupervisorStatusTracker();
+    this.statusTracker = new ScheduledBatchStatusTracker();
     this.brokerClient = brokerClient2;
 
     this.taskRunnerListener = new TaskRunnerListener()
@@ -157,7 +157,7 @@ public class ScheduledBatchScheduler
   }
 
   @Nullable
-  public BatchSupervisorSnapshot getSchedulerSnapshot(final String supervisorId)
+  public ScheduledBatchSupervisorSnapshot getSchedulerSnapshot(final String supervisorId)
   {
     final SchedulerManager state = supervisorToManager.get(supervisorId);
     if (state == null) {
@@ -167,9 +167,9 @@ public class ScheduledBatchScheduler
     final Optional<DateTime> nextExecutionTime = state.getNextExecutionTime();
     final Optional<Duration> timeToNextExecution = state.getDurationBeforeNextRun();
 
-    final BatchSupervisorStatusTracker.BatchSupervisorTaskStatus tasks = statusTracker.getSupervisorTasks(supervisorId);
+    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus tasks = statusTracker.getSupervisorTasks(supervisorId);
 
-    return new BatchSupervisorSnapshot(
+    return new ScheduledBatchSupervisorSnapshot(
         supervisorId,
         state.getSchedulerStatus(),
         previousExecutionTime != null ? previousExecutionTime.toString() : "Not run",
@@ -208,7 +208,7 @@ public class ScheduledBatchScheduler
     private final ExecutionTime executionTime;
     private final ScheduledExecutorService executorService;
 
-    private BatchSupervisorPayload.BatchSupervisorStatus status;
+    private ScheduledBatchSupervisorPayload.BatchSupervisorStatus status;
     // Track the last know run time.
     private DateTime lastRunTime;
 
@@ -237,7 +237,7 @@ public class ScheduledBatchScheduler
         return;
       }
 
-      status = BatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING;
+      status = ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING;
       Optional<Duration> duration = executionTime.timeToNextExecution(ZonedDateTime.now());
       if (!duration.isPresent()) {
         // Should be a defensive exception that should never happen
@@ -268,7 +268,7 @@ public class ScheduledBatchScheduler
 
     private synchronized void stopScheduling()
     {
-      status = BatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN;
+      status = ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN;
       executorService.shutdown();
       try {
         if (!executorService.awaitTermination(3, TimeUnit.SECONDS)) {
@@ -305,7 +305,7 @@ public class ScheduledBatchScheduler
       return executionTime.timeToNextExecution(ZonedDateTime.now());
     }
 
-    private BatchSupervisorPayload.BatchSupervisorStatus getSchedulerStatus()
+    private ScheduledBatchSupervisorPayload.BatchSupervisorStatus getSchedulerStatus()
     {
       return status;
     }

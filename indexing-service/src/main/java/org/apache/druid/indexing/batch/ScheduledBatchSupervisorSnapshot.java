@@ -25,13 +25,13 @@ import org.apache.druid.indexer.TaskStatus;
 
 import java.util.Map;
 
-public class BatchSupervisorSnapshot
+public class ScheduledBatchSupervisorSnapshot
 {
   @JsonProperty
   private final String supervisorId;
 
   @JsonProperty
-  private final BatchSupervisorPayload.BatchSupervisorStatus status;
+  private final ScheduledBatchSupervisorPayload.BatchSupervisorStatus status;
 
   @JsonProperty
   private final String previousTaskExecutionTime;
@@ -49,9 +49,9 @@ public class BatchSupervisorSnapshot
   private final Map<String, TaskStatus> completedTasks;
 
   @JsonCreator
-  public BatchSupervisorSnapshot(
+  public ScheduledBatchSupervisorSnapshot(
       @JsonProperty("supervisorId") String supervisorId,
-      @JsonProperty("status") BatchSupervisorPayload.BatchSupervisorStatus status,
+      @JsonProperty("status") ScheduledBatchSupervisorPayload.BatchSupervisorStatus status,
       @JsonProperty("previousTaskExecutionTime") String previousTaskExecutionTime,
       @JsonProperty("nextTaskExecutionTime") String nextTaskExecutionTime,
       @JsonProperty("timeToNextExecution") String timeToNextExecution,
@@ -73,7 +73,7 @@ public class BatchSupervisorSnapshot
     return supervisorId;
   }
 
-  public BatchSupervisorPayload.BatchSupervisorStatus getStatus()
+  public ScheduledBatchSupervisorPayload.BatchSupervisorStatus getStatus()
   {
     return status;
   }
