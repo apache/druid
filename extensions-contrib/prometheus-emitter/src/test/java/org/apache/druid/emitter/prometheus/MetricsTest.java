@@ -20,9 +20,11 @@
 package org.apache.druid.emitter.prometheus;
 
 import io.prometheus.client.Histogram;
+import org.apache.druid.java.util.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -92,5 +94,19 @@ public class MetricsTest
     String actualMessage = exception.getMessage();
 
     Assert.assertTrue(actualMessage.contains(expectedMessage));
+  }
+
+  @Test
+  public void testMetricsConfigurationWithNonExistentMetric() {
+    Metrics metrics = new Metrics("test_4", null, true, true, null);
+    DimensionsAndCollector nonExistentDimsCollector = metrics.getByName("non/existent", "historical");
+    Assert.assertNull(nonExistentDimsCollector);
+  }
+
+  @Test
+  public void testMetricsConfigurationWithUnSupportedType() {
+    Assert.assertThrows(ISE.class, () -> {
+      new Metrics("test_5", "src/test/resources/defaultMetricsTest.json", true, true, null);
+    });
   }
 }
