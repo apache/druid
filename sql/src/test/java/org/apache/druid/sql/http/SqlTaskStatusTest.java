@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.sql;
+package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -25,7 +25,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.sql.http.SqlTaskStatus;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,8 +36,8 @@ public class SqlTaskStatusTest
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     DruidException underlyingException = DruidException.forPersona(DruidException.Persona.DEVELOPER)
-        .ofCategory(DruidException.Category.INVALID_INPUT)
-        .build("error message");
+                                                       .ofCategory(DruidException.Category.INVALID_INPUT)
+                                                       .build("error message");
 
     final SqlTaskStatus status = new SqlTaskStatus(
         "taskid",
