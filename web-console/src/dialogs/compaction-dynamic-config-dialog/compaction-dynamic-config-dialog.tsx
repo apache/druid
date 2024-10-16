@@ -64,9 +64,11 @@ export const CompactionDynamicConfigDialog = React.memo(function CompactionDynam
 
   useQueryManager<null, Record<string, any>>({
     initQuery: null,
-    processQuery: async () => {
+    processQuery: async (_, cancelToken) => {
       try {
-        const c = (await Api.instance.get('/druid/coordinator/v1/config/compaction')).data;
+        const c = (
+          await Api.instance.get('/druid/coordinator/v1/config/compaction', { cancelToken })
+        ).data;
         setDynamicConfig({
           compactionTaskSlotRatio: c.compactionTaskSlotRatio ?? DEFAULT_RATIO,
           maxCompactionTaskSlots: c.maxCompactionTaskSlots ?? DEFAULT_MAX,

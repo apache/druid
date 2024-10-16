@@ -125,6 +125,13 @@
       vertical-align: top;
       background: $dark-gray3;
     }
+
+    .detail-counters-for-sort {
+      .count {
+        font-style: italic;
+        opacity: 0.8;
+      }
+    }
   }
 
   .cpu-label {
