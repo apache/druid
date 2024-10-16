@@ -36,19 +36,23 @@ import org.apache.druid.sql.client.Broker;
 import org.apache.druid.sql.client.BrokerClient;
 import org.apache.druid.sql.client.BrokerClientImpl;
 
-public class SqlServiceModule extends ServiceClientModule
+/**
+ * This is an extension of {@link ServiceClientModule} because of module dependencies.
+ * The {@link BrokerClientImpl} requires classes present in the sql module.
+ */
+public class BrokerServiceModule extends ServiceClientModule
 {
   @Provides
   @ManageLifecycle
   @Broker
-  public ServiceLocator makeSqlBrokerServiceLocator(final DruidNodeDiscoveryProvider discoveryProvider)
+  public ServiceLocator makeBrokerServiceLocator(final DruidNodeDiscoveryProvider discoveryProvider)
   {
     return new DiscoveryServiceLocator(discoveryProvider, NodeRole.BROKER);
   }
 
   @Provides
   @LazySingleton
-  public BrokerClient makeSqlBrokerClient(
+  public BrokerClient makeBrokerClient(
       @Json final ObjectMapper jsonMapper,
       @EscalatedGlobal final ServiceClientFactory clientFactory,
       @Broker final ServiceLocator serviceLocator

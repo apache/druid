@@ -133,7 +133,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
-import org.apache.druid.sql.guice.SqlServiceModule;
+import org.apache.druid.sql.guice.BrokerServiceModule;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
@@ -462,7 +462,7 @@ public class CliOverlord extends ServerRunnable
         new SupervisorModule(),
         new LookupSerdeModule(),
         new SamplerModule(),
-        new SqlServiceModule()
+        new BrokerServiceModule()
     );
   }
 
