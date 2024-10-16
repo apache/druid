@@ -497,13 +497,14 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
 /**
  * This function cleans a spec that was returned by the server so that it can be re-opened in the data loader to  be
  * submitted again.
- * For backwards compatible reasons the contents of `spec` (`dataSchema`, `ioConfig`, and `tuningConfig`)
- * are duplicated at the top level. This function removes these duplicates (if needed) so that there is no confusion
- * which is the authoritative copy.
  * @param spec - the spec to clean
  */
 export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
   const specSpec = spec.spec;
+
+  // For backwards compatible reasons the contents of `spec` (`dataSchema`, `ioConfig`, and `tuningConfig`)
+  // can be duplicated at the top level. This function removes these duplicates (if needed) so that there is no confusion
+  // which is the authoritative copy.
   if (
     specSpec &&
     specSpec.dataSchema &&
@@ -515,6 +516,15 @@ export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> 
   ) {
     spec = deleteKeys(spec, ['dataSchema', 'ioConfig', 'tuningConfig'] as any[]);
   }
+
+  // Sometimes the dataSource can (redundantly) make it to the top level for some reason - delete it
+  if (
+    typeof specSpec?.dataSchema?.dataSource === 'string' &&
+    typeof (spec as any).dataSource === 'string'
+  ) {
+    spec = deleteKeys(spec, ['dataSource'] as any[]);
+  }
+
   return deleteKeys(spec, ['id', 'groupId', 'resource']);
 }
 
