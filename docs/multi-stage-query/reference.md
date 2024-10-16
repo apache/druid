@@ -150,22 +150,22 @@ Supported arguments for the function:
 
 | Parameter | Required | Description | Default |
 |---|---|---|---|
-| `bucket` | Yes  | The S3 bucket to which the files are exported to. The bucket and prefix combination should be whitelisted in `druid.export.storage.s3.allowedExportPaths`.                                                                                                                     | n/a     |
-| `prefix`    | Yes      | Path where the exported files would be created. The export query expects the destination to be empty. If the location includes other files, then the query will fail. The bucket and prefix combination should be whitelisted in `druid.export.storage.s3.allowedExportPaths`. | n/a     |
+| `bucket` | Yes  | S3 bucket destination for exported files. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths`. | n/a |
+| `prefix` | Yes  | Destination path in the bucket to create exported files. The export query expects the destination path to be empty. If the location includes other files, the query will fail. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths`. | n/a |
 
-The following runtime parameters must be configured to export into an S3 destination:
+Configure following runtime parameters to export to an S3 destination:
 
-| Runtime Parameter                            | Required | Description                                                                                                                                                                                                                          | Default |
-|----------------------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----|
-| `druid.export.storage.s3.tempLocalDir`       | Yes      | Directory used on the local storage of the worker to store temporary files required while uploading the data.                                                                                                                        | n/a |
-| `druid.export.storage.s3.allowedExportPaths` | Yes      | An array of S3 prefixes that are whitelisted as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. Example: `[\"s3://bucket1/export/\", \"s3://bucket2/export/\"]`    | n/a |
-| `druid.export.storage.s3.maxRetry`           | No       | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                      | 10  |
-| `druid.export.storage.s3.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
+| Runtime Parameter | Required | Description | Default |
+|---|---|---|---|
+| `druid.export.storage.s3.tempLocalDir` | Yes | Directory for local storage where the worker stores temporary files before uploading the data to S3. | n/a |
+| `druid.export.storage.s3.allowedExportPaths` | Yes | Array of S3 prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For eample: `[\"s3://bucket1/export/\", \"s3://bucket2/export/\"]` | n/a |
+| `druid.export.storage.s3.maxRetry` | No | The maximum number of  attempts for S3 API calls to avoid failures due to transient errors. | 10 |
+| `druid.export.storage.s3.chunkSize` | No | Individual chunk size to  store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to S3, but require more disk space to store temporary chunks. | 100MiB |
 
 
 ##### GOOGLE - Google Cloud Storage
 
-To export query results to Google Cloud Storage (GCS), passing the `google()` function as an argument to the `EXTERN` function.
+To export query results to Google Cloud Storage (GCS), pass the `google()` function as an argument to the `EXTERN` function.
 This requires the `druid-google-extensions`.
 The `google()` function configures the connection to Google Cloud Storage. Pass the arguments for `google()` as named parameters with the value in single quotes. For example:
 
@@ -184,17 +184,17 @@ Supported arguments for the function:
 
 | Parameter   | Required | Description | Default |
 |---|---|---|---|
-| `bucket`    | Yes | The GCS bucket destination for exported files. You must add the bucket and prefix combination to the `druid.export.storage.google.allowedExportPaths` allow list. | n/a |
+| `bucket`    | Yes | GCS bucket destination for exported files. You must add the bucket and prefix combination to the `druid.export.storage.google.allowedExportPaths` allow list. | n/a |
 | `prefix` | Yes  | Destination path in the bucket to create exported files. The export query expects the destination path to be empty. If the location includes other files, the query will fail. You must add the bucket and prefix combination to the `druid.export.storage.google.allowedExportPaths` allow list. | n/a |
 
 Configure the following runtime parameters to export query results to a GCS destination:
 
 | Runtime Parameter | Required | Description | Default |
 |---|---|---|---|
-| `druid.export.storage.google.tempLocalDir` | Yes | Directory for local storage where the worker stores temporary files before uploading the data to GCS. | n/a |
-| `druid.export.storage.google.allowedExportPaths` | Yes | An array of GCS prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For eample: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
-| `druid.export.storage.google.maxRetry` | No | The maximum number of  attempts for GCS API calls to avoid failures due to transient errors. | 10 |
-| `druid.export.storage.google.chunkSize` | No | Individual chunk size to  store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks. | 4 MiB |
+| `druid.export.storage.google.tempLocalDir` | Yes | Directory for local storage where the worker stores temporary files before uploading the data to GCS | n/a |
+| `druid.export.storage.google.allowedExportPaths` | Yes | Array of GCS prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For eample: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
+| `druid.export.storage.google.maxRetry` | No | The maximum number of  attempts for GCS API calls to avoid failures due to transient errors | 10 |
+| `druid.export.storage.google.chunkSize` | No | Individual chunk size to  store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks | 4 MiB |
 
 ##### LOCAL - local file storage
 
