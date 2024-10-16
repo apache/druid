@@ -295,7 +295,7 @@ public class ScheduledBatchScheduler
       if (zonedDateTime.isPresent()) {
         final ZonedDateTime zdt = zonedDateTime.get();
         final Instant instant = zdt.toInstant();
-        return Optional.of(new DateTime(instant.toEpochMilli(), DateTimeZone.forID(zdt.getZone().getId())));
+        return Optional.of(new DateTime(instant.toEpochMilli(), DateTimes.inferTzFromString(zdt.getZone().getId())));
       } else {
         return Optional.empty();
       }
