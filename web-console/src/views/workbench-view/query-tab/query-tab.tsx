@@ -180,7 +180,8 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   );
 
   function shouldAutoRun(): boolean {
-    if (query.getEffectiveEngine() !== 'sql-native') return false;
+    const effectiveEngine = query.getEffectiveEngine();
+    if (effectiveEngine !== 'sql-native' && effectiveEngine !== 'sql-msq-dart') return false;
     const queryDuration = executionState.data?.result?.queryDuration;
     return Boolean(queryDuration && queryDuration < 10000);
   }
@@ -296,9 +297,10 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                   if (deepGet(query, 'context.fullReport') && dartResponse[0][0] === 'fullReport') {
                     const dartReport = dartResponse[dartResponse.length - 1][0];
 
-                    return Execution.fromTaskReport(dartReport)
-                      .changeEngine('sql-msq-dart')
-                      .changeSqlQuery(query.query, query.context);
+                    return Execution.fromDartReport(dartReport).changeSqlQuery(
+                      query.query,
+                      query.context,
+                    );
                   } else {
                     return Execution.fromResult(
                       engine,
@@ -308,7 +310,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                         query.header,
                         query.typesHeader,
                         query.sqlTypesHeader,
-                      ),
+                      ).changeQueryDuration(Date.now() - startTime.valueOf()),
                     ).changeSqlQuery(query.query, query.context);
                   }
                 },
@@ -371,6 +373,16 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   }, [executionState.loading, Boolean(executionState.intermediate)]);
 
   const execution = executionState.data;
+
+  // This is the execution that would be shown in the output pane, it is either the actual execution or a result
+  // execution that will be shown under the loader
+  const executionToShow =
+    execution ||
+    (() => {
+      if (executionState.intermediate) return;
+      const e = executionState.getSomeData();
+      return e?.result ? e : undefined;
+    })();
 
   const incrementMetadataVersion = useStore(
     metadataStateStore,
@@ -525,40 +537,40 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               )}
             </div>
           )}
-          {execution &&
-            (execution.error ? (
+          {executionToShow &&
+            (executionToShow.error ? (
               <div className="error-container">
-                <ExecutionErrorPane execution={execution} />
-                {execution.stages && (
+                <ExecutionErrorPane execution={executionToShow} />
+                {executionToShow.stages && (
                   <ExecutionStagesPane
-                    execution={execution}
-                    onErrorClick={() => onDetails(execution, 'error')}
-                    onWarningClick={() => onDetails(execution, 'warnings')}
+                    execution={executionToShow}
+                    onErrorClick={() => onDetails(executionToShow, 'error')}
+                    onWarningClick={() => onDetails(executionToShow, 'warnings')}
                     goToTask={goToTask}
                   />
                 )}
               </div>
-            ) : execution.result ? (
+            ) : executionToShow.result ? (
               <ResultTablePane
-                runeMode={execution.engine === 'native'}
-                queryResult={execution.result}
+                runeMode={executionToShow.engine === 'native'}
+                queryResult={executionToShow.result}
                 onQueryAction={handleQueryAction}
               />
-            ) : execution.isSuccessfulIngest() ? (
+            ) : executionToShow.isSuccessfulIngest() ? (
               <IngestSuccessPane
-                execution={execution}
+                execution={executionToShow}
                 onDetails={onDetails}
                 onQueryTab={onQueryTab}
               />
             ) : (
               <div className="generic-status-container">
                 <div className="generic-status-container-info">
-                  {`Execution completed with status: ${execution.status}`}
+                  {`Execution completed with status: ${executionToShow.status}`}
                 </div>
                 <ExecutionStagesPane
-                  execution={execution}
-                  onErrorClick={() => onDetails(execution, 'error')}
-                  onWarningClick={() => onDetails(execution, 'warnings')}
+                  execution={executionToShow}
+                  onErrorClick={() => onDetails(executionToShow, 'error')}
+                  onWarningClick={() => onDetails(executionToShow, 'warnings')}
                   goToTask={goToTask}
                 />
               </div>
