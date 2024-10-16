@@ -88,6 +88,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
     subQueryId(query);
     sqlQueryId(query);
     context(query);
+    columns(query);
   }
 
   @Override
@@ -158,6 +159,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   public void context(QueryType query)
   {
     setDimension("context", query.getContext() == null ? ImmutableMap.of() : query.getContext());
+  }
+
+  @Override
+  public void columns(QueryType query)
+  {
+    // Emit nothing by default.
   }
 
   @Override
