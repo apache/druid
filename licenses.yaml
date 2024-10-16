@@ -5062,17 +5062,6 @@ libraries:
 
 ---
 
-name: quartz
-license_category: binary
-module: core
-license_name: Apache License version 2.0
-version: 2.3.2
-license_file_path: licenses/bin/quartz.APACHE2
-libraries:
-  - org.quartz-scheduler: quartz
-
----
-
 # Web console modules start
 name: "@babel/code-frame"
 license_category: binary
