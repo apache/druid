@@ -5803,7 +5803,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Raynos
-version: 1.1.1
+version: 1.1.2
 license_file_path: licenses/bin/function-bind.MIT
 
 ---
@@ -5828,13 +5828,13 @@ license_file_path: licenses/bin/has-own-prop.MIT
 
 ---
 
-name: "has"
+name: "hasown"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Thiago de Arruda
-version: 1.0.3
-license_file_path: licenses/bin/has.MIT
+copyright: Jordan Harband
+version: 2.0.2
+license_file_path: licenses/bin/hasown.MIT
 
 ---
 
@@ -5932,7 +5932,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 2.10.0
+version: 2.15.1
 license_file_path: licenses/bin/is-core-module.MIT
 
 ---
@@ -6211,7 +6211,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Blake Embrey (hello@blakeembrey.com)
-version: 1.7.0
+version: 1.9.0
 license_file_path: licenses/bin/path-to-regexp.MIT
 
 ---
@@ -6231,7 +6231,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc.
-version: 15.7.2
+version: 15.8.1
 license_file_path: licenses/bin/prop-types.MIT
 
 ---
@@ -6311,7 +6311,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 16.8.6
+version: 16.13.1
 license_file_path: licenses/bin/react-is.MIT
 
 ---
