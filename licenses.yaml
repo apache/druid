@@ -5007,6 +5007,72 @@ libraries:
 
 ---
 
+name: cron-utils
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 9.2.0
+license_file_path: licenses/bin/cron-utils.APACHE2
+libraries:
+  - com.cronutils: cron-utils
+
+---
+
+name: c3p0
+license_category: binary
+module: core
+license_name: Eclipse Public License 1.0
+version: 0.9.5.4
+license_file_path: licenses/bin/c3p0.EPL1
+libraries:
+  - com.mchange: c3p0
+
+---
+
+name: mchange-commons-java
+license_category: binary
+module: core
+license_name: Eclipse Public License 1.0
+version: 0.2.15
+license_file_path: licenses/bin/mchange-commons-java.EPL1
+libraries:
+  - com.mchange: mchange-commons-java
+
+---
+
+name: HikariCP-java7
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 2.4.13
+license_file_path: licenses/bin/HikariCP-java7.APACHE2
+libraries:
+  - com.zaxxer: HikariCP-java7
+
+---
+
+name: jakarta.el
+license_category: binary
+module: core
+license_name: Eclipse Public License 2.0
+version: 3.0.4
+license_file_path: licenses/bin/jakarta.el.EPL2
+libraries:
+  - org.glassfish: jakarta.el
+
+---
+
+name: quartz
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 2.3.2
+license_file_path: licenses/bin/quartz.APACHE2
+libraries:
+  - org.quartz-scheduler: quartz
+
+---
+
 # Web console modules start
 name: "@babel/code-frame"
 license_category: binary
