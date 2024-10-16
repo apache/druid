@@ -60,6 +60,7 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
         .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
         .changeLimitValue(101)
         .toString(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [querySource.query, filter, column, searchString],
   );
 

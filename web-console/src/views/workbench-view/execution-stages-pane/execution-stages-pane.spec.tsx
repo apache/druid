@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import { EXECUTION_INGEST_COMPLETE } from '../../../druid-models/mocks';
 import { shallow } from '../../../utils/shallow-renderer';
 

@@ -17,8 +17,7 @@
  */
 
 import { Button, Classes, Dialog, FormGroup, InputGroup, Intent, Tag } from '@blueprintjs/core';
-import type { SqlQuery } from '@druid-toolkit/query';
-import { type QueryResult, F, sql, SqlExpression } from '@druid-toolkit/query';
+import type { F, type QueryResult, sql, SqlExpression, SqlQuery } from '@druid-toolkit/query';
 import React, { useMemo, useState } from 'react';
 
 import { AppToaster } from '../../../../../singletons';

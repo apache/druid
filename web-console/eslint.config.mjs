@@ -19,10 +19,14 @@
 import awesomeCodeStyle, { configs } from '@awesome-code-style/eslint-config';
 import awesomeCodeStyleReact, { reactConfigs } from '@awesome-code-style/eslint-config/react';
 import notice from 'eslint-plugin-notice';
+import globals from 'globals';
 
 const TYPESCRIPT_FILES = ['**/*.ts', '**/*.tsx'];
 
 export default [
+  {
+    ignores: ['public', 'target'],
+  },
   ...awesomeCodeStyle,
   ...awesomeCodeStyleReact,
   ...configs.typeChecked.map(config => ({ ...config, files: TYPESCRIPT_FILES })),
@@ -34,6 +38,21 @@ export default [
     rules: {
       'notice/notice': [2, { mustMatch: 'Licensed to the Apache Software Foundation \\(ASF\\).+' }],
       'react/jsx-no-bind': [2, { allowArrowFunctions: true, allowFunctions: true }],
+    },
+  },
+  {
+    files: ['*.js', 'lib/*.js', 'script/*.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': [0],
+    },
+  },
+  {
+    files: ['e2e-tests/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-declaration-merging': [0],
     },
   },
 ];

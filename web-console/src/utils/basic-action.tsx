@@ -19,7 +19,6 @@
 import type { IconName, Intent } from '@blueprintjs/core';
 import { Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import type { JSX } from 'react';
-import React from 'react';
 
 export interface BasicAction {
   icon?: IconName;

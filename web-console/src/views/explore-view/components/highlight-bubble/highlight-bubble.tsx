@@ -17,7 +17,7 @@
  */
 
 import { Button, Card, Elevation } from '@blueprintjs/core';
-import React, { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from 'zustand';
 
