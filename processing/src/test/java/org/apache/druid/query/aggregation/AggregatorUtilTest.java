@@ -22,13 +22,18 @@ package org.apache.druid.query.aggregation;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.math.expr.Expr;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,6 +41,76 @@ import java.util.List;
 
 public class AggregatorUtilTest
 {
+  @FunctionalInterface
+  public interface ColumnValueSelectorFunction<T>
+  {
+    ColumnValueSelector<?> apply(
+        ColumnSelectorFactory columnSelectorFactory,
+        @Nullable String fieldName,
+        @Nullable Expr fieldExpression
+    );
+  }
+
+  @Test
+  public void testMakeColumnValueSelectorFunctions()
+  {
+    // Define the array of method references
+    ColumnValueSelectorFunction<?>[] functions = new ColumnValueSelectorFunction[]{
+        AggregatorUtil::makeColumnValueSelectorWithStringDefault,
+        (columnSelectorFactory, fieldName, fieldExpression) -> AggregatorUtil.makeColumnValueSelectorWithFloatDefault(
+            columnSelectorFactory,
+            fieldName,
+            fieldExpression,
+            0
+        ),
+        (columnSelectorFactory, fieldName, fieldExpression) -> AggregatorUtil.makeColumnValueSelectorWithDoubleDefault(
+            columnSelectorFactory,
+            fieldName,
+            fieldExpression,
+            0.0
+        ),
+        (columnSelectorFactory, fieldName, fieldExpression) -> AggregatorUtil.makeColumnValueSelectorWithLongDefault(
+            columnSelectorFactory,
+            fieldName,
+            fieldExpression,
+            0
+        )
+    };
+
+    for (ColumnValueSelectorFunction<?> function : functions) {
+      // Test fieldName and fieldExpression both null
+      try {
+        ColumnSelectorFactory columnSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+        function.apply(columnSelectorFactory, null, null);
+        Assert.fail("Expected IllegalArgumentException for null fieldName and fieldExpression");
+      }
+      catch (IllegalArgumentException e) {
+        // Do nothing
+      }
+
+      // Test both fieldName and fieldExpression non-null
+      try {
+        ColumnSelectorFactory columnSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+        Expr expr = EasyMock.createMock(Expr.class);
+        function.apply(columnSelectorFactory, "fieldName", expr);
+        Assert.fail("Expected IllegalArgumentException for non-null fieldName and fieldExpression");
+      }
+      catch (IllegalArgumentException e) {
+        // Do nothing
+      }
+
+      // Test fieldName non-null
+      ColumnSelectorFactory columnSelectorFactory = EasyMock.createMock(ColumnSelectorFactory.class);
+      ColumnValueSelector<?> selector = EasyMock.createMock(ColumnValueSelector.class);
+      EasyMock.expect(columnSelectorFactory.makeColumnValueSelector("fieldName")).andReturn(selector);
+      EasyMock.replay(columnSelectorFactory);
+
+      ColumnValueSelector<?> result = function.apply(columnSelectorFactory, "fieldName", null);
+      Assert.assertEquals(selector, result);
+
+      EasyMock.verify(columnSelectorFactory);
+    }
+  }
 
   @Test
   public void testPruneDependentPostAgg()
