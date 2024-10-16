@@ -36,8 +36,9 @@ public class SqlTaskStatusTest
     final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
     DruidException underlyingException = DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                                                       .ofCategory(DruidException.Category.INVALID_INPUT)
-                                                       .build("error message");
+        .ofCategory(DruidException.Category.INVALID_INPUT)
+        .build("error message");
+
     final SqlTaskStatus status = new SqlTaskStatus(
         "taskid",
         TaskState.FAILED,

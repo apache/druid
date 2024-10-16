@@ -52,7 +52,6 @@ public interface SupervisorSpec
     return null;
   }
 
-  // This is weird; a supervisor should only target a single datasource.
   List<String> getDataSources();
 
   default SupervisorSpec createSuspendedSpec()

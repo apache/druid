@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.server.security.ResourceAction;
@@ -41,11 +42,11 @@ public class NoopSupervisorSpec implements SupervisorSpec
   // NoopSupervisorSpec is used as a tombstone, added when a previously running supervisor is stopped.
   // Inherit the datasources of the previous running spec, so that we can determine whether a user is authorized to see
   // this tombstone (users can only see tombstones for datasources that they have access to).
-  @Nullable // this is initialized to empty array in the constructor!
+  @Nullable
   @JsonProperty("dataSources")
   private List<String> datasources;
 
-  @Nullable // this is true, but the annotation should also be in the SupervisorSpec interface
+  @Nullable
   @JsonProperty("id")
   private String id;
 
@@ -66,6 +67,7 @@ public class NoopSupervisorSpec implements SupervisorSpec
     this(id, datasources, null, null, null);
   }
 
+  @VisibleForTesting
   @JsonCreator
   public NoopSupervisorSpec(
       @JsonProperty("id") @Nullable String id,
@@ -83,7 +85,6 @@ public class NoopSupervisorSpec implements SupervisorSpec
     this.source = "noop";
   }
 
-  @Nullable
   @Override
   @JsonProperty
   public String getId()
