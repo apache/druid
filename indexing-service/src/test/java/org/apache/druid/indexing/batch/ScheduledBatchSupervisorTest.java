@@ -43,7 +43,7 @@ public class ScheduledBatchSupervisorTest
   private SqlQuery query;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     brokerClient = Mockito.mock(BrokerClient.class);
     scheduler = Mockito.mock(ScheduledBatchScheduler.class);

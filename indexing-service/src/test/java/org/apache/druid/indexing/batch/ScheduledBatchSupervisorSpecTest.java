@@ -52,7 +52,7 @@ public class ScheduledBatchSupervisorSpecTest
   private SqlQuery query;
 
   @Before
-  public void setUp() throws Exception
+  public void setUp()
   {
     brokerClient = Mockito.mock(BrokerClient.class);
     scheduler = Mockito.mock(ScheduledBatchScheduler.class);
@@ -183,7 +183,7 @@ public class ScheduledBatchSupervisorSpecTest
   }
 
   @Test
-  public void testCreateSupervisorWithSelectQuery() throws Exception
+  public void testCreateSupervisorWithSelectQuery()
   {
     query = new SqlQuery(
         "SELECT TIME_PARSE(ts) AS __time, c1 FROM (VALUES('2023-01-01', 'insert_1'), ('2023-01-01', 'insert_2'), ('2023-02-01', 'insert3')) AS t(ts, c1) PARTITIONED BY ALL ",
