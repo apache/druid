@@ -34,7 +34,7 @@
   </parent>
 
   <properties>
-    <pac4j.version>4.5.7</pac4j.version>
+    <pac4j.version>6.0.2</pac4j.version>
 
     <!-- Following must be updated along with any updates to pac4j version. One can find the compatible version of nimbus libraries in org.pac4j:pac4j-oidc dependencies-->
     <nimbus.lang.tag.version>1.7</nimbus.lang.tag.version>
