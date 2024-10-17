@@ -19,24 +19,16 @@
 
 package org.apache.druid.query.operator;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import org.junit.Test;
 
-import java.util.List;
-
-public class NaivePartitioningOperatorFactory extends AbstractPartitioningOperatorFactory
+public class GlueingPartitioningOperatorFactoryTest
 {
-  @JsonCreator
-  public NaivePartitioningOperatorFactory(
-      @JsonProperty("partitionColumns") List<String> partitionColumns
-  )
+  @Test
+  public void testEquals()
   {
-    super(partitionColumns);
-  }
-
-  @Override
-  public Operator wrap(Operator op)
-  {
-    return new NaivePartitioningOperator(partitionColumns, op);
+    EqualsVerifier.forClass(GlueingPartitioningOperatorFactory.class)
+        .usingGetClass()
+        .verify();
   }
 }
