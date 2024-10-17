@@ -22,10 +22,14 @@ package org.apache.druid.query.union;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.allocation.HeapMemoryAllocator;
+import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.FrameBasedInlineDataSource;
+import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -48,7 +52,6 @@ import java.util.List;
 
 public class UnionQueryQueryToolChestTest
 {
-
   @BeforeAll
   public static void setUpClass()
   {
@@ -171,6 +174,48 @@ public class UnionQueryQueryToolChestTest
                 new RealUnionResult(scan2.makeResultSequence())
             )
         )
+    );
+  }
+
+  @Test
+  public void testResultsAsFrames()
+  {
+    RowSignature sig = RowSignature.builder()
+        .add("a", ColumnType.STRING)
+        .add("b", ColumnType.STRING)
+        .build();
+
+    TestScanQuery scan1 = new TestScanQuery("foo", sig)
+        .appendRow("a", "a")
+        .appendRow("a", "b");
+    TestScanQuery scan2 = new TestScanQuery("bar", sig)
+        .appendRow("x", "x")
+        .appendRow("x", "y");
+
+    UnionQuery query = new UnionQuery(
+        ImmutableList.of(
+            scan1.query,
+            scan2.query
+        )
+    );
+    List<FrameSignaturePair> frames = toolChest.resultsAsFrames(
+        query,
+        Sequences.of(
+            new RealUnionResult(scan1.makeResultSequence()),
+            new RealUnionResult(scan2.makeResultSequence())
+        ),
+        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
+        true
+    ).get().toList();
+
+    Sequence<Object[]> rows = new FrameBasedInlineDataSource(frames, scan1.query.getRowSignature()).getRowsAsSequence();
+
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.<Object[]>builder()
+            .addAll(scan1.results)
+            .addAll(scan2.results)
+            .build(),
+        rows
     );
   }
 }
