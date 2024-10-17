@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.sql;
+package org.apache.druid.sql.http;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;

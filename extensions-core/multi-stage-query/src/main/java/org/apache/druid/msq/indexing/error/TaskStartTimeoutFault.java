@@ -45,7 +45,7 @@ public class TaskStartTimeoutFault extends BaseMSQFault
   {
     super(
         CODE,
-        "Unable to launch [%d] workers out of the total [%d] worker tasks within [%,d] seconds of the last successful worker launch."
+        "Unable to launch [%d] workers out of the total [%d] worker tasks within [%,d] seconds of the last successful worker launch. "
         + "There might be insufficient available slots to start all worker tasks simultaneously. "
         + "Try lowering '%s' in your query context to a number that fits within your available task capacity, "
         + "or try increasing capacity.",
