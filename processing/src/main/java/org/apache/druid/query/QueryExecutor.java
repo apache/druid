@@ -28,7 +28,6 @@ public interface QueryExecutor<T>
 {
   QueryRunner<T> makeQueryRunner(
       Query<T> query,
-      QueryToolChestWarehouse warehouse,
       QuerySegmentWalker walker
   );
 }

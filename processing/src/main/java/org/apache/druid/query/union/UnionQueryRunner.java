@@ -33,7 +33,6 @@ import java.util.List;
 class UnionQueryRunner implements QueryRunner<UnionResult>
 {
   private final QuerySegmentWalker walker;
-  private final UnionQuery query;
   private final List<QueryRunner> runners;
 
   public UnionQueryRunner(
@@ -41,7 +40,6 @@ class UnionQueryRunner implements QueryRunner<UnionResult>
       QuerySegmentWalker walker
   )
   {
-    this.query = query;
     this.walker = walker;
     this.runners = makeSubQueryRunners(query);
   }

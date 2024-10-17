@@ -34,7 +34,6 @@ import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.groupby.SupportRowSignature;
 import org.apache.druid.segment.column.RowSignature;
@@ -49,7 +48,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<UnionResult, UnionQ
 {
   @Override
   public QueryRunner<UnionResult> makeQueryRunner(Query<UnionResult> query,
-      QueryToolChestWarehouse warehouse, QuerySegmentWalker clientQuerySegmentWalker)
+      QuerySegmentWalker clientQuerySegmentWalker)
   {
     return new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker);
   }
