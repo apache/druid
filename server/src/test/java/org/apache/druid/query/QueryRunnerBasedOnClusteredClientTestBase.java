@@ -109,7 +109,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
         CLOSER,
         TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
     );
-    toolChestWarehouse = conglomerate;
+    toolChestWarehouse = new ConglomerateBackedQueryToolChestWarehouse(conglomerate);
   }
 
   @AfterClass
