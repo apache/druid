@@ -4973,6 +4973,55 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testJsonAggrMerging()
+  {
+    testQuery(
+        "SELECT "
+            + "JSON_MERGE_AGGR('ADD','{\"x\":100.10}',JSON_OBJECT(KEY 'x' VALUE JSON_VALUE(nest, '$.x' RETURNING DECIMAL)))\n"
+            + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    new ExpressionVirtualColumn(
+                        "v0",
+                        "json_merge_aggr('ADD','{\\u0022x\\u0022:100.10}',json_object('x',\"v1\"))",
+                        ColumnType.NESTED_DATA,
+                        queryFramework().macroTable()
+                    ),
+                    new NestedFieldVirtualColumn(
+                        "nest",
+                        "v1",
+                        ColumnType.DOUBLE,
+                        ImmutableList.of(
+                            new NestedPathField("x")
+                        ),
+                        false,
+                        null,
+                        false
+                    )
+                )
+                .columns("v0")
+                .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"{\"x\":200.1}"},
+            new Object[]{"{\"x\":null}"},
+            new Object[]{"{\"x\":300.1}"},
+            new Object[]{"{\"x\":null}"},
+            new Object[]{"{\"x\":null}"},
+            new Object[]{"{\"x\":200.1}"},
+            new Object[]{"{\"x\":null}"}
+        ),
+        RowSignature.builder()
+            .add("EXPR$0", ColumnType.NESTED_DATA)
+            .build()
+    );
+  }
+
+  @Test
   public void testCompositionTyping()
   {
     testQuery(
