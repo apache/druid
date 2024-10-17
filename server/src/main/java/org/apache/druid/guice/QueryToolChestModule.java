@@ -26,8 +26,8 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.GenericQueryMetricsFactory;
-import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestWarehouse;
@@ -101,7 +101,7 @@ public class QueryToolChestModule implements Module
       binder.bind(entry.getValue()).in(LazySingleton.class);
     }
 
-    binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
+    binder.bind(QueryToolChestWarehouse.class).to(DefaultQueryRunnerFactoryConglomerate.class);
 
     JsonConfigProvider.bind(binder, "druid.query.default", DefaultQueryConfig.class);
     JsonConfigProvider.bind(binder, "druid.query.groupBy", GroupByQueryConfig.class);
