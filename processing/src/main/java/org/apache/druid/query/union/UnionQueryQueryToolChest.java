@@ -35,7 +35,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
-import org.apache.druid.query.groupby.SupportRowSignature;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Finalization;
 
@@ -84,8 +83,9 @@ public class UnionQueryQueryToolChest extends QueryToolChest<UnionResult, UnionQ
   public RowSignature resultArraySignature(UnionQuery query)
   {
     for (Query<?> q : query.queries) {
-      if (q instanceof SupportRowSignature) {
-        return ((SupportRowSignature) q).getResultRowSignature(Finalization.UNKNOWN);
+      RowSignature sig = q.getResultRowSignature(Finalization.UNKNOWN);
+      if (sig != null) {
+        return sig;
       }
     }
     throw DruidException.defensive("None of the subqueries support row signature");

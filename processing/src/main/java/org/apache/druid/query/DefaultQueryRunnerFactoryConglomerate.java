@@ -19,10 +19,9 @@
 
 package org.apache.druid.query;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import org.apache.druid.error.DruidException;
-
-import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -31,9 +30,10 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
   private final Map<Class<? extends Query>, QueryRunnerFactory> factories;
   private final Map<Class<? extends Query>, QueryToolChest> toolchests;
 
+  @VisibleForTesting
   public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories)
   {
-    this(factories, Collections.emptyMap());
+    this(factories, Maps.transformValues(factories, f -> f.getToolchest()));
   }
 
   @Inject
@@ -52,17 +52,14 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
   {
-    QueryRunnerFactory<T, QueryType> factory = findFactory(query);
-    if (factory == null) {
-      throw DruidException
-          .defensive("QueryRunnerFactory for QueryType [%s] is not registered!", query.getClass().getName());
-    }
-    return factory.getToolchest();
+    return toolchests.get(query.getClass());
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public <T, QueryType extends Query<T>> QueryExecutor<T> getQueryExecutor(QueryType query)
   {
     QueryToolChest<T, QueryType> toolchest = getToolChest(query);

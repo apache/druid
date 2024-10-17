@@ -38,7 +38,6 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.groupby.SupportRowSignature;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec.LimitJsonIncludeFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
@@ -57,7 +56,7 @@ import java.util.Set;
 /**
  */
 @JsonTypeName("timeseries")
-public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>> implements SupportRowSignature
+public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 {
   public static final String CTX_GRAND_TOTAL = "grandTotal";
   public static final String SKIP_EMPTY_BUCKETS = "skipEmptyBuckets";

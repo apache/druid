@@ -39,7 +39,6 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.groupby.SupportRowSignature;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
@@ -59,7 +58,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class ScanQuery extends BaseQuery<ScanResultValue> implements SupportRowSignature
+public class ScanQuery extends BaseQuery<ScanResultValue>
 {
   public enum ResultFormat
   {
