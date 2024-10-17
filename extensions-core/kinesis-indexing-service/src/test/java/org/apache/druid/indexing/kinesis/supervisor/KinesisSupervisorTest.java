@@ -358,6 +358,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Thread.sleep(1 * 1000);
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(2, taskCountAfterScale);
+    autoscaler.stop();
   }
 
   @Test
@@ -435,6 +436,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     Thread.sleep(1 * 1000);
     int taskCountAfterScale = supervisor.getIoConfig().getTaskCount();
     Assert.assertEquals(1, taskCountAfterScale);
+    autoscaler.stop();
   }
 
   @Test
