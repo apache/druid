@@ -27,11 +27,11 @@ import org.apache.druid.java.util.common.guava.Sequence;
  * Caveat: the index of the ResultUnionResult in the output sequence is in line
  * with the index of the executed query.
  */
-public class RealUnionResult
+public class UnionResult
 {
   private final Sequence<?> seq;
 
-  public RealUnionResult(Sequence<?> seq)
+  public UnionResult(Sequence<?> seq)
   {
     this.seq = seq;
   }

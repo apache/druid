@@ -44,11 +44,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, UnionQuery>
-    implements QueryExecutor<RealUnionResult>
+public class UnionQueryQueryToolChest extends QueryToolChest<UnionResult, UnionQuery>
+    implements QueryExecutor<UnionResult>
 {
   @Override
-  public QueryRunner<RealUnionResult> makeQueryRunner(Query<RealUnionResult> query,
+  public QueryRunner<UnionResult> makeQueryRunner(Query<UnionResult> query,
       QueryToolChestWarehouse warehouse, QuerySegmentWalker clientQuerySegmentWalker)
   {
     return new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker);
@@ -56,7 +56,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
 
   @Override
   @SuppressWarnings("unchecked")
-  public QueryRunner<RealUnionResult> mergeResults(QueryRunner<RealUnionResult> runner)
+  public QueryRunner<UnionResult> mergeResults(QueryRunner<UnionResult> runner)
   {
     throw new UnsupportedOperationException("Not supported");
   }
@@ -68,7 +68,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
   }
 
   @Override
-  public Function<RealUnionResult, RealUnionResult> makePreComputeManipulatorFn(
+  public Function<UnionResult, UnionResult> makePreComputeManipulatorFn(
       UnionQuery query,
       MetricManipulationFn fn)
   {
@@ -76,7 +76,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
   }
 
   @Override
-  public TypeReference<RealUnionResult> getResultTypeReference()
+  public TypeReference<UnionResult> getResultTypeReference()
   {
     return null;
   }
@@ -96,7 +96,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Sequence<Object[]> resultsAsArrays(
       UnionQuery query,
-      Sequence<RealUnionResult> resultSequence)
+      Sequence<UnionResult> resultSequence)
   {
     return new UnionSequenceMaker<Object[]>()
     {
@@ -113,7 +113,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       UnionQuery query,
-      Sequence<RealUnionResult> resultSequence,
+      Sequence<UnionResult> resultSequence,
       MemoryAllocatorFactory memoryAllocatorFactory,
       boolean useNestedForUnknownTypes)
   {
@@ -132,14 +132,14 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
   {
     public Optional<Sequence<T>> transform(
         UnionQuery query,
-        Sequence<RealUnionResult> resultSequence)
+        Sequence<UnionResult> resultSequence)
     {
-      List<RealUnionResult> results = resultSequence.toList();
+      List<UnionResult> results = resultSequence.toList();
       List<Sequence<T>> resultSeqs = new ArrayList<>();
 
       for (int i = 0; i < results.size(); i++) {
         Query<?> q = query.queries.get(i);
-        RealUnionResult realUnionResult = results.get(i);
+        UnionResult realUnionResult = results.get(i);
         Optional<Sequence<T>> queryResults = transformResults(q, realUnionResult.getResults());
         if (!queryResults.isPresent()) {
           return Optional.empty();

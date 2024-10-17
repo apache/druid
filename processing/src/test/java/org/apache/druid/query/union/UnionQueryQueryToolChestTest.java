@@ -170,8 +170,8 @@ public class UnionQueryQueryToolChestTest
         toolChest.resultsAsArrays(
             query,
             Sequences.of(
-                new RealUnionResult(scan1.makeResultSequence()),
-                new RealUnionResult(scan2.makeResultSequence())
+                new UnionResult(scan1.makeResultSequence()),
+                new UnionResult(scan2.makeResultSequence())
             )
         )
     );
@@ -201,8 +201,8 @@ public class UnionQueryQueryToolChestTest
     List<FrameSignaturePair> frames = toolChest.resultsAsFrames(
         query,
         Sequences.of(
-            new RealUnionResult(scan1.makeResultSequence()),
-            new RealUnionResult(scan2.makeResultSequence())
+            new UnionResult(scan1.makeResultSequence()),
+            new UnionResult(scan2.makeResultSequence())
         ),
         new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
         true

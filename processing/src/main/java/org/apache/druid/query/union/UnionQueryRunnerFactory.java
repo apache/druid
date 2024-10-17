@@ -27,7 +27,7 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.Segment;
 
-public class UnionQueryRunnerFactory implements QueryRunnerFactory<RealUnionResult, UnionQuery>
+public class UnionQueryRunnerFactory implements QueryRunnerFactory<UnionResult, UnionQuery>
 {
   private UnionQueryQueryToolChest toolChest;
 
@@ -38,20 +38,20 @@ public class UnionQueryRunnerFactory implements QueryRunnerFactory<RealUnionResu
   }
 
   @Override
-  public QueryRunner<RealUnionResult> createRunner(Segment segment)
+  public QueryRunner<UnionResult> createRunner(Segment segment)
   {
     throw DruidException.defensive("not expected to be used");
   }
 
   @Override
-  public QueryRunner<RealUnionResult> mergeRunners(QueryProcessingPool queryProcessingPool,
-      Iterable<QueryRunner<RealUnionResult>> queryRunners)
+  public QueryRunner<UnionResult> mergeRunners(QueryProcessingPool queryProcessingPool,
+      Iterable<QueryRunner<UnionResult>> queryRunners)
   {
     throw DruidException.defensive("not expected to be used");
   }
 
   @Override
-  public QueryToolChest<RealUnionResult, UnionQuery> getToolchest()
+  public QueryToolChest<UnionResult, UnionQuery> getToolchest()
   {
     return toolChest;
   }

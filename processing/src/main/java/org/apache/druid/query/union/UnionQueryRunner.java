@@ -30,7 +30,7 @@ import org.apache.druid.query.context.ResponseContext;
 import java.util.ArrayList;
 import java.util.List;
 
-class UnionQueryRunner implements QueryRunner<RealUnionResult>
+class UnionQueryRunner implements QueryRunner<UnionResult>
 {
   private final QuerySegmentWalker walker;
   private final UnionQuery query;
@@ -57,11 +57,11 @@ class UnionQueryRunner implements QueryRunner<RealUnionResult>
   }
 
   @Override
-  public Sequence<RealUnionResult> run(QueryPlus<RealUnionResult> queryPlus, ResponseContext responseContext)
+  public Sequence<UnionResult> run(QueryPlus<UnionResult> queryPlus, ResponseContext responseContext)
   {
     UnionQuery unionQuery = queryPlus.unwrapQuery(UnionQuery.class);
 
-    List<RealUnionResult> seqs = new ArrayList<RealUnionResult>();
+    List<UnionResult> seqs = new ArrayList<UnionResult>();
     for (int i = 0; i < runners.size(); i++) {
       Query<?> q = unionQuery.queries.get(i);
       QueryRunner r = runners.get(i);
@@ -70,10 +70,10 @@ class UnionQueryRunner implements QueryRunner<RealUnionResult>
     return Sequences.simple(seqs);
   }
 
-  private <T> RealUnionResult makeUnionResult(QueryRunner runner, QueryPlus<T> withQuery,
+  private <T> UnionResult makeUnionResult(QueryRunner runner, QueryPlus<T> withQuery,
       ResponseContext responseContext)
   {
     Sequence<T> seq = runner.run(withQuery, responseContext);
-    return new RealUnionResult(seq);
+    return new UnionResult(seq);
   }
 }
