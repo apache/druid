@@ -578,12 +578,14 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    GroupByResourcesReservationPool groupByResourcesReservationPoolBroker =
-        new GroupByResourcesReservationPool(mergePoolBroker, config);
-    GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical =
-        new GroupByResourcesReservationPool(mergePoolHistorical, config);
-    GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical2 =
-        new GroupByResourcesReservationPool(mergePoolHistorical2, config);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
+
+    final GroupByResourcesReservationPool groupByResourcesReservationPoolBroker =
+        new GroupByResourcesReservationPool(mergePoolBroker, config, groupByStatsProvider);
+    final GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical =
+        new GroupByResourcesReservationPool(mergePoolHistorical, config, groupByStatsProvider);
+    final GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical2 =
+        new GroupByResourcesReservationPool(mergePoolHistorical2, config, groupByStatsProvider);
 
     final GroupingEngine groupingEngineBroker = new GroupingEngine(
         druidProcessingConfig,
@@ -591,7 +593,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         groupByResourcesReservationPoolBroker,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
+        NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupingEngine groupingEngineHistorical = new GroupingEngine(
         druidProcessingConfig,
@@ -599,7 +602,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         groupByResourcesReservationPoolHistorical,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
+        NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupingEngine groupingEngineHistorical2 = new GroupingEngine(
         druidProcessingConfig,
@@ -607,7 +611,8 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
         groupByResourcesReservationPoolHistorical2,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
+        NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
 
     groupByFactoryBroker = new GroupByQueryRunnerFactory(

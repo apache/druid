@@ -86,6 +86,9 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`subquery/fallback/unknownReason/count`|Number of subqueries which cannot be materialized as frames due other reasons.|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |
 |`query/rowLimit/exceeded/count`|Number of queries whose inlined subquery results exceeded the given row limit|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |
 |`query/byteLimit/exceeded/count`|Number of queries whose inlined subquery results exceeded the given byte limit|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |
+|`mergeBuffer/acquiredCount`|Number of merge buffers acquired from the merge buffer pool.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
+|`groupBy/acquisitionTimeNs`|Average time in nanos to acquire resource for group by queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
+|`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 
 ### Historical
 
@@ -104,6 +107,9 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/timeout/count`|Number of timed out queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`mergeBuffer/pendingRequests`|Number of requests waiting to acquire a batch of buffers from the merge buffer pool.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
+|`mergeBuffer/acquiredCount`|Number of merge buffers acquired from the merge buffer pool.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
+|`groupBy/acquisitionTimeNs`|Average time in nanos to acquire resource for group by queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
+|`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 
 ### Real-time
 
@@ -120,6 +126,9 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`query/interrupted/count`|Number of queries interrupted due to cancellation.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`query/timeout/count`|Number of timed out queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
 |`mergeBuffer/pendingRequests`|Number of requests waiting to acquire a batch of buffers from the merge buffer pool.|This metric is only available if the `QueryCountStatsMonitor` module is included.||
+|`mergeBuffer/acquiredCount`|Number of merge buffers acquired from the merge buffer pool.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
+|`groupBy/acquisitionTimeNs`|Average time in nanos to acquire resource for group by queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
+|`groupBy/spilledBytes`|Number of bytes spilled on the disk by the groupBy queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 
 ### Jetty
 

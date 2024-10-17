@@ -59,6 +59,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryResources;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
@@ -103,6 +104,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
   private final int mergeBufferSize;
+  private final GroupByStatsProvider groupByStatsProvider;
 
   public GroupByMergingQueryRunner(
       GroupByQueryConfig config,
@@ -114,7 +116,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       int concurrencyHint,
       int mergeBufferSize,
       ObjectMapper spillMapper,
-      String processingTmpDir
+      String processingTmpDir,
+      GroupByStatsProvider groupByStatsProvider
   )
   {
     this.config = config;
@@ -127,6 +130,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
     this.mergeBufferSize = mergeBufferSize;
+    this.groupByStatsProvider = groupByStatsProvider;
   }
 
   @Override
@@ -187,6 +191,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
               final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
                   ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);
               resources.register(temporaryStorageHolder);
+
+              groupByStatsProvider.registerTemporaryStorage(temporaryStorage);
 
               // If parallelCombine is enabled, we need two merge buffers for parallel aggregating and parallel combining
               final int numMergeBuffers = querySpecificConfig.getNumParallelCombineThreads() > 1 ? 2 : 1;
