@@ -24,6 +24,7 @@ import org.apache.druid.segment.column.RowSignature;
 /**
  * Interface for queries that support a row signature.
  */
+// FIXME: remove/flatten
 public interface SupportRowSignature
 {
   RowSignature getResultRowSignature(RowSignature.Finalization finalization);
