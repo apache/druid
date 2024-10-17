@@ -29,6 +29,7 @@ import java.util.Map;
 public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactoryConglomerate
 {
   private final Map<Class<? extends Query>, QueryRunnerFactory> factories;
+  private final Map<Class<? extends Query>, QueryToolChest> toolchests;
 
   public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories)
   {
@@ -40,6 +41,7 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
       Map<Class<? extends Query>, QueryToolChest> toolchests)
   {
     this.factories = new IdentityHashMap<>(factories);
+    this.toolchests = new IdentityHashMap<>(toolchests);
   }
 
   @Override
@@ -63,12 +65,7 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
   @Override
   public <T, QueryType extends Query<T>> QueryExecutor<T> getQueryExecutor(QueryType query)
   {
-    QueryRunnerFactory<T, QueryType> factory = findFactory(query);
-    if (factory == null) {
-      throw DruidException
-          .defensive("QueryRunnerFactory for QueryType [%s] is not registered!", query.getClass().getName());
-    }
-    QueryToolChest<T, QueryType> toolchest = factory.getToolchest();
+    QueryToolChest<T, QueryType> toolchest = getToolChest(query);
     if (toolchest instanceof QueryExecutor) {
       return (QueryExecutor<T>) toolchest;
     }
