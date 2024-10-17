@@ -23,22 +23,22 @@ sidebar_label: Supervisor
   ~ under the License.
   -->
 
-A supervisor manages streaming ingestion from external streaming sources into Apache Druid.
-Supervisors oversee the state of indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained.
+Apache Druid uses supervisors to manage streaming ingestion from external streaming sources into Druid.
+Supervisors oversee the state of indexing tasks to coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained. They can also be used to perform [automatic compaction](../data-management/automatic-compaction.md) after data has been ingested.
 
 This topic uses the Apache Kafka term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
 
 ## Supervisor spec
 
-Druid uses a JSON specification, often referred to as the supervisor spec, to define streaming ingestion tasks.
-The supervisor spec specifies how Druid should consume, process, and index streaming data.
+Druid uses a JSON specification, often referred to as the supervisor spec, to define tasks used for streaming ingestion or auto-compaction.
+The supervisor spec specifies how Druid should consume, process, and index data from an external stream or Druid itself.
 
 The following table outlines the high-level configuration options for a supervisor spec:
 
 |Property|Type|Description|Required|
 |--------|----|-----------|--------|
-|`type`|String|The supervisor type. One of `kafka`or `kinesis`.|Yes|
-|`spec`|Object|The container object for the supervisor configuration.|Yes|
+|`type`|String|The supervisor type. For streaming ingestion, this can be either `kafka`, `kinesis`, or `rabbit`. For automatic compaction, set the type to `autocompact`. |Yes|
+|`spec`|Object|The container object for the supervisor configuration. For automatic compaction, this is the same as the compaction configuration. |Yes|
 |`spec.dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
 |`spec.ioConfig`|Object|The I/O configuration object to define the connection and I/O-related settings for the supervisor and indexing tasks.|Yes|
 |`spec.tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks.|No|
