@@ -147,8 +147,8 @@ public class Sequences
     }
   }
 
-  public static <T> Sequence<T> singleton(T value)
+  public static <T> Sequence<T> of(T ...values)
   {
-    return simple(Collections.singletonList(value));
+    return simple(Arrays.asList(values));
   }
 }
