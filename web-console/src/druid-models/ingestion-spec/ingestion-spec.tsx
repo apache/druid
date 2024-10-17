@@ -1115,7 +1115,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Delta snapshot version',
           type: 'number',
           placeholder: '(latest)',
-          zeroMeansUndefined: true,
           info: (
             <>
               The snapshot version to read from the Delta table. By default, the latest snapshot is

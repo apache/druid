@@ -667,7 +667,6 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Delta snapshot version',
     type: 'number',
     placeholder: '(latest)',
-    zeroMeansUndefined: true,
     defined: typeIsKnown(KNOWN_TYPES, 'delta'),
     info: (
       <>
