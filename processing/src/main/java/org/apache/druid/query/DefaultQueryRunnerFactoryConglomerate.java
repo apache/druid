@@ -20,23 +20,26 @@
 package org.apache.druid.query;
 
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-/**
-*/
 public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactoryConglomerate
 {
   private final Map<Class<? extends Query>, QueryRunnerFactory> factories;
 
-  @Inject
   public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories)
   {
+    this(factories, Collections.emptyMap());
+  }
+
+  @Inject
+  public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories,
+      Map<Class<? extends Query>, QueryToolChest> toolchests)
+  {
     this.factories = new IdentityHashMap<>(factories);
-    for (QueryRunnerFactory factory : factories.values()) {
-      factory.getToolchest().setWarehouse(this);
-    }
   }
 
   @Override
@@ -44,6 +47,31 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
   public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
   {
     return factories.get(query.getClass());
+  }
+
+  @Override
+  public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
+  {
+    QueryRunnerFactory<T, QueryType> factory = findFactory(query);
+    if (factory == null) {
+      throw DruidException
+          .defensive("QueryRunnerFactory for QueryType [%s] is not registered!", query.getClass().getName());
+    }
+    return factory.getToolchest();
+  }
+
+  public <T, QueryType extends Query<T>> QueryExecutor<QueryType> getQueryExecutor(QueryType query)
+  {
+    QueryRunnerFactory<T, QueryType> factory = findFactory(query);
+    if (factory == null) {
+      throw DruidException
+          .defensive("QueryRunnerFactory for QueryType [%s] is not registered!", query.getClass().getName());
+    }
+    QueryToolChest<T, QueryType> toolchest = factory.getToolchest();
+    if (toolchest instanceof QueryExecutor) {
+      return (QueryExecutor<QueryType>) toolchest;
+    }
+    return null;
   }
 
 }

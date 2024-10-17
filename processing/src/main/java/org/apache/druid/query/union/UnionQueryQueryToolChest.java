@@ -102,7 +102,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<UnionResult, UnionQ
       @Override
       public Optional<Sequence<Object[]>> transformResults(Query<?> query, Sequence<Object> results)
       {
-        QueryToolChest toolChest = warehouse.getToolChest(query);
+        QueryToolChest toolChest = conglomerate.getToolChest(query);
         return Optional.of(toolChest.resultsAsArrays(query, results));
       }
     }.transform(query, resultSequence).get();
@@ -121,7 +121,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<UnionResult, UnionQ
       @Override
       public Optional<Sequence<FrameSignaturePair>> transformResults(Query<?> query, Sequence<Object> results)
       {
-        QueryToolChest toolChest = warehouse.getToolChest(query);
+        QueryToolChest toolChest = conglomerate.getToolChest(query);
         return toolChest.resultsAsFrames(query, results, memoryAllocatorFactory, useNestedForUnknownTypes);
       }
     }.transform(query, resultSequence);

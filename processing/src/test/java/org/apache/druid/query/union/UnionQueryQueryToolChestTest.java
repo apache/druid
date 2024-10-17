@@ -27,15 +27,14 @@ import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.FrameSignaturePair;
-import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestTestHelper;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryQueryToolChestTest;
 import org.apache.druid.query.scan.ScanResultValue;
@@ -48,6 +47,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class UnionQueryQueryToolChestTest
@@ -63,12 +63,13 @@ public class UnionQueryQueryToolChestTest
   public UnionQueryQueryToolChestTest()
   {
     toolChest = new UnionQueryQueryToolChest();
-    QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(
+    DefaultQueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
+        Collections.emptyMap(),
         ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
             .put(ScanQuery.class, ScanQueryQueryToolChestTest.makeTestScanQueryToolChest())
             .build()
     );
-    toolChest.setWarehouse(warehouse);
+    toolChest.setWarehouse(conglomerate);
   }
 
   @Test
