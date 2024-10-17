@@ -186,19 +186,14 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>> im
   @Override
   public RowSignature getResultRowSignature(Finalization finalization)
   {
-    return getResultSignature(finalization);
-  }
-
-  @Deprecated
-  public RowSignature getResultSignature(final RowSignature.Finalization finalization)
-  {
+    final Finalization finalization1 = finalization;
     final RowSignature.Builder builder = RowSignature.builder();
     builder.addTimeColumn();
     String timestampResultField = getTimestampResultField();
     if (StringUtils.isNotEmpty(timestampResultField)) {
       builder.add(timestampResultField, ColumnType.LONG);
     }
-    builder.addAggregators(aggregatorSpecs, finalization);
+    builder.addAggregators(aggregatorSpecs, finalization1);
     builder.addPostAggregators(postAggregatorSpecs);
     return builder.build();
   }
