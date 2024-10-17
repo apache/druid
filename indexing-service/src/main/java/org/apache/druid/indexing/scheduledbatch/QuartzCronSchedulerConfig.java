@@ -30,13 +30,13 @@ public class QuartzCronSchedulerConfig implements CronSchedulerConfig
 {
   public static final String TYPE = "quartz";
 
+  private static final CronParser CRON_PARSER =
+      new CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.QUARTZ));
+
   @JsonProperty
   private final String schedule;
 
   private final Cron cron;
-
-  private static final CronParser CRON_PARSER =
-      new CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.QUARTZ));
 
   @JsonCreator
   public QuartzCronSchedulerConfig(@JsonProperty("schedule") final String schedule)
@@ -54,6 +54,14 @@ public class QuartzCronSchedulerConfig implements CronSchedulerConfig
   public Cron getCron()
   {
     return cron;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "QuartzCronSchedulerConfig{" +
+           "schedule='" + schedule + '\'' +
+           '}';
   }
 }
 

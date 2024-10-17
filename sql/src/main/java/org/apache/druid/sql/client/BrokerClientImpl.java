@@ -25,8 +25,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -39,8 +37,6 @@ import java.util.List;
 
 public class BrokerClientImpl implements BrokerClient
 {
-  private static final Logger log = new EmittingLogger(BrokerClientImpl.class);
-
   private final ServiceClient client;
   private final ObjectMapper jsonMapper;
 

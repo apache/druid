@@ -30,11 +30,6 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
 {
   public static final String TYPE = "unix";
 
-  @JsonProperty
-  private final String schedule;
-
-  private final Cron cron;
-
   private static final CronParser CRON_PARSER = createUnixCronParserWithMacros();
 
   private static CronParser createUnixCronParserWithMacros()
@@ -54,7 +49,12 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
                             .instance()
     );
   }
-  
+
+  @JsonProperty
+  private final String schedule;
+
+  private final Cron cron;
+
   @JsonCreator
   public UnixCronSchedulerConfig(@JsonProperty("schedule") final String schedule)
   {
@@ -71,5 +71,13 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
   public String getSchedule()
   {
     return schedule;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "UnixCronSchedulerConfig{" +
+           "schedule='" + schedule + '\'' +
+           '}';
   }
 }

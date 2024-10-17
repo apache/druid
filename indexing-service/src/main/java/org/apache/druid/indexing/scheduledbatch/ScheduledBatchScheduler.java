@@ -33,6 +33,7 @@ import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.sql.client.BrokerClient;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
@@ -44,10 +45,19 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Metrics:
+ * 1. Number of supervisor schedulers started and stopped.
+ * 2. Number of jobs submitted per supervisor
+ * 3. Number of jobs submitted completed per supervisor
+ * 4. Number of jobs errored out per supervisor
+ */
+// Metrics: 1. number of supervisors increment when start/stop is called. 2. number of jobs 3. number of
 public class ScheduledBatchScheduler
 {
   private static final Logger log = new EmittingLogger(ScheduledBatchScheduler.class);
@@ -55,29 +65,30 @@ public class ScheduledBatchScheduler
   private final TaskRunnerListener taskRunnerListener;
   private final TaskMaster taskMaster;
   private final ScheduledBatchStatusTracker statusTracker;
-
-  private final ConcurrentHashMap<String, SchedulerManager> supervisorToManager
-      = new ConcurrentHashMap<>();
+  private final BrokerClient brokerClient;
+  private final ServiceEmitter emitter;
 
   /**
    * Single-threaded executor to process the cron jobs queue.
    */
   private final ScheduledExecutorService cronExecutor;
 
-  private final BrokerClient brokerClient;
+  private final ConcurrentHashMap<String, SchedulerManager> supervisorToManager
+      = new ConcurrentHashMap<>();
 
   @Inject
   public ScheduledBatchScheduler(
       final TaskMaster taskMaster,
       final ScheduledExecutorFactory executorFactory,
-      final ServiceEmitter emitter,
-      final BrokerClient brokerClient
+      final BrokerClient brokerClient,
+      final ServiceEmitter emitter
   )
   {
     this.taskMaster = taskMaster;
     this.cronExecutor = executorFactory.create(1, "ScheduledBatchCronScheduler-%s");
-    this.statusTracker = new ScheduledBatchStatusTracker();
     this.brokerClient = brokerClient;
+    this.emitter = emitter;
+    this.statusTracker = new ScheduledBatchStatusTracker(); // this can perhaps be injected and used for test verification.
 
     this.taskRunnerListener = new TaskRunnerListener()
     {
@@ -121,11 +132,11 @@ public class ScheduledBatchScheduler
   public void stopScheduledIngestion(final String supervisorId)
   {
     log.info("Stopping scheduled batch ingestion for supervisorId[%s].", supervisorId);
-    final SchedulerManager state = supervisorToManager.get(supervisorId);
-    if (state != null) {
+    final SchedulerManager manager = supervisorToManager.get(supervisorId);
+    if (manager != null) {
       // Don't remove the supervisorId from supervisorToManager. We want to be able to track the status
-      // for suspended supervisors to track any in-flight tasks. stop() will cleanup any state completely.
-      state.stopScheduling();
+      // for suspended supervisors to track any in-flight tasks. stop() will clean up all state completely.
+      manager.stopScheduling();
     }
   }
 
@@ -178,18 +189,12 @@ public class ScheduledBatchScheduler
   }
 
   private void submitSqlTask(final String supervisorId, final SqlQuery spec)
+      throws ExecutionException, InterruptedException
   {
     log.info("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
     final ListenableFuture<SqlTaskStatus> sqlTaskStatusListenableFuture = brokerClient.submitTask(spec);
     final SqlTaskStatus sqlTaskStatus;
-    try {
-      sqlTaskStatus = sqlTaskStatusListenableFuture.get();
-    }
-    catch (Exception e) {
-      log.error(e, "Error getting taskId for supervisorId[%s] and spec[%s].", supervisorId, spec);
-      return;
-    }
-    log.info("Received task status[%s] for supervisor[%s].", sqlTaskStatus, supervisorId);
+    sqlTaskStatus = sqlTaskStatusListenableFuture.get();
     statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus);
   }
 
@@ -201,6 +206,12 @@ public class ScheduledBatchScheduler
     private final ScheduledExecutorService executorService;
 
     private ScheduledBatchSupervisorPayload.BatchSupervisorStatus status;
+
+    /**
+     * Note that the last task submitted per supervisor should eventually be persisted in the metadata store,
+     * along with any other scheduler state, so that the batch supervisor can recover gracefully and
+     * avoid missing task submissions during rolling restarts, etc.
+     */
     private DateTime lastTaskSubmittedTime;
 
     private SchedulerManager(
@@ -234,8 +245,10 @@ public class ScheduledBatchScheduler
               try {
                 lastTaskSubmittedTime = DateTimes.nowUtc();
                 submitSqlTask(supervisorId, spec);
+                emitMetric("batchSupervisor/tasks/submit/success", 1);
               }
               catch (Exception e) {
+                emitMetric("batchSupervisor/tasks/submit/failed", 1);
                 log.error(e, "Error submitting task for supervisor[%s]. Continuing schedule.", supervisorId);
               }
             });
@@ -260,6 +273,15 @@ public class ScheduledBatchScheduler
         Thread.currentThread().interrupt();
       }
       status = ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN;
+    }
+
+    private void emitMetric(final String metricName, final int value)
+    {
+      emitter.emit(
+          ServiceMetricEvent.builder()
+              .setDimension("supervisorId", supervisorId)
+              .setMetric(metricName, value)
+      );
     }
 
     @Nullable
