@@ -19,18 +19,27 @@
 @import '../../variables';
 
 $column-tree-width: 250px;
-$recent-query-task-panel-width: 250px;
 
 .workbench-view {
   height: 100%;
   width: 100%;
+
+  .splitter-layout.workbench-splitter > .layout-splitter {
+    width: $thin-padding;
+
+    &:hover {
+      background: black;
+      opacity: 0.1;
+      border-radius: 2px;
+    }
+  }
 
   .column-tree {
     position: absolute;
     top: 0;
     left: 0;
     height: 100%;
-    width: $column-tree-width;
+    width: 100%;
     @include card-like;
   }
 
@@ -39,7 +48,7 @@ $recent-query-task-panel-width: 250px;
     top: 0;
     right: 0;
     height: 100%;
-    width: $recent-query-task-panel-width;
+    width: 100%;
     display: flex;
     flex-direction: column;
     gap: 2px;
@@ -54,8 +63,7 @@ $recent-query-task-panel-width: 250px;
     position: absolute;
     top: 0;
     height: 100%;
-    left: $column-tree-width + $thin-padding;
-    right: $recent-query-task-panel-width + $thin-padding;
+    width: 100%;
 
     .tab-and-tool-bar {
       position: absolute;

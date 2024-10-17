@@ -22,10 +22,9 @@ import { QueryResult, QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import SplitterLayout from 'react-splitter-layout';
 import { useStore } from 'zustand';
 
-import { Loader, QueryErrorPane } from '../../../components';
+import { Loader, QueryErrorPane, SplitterLayout } from '../../../components';
 import type { CapacityInfo, DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
 import { DEFAULT_SERVER_QUERY_CONTEXT, Execution, WorkbenchQuery } from '../../../druid-models';
 import {
@@ -44,9 +43,9 @@ import {
   deepGet,
   DruidError,
   findAllSqlQueriesInText,
-  localStorageGet,
+  localStorageGetJson,
   LocalStorageKeys,
-  localStorageSet,
+  localStorageSetJson,
   QueryManager,
 } from '../../../utils';
 import { CapacityAlert } from '../capacity-alert/capacity-alert';
@@ -69,6 +68,10 @@ import './query-tab.scss';
 const queryRunner = new QueryRunner({
   inflateDateStrategy: 'none',
 });
+
+function handleSecondaryPaneSizeChange(secondaryPaneSize: number) {
+  localStorageSetJson(LocalStorageKeys.WORKBENCH_PANE_SIZE, secondaryPaneSize);
+}
 
 export interface QueryTabProps
   extends Pick<
@@ -185,10 +188,6 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     const queryDuration = executionState.data?.result?.queryDuration;
     return Boolean(queryDuration && queryDuration < 10000);
   }
-
-  const handleSecondaryPaneSizeChange = useCallback((secondaryPaneSize: number) => {
-    localStorageSet(LocalStorageKeys.WORKBENCH_PANE_SIZE, String(secondaryPaneSize));
-  }, []);
 
   const queryInputRef = useRef<FlexibleQueryInput | null>(null);
 
@@ -468,7 +467,9 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
       <SplitterLayout
         vertical
         percentage
-        secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.WORKBENCH_PANE_SIZE)!) || 40}
+        secondaryInitialSize={
+          Number(localStorageGetJson(LocalStorageKeys.WORKBENCH_PANE_SIZE)) || 40
+        }
         primaryMinSize={20}
         secondaryMinSize={20}
         onSecondaryPaneSizeChange={handleSecondaryPaneSizeChange}

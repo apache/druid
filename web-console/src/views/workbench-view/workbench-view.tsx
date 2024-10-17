@@ -32,7 +32,7 @@ import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
-import { MenuCheckbox } from '../../components';
+import { MenuCheckbox, SplitterLayout } from '../../components';
 import { SpecDialog, StringInputDialog } from '../../dialogs';
 import type {
   CapacityInfo,
@@ -86,6 +86,14 @@ import { WorkbenchHistoryDialog } from './workbench-history-dialog/workbench-his
 import './workbench-view.scss';
 
 const LAST_DAY = SqlExpression.parse(`__time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
+
+function handleLeftPaneSizeChange(paneSize: number) {
+  localStorageSetJson(LocalStorageKeys.WORKBENCH_LEFT_SIZE, paneSize);
+}
+
+function handleRightPaneSizeChange(paneSize: number) {
+  localStorageSetJson(LocalStorageKeys.WORKBENCH_RIGHT_SIZE, paneSize);
+}
 
 function cleanupTabEntry(tabEntry: TabEntry): void {
   const discardedId = tabEntry.id;
@@ -912,40 +920,60 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
 
     const showRightPanel = showRecentQueryTaskPanel || showCurrentDartPanel;
     return (
-      <div
-        className={classNames('workbench-view app-view', {
-          'hide-column-tree': columnMetadataState.isError(),
-          'hide-right-panel': !showRightPanel,
-        })}
-      >
-        {!columnMetadataState.isError() && (
-          <ColumnTree
-            getParsedQuery={this.getParsedQuery}
-            columnMetadata={columnMetadataState.getSomeData()}
-            columnMetadataLoading={columnMetadataState.loading}
-            onQueryChange={this.handleSqlQueryChange}
-            defaultSchema={defaultSchema ? defaultSchema : 'druid'}
-            defaultTables={defaultTables}
-            defaultWhere={LAST_DAY}
-            highlightTable={undefined}
-          />
-        )}
-        {this.renderCenterPanel()}
-        {showRightPanel && (
-          <div className="recent-panel">
-            {showRecentQueryTaskPanel && (
-              <RecentQueryTaskPanel
-                onClose={this.handleRecentQueryTaskPanelClose}
-                onExecutionDetails={this.handleDetailsWithId}
-                onChangeQuery={this.handleQueryStringChange}
-                onNewTab={this.handleNewTab}
+      <div className="workbench-view app-view">
+        <SplitterLayout
+          className="workbench-splitter"
+          primaryIndex={0}
+          secondaryMinSize={200}
+          secondaryMaxSize={500}
+          secondaryInitialSize={
+            Number(localStorageGetJson(LocalStorageKeys.WORKBENCH_RIGHT_SIZE)) || 250
+          }
+          onSecondaryPaneSizeChange={handleRightPaneSizeChange}
+          primaryMinSize={600}
+        >
+          <SplitterLayout
+            className="workbench-splitter"
+            primaryIndex={1}
+            secondaryMinSize={200}
+            secondaryMaxSize={500}
+            secondaryInitialSize={
+              Number(localStorageGetJson(LocalStorageKeys.WORKBENCH_LEFT_SIZE)) || 250
+            }
+            onSecondaryPaneSizeChange={handleLeftPaneSizeChange}
+            primaryMinSize={400}
+          >
+            {!columnMetadataState.isError() && (
+              <ColumnTree
+                getParsedQuery={this.getParsedQuery}
+                columnMetadata={columnMetadataState.getSomeData()}
+                columnMetadataLoading={columnMetadataState.loading}
+                onQueryChange={this.handleSqlQueryChange}
+                defaultSchema={defaultSchema ? defaultSchema : 'druid'}
+                defaultTables={defaultTables}
+                defaultWhere={LAST_DAY}
+                highlightTable={undefined}
               />
             )}
-            {showCurrentDartPanel && (
-              <CurrentDartPanel onClose={this.handleCurrentDartPanelClose} />
-            )}
-          </div>
-        )}
+            {this.renderCenterPanel()}
+          </SplitterLayout>
+          {showRightPanel && (
+            <div className="recent-panel">
+              {showRecentQueryTaskPanel && (
+                <RecentQueryTaskPanel
+                  onClose={this.handleRecentQueryTaskPanelClose}
+                  onExecutionDetails={this.handleDetailsWithId}
+                  onChangeQuery={this.handleQueryStringChange}
+                  onNewTab={this.handleNewTab}
+                />
+              )}
+              {showCurrentDartPanel && (
+                <CurrentDartPanel onClose={this.handleCurrentDartPanelClose} />
+              )}
+            </div>
+          )}
+        </SplitterLayout>
+
         {this.renderExecutionDetailsDialog()}
         {this.renderExplainDialog()}
         {this.renderHistoryDialog()}
