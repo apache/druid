@@ -20,7 +20,6 @@
 package org.apache.druid.indexing.batch;
 
 import com.cronutils.model.time.ExecutionTime;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.indexer.TaskLocation;
@@ -38,9 +37,9 @@ import org.apache.druid.sql.client.BrokerClient;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Optional;
@@ -53,7 +52,6 @@ public class ScheduledBatchScheduler
 {
   private static final Logger log = new EmittingLogger(ScheduledBatchScheduler.class);
 
-  private final ObjectMapper objectMapper;
   private final TaskRunnerListener taskRunnerListener;
   private final TaskMaster taskMaster;
   private final ScheduledBatchStatusTracker statusTracker;
@@ -62,9 +60,10 @@ public class ScheduledBatchScheduler
       = new ConcurrentHashMap<>();
 
   /**
-   * Single-threaded executor to process the compaction queue.
+   * Single-threaded executor to process the cron jobs queue.
    */
   private final ScheduledExecutorService cronExecutor;
+
   private final BrokerClient brokerClient;
 
   @Inject
@@ -72,22 +71,20 @@ public class ScheduledBatchScheduler
       final TaskMaster taskMaster,
       final ScheduledExecutorFactory executorFactory,
       final ServiceEmitter emitter,
-      final ObjectMapper objectMapper,
-      final BrokerClient brokerClient2
+      final BrokerClient brokerClient
   )
   {
-    this.objectMapper = objectMapper;
     this.taskMaster = taskMaster;
-    this.cronExecutor = executorFactory.create(1, "GlobalBatchCronScheduler-%s");
+    this.cronExecutor = executorFactory.create(1, "ScheduledBatchCronScheduler-%s");
     this.statusTracker = new ScheduledBatchStatusTracker();
-    this.brokerClient = brokerClient2;
+    this.brokerClient = brokerClient;
 
     this.taskRunnerListener = new TaskRunnerListener()
     {
       @Override
       public String getListenerId()
       {
-        return "GlobalBatchCronScheduler";
+        return "ScheduledBatchScheduler";
       }
 
       @Override
@@ -99,7 +96,6 @@ public class ScheduledBatchScheduler
       @Override
       public void statusChanged(final String taskId, final TaskStatus taskStatus)
       {
-        log.info("Task[%s] status changed to [%s]", taskId, taskStatus);
         if (taskStatus.isComplete()) {
           statusTracker.onTaskCompleted(taskId, taskStatus);
         }
@@ -159,34 +155,31 @@ public class ScheduledBatchScheduler
   @Nullable
   public ScheduledBatchSupervisorSnapshot getSchedulerSnapshot(final String supervisorId)
   {
-    final SchedulerManager state = supervisorToManager.get(supervisorId);
-    if (state == null) {
+    final SchedulerManager manager = supervisorToManager.get(supervisorId);
+    if (manager == null) {
       return null;
     }
-    final DateTime previousExecutionTime = state.getPreviousExecutionTime();
-    final Optional<DateTime> nextExecutionTime = state.getNextExecutionTime();
-    final Optional<Duration> timeToNextExecution = state.getDurationBeforeNextRun();
 
     final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus tasks = statusTracker.getSupervisorTasks(supervisorId);
-
     return new ScheduledBatchSupervisorSnapshot(
         supervisorId,
-        state.getSchedulerStatus(),
-        previousExecutionTime != null ? previousExecutionTime.toString() : "Not run",
-        nextExecutionTime.isPresent() ? nextExecutionTime.get().toString() : "N/A",
-        timeToNextExecution.isPresent() ? timeToNextExecution.get().toString() : "N/A",
+        manager.getSchedulerStatus(),
+        manager.getLastTaskSubmittedTime(),
+        manager.getNextTaskSubmissionTime(),
+        manager.getTimeUntilNextTaskSubmission(),
         tasks.getSubmittedTasks(),
         tasks.getCompletedTasks()
     );
   }
 
-  private void enqueueWork(Runnable task)
+  private void enqueueTask(final Runnable runnable)
   {
-    cronExecutor.submit(task);
+    cronExecutor.submit(runnable);
   }
 
-  private void postMsqTaskPayloadViaNewBrokerClient(final String supervisorId, final SqlQuery spec)
+  private void submitSqlTask(final String supervisorId, final SqlQuery spec)
   {
+    log.info("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
     final ListenableFuture<SqlTaskStatus> sqlTaskStatusListenableFuture = brokerClient.submitTask(spec);
     final SqlTaskStatus sqlTaskStatus;
     try {
@@ -203,14 +196,12 @@ public class ScheduledBatchScheduler
   private class SchedulerManager
   {
     private final String supervisorId;
-    private final CronSchedulerConfig cronSchedulerConfig;
     private final SqlQuery spec;
     private final ExecutionTime executionTime;
     private final ScheduledExecutorService executorService;
 
     private ScheduledBatchSupervisorPayload.BatchSupervisorStatus status;
-    // Track the last know run time.
-    private DateTime lastRunTime;
+    private DateTime lastTaskSubmittedTime;
 
     private SchedulerManager(
         final String supervisorId,
@@ -219,7 +210,6 @@ public class ScheduledBatchScheduler
     )
     {
       this.supervisorId = supervisorId;
-      this.cronSchedulerConfig = cronSchedulerConfig;
       this.spec = spec;
       this.executionTime = ExecutionTime.forCron(cronSchedulerConfig.getCron());
       this.executorService = Executors.newSingleThreadScheduledExecutor();
@@ -228,81 +218,74 @@ public class ScheduledBatchScheduler
     private synchronized void startScheduling()
     {
       if (executorService.isTerminated() || executorService.isShutdown()) {
-        log.info(
-            "Executor service for [%s] is shutdown[%s] or terminated[%s]",
-            supervisorId,
-            executorService.isShutdown(),
-            executorService.isTerminated()
-        );
         return;
       }
 
       status = ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING;
-      Optional<Duration> duration = executionTime.timeToNextExecution(ZonedDateTime.now());
-      if (!duration.isPresent()) {
-        // Should be a defensive exception that should never happen
+      final Duration timeUntilNextSubmission = getTimeUntilNextTaskSubmission();
+      if (timeUntilNextSubmission == null) {
+        log.info("No more tasks will be submitted for supervisor[%s].", supervisorId);
         return;
       }
-      final long nextExecutionMillis = duration.get().toMillis();
-      log.info("Time to next execution for millis[%s] for supervisor[%s].", nextExecutionMillis, supervisorId);
 
       executorService.schedule(
           () -> {
-            enqueueWork(() -> {
+            enqueueTask(() -> {
               try {
-                lastRunTime = DateTimes.nowUtc();
-                log.info("Submitting a new task with spec[%s] for supervisor[%s]!", spec, supervisorId);
-                postMsqTaskPayloadViaNewBrokerClient(supervisorId, spec);
+                lastTaskSubmittedTime = DateTimes.nowUtc();
+                submitSqlTask(supervisorId, spec);
               }
               catch (Exception e) {
-                log.error(e, "Exception submitting task for supervisor[%s]!", supervisorId);
+                log.error(e, "Error submitting task for supervisor[%s]. Continuing schedule.", supervisorId);
               }
             });
-            log.info("Supervisor[%s] enqueud a Runnable work [%s] now...", supervisorId, spec);
             startScheduling();
           },
-          nextExecutionMillis,
+          timeUntilNextSubmission.getMillis(),
           TimeUnit.MILLISECONDS
       );
     }
 
     private synchronized void stopScheduling()
     {
-      status = ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN;
       executorService.shutdown();
       try {
-        if (!executorService.awaitTermination(3, TimeUnit.SECONDS)) {
+        if (!executorService.awaitTermination(2, TimeUnit.SECONDS)) {
           executorService.shutdownNow();
         }
       }
       catch (InterruptedException e) {
-        log.error(e, "Error shutting down supervisor[%s] executor pool. Interrupting the threads.", supervisorId);
+        log.error(e, "Forcing shutdown of executor service for supervisor[%s].", supervisorId);
         executorService.shutdownNow();
         Thread.currentThread().interrupt();
       }
+      status = ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN;
     }
 
-    private DateTime getPreviousExecutionTime()
+    @Nullable
+    private DateTime getLastTaskSubmittedTime()
     {
-      return lastRunTime;
+      return lastTaskSubmittedTime;
     }
 
-    private Optional<DateTime> getNextExecutionTime()
+    @Nullable
+    private DateTime getNextTaskSubmissionTime()
     {
       final Optional<ZonedDateTime> zonedDateTime = executionTime.nextExecution(ZonedDateTime.now());
-
       if (zonedDateTime.isPresent()) {
         final ZonedDateTime zdt = zonedDateTime.get();
         final Instant instant = zdt.toInstant();
-        return Optional.of(new DateTime(instant.toEpochMilli(), DateTimes.inferTzFromString(zdt.getZone().getId())));
+        return new DateTime(instant.toEpochMilli(), DateTimes.inferTzFromString(zdt.getZone().getId()));
       } else {
-        return Optional.empty();
+        return null;
       }
     }
 
-    private Optional<Duration> getDurationBeforeNextRun()
+    @Nullable
+    private Duration getTimeUntilNextTaskSubmission()
     {
-      return executionTime.timeToNextExecution(ZonedDateTime.now());
+      final Optional<java.time.Duration> duration = executionTime.timeToNextExecution(ZonedDateTime.now());
+      return duration.map(value -> Duration.millis(value.toMillis())).orElse(null);
     }
 
     private ScheduledBatchSupervisorPayload.BatchSupervisorStatus getSchedulerStatus()

@@ -19,22 +19,16 @@
 
 package org.apache.druid.indexing.batch;
 
-import com.fasterxml.jackson.databind.InjectableValues;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import org.apache.calcite.avatica.SqlType;
-import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.TaskRunner;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.segment.TestIndex;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.sql.client.BrokerClient;
@@ -42,32 +36,16 @@ import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 public class ScheduledBatchSchedulerTest
 {
-  private static final ObjectMapper OBJECT_MAPPER;
-
-  static {
-    OBJECT_MAPPER = new DefaultObjectMapper();
-    OBJECT_MAPPER.registerModules(new IndexingServiceTuningConfigModule().getJacksonModules());
-    OBJECT_MAPPER.setInjectableValues(
-        new InjectableValues
-            .Std()
-            .addValue(
-                SegmentCacheManagerFactory.class,
-                new SegmentCacheManagerFactory(TestIndex.INDEX_IO, OBJECT_MAPPER)
-            )
-    );
-  }
-
-
   private TaskMaster taskMaster;
   private BlockingExecutorService executor;
   private BrokerClient brokerClient;
@@ -102,7 +80,6 @@ public class ScheduledBatchSchedulerTest
         taskMaster,
         (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
         serviceEmitter,
-        OBJECT_MAPPER,
         brokerClient
     );
   }
@@ -118,7 +95,7 @@ public class ScheduledBatchSchedulerTest
     assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
     assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
     assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    assertEquals("Not run", snapshot.getPreviousTaskExecutionTime());
+    assertNull(snapshot.getLastTaskSubmittedTime());
 
     scheduler.stopScheduledIngestion("foo");
     snapshot = scheduler.getSchedulerSnapshot("foo");
@@ -137,7 +114,7 @@ public class ScheduledBatchSchedulerTest
     assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
 
     scheduler.stop();
-    Assert.assertNull(scheduler.getSchedulerSnapshot("foo"));
+    assertNull(scheduler.getSchedulerSnapshot("foo"));
   }
 
   @Test
@@ -164,9 +141,9 @@ public class ScheduledBatchSchedulerTest
     assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
     assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
     assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    assertEquals("Not run", snapshot.getPreviousTaskExecutionTime());
+    assertNull(snapshot.getLastTaskSubmittedTime());
 
-    Thread.sleep(5000);
+    Thread.sleep(1200);
 
     scheduler.stopScheduledIngestion("foo");
     snapshot = scheduler.getSchedulerSnapshot("foo");
@@ -177,7 +154,7 @@ public class ScheduledBatchSchedulerTest
     assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN, snapshot.getStatus());
 
     scheduler.stop();
-    Assert.assertNull(scheduler.getSchedulerSnapshot("foo"));
+    assertNull(scheduler.getSchedulerSnapshot("foo"));
   }
 
   @Test
@@ -195,9 +172,9 @@ public class ScheduledBatchSchedulerTest
     assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
     assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
     assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    assertEquals("Not run", snapshot.getPreviousTaskExecutionTime());
+    assertNull(snapshot.getLastTaskSubmittedTime());
 
-    Thread.sleep(2000);
+    Thread.sleep(1200);
     executor.finishNextPendingTask();
     snapshot = scheduler.getSchedulerSnapshot("foo");
     assertNotNull(snapshot);
@@ -205,7 +182,7 @@ public class ScheduledBatchSchedulerTest
     assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
     assertEquals(ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId())), snapshot.getCompletedTasks());
     assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    Assert.assertNotEquals("Not run", snapshot.getPreviousTaskExecutionTime());
+    assertNotNull(snapshot.getLastTaskSubmittedTime());
 
     scheduler.stopScheduledIngestion("foo");
 
@@ -217,7 +194,7 @@ public class ScheduledBatchSchedulerTest
     assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN, snapshot.getStatus());
 
     scheduler.stop();
-    Assert.assertNull(scheduler.getSchedulerSnapshot("foo"));
+    assertNull(scheduler.getSchedulerSnapshot("foo"));
   }
 
   @Test
@@ -237,7 +214,7 @@ public class ScheduledBatchSchedulerTest
     assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
     assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
     assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    assertEquals("Not run", snapshot.getPreviousTaskExecutionTime());
+    assertNull(snapshot.getLastTaskSubmittedTime());
 
     Thread.sleep(1200);
     executor.finishNextPendingTask();
@@ -247,7 +224,7 @@ public class ScheduledBatchSchedulerTest
     assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
     assertEquals(ImmutableMap.of(expectedTask1.getTaskId(), TaskStatus.success(expectedTask1.getTaskId())), snapshot.getCompletedTasks());
     assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    Assert.assertNotEquals("Not run", snapshot.getPreviousTaskExecutionTime());
+    assertNotNull(snapshot.getLastTaskSubmittedTime());
 
     Thread.sleep(1200);
     executor.finishNextPendingTask();
@@ -261,7 +238,7 @@ public class ScheduledBatchSchedulerTest
     assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN, snapshot.getStatus());
 
     scheduler.stop();
-    Assert.assertNull(scheduler.getSchedulerSnapshot("foo"));
+    assertNull(scheduler.getSchedulerSnapshot("foo"));
   }
 
   @Test

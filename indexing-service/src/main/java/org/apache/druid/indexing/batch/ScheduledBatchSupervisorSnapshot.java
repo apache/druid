@@ -22,7 +22,10 @@ package org.apache.druid.indexing.batch;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.TaskStatus;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
 import java.util.Map;
 
 public class ScheduledBatchSupervisorSnapshot
@@ -33,14 +36,17 @@ public class ScheduledBatchSupervisorSnapshot
   @JsonProperty
   private final ScheduledBatchSupervisorPayload.BatchSupervisorStatus status;
 
+  @Nullable
   @JsonProperty
-  private final String previousTaskExecutionTime;
+  private final DateTime lastTaskSubmittedTime;
 
+  @Nullable
   @JsonProperty
-  private final String nextTaskExecutionTime;
+  private final DateTime nextTaskSubmissionTime;
 
+  @Nullable
   @JsonProperty
-  private final String timeToNextExecution;
+  private final Duration timeUntilNextTaskSubmission;
 
   @JsonProperty
   private final Map<String, TaskStatus> activeTasks;
@@ -52,18 +58,18 @@ public class ScheduledBatchSupervisorSnapshot
   public ScheduledBatchSupervisorSnapshot(
       @JsonProperty("supervisorId") String supervisorId,
       @JsonProperty("status") ScheduledBatchSupervisorPayload.BatchSupervisorStatus status,
-      @JsonProperty("previousTaskExecutionTime") String previousTaskExecutionTime,
-      @JsonProperty("nextTaskExecutionTime") String nextTaskExecutionTime,
-      @JsonProperty("timeToNextExecution") String timeToNextExecution,
+      @JsonProperty("lastTaskSubmittedTime") @Nullable DateTime lastTaskSubmittedTime,
+      @JsonProperty("nextTaskSubmissionTime") @Nullable DateTime nextTaskSubmissionTime,
+      @JsonProperty("timeUntilNextTaskSubmission") @Nullable Duration timeUntilNextTaskSubmission,
       @JsonProperty("activeTasks") Map<String, TaskStatus> activeTasks,
       @JsonProperty("completedTasks") Map<String, TaskStatus> completedTasks
   )
   {
     this.supervisorId = supervisorId;
     this.status = status;
-    this.previousTaskExecutionTime = previousTaskExecutionTime;
-    this.nextTaskExecutionTime = nextTaskExecutionTime;
-    this.timeToNextExecution = timeToNextExecution;
+    this.lastTaskSubmittedTime = lastTaskSubmittedTime;
+    this.nextTaskSubmissionTime = nextTaskSubmissionTime;
+    this.timeUntilNextTaskSubmission = timeUntilNextTaskSubmission;
     this.activeTasks = activeTasks;
     this.completedTasks = completedTasks;
   }
@@ -78,19 +84,19 @@ public class ScheduledBatchSupervisorSnapshot
     return status;
   }
 
-  public String getPreviousTaskExecutionTime()
+  public DateTime getLastTaskSubmittedTime()
   {
-    return previousTaskExecutionTime;
+    return lastTaskSubmittedTime;
   }
 
-  public String getNextTaskExecutionTime()
+  public DateTime getNextTaskSubmissionTime()
   {
-    return nextTaskExecutionTime;
+    return nextTaskSubmissionTime;
   }
 
-  public String getTimeToNextExecution()
+  public Duration getTimeUntilNextTaskSubmission()
   {
-    return timeToNextExecution;
+    return timeUntilNextTaskSubmission;
   }
 
   public Map<String, TaskStatus> getActiveTasks()

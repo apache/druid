@@ -34,7 +34,6 @@ import org.apache.druid.sql.client.BrokerClient;
 import org.apache.druid.sql.http.ExplainPlanInformation;
 import org.apache.druid.sql.http.SqlQuery;
 import org.hamcrest.MatcherAssert;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -153,13 +152,13 @@ public class ScheduledBatchSupervisorSpecTest
         scheduler,
         brokerClient
     );
-    Assert.assertFalse(activeSpec.isSuspended());
+    assertFalse(activeSpec.isSuspended());
 
     final ScheduledBatchSupervisorSpec suspendedSpec = activeSpec.createSuspendedSpec();
-    Assert.assertTrue(suspendedSpec.isSuspended());
-    Assert.assertEquals(activeSpec.getId(), suspendedSpec.getId());
-    Assert.assertEquals(activeSpec.getSpec(), suspendedSpec.getSpec());
-    Assert.assertEquals(activeSpec.getDataSources(), suspendedSpec.getDataSources());
+    assertTrue(suspendedSpec.isSuspended());
+    assertEquals(activeSpec.getId(), suspendedSpec.getId());
+    assertEquals(activeSpec.getSpec(), suspendedSpec.getSpec());
+    assertEquals(activeSpec.getDataSources(), suspendedSpec.getDataSources());
   }
 
   @Test
@@ -175,13 +174,13 @@ public class ScheduledBatchSupervisorSpecTest
         scheduler,
         brokerClient
     );
-    Assert.assertTrue(suspendedSpec.isSuspended());
+    assertTrue(suspendedSpec.isSuspended());
 
     final ScheduledBatchSupervisorSpec activeSpec = suspendedSpec.createRunningSpec();
-    Assert.assertFalse(activeSpec.isSuspended());
-    Assert.assertEquals(activeSpec.getId(), suspendedSpec.getId());
-    Assert.assertEquals(activeSpec.getSpec(), suspendedSpec.getSpec());
-    Assert.assertEquals(activeSpec.getDataSources(), suspendedSpec.getDataSources());
+    assertFalse(activeSpec.isSuspended());
+    assertEquals(activeSpec.getId(), suspendedSpec.getId());
+    assertEquals(activeSpec.getSpec(), suspendedSpec.getSpec());
+    assertEquals(activeSpec.getDataSources(), suspendedSpec.getDataSources());
   }
 
   @Test
@@ -240,7 +239,7 @@ public class ScheduledBatchSupervisorSpecTest
       assertEquals(spec.getDataSources(), observedSpec.getDataSources());
     }
     catch (Exception e) {
-      throw DruidException.defensive(e, "Error while performing serde");
+      throw DruidException.defensive(e, "Error while performing serde of spec[%s].", spec);
     }
   }
 }

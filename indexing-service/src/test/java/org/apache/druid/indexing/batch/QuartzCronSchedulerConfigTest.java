@@ -77,7 +77,7 @@ public class QuartzCronSchedulerConfigTest
   }
 
   @Test
-  public void testDailyMacroNotSupported()
+  public void testMacroExpressionsNotSupported()
   {
     assertThrows(IllegalArgumentException.class, () -> new QuartzCronSchedulerConfig("@daily"));
   }

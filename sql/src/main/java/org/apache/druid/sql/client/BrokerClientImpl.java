@@ -53,11 +53,9 @@ public class BrokerClientImpl implements BrokerClient
   @Override
   public ListenableFuture<SqlTaskStatus> submitTask(final SqlQuery sqlQuery)
   {
-    log.info("Submitting task with query[%s].", sqlQuery);
-    final String path = "/druid/v2/sql/task/";
     return FutureUtils.transform(
         client.asyncRequest(
-            new RequestBuilder(HttpMethod.POST, path)
+            new RequestBuilder(HttpMethod.POST, "/druid/v2/sql/task/")
                 .jsonContent(jsonMapper, sqlQuery),
             new BytesFullResponseHandler()
         ),
@@ -77,11 +75,9 @@ public class BrokerClientImpl implements BrokerClient
         null,
         null
     );
-    log.info("Submitting explain query[%s].", explainSqlQuery);
-    final String path = "/druid/v2/sql/task/";
     return FutureUtils.transform(
         client.asyncRequest(
-            new RequestBuilder(HttpMethod.POST, path)
+            new RequestBuilder(HttpMethod.POST, "/druid/v2/sql/task/")
                 .jsonContent(jsonMapper, explainSqlQuery),
             new BytesFullResponseHandler()
         ),
