@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.loading;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Predicate;
 import com.google.common.io.Files;
 import org.apache.druid.java.util.common.FileUtils;
@@ -116,12 +115,6 @@ public class LocalDataSegmentPuller implements URIDataPuller
   }
 
   private static final Logger log = new Logger(LocalDataSegmentPuller.class);
-
-  @VisibleForTesting
-  public void getSegmentFiles(DataSegment segment, File dir) throws SegmentLoadingException
-  {
-    getSegmentFiles(getFile(segment), dir);
-  }
 
   public FileUtils.FileCopyResult getSegmentFiles(final File sourceFile, final File dir) throws SegmentLoadingException
   {

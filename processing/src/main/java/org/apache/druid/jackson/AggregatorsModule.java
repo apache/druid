@@ -83,6 +83,16 @@ public class AggregatorsModule extends SimpleModule
   {
     super("AggregatorFactories");
 
+    registerComplexMetricsAndSerde();
+
+    setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
+    setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
+
+    addSerializer(DoubleMeanHolder.class, DoubleMeanHolder.Serializer.INSTANCE);
+  }
+
+  public static void registerComplexMetricsAndSerde()
+  {
     ComplexMetrics.registerSerde(HyperUniquesSerde.TYPE_NAME, new HyperUniquesSerde());
     ComplexMetrics.registerSerde(PreComputedHyperUniquesSerde.TYPE_NAME, new PreComputedHyperUniquesSerde());
     ComplexMetrics.registerSerde(
@@ -102,11 +112,6 @@ public class AggregatorsModule extends SimpleModule
         SerializablePairLongLongComplexMetricSerde.TYPE_NAME,
         new SerializablePairLongLongComplexMetricSerde()
     );
-
-    setMixInAnnotation(AggregatorFactory.class, AggregatorFactoryMixin.class);
-    setMixInAnnotation(PostAggregator.class, PostAggregatorMixin.class);
-
-    addSerializer(DoubleMeanHolder.class, DoubleMeanHolder.Serializer.INSTANCE);
   }
 
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")

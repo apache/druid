@@ -34,8 +34,7 @@ Druid docs contributors:
 Druid docs contributors can open an issue about documentation, or contribute a change with a pull request (PR).
 
 The open source Druid docs are located here:
-https://druid.apache.org/docs/latest/design/index.html
-
+<https://druid.apache.org/docs/latest/design/index.html>
 
 If you need to update a Druid doc, locate and update the doc in the Druid repo following the instructions below.
 
@@ -48,19 +47,22 @@ See [`CONTRIBUTING.md`](https://github.com/apache/incubator-druid/blob/master/CO
 ## Before you begin
 
 Before you can contribute to the Druid docs for the first time, you must complete the following steps:
+
 1. Fork the [Druid repo](https://github.com/apache/druid). Your fork will be the `origin` remote.
-2. Clone your fork: 
-   
+2. Clone your fork:
+
    ```bash
    git clone git@github.com:GITHUB_USERNAME/druid.git
    ```
+
    Replace `GITHUB_USERNAME` with your GitHub username.
 3. In the directory where you cloned your fork, set up `apache/druid`  as your your remote `upstream` repo:
-   
+
    ```bash
    git remote add upstream https://github.com/apache/druid.git
    ```
-4. Confirm that your fork shows up as the origin repo and `apache/druid` shows up as the upstream repo:   
+
+4. Confirm that your fork shows up as the origin repo and `apache/druid` shows up as the upstream repo:
 
    ```bash
    git remote -v
@@ -71,11 +73,11 @@ Before you can contribute to the Druid docs for the first time, you must complet
    ```bash
    git config user.email
    ```
-   
+
    If you need to set your email, see the [GitHub instructions](https://docs.github.com/en/github-ae@latest/account-and-profile/setting-up-and-managing-your-github-user-account/managing-email-preferences/setting-your-commit-email-address#setting-your-commit-email-address-in-git).
 
-5. Install Docusaurus so that you can build the site locally. Run either `npm install` or `yarn install` in the `website` directory.
-   
+6. Install Docusaurus so that you can build the site locally. Run either `npm install` or `yarn install` in the `website` directory.
+
 ## Contributing
 
 Before you contribute, make sure your local branch of `master` and the upstream Apache branch are up-to-date and in sync. This can help you avoid merge conflicts. Run the following commands on your fork's `master` branch:
@@ -104,13 +106,13 @@ Now you're up to date, and you can make your changes.
    Provide a name for your feature branch in `MY-BRANCH`.
 
 2. Find the file that you want to make changes to. All the source files for the docs are written in Markdown and located in the `docs` directory. The URL for the page includes the subdirectory the source file is in. For example, the SQL-based ingestion tutorial found at `https://druid.apache.org/docs/latest/tutorials/tutorial-msq-extern.html` is in the `tutorials` subdirectory.
-   
+
    If you're adding a page, create a new Markdown file in the appropriate subdirectory. Then, copy the front matter and Apache license from an existing file. Update the `title` and `id` fields. Don't forget to add it to `website/sidebars.json` so that your new page shows up in the navigation.
 
-4. Test changes locally by building the site and navigating to your changes. In the `website` directory, run `docusaurus-start`. By default, this starts the site on `localhost:3000`. If port `3000` is already in use, it'll increment the port number from there.
-   
-5. Use the following commands to run the link and spellcheckers locally: 
-   
+3. Test changes locally by building the site and navigating to your changes. In the `website` directory, run `npm run start`. By default, this starts the site on `localhost:3000`. If port `3000` is already in use, it'll increment the port number from there.
+
+4. Use the following commands to run the link and spellcheckers locally:
+
    ```bash
    cd website
    # You only need to install once
@@ -123,7 +125,7 @@ Now you're up to date, and you can make your changes.
 
    This step can save you time during the review process since they'll run faster than the GitHub Action version of the checks and warn you of issues before you create a PR.
 
-5. Push your changes to your fork: 
+5. Push your changes to your fork:
 
    ```bash
    git push --set-upstream origin MY-BRANCH
@@ -133,7 +135,7 @@ Now you're up to date, and you can make your changes.
 
 The pull request template is extensive. You may not need all the information there, so feel free to delete unneeded sections as you fill it out. Once you create the pull request, GitHub automatically labels the issue so that reviewers can take a look.
 
-The docs go through a review process similar to the code where community members will offer feedback. Once the review process is complete and your changes are merged, they'll be available on the live site when the site gets republished. 
+The docs go through a review process similar to the code where community members will offer feedback. Once the review process is complete and your changes are merged, they'll be available on the live site when the site gets republished.
 
 ## Style guide
 
@@ -146,6 +148,7 @@ The style guide should serve as a point of reference to enable contributors and 
 In some cases, Google Style might make the Druid docs more difficult to read and understand. This section highlights those exceptions.
 
 #### SQL keyword syntax
+
 For SQL keywords and functions, use all caps, but do not use code font.
 
 :::tip
@@ -158,7 +161,6 @@ The UNNEST clause unnests array values.
 
 The \`UNNEST\` clause unnests array values.
 :::
-
 
 #### Optional parameters and arguments
 

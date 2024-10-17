@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { sum } from 'd3-array';
+import { max, sum } from 'd3-array';
 import React from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
+  type TableColumnSelectorColumn,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
@@ -39,27 +40,31 @@ import type { QueryWithContext } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
-import type { NumberLike } from '../../utils';
+import type { AuxiliaryQueryFn, NumberLike } from '../../utils';
 import {
+  assemble,
   deepGet,
   filterMap,
   formatBytes,
   formatBytesCompact,
+  formatDurationWithMsIfNeeded,
   hasPopoverOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
   oneOf,
   pluralIfNeeded,
+  prettyFormatIsoDateWithMsIfNeeded,
   queryDruidSql,
   QueryManager,
   QueryState,
+  ResultWithAuxiliaryWork,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
 
 import './services-view.scss';
 
-const tableColumns: Record<CapabilitiesMode, string[]> = {
+const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[]> = {
   'full': [
     'Service',
     'Type',
@@ -96,28 +101,9 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
   ],
 };
 
-function formatQueues(
-  segmentsToLoad: NumberLike,
-  segmentsToLoadSize: NumberLike,
-  segmentsToDrop: NumberLike,
-  segmentsToDropSize: NumberLike,
-): string {
-  const queueParts: string[] = [];
-  if (segmentsToLoad) {
-    queueParts.push(
-      `${pluralIfNeeded(segmentsToLoad, 'segment')} to load (${formatBytesCompact(
-        segmentsToLoadSize,
-      )})`,
-    );
-  }
-  if (segmentsToDrop) {
-    queueParts.push(
-      `${pluralIfNeeded(segmentsToDrop, 'segment')} to drop (${formatBytesCompact(
-        segmentsToDropSize,
-      )})`,
-    );
-  }
-  return queueParts.join(', ') || 'Empty load/drop queues';
+interface ServicesQuery {
+  capabilities: Capabilities;
+  visibleColumns: LocalStorageBackedVisibility;
 }
 
 export interface ServicesViewProps {
@@ -148,8 +134,8 @@ interface ServiceResultRow {
   readonly plaintext_port: number;
   readonly tls_port: number;
   readonly start_time: string;
-  loadQueueInfo?: LoadQueueInfo;
-  workerInfo?: WorkerInfo;
+  readonly loadQueueInfo?: LoadQueueInfo;
+  readonly workerInfo?: WorkerInfo;
 }
 
 interface LoadQueueInfo {
@@ -157,6 +143,44 @@ interface LoadQueueInfo {
   readonly segmentsToDropSize: NumberLike;
   readonly segmentsToLoad: NumberLike;
   readonly segmentsToLoadSize: NumberLike;
+  readonly expectedLoadTimeMillis: NumberLike;
+}
+
+function formatLoadQueueInfo({
+  segmentsToDrop,
+  segmentsToDropSize,
+  segmentsToLoad,
+  segmentsToLoadSize,
+  expectedLoadTimeMillis,
+}: LoadQueueInfo): string {
+  return (
+    assemble(
+      segmentsToLoad
+        ? `${pluralIfNeeded(segmentsToLoad, 'segment')} to load (${formatBytesCompact(
+            segmentsToLoadSize,
+          )}${
+            expectedLoadTimeMillis
+              ? `, ${formatDurationWithMsIfNeeded(expectedLoadTimeMillis)}`
+              : ''
+          })`
+        : undefined,
+      segmentsToDrop
+        ? `${pluralIfNeeded(segmentsToDrop, 'segment')} to drop (${formatBytesCompact(
+            segmentsToDropSize,
+          )})`
+        : undefined,
+    ).join(', ') || 'Empty load/drop queues'
+  );
+}
+
+function aggregateLoadQueueInfos(loadQueueInfos: LoadQueueInfo[]): LoadQueueInfo {
+  return {
+    segmentsToLoad: sum(loadQueueInfos, s => Number(s.segmentsToLoad) || 0),
+    segmentsToLoadSize: sum(loadQueueInfos, s => Number(s.segmentsToLoadSize) || 0),
+    segmentsToDrop: sum(loadQueueInfos, s => Number(s.segmentsToDrop) || 0),
+    segmentsToDropSize: sum(loadQueueInfos, s => Number(s.segmentsToDropSize) || 0),
+    expectedLoadTimeMillis: max(loadQueueInfos, s => Number(s.expectedLoadTimeMillis) || 0) || 0,
+  };
 }
 
 interface WorkerInfo {
@@ -177,7 +201,7 @@ interface WorkerInfo {
 }
 
 export class ServicesView extends React.PureComponent<ServicesViewProps, ServicesViewState> {
-  private readonly serviceQueryManager: QueryManager<Capabilities, ServiceResultRow[]>;
+  private readonly serviceQueryManager: QueryManager<ServicesQuery, ServiceResultRow[]>;
 
   // Ranking
   //   coordinator => 8
@@ -217,23 +241,6 @@ ORDER BY
   ) DESC,
   "service" DESC`;
 
-  static async getServices(): Promise<ServiceResultRow[]> {
-    const allServiceResp = await Api.instance.get('/druid/coordinator/v1/servers?simple');
-    const allServices = allServiceResp.data;
-    return allServices.map((s: any) => {
-      return {
-        service: s.host,
-        service_type: s.type === 'indexer-executor' ? 'peon' : s.type,
-        tier: s.tier,
-        host: s.host.split(':')[0],
-        plaintext_port: parseInt(s.host.split(':')[1], 10),
-        curr_size: s.currSize,
-        max_size: s.maxSize,
-        tls_port: -1,
-      };
-    });
-  }
-
   constructor(props: ServicesViewProps) {
     super(props);
     this.state = {
@@ -245,63 +252,92 @@ ORDER BY
     };
 
     this.serviceQueryManager = new QueryManager({
-      processQuery: async capabilities => {
+      processQuery: async ({ capabilities, visibleColumns }, cancelToken) => {
         let services: ServiceResultRow[];
         if (capabilities.hasSql()) {
-          services = await queryDruidSql({ query: ServicesView.SERVICE_SQL });
+          services = await queryDruidSql({ query: ServicesView.SERVICE_SQL }, cancelToken);
         } else if (capabilities.hasCoordinatorAccess()) {
-          services = await ServicesView.getServices();
+          services = (
+            await Api.instance.get('/druid/coordinator/v1/servers?simple', { cancelToken })
+          ).data.map((s: any): ServiceResultRow => {
+            const hostParts = s.host.split(':');
+            const port = parseInt(hostParts[1], 10);
+            return {
+              service: s.host,
+              service_type: s.type === 'indexer-executor' ? 'peon' : s.type,
+              tier: s.tier,
+              host: hostParts[0],
+              plaintext_port: port < 9000 ? port : -1,
+              tls_port: port < 9000 ? -1 : port,
+              curr_size: s.currSize,
+              max_size: s.maxSize,
+              start_time: '1970:01:01T00:00:00Z',
+              is_leader: 0,
+            };
+          });
         } else {
           throw new Error(`must have SQL or coordinator access`);
         }
 
-        if (capabilities.hasCoordinatorAccess()) {
-          try {
-            const loadQueueInfos = (
-              await Api.instance.get<Record<string, LoadQueueInfo>>(
-                '/druid/coordinator/v1/loadqueue?simple',
-              )
-            ).data;
-            services.forEach(s => {
-              s.loadQueueInfo = loadQueueInfos[s.service];
-            });
-          } catch {
-            AppToaster.show({
-              icon: IconNames.ERROR,
-              intent: Intent.DANGER,
-              message: 'There was an error getting the load queue info',
-            });
-          }
-        }
+        const auxiliaryQueries: AuxiliaryQueryFn<ServiceResultRow[]>[] = [];
 
-        if (capabilities.hasOverlordAccess()) {
-          try {
-            const workerInfos = (await Api.instance.get<WorkerInfo[]>('/druid/indexer/v1/workers'))
-              .data;
-
-            const workerInfoLookup: Record<string, WorkerInfo> = lookupBy(
-              workerInfos,
-              m => m.worker?.host,
-            );
-
-            services.forEach(s => {
-              s.workerInfo = workerInfoLookup[s.service];
-            });
-          } catch (e) {
-            // Swallow this error because it simply a reflection of a local task runner.
-            if (
-              deepGet(e, 'response.data.error') !== 'Task Runner does not support worker listing'
-            ) {
+        if (capabilities.hasCoordinatorAccess() && visibleColumns.shown('Details')) {
+          auxiliaryQueries.push(async (services, cancelToken) => {
+            try {
+              const loadQueueInfos = (
+                await Api.instance.get<Record<string, LoadQueueInfo>>(
+                  '/druid/coordinator/v1/loadqueue?simple',
+                  { cancelToken },
+                )
+              ).data;
+              return services.map(s => ({
+                ...s,
+                loadQueueInfo: loadQueueInfos[s.service],
+              }));
+            } catch {
               AppToaster.show({
                 icon: IconNames.ERROR,
                 intent: Intent.DANGER,
-                message: 'There was an error getting the worker info',
+                message: 'There was an error getting the load queue info',
               });
+              return services;
             }
-          }
+          });
         }
 
-        return services;
+        if (capabilities.hasOverlordAccess()) {
+          auxiliaryQueries.push(async (services, cancelToken) => {
+            try {
+              const workerInfos = (
+                await Api.instance.get<WorkerInfo[]>('/druid/indexer/v1/workers', { cancelToken })
+              ).data;
+
+              const workerInfoLookup: Record<string, WorkerInfo> = lookupBy(
+                workerInfos,
+                m => m.worker?.host,
+              );
+
+              return services.map(s => ({
+                ...s,
+                workerInfo: workerInfoLookup[s.service],
+              }));
+            } catch (e) {
+              // Swallow this error because it simply a reflection of a local task runner.
+              if (
+                deepGet(e, 'response.data.error') !== 'Task Runner does not support worker listing'
+              ) {
+                AppToaster.show({
+                  icon: IconNames.ERROR,
+                  intent: Intent.DANGER,
+                  message: 'There was an error getting the worker info',
+                });
+              }
+              return services;
+            }
+          });
+        }
+
+        return new ResultWithAuxiliaryWork(services, auxiliaryQueries);
       },
       onStateChange: servicesState => {
         this.setState({
@@ -313,7 +349,8 @@ ORDER BY
 
   componentDidMount(): void {
     const { capabilities } = this.props;
-    this.serviceQueryManager.runQuery(capabilities);
+    const { visibleColumns } = this.state;
+    this.serviceQueryManager.runQuery({ capabilities, visibleColumns });
   }
 
   componentWillUnmount(): void {
@@ -489,10 +526,7 @@ ORDER BY
                 )
               ) {
                 const workerInfos: WorkerInfo[] = filterMap(originalRows, r => r.workerInfo);
-
-                if (!workerInfos.length) {
-                  return 'Could not get worker infos';
-                }
+                if (!workerInfos.length) return '';
 
                 const totalCurrCapacityUsed = sum(
                   workerInfos,
@@ -516,9 +550,7 @@ ORDER BY
 
                 case 'indexer':
                 case 'middle_manager': {
-                  if (!deepGet(original, 'workerInfo')) {
-                    return 'Could not get capacity info';
-                  }
+                  if (!deepGet(original, 'workerInfo')) return '';
                   const currCapacityUsed = deepGet(original, 'workerInfo.currCapacityUsed') || 0;
                   const capacity = deepGet(original, 'workerInfo.worker.capacity');
                   if (typeof capacity === 'number') {
@@ -553,18 +585,24 @@ ORDER BY
                 case 'middle_manager':
                 case 'indexer': {
                   const { workerInfo } = row;
-                  if (!workerInfo) {
-                    return 'Could not get detail info';
-                  }
+                  if (!workerInfo) return '';
 
                   if (workerInfo.worker.version === '') return 'Disabled';
 
                   const details: string[] = [];
                   if (workerInfo.lastCompletedTaskTime) {
-                    details.push(`Last completed task: ${workerInfo.lastCompletedTaskTime}`);
+                    details.push(
+                      `Last completed task: ${prettyFormatIsoDateWithMsIfNeeded(
+                        workerInfo.lastCompletedTaskTime,
+                      )}`,
+                    );
                   }
                   if (workerInfo.blacklistedUntil) {
-                    details.push(`Blacklisted until: ${workerInfo.blacklistedUntil}`);
+                    details.push(
+                      `Blacklisted until: ${prettyFormatIsoDateWithMsIfNeeded(
+                        workerInfo.blacklistedUntil,
+                      )}`,
+                    );
                   }
                   return details.join(' ');
                 }
@@ -598,16 +636,7 @@ ORDER BY
 
                 case 'historical': {
                   const { loadQueueInfo } = original;
-                  if (!loadQueueInfo) return 'Could not get load queue info';
-
-                  const { segmentsToLoad, segmentsToLoadSize, segmentsToDrop, segmentsToDropSize } =
-                    loadQueueInfo;
-                  return formatQueues(
-                    segmentsToLoad,
-                    segmentsToLoadSize,
-                    segmentsToDrop,
-                    segmentsToDropSize,
-                  );
+                  return loadQueueInfo ? formatLoadQueueInfo(loadQueueInfo) : '';
                 }
 
                 default:
@@ -617,29 +646,10 @@ ORDER BY
             Aggregated: ({ subRows }) => {
               const originalRows = subRows.map(r => r._original);
               if (!originalRows.some(r => r.service_type === 'historical')) return '';
-
               const loadQueueInfos: LoadQueueInfo[] = filterMap(originalRows, r => r.loadQueueInfo);
-
-              if (!loadQueueInfos.length) {
-                return 'Could not get load queue infos';
-              }
-
-              const segmentsToLoad = sum(loadQueueInfos, s => Number(s.segmentsToLoad) || 0);
-              const segmentsToLoadSize = sum(
-                loadQueueInfos,
-                s => Number(s.segmentsToLoadSize) || 0,
-              );
-              const segmentsToDrop = sum(loadQueueInfos, s => Number(s.segmentsToDrop) || 0);
-              const segmentsToDropSize = sum(
-                loadQueueInfos,
-                s => Number(s.segmentsToDropSize) || 0,
-              );
-              return formatQueues(
-                segmentsToLoad,
-                segmentsToLoadSize,
-                segmentsToDrop,
-                segmentsToDropSize,
-              );
+              return loadQueueInfos.length
+                ? formatLoadQueueInfo(aggregateLoadQueueInfos(loadQueueInfos))
+                : '';
             },
           },
           {
@@ -656,7 +666,7 @@ ORDER BY
               const { worker } = value;
               const disabled = worker.version === '';
               const workerActions = this.getWorkerActions(worker.host, disabled);
-              return <ActionCell actions={workerActions} />;
+              return <ActionCell actions={workerActions} menuTitle={worker.host} />;
             },
             Aggregated: () => '',
           },
@@ -699,8 +709,16 @@ ORDER BY
           return resp.data;
         }}
         confirmButtonText="Disable worker"
-        successText="Worker has been disabled"
-        failText="Could not disable worker"
+        successText={
+          <>
+            Worker <Tag minimal>{middleManagerDisableWorkerHost}</Tag> has been disabled
+          </>
+        }
+        failText={
+          <>
+            Could not disable worker <Tag minimal>{middleManagerDisableWorkerHost}</Tag>
+          </>
+        }
         intent={Intent.DANGER}
         onClose={() => {
           this.setState({ middleManagerDisableWorkerHost: undefined });
@@ -796,7 +814,7 @@ ORDER BY
           />
           {this.renderBulkServicesActions()}
           <TableColumnSelector
-            columns={tableColumns[capabilities.getMode()]}
+            columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()]}
             onChange={column =>
               this.setState(prevState => ({
                 visibleColumns: prevState.visibleColumns.toggle(column),

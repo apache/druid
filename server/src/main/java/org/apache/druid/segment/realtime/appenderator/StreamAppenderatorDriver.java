@@ -40,7 +40,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -82,7 +82,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   private static final long HANDOFF_TIME_THRESHOLD = 600_000;
 
   private final SegmentHandoffNotifier handoffNotifier;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final ObjectMapper objectMapper;
 
   /**
@@ -91,7 +91,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
    * @param appenderator           appenderator
    * @param segmentAllocator       segment allocator
    * @param handoffNotifierFactory handoff notifier factory
-   * @param usedSegmentChecker     used segment checker
+   * @param segmentRetriever     used segment checker
    * @param objectMapper           object mapper, used for serde of commit metadata
    * @param metrics                Firedepartment metrics
    */
@@ -99,16 +99,16 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
-      UsedSegmentChecker usedSegmentChecker,
+      PublishedSegmentRetriever segmentRetriever,
       DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper,
-      FireDepartmentMetrics metrics
+      SegmentGenerationMetrics metrics
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
+    super(appenderator, segmentAllocator, segmentRetriever, dataSegmentKiller);
 
     this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
-                                        .createSegmentHandoffNotifier(appenderator.getDataSource());
+                                        .createSegmentHandoffNotifier(appenderator.getDataSource(), appenderator.getId());
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
   }
@@ -360,7 +360,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             ),
             Execs.directExecutor(),
             () -> {
-              log.debug("Segment[%s] successfully handed off, dropping.", segmentIdentifier);
+              log.debug("Segment[%s] successfully handed off for task[%s], dropping.", segmentIdentifier, appenderator.getId());
               metrics.incrementHandOffCount();
 
               final ListenableFuture<?> dropFuture = appenderator.drop(segmentIdentifier);
@@ -416,7 +416,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   {
     return Futures.transformAsync(
         publish(publisher, committer, sequenceNames),
-        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::registerHandoff,
+        this::registerHandoff,
         MoreExecutors.directExecutor()
     );
   }

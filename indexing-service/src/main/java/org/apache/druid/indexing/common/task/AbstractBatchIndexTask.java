@@ -620,10 +620,19 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     if (storeCompactionState) {
       TuningConfig tuningConfig = ingestionSpec.getTuningConfig();
       GranularitySpec granularitySpec = ingestionSpec.getDataSchema().getGranularitySpec();
-      // We do not need to store dimensionExclusions and spatialDimensions since auto compaction does not support them
-      DimensionsSpec dimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec() == null
-                                      ? null
-                                      : new DimensionsSpec(ingestionSpec.getDataSchema().getDimensionsSpec().getDimensions());
+      DimensionsSpec dimensionsSpec;
+      if (ingestionSpec.getDataSchema().getDimensionsSpec() == null) {
+        dimensionsSpec = null;
+      } else {
+        // We do not need to store spatial dimensions, since by this point they've been converted to regular dimensions.
+        // We also do not need to store dimensionExclusions, only dimensions that exist.
+        final DimensionsSpec inputDimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec();
+        dimensionsSpec = DimensionsSpec
+            .builder()
+            .setDimensions(inputDimensionsSpec.getDimensions())
+            .setForceSegmentSortByTime(inputDimensionsSpec.isForceSegmentSortByTimeConfigured())
+            .build();
+      }
       // We only need to store filter since that is the only field auto compaction support
       Map<String, Object> transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null || TransformSpec.NONE.equals(ingestionSpec.getDataSchema().getTransformSpec())
                                           ? null
@@ -710,7 +719,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
     try (
         SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
-                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource())
+                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource(), getId())
     ) {
 
       final ExecutorService exec = Execs.directExecutor();
@@ -921,7 +930,24 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 null,
                 null
             )
-        ),
+        )
+    );
+  }
+
+  /**
+   * Builds a map with the following keys and values:
+   *  {@link IngestionStatsAndErrorsTaskReport#REPORT_KEY} : {@link IngestionStatsAndErrorsTaskReport}.
+   *  {@link TaskContextReport#REPORT_KEY} : {@link TaskContextReport}.
+   */
+  protected TaskReport.ReportMap buildIngestionStatsAndContextReport(
+      IngestionState ingestionState,
+      String errorMessage,
+      Long segmentsRead,
+      Long segmentsPublished
+  )
+  {
+    return TaskReport.buildTaskReports(
+        buildIngestionStatsTaskReport(ingestionState, errorMessage, segmentsRead, segmentsPublished),
         new TaskContextReport(getId(), getContext())
     );
   }
@@ -938,21 +964,33 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   )
   {
     return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrors(
-                ingestionState,
-                getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats(),
-                errorMessage,
-                segmentAvailabilityConfirmationCompleted,
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                segmentsRead,
-                segmentsPublished
-            )
-        ),
-        new TaskContextReport(getId(), getContext())
+        buildIngestionStatsTaskReport(ingestionState, errorMessage, segmentsRead, segmentsPublished)
+    );
+  }
+
+  /**
+   * Helper method to create IngestionStatsAndErrorsTaskReport.
+   */
+  private IngestionStatsAndErrorsTaskReport buildIngestionStatsTaskReport(
+      IngestionState ingestionState,
+      String errorMessage,
+      Long segmentsRead,
+      Long segmentsPublished
+  )
+  {
+    return new IngestionStatsAndErrorsTaskReport(
+        getId(),
+        new IngestionStatsAndErrors(
+            ingestionState,
+            getTaskCompletionUnparseableEvents(),
+            getTaskCompletionRowStats(),
+            errorMessage,
+            segmentAvailabilityConfirmationCompleted,
+            segmentAvailabilityWaitTimeMs,
+            Collections.emptyMap(),
+            segmentsRead,
+            segmentsPublished
+        )
     );
   }
 

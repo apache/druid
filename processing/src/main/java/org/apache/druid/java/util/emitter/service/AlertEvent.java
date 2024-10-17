@@ -186,6 +186,13 @@ public class AlertEvent implements Event
       {
         return "service-failure";
       }
+    },
+    DEPRECATED {
+      @Override
+      public String toString()
+      {
+        return "deprecated";
+      }
     };
 
     public static final Severity DEFAULT = COMPONENT_FAILURE;

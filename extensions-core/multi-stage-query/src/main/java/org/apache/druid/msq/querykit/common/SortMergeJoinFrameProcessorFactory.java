@@ -134,7 +134,8 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      boolean removeNullBytes
   ) throws IOException
   {
     if (inputSlices.size() != 2 || !inputSlices.stream().allMatch(slice -> slice instanceof StageInputSlice)) {
@@ -180,7 +181,7 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
               readableInputs.get(LEFT),
               readableInputs.get(RIGHT),
               outputChannel.getWritableChannel(),
-              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
+              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes),
               rightPrefix,
               keyColumns,
               requiredNonNullKeyParts,
@@ -194,6 +195,12 @@ public class SortMergeJoinFrameProcessorFactory extends BaseFrameProcessorFactor
         ProcessorManagers.of(processors),
         OutputChannels.wrap(ImmutableList.copyOf(outputChannels.values()))
     );
+  }
+
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
   }
 
   /**

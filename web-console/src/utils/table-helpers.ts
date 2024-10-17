@@ -16,11 +16,11 @@
  * limitations under the License.
  */
 
-import type { QueryResult } from '@druid-toolkit/query';
+import type { QueryResult, SqlExpression } from '@druid-toolkit/query';
 import { C } from '@druid-toolkit/query';
 import type { Filter } from 'react-table';
 
-import { filterMap, formatNumber, oneOf } from './general';
+import { filterMap, formatNumber, isNumberLike, oneOf } from './general';
 import { deepSet } from './object-change';
 
 export interface Pagination {
@@ -32,9 +32,18 @@ export function changePage(pagination: Pagination, page: number): Pagination {
   return deepSet(pagination, 'page', page);
 }
 
+export interface ColumnHint {
+  displayName?: string;
+  group?: string;
+  hidden?: boolean;
+  expressionForWhere?: SqlExpression;
+  formatter?: (x: any) => string;
+}
+
 export function getNumericColumnBraces(
   queryResult: QueryResult,
-  pagination?: Pagination,
+  columnHints: Map<string, ColumnHint> | undefined,
+  pagination: Pagination | undefined,
 ): Record<number, string[]> {
   let rows = queryResult.rows;
 
@@ -47,11 +56,10 @@ export function getNumericColumnBraces(
   if (rows.length) {
     queryResult.header.forEach((column, i) => {
       if (!oneOf(column.nativeType, 'LONG', 'FLOAT', 'DOUBLE')) return;
-      const brace = filterMap(rows, row =>
-        oneOf(typeof row[i], 'number', 'bigint') ? formatNumber(row[i]) : undefined,
-      );
-      if (rows.length === brace.length) {
-        numericColumnBraces[i] = brace;
+      const formatter = columnHints?.get(column.name)?.formatter || formatNumber;
+      const braces = filterMap(rows, row => (isNumberLike(row[i]) ? formatter(row[i]) : undefined));
+      if (braces.length) {
+        numericColumnBraces[i] = braces;
       }
     });
   }

@@ -173,7 +173,6 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskReport({
                 ],
                 resultFormat: 'compactedList',
                 columns: ['agent_type', 'v0'],
-                legacy: false,
                 context: {
                   __resultFormat: 'array',
                   __timeColumn: 'v0',
@@ -390,7 +389,6 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskReport({
         ],
         resultFormat: 'compactedList',
         columns: ['agent_type', 'v0'],
-        legacy: false,
         context: {
           __resultFormat: 'array',
           __user: 'allowAll',

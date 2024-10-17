@@ -27,6 +27,7 @@ import type { ArrayMode, InputFormat, InputSource } from '../../../druid-models'
 import {
   BATCH_INPUT_FORMAT_FIELDS,
   chooseByBestTimestamp,
+  DEFAULT_ARRAY_MODE,
   DETECTION_TIMESTAMP_SPEC,
   getPossibleSystemFieldsForInputSource,
   guessColumnTypeFromSampleResponse,
@@ -93,12 +94,14 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
     InputSourceAndFormat | undefined
   >(isValidInputFormat(initInputFormat) ? inputSourceAndFormat : undefined);
   const [selectTimestamp, setSelectTimestamp] = useState(true);
-  const [arrayMode, setArrayMode] = useState<ArrayMode>('multi-values');
+  const [arrayMode, setArrayMode] = useState<ArrayMode>(DEFAULT_ARRAY_MODE);
 
   const [previewState] = useQueryManager<InputSourceAndFormat, SampleResponse>({
     query: inputSourceAndFormatToSample,
-    processQuery: async ({ inputSource, inputFormat }) => {
-      if (!isValidInputFormat(inputFormat)) throw new Error('invalid input format');
+    processQuery: async ({ inputSource, inputFormat }, cancelToken) => {
+      const fixedFormatSource = inputSource.type === 'delta';
+      if (!fixedFormatSource && !isValidInputFormat(inputFormat))
+        throw new Error('invalid input format');
 
       const sampleSpec: SampleSpec = {
         type: 'index_parallel',
@@ -106,7 +109,9 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
           ioConfig: {
             type: 'index_parallel',
             inputSource,
-            inputFormat: deepSet(inputFormat, 'keepNullColumns', true),
+            inputFormat: fixedFormatSource
+              ? undefined
+              : (deepSet(inputFormat, 'keepNullColumns', true) as InputFormat),
           },
           dataSchema: {
             dataSource: 'sample',
@@ -126,7 +131,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
         },
       };
 
-      return await postToSampler(sampleSpec, 'input-format-step');
+      return await postToSampler(sampleSpec, 'input-format-step', cancelToken);
     },
   });
 
@@ -196,6 +201,8 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
   const needsResample = inputSourceAndFormatToSample !== inputSourceAndFormat;
   const nextDisabled = !inputSourceFormatAndMore || needsResample;
 
+  const fixedFormatSource = inputSourceFormatAndMore?.inputSource.type === 'delta';
+
   return (
     <div className="input-format-step">
       <div className="preview">
@@ -224,30 +231,41 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
           <FormGroup>
             <Callout>
               <p>Ensure that your data appears correctly in a row/column orientation.</p>
-              <LearnMore href={`${getLink('DOCS')}/ingestion/data-formats.html`} />
+              <LearnMore href={`${getLink('DOCS')}/ingestion/data-formats`} />
             </Callout>
           </FormGroup>
-          <AutoForm
-            fields={BATCH_INPUT_FORMAT_FIELDS}
-            model={inputSourceAndFormat.inputFormat}
-            onChange={inputFormat =>
-              setInputSourceAndFormat({ ...inputSourceAndFormat, inputFormat })
-            }
-          />
-          {possibleSystemFields.length > 0 && (
-            <AutoForm
-              fields={[
-                {
-                  name: 'inputSource.systemFields',
-                  label: 'System fields',
-                  type: 'string-array',
-                  suggestions: possibleSystemFields,
-                  info: 'JSON array of system fields to return as part of input rows.',
-                },
-              ]}
-              model={inputSourceAndFormat}
-              onChange={setInputSourceAndFormat as any}
-            />
+          {fixedFormatSource ? (
+            <FormGroup>
+              <Callout>
+                The <Tag minimal>{inputSourceFormatAndMore?.inputSource.type}</Tag> input source has
+                a fixed format that can not be configured.
+              </Callout>
+            </FormGroup>
+          ) : (
+            <>
+              <AutoForm
+                fields={BATCH_INPUT_FORMAT_FIELDS}
+                model={inputSourceAndFormat.inputFormat}
+                onChange={inputFormat =>
+                  setInputSourceAndFormat({ ...inputSourceAndFormat, inputFormat })
+                }
+              />
+              {possibleSystemFields.length > 0 && (
+                <AutoForm
+                  fields={[
+                    {
+                      name: 'inputSource.systemFields',
+                      label: 'System fields',
+                      type: 'string-array',
+                      suggestions: possibleSystemFields,
+                      info: 'JSON array of system fields to return as part of input rows.',
+                    },
+                  ]}
+                  model={inputSourceAndFormat}
+                  onChange={setInputSourceAndFormat as any}
+                />
+              )}
+            </>
           )}
           {needsResample && (
             <FormGroup className="control-buttons">

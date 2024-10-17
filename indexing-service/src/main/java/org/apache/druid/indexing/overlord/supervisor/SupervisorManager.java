@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -38,7 +39,6 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -135,6 +135,17 @@ public class SupervisorManager
   {
     Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
     return supervisor == null ? Optional.absent() : Optional.fromNullable(supervisor.lhs.getState());
+  }
+
+  public boolean handoffTaskGroupsEarly(String id, List<Integer> taskGroupIds)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    if (supervisor == null || supervisor.lhs == null) {
+      return false;
+    }
+    final StreamSupervisor streamSupervisor = requireStreamSupervisor(id, "handoff");
+    streamSupervisor.handoffTaskGroupsEarly(taskGroupIds);
+    return true;
   }
 
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
@@ -268,10 +279,11 @@ public class SupervisorManager
       return false;
     }
 
+    final StreamSupervisor streamSupervisor = requireStreamSupervisor(id, "reset");
     if (resetDataSourceMetadata == null) {
-      supervisor.lhs.reset(null);
+      streamSupervisor.reset(null);
     } else {
-      supervisor.lhs.resetOffsets(resetDataSourceMetadata);
+      streamSupervisor.resetOffsets(resetDataSourceMetadata);
     }
     SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
     if (autoscaler != null) {
@@ -294,7 +306,8 @@ public class SupervisorManager
 
       Preconditions.checkNotNull(supervisor, "supervisor could not be found");
 
-      supervisor.lhs.checkpoint(taskGroupId, previousDataSourceMetadata);
+      final StreamSupervisor streamSupervisor = requireStreamSupervisor(supervisorId, "checkPoint");
+      streamSupervisor.checkpoint(taskGroupId, previousDataSourceMetadata);
       return true;
     }
     catch (Exception e) {
@@ -435,5 +448,22 @@ public class SupervisorManager
     }
 
     return true;
+  }
+
+  private StreamSupervisor requireStreamSupervisor(final String supervisorId, final String operation)
+  {
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(supervisorId);
+    if (supervisor.lhs instanceof StreamSupervisor) {
+      return (StreamSupervisor) supervisor.lhs;
+    } else {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.UNSUPPORTED)
+                          .build(
+                              "Operation[%s] is not supported by supervisor[%s] of type[%s].",
+                              operation,
+                              supervisorId,
+                              supervisor.rhs.getType()
+                          );
+    }
   }
 }

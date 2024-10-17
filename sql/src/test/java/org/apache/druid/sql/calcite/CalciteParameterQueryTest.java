@@ -75,7 +75,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0")
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -652,10 +651,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testWrongTypeParameter()
   {
-    if (!useDefault) {
-      // cannot vectorize inline datasource
-      cannotVectorize();
-    }
     testQuery(
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
@@ -689,7 +684,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .columns("EXPR$0")
-                  .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -701,7 +695,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNullParameter()
   {
-    cannotVectorize();
     // contrived example of using null as an sql parameter to at least test the codepath because lots of things dont
     // actually work as null and things like 'IS NULL' fail to parse in calcite if expressed as 'IS ?'
 

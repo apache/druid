@@ -49,7 +49,7 @@ import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.segment.loading.NoopDataSegmentPusher;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -96,18 +96,15 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     EasyMock.expect(appenderatorConfig.getMaxPendingPersists()).andReturn(0);
     EasyMock.expect(appenderatorConfig.isSkipBytesInMemoryOverheadCheck()).andReturn(false);
     EasyMock.replay(appenderatorConfig);
-    appenderator = manager.createClosedSegmentsOfflineAppenderatorForTask(
+    appenderator = manager.createBatchAppenderatorForTask(
         "taskId",
-        new DataSchema(
-            "myDataSource",
-            new TimestampSpec("__time", "millis", null),
-            null,
-            null,
-            new UniformGranularitySpec(Granularities.HOUR, Granularities.HOUR, false, Collections.emptyList()),
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("myDataSource")
+                  .withTimestamp(new TimestampSpec("__time", "millis", null))
+                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.HOUR, false, Collections.emptyList()))
+                  .build(),
         appenderatorConfig,
-        new FireDepartmentMetrics(),
+        new SegmentGenerationMetrics(),
         new NoopDataSegmentPusher(),
         TestHelper.makeJsonMapper(),
         TestHelper.getTestIndexIO(),

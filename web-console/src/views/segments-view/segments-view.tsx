@@ -26,6 +26,7 @@ import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
+  type TableColumnSelectorColumn,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
@@ -76,14 +77,14 @@ import type { BasicAction } from '../../utils/basic-action';
 
 import './segments-view.scss';
 
-const tableColumns: Record<CapabilitiesMode, string[]> = {
+const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[]> = {
   'full': [
     'Segment ID',
     'Datasource',
     'Start',
     'End',
     'Version',
-    'Time span',
+    { text: 'Time span', label: '𝑓(sys.segments)' },
     'Shard type',
     'Shard spec',
     'Partition',
@@ -105,6 +106,7 @@ const tableColumns: Record<CapabilitiesMode, string[]> = {
     'Start',
     'End',
     'Version',
+    { text: 'Time span', label: '𝑓(sys.segments)' },
     'Shard type',
     'Shard spec',
     'Partition',
@@ -253,14 +255,14 @@ END AS "time_span"`,
 
     this.segmentsQueryManager = new QueryManager({
       debounceIdle: 500,
-      processQuery: async (query: SegmentsQuery, _cancelToken, setIntermediateQuery) => {
+      processQuery: async (query: SegmentsQuery, cancelToken, setIntermediateQuery) => {
         const { page, pageSize, filtered, sorted, visibleColumns, capabilities, groupByInterval } =
           query;
 
         if (capabilities.hasSql()) {
           const whereParts = filterMap(filtered, (f: Filter) => {
             if (f.id === 'shard_type') {
-              // Special handling for shard_type that needs to be search in the shard_spec
+              // Special handling for shard_type that needs to be searched for in the shard_spec
               // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
               const modeAndNeedle = parseFilterModeAndNeedle(f);
               if (!modeAndNeedle) return;
@@ -354,10 +356,10 @@ END AS "time_span"`,
           }
           const sqlQuery = queryParts.join('\n');
           setIntermediateQuery(sqlQuery);
-          return await queryDruidSql({ query: sqlQuery });
+          return await queryDruidSql({ query: sqlQuery }, cancelToken);
         } else if (capabilities.hasCoordinatorAccess()) {
           let datasourceList: string[] = (
-            await Api.instance.get('/druid/coordinator/v1/metadata/datasources')
+            await Api.instance.get('/druid/coordinator/v1/metadata/datasources', { cancelToken })
           ).data;
 
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
@@ -381,6 +383,7 @@ END AS "time_span"`,
             const segments = (
               await Api.instance.get(
                 `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
+                { cancelToken },
               )
             ).data?.segments;
             if (!Array.isArray(segments)) continue;
@@ -886,6 +889,7 @@ END AS "time_span"`,
                     this.onDetail(id, datasource);
                   }}
                   actions={this.getSegmentActions(id, datasource)}
+                  menuTitle={id}
                 />
               );
             },
@@ -1007,7 +1011,7 @@ END AS "time_span"`,
               disabled={!capabilities.hasSqlOrCoordinatorAccess()}
             />
             <TableColumnSelector
-              columns={tableColumns[capabilities.getMode()]}
+              columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()]}
               onChange={column =>
                 this.setState(prevState => ({
                   visibleColumns: prevState.visibleColumns.toggle(column),

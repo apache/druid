@@ -1,4 +1,5 @@
 dist
+longCompress
 target
 *.iml
 *.ipr
@@ -26,7 +27,7 @@ README
 .pmdruleset.xml
 .java-version
 integration-tests/gen-scripts/
-/bin/
+**/bin/
 *.hprof
 **/.ipynb_checkpoints/
 website/.yarn/

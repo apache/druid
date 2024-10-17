@@ -37,10 +37,10 @@ import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.sql.BloomDimFilterSqlTest.BloomDimFilterComponentSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.http.SqlParameter;
 import org.junit.jupiter.api.Disabled;
@@ -48,7 +48,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
-@SqlTestFrameWorkModule(BloomDimFilterComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(BloomDimFilterComponentSupplier.class)
 public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
 {
   public static class BloomDimFilterComponentSupplier extends StandardComponentSupplier
@@ -98,7 +98,6 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
   @Test
   public void testBloomFilterExprFilter() throws IOException
   {
-    cannotVectorize();
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("a-foo");
     filter.addString("-foo");

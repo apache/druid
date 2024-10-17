@@ -21,6 +21,12 @@
   "metadatacache/schemaPoll/count" : { "dimensions" : [], "type" : "count", "help": "Number of coordinator polls to fetch datasource schema."},
   "metadatacache/schemaPoll/failed" : { "dimensions" : [], "type" : "count", "help": "Number of failed coordinator polls to fetch datasource schema."},
   "metadatacache/schemaPoll/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Time taken for coordinator polls to fetch datasource schema."},
+  "metadatacache/backfill/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of segments for which schema was back filled in the database."},
+  "schemacache/realtime/count" : { "dimensions" : [], "type" : "count", "help": "Number of realtime segments for which schema is cached."},
+  "schemacache/finalizedSegmentMetadata/count" : { "dimensions" : [], "type" : "count", "help": "Number of finalized segments for which schema metadata is cached."},
+  "schemacache/finalizedSchemaPayload/count" : { "dimensions" : [], "type" : "count", "help": "Number of finalized segment schema cached."},
+  "schemacache/inTransitSMQResults/count" : { "dimensions" : [], "type" : "count", "help": "Number of segments for which schema was fetched by executing segment metadata query."},
+  "schemacache/inTransitSMQPublishedResults/count" : { "dimensions" : [], "type" : "count", "help": "Number of segments for which schema is cached after back filling in the database."},
   "serverview/sync/healthy" : { "dimensions" : ["server"], "type" : "gauge", "help": "Sync status of the Broker with a segment-loading server such as a Historical or Peon."},
   "serverview/sync/unstableTime" : { "dimensions" : ["server"], "type" : "timer", "conversionFactor": 1000.0, "help": "Time in seconds for which the Broker has been failing to sync with a segment-loading server."},
   "query/segment/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to query individual segment. Includes time to page in the segment from disk."},
@@ -98,6 +104,7 @@
   "ingest/notices/time" : { "dimensions" : ["dataSource"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to process a notice by the supervisor." },
   "ingest/pause/time" : { "dimensions" : ["dataSource"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds spent by a task in a paused state without ingesting." },
   "ingest/handoff/time" : { "dimensions" : ["dataSource"], "type" : "timer", "conversionFactor": 1000.0, "help": "Total number of seconds taken to handoff a set of segments." },
+  "task/autoScaler/requiredCount" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Count of required tasks based on the calculations of lagBased auto scaler." },
 
   "task/run/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to run a task."},
   "task/pending/time" : { "dimensions" : ["dataSource", "taskType"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken for a task to wait for running."},
@@ -140,6 +147,7 @@
   "segment/unneededEternityTombstone/count" : { "dimensions" : [], "type" : "gauge", "help": "Number of non-overshadowed eternity tombstones marked as unused."},
   "segment/unavailable/count" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries."},
   "segment/underReplicated/count" : { "dimensions" : ["dataSource", "tier"], "type" : "gauge", "help": "Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries."},
+  "segment/availableDeepStorageOnly/count" : { "dimensions" : ["dataSource", "tier"], "type" : "gauge", "help": "Number of unique segments that are only available for querying directly from deep storage."},
   "tier/historical/count" : { "dimensions" : ["tier"], "type" : "count", "help": "Number of available historical nodes in each tier."},
   "tier/replication/factor" : { "dimensions" : ["tier"], "type" : "count", "help": "Configured maximum replication factor in each tier."},
   "tier/required/capacity" : { "dimensions" : ["tier"], "type" : "count", "help": "Total capacity in bytes required in each tier."},
@@ -150,6 +158,7 @@
   "killTask/availableSlot/count" : { "dimensions" : [], "type" : "gauge", "help": "Number of available task slots that can be used for auto kill tasks in the auto kill run."},
   "killTask/maxSlot/count" : { "dimensions" : [], "type" : "gauge", "help": "Maximum number of task slots available for auto kill tasks in the auto kill run."},
   "kill/task/count" : { "dimensions" : [], "type" : "gauge", "help": "Number of tasks issued in the auto kill run."},
+  "kill/eligibleUnusedSegments/count" : { "dimensions" : [], "type" : "gauge", "help": "The number of unused segments of a datasource that are identified as eligible for deletion from the metadata store by the coordinator."},
   "kill/pendingSegments/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Number of stale pending segments deleted from the metadata store."},
   "segment/waitCompact/bytes" : { "dimensions" : ["dataSource"], "type" : "gauge", "help": "Total bytes of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)."},
   "segment/waitCompact/count" : { "dimensions" : ["dataSource"], "type" : "count", "help": "Total number of segments of this datasource waiting to be compacted by the auto compaction (only consider intervals/segments that are eligible for auto compaction)."},
@@ -191,9 +200,6 @@
 
   "zk/connected" : { "dimensions" : [], "type" : "gauge", "help":  "Indicator of connection status to zookeeper."},
   "zk/reconnect/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Amount of time, in seconds, that a server was disconnected from ZooKeeper before reconnecting." },
-
-  "ingest/events/buffered" : { "dimensions" : ["serviceName", "dataSource", "bufferCapacity"], "type" : "gauge", "help": "Number of events queued in the EventReceiverFirehose's buffer"},
-  "ingest/bytes/received" : { "dimensions" : ["serviceName", "dataSource"], "type" : "gauge", "help": "Number of bytes received by the EventReceiverFirehose."},
 
   "sys/swap/free" : { "dimensions" : [], "type" : "gauge", "help": "Free swap"},
   "sys/swap/max" : { "dimensions" : [], "type" : "gauge", "help": "Max swap"},

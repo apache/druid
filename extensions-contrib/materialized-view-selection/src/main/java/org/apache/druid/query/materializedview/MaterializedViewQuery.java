@@ -147,12 +147,6 @@ public class MaterializedViewQuery<T> implements Query<T>
   }
 
   @Override
-  public boolean isDescending()
-  {
-    return query.isDescending();
-  }
-
-  @Override
   public Ordering<T> getResultOrdering()
   {
     return query.getResultOrdering();

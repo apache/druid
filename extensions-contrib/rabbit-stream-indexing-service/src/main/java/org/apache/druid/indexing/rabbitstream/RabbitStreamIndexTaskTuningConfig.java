@@ -74,7 +74,9 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
       @Nullable Integer numPersistThreads,
       @Nullable Integer recordBufferSize,
       @Nullable Integer recordBufferOfferTimeout,
-      @Nullable Integer maxRecordsPerPoll)
+      @Nullable Integer maxRecordsPerPoll,
+      @Nullable Integer maxColumnsToMerge
+  )
   {
     super(
         appendableIndexSpec,
@@ -97,7 +99,8 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions,
-        numPersistThreads
+        numPersistThreads,
+        maxColumnsToMerge
     );
 
     this.recordBufferSize = recordBufferSize;
@@ -130,7 +133,8 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
       @JsonProperty("maxParseExceptions") @Nullable Integer maxParseExceptions,
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads,
-      @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll
+      @JsonProperty("maxRecordsPerPoll") @Nullable Integer maxRecordsPerPoll,
+      @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge
   )
   {
     this(
@@ -156,7 +160,9 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
         numPersistThreads,
         recordBufferSize,
         recordBufferOfferTimeout,
-        maxRecordsPerPoll);
+        maxRecordsPerPoll,
+        maxColumnsToMerge
+    );
   }
 
   @Nullable
@@ -226,7 +232,8 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
         getNumPersistThreads(),
         getRecordBufferSizeConfigured(),
         getRecordBufferOfferTimeout(),
-        getMaxRecordsPerPollConfigured()
+        getMaxRecordsPerPollConfigured(),
+        getMaxColumnsToMerge()
         );
   }
 
@@ -253,6 +260,7 @@ public class RabbitStreamIndexTaskTuningConfig extends SeekableStreamIndexTaskTu
         ", maxSavedParseExceptions=" + getMaxSavedParseExceptions() +
         ", numPersistThreads=" + getNumPersistThreads() +
         ", maxRecordsPerPole=" + getMaxRecordsPerPollConfigured() +
+        ", maxColumnsToMerge=" + getMaxColumnsToMerge() +
         '}';
   }
 

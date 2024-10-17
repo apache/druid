@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.iceberg.BaseMetastoreCatalog;
+import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.hadoop.HadoopCatalog;
 
 import javax.annotation.Nullable;
@@ -43,18 +43,23 @@ public class LocalCatalog extends IcebergCatalog
   @JsonProperty
   private final Map<String, String> catalogProperties;
 
-  private BaseMetastoreCatalog catalog;
+  @JsonProperty
+  private final Boolean caseSensitive;
+
+  private Catalog catalog;
 
   @JsonCreator
   public LocalCatalog(
       @JsonProperty("warehousePath") String warehousePath,
       @JsonProperty("catalogProperties") @Nullable
-          Map<String, String> catalogProperties
+          Map<String, String> catalogProperties,
+      @JsonProperty("caseSensitive") Boolean caseSensitive
   )
   {
     Preconditions.checkNotNull(warehousePath, "warehousePath is null");
     this.warehousePath = warehousePath;
     this.catalogProperties = catalogProperties;
+    this.caseSensitive = caseSensitive == null ? true : caseSensitive;
     this.catalog = retrieveCatalog();
 
   }
@@ -72,7 +77,13 @@ public class LocalCatalog extends IcebergCatalog
   }
 
   @Override
-  public BaseMetastoreCatalog retrieveCatalog()
+  public boolean isCaseSensitive()
+  {
+    return caseSensitive;
+  }
+
+  @Override
+  public Catalog retrieveCatalog()
   {
     if (catalog == null) {
       catalog = setupCatalog();
@@ -100,12 +111,13 @@ public class LocalCatalog extends IcebergCatalog
     }
     LocalCatalog that = (LocalCatalog) o;
     return warehousePath.equals(that.warehousePath)
-           && Objects.equals(catalogProperties, that.catalogProperties);
+           && Objects.equals(catalogProperties, that.catalogProperties)
+           && Objects.equals(caseSensitive, that.caseSensitive);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(warehousePath, catalogProperties);
+    return Objects.hash(warehousePath, catalogProperties, caseSensitive);
   }
 }

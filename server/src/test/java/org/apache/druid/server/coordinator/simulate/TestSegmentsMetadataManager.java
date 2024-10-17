@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
@@ -47,6 +46,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   private final ConcurrentMap<String, DataSegment> usedSegments = new ConcurrentHashMap<>();
 
   private volatile DataSourcesSnapshot snapshot;
+  private volatile boolean pollingStarted;
 
   public void addSegment(DataSegment segment)
   {
@@ -65,19 +65,19 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public void startPollingDatabasePeriodically()
   {
-
+    this.pollingStarted = true;
   }
 
   @Override
   public void stopPollingDatabasePeriodically()
   {
-
+    this.pollingStarted = false;
   }
 
   @Override
   public boolean isPollingDatabasePeriodically()
   {
-    return true;
+    return pollingStarted;
   }
 
   @Override
@@ -170,7 +170,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments()
   {
     if (snapshot == null) {
-      snapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments.values(), ImmutableMap.of());
+      snapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments.values());
     }
     return snapshot;
   }
@@ -225,12 +225,6 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   )
   {
     return null;
-  }
-
-  @Override
-  public void poll()
-  {
-
   }
 
   @Override

@@ -34,8 +34,8 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
-import org.apache.druid.guice.NestedDataModule;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -66,20 +66,23 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.segment.nested.NestedPathField;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest.NestedComponentSupplier;
+import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
+import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -89,16 +92,17 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@SqlTestFramework.SqlTestFrameWorkModule(NestedComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(NestedComponentSupplier.class)
 public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
 {
-  private static final String DATA_SOURCE = "nested";
-  private static final String DATA_SOURCE_MIXED = "nested_mix";
-  private static final String DATA_SOURCE_MIXED_2 = "nested_mix_2";
-  private static final String DATA_SOURCE_ARRAYS = "arrays";
-  private static final String DATA_SOURCE_ALL = "all_auto";
+  public static final String DATA_SOURCE = "nested";
+  public static final String DATA_SOURCE_MIXED = "nested_mix";
+  public static final String DATA_SOURCE_MIXED_2 = "nested_mix_2";
+  public static final String DATA_SOURCE_ARRAYS = "arrays";
+  public static final String DATA_SOURCE_ALL = "all_auto";
+  public static final String DATA_SOURCE_ALL_REALTIME = "all_auto_realtime";
 
-  private static final List<ImmutableMap<String, Object>> RAW_ROWS = ImmutableList.of(
+  public static final List<ImmutableMap<String, Object>> RAW_ROWS = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
                   .put("t", "2000-01-01")
                   .put("string", "aaa")
@@ -150,7 +154,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .build()
   );
 
-  private static final InputRowSchema ALL_JSON_COLUMNS = new InputRowSchema(
+  public static final InputRowSchema ALL_JSON_COLUMNS = new InputRowSchema(
       new TimestampSpec("t", "iso", null),
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
@@ -164,7 +168,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       null
   );
 
-  private static final InputRowSchema JSON_AND_SCALAR_MIX = new InputRowSchema(
+  public static final InputRowSchema JSON_AND_SCALAR_MIX = new InputRowSchema(
       new TimestampSpec("t", "iso", null),
       DimensionsSpec.builder().setDimensions(
           ImmutableList.<DimensionSchema>builder()
@@ -177,13 +181,13 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       ).build(),
       null
   );
-  private static final List<InputRow> ROWS =
+  public static final List<InputRow> ROWS =
       RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, ALL_JSON_COLUMNS)).collect(Collectors.toList());
 
-  private static final List<InputRow> ROWS_MIX =
+  public static final List<InputRow> ROWS_MIX =
       RAW_ROWS.stream().map(raw -> TestDataBuilder.createRow(raw, JSON_AND_SCALAR_MIX)).collect(Collectors.toList());
 
-  protected static class NestedComponentSupplier extends StandardComponentSupplier
+  public static class NestedComponentSupplier extends StandardComponentSupplier
   {
     public NestedComponentSupplier(TempDirProducer tempFolderProducer)
     {
@@ -194,7 +198,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     public void configureGuice(DruidInjectorBuilder builder)
     {
       super.configureGuice(builder);
-      builder.addModule(new NestedDataModule());
     }
 
     @SuppressWarnings("resource")
@@ -205,7 +208,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         final Injector injector
     )
     {
-      NestedDataModule.registerHandlersAndSerde();
+      BuiltInTypesModule.registerHandlersAndSerde();
       final QueryableIndex index =
           IndexBuilder.create()
                       .tmpDir(tempDirProducer.newTempFolder())
@@ -335,6 +338,30 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .inputTmpDir(tempDirProducer.newTempFolder())
                       .buildMMappedIndex();
 
+      final IncrementalIndex indexAllTypesAutoRealtime =
+          IndexBuilder.create()
+                      .tmpDir(tempDirProducer.newTempFolder())
+                      .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+                      .schema(
+                          new IncrementalIndexSchema.Builder()
+                              .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                              .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                              .withMetrics(
+                                  new CountAggregatorFactory("cnt")
+                              )
+                              .withRollup(false)
+                              .build()
+                      )
+                      .inputSource(
+                          ResourceInputSource.of(
+                              NestedDataTestUtils.class.getClassLoader(),
+                              NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE
+                          )
+                      )
+                      .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+                      .inputTmpDir(tempDirProducer.newTempFolder())
+                      .buildIncrementalIndex();
+
 
       SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate);
       walker.add(
@@ -400,6 +427,15 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                      .size(0)
                      .build(),
           indexAllTypesAuto
+      ).add(
+          DataSegment.builder()
+                     .dataSource(DATA_SOURCE_ALL_REALTIME)
+                     .version("1")
+                     .interval(indexAllTypesAutoRealtime.getInterval())
+                     .shardSpec(new LinearShardSpec(1))
+                     .size(0)
+                     .build(),
+          indexAllTypesAutoRealtime
       );
 
       return walker;
@@ -1086,6 +1122,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeStringMixed2SparseJsonValueNonExistentPath()
   {
+    // Fails while planning for MSQ because MSQ expects a defined type for the virtual column while planning (to figure
+    // out the scanSignature) whereas the NestedFieldVirtualColumn cannot determine the type for the non-existant path,
+    // due to which it returns null
+    msqIncompatible();
     testQuery(
         "SELECT "
         + "JSON_VALUE(string_sparse, '$[1]'), "
@@ -1144,7 +1184,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .columns("v0", "v1", "v2", "v3")
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                      .legacy(false)
                       .build()
             )
         )
@@ -1232,7 +1271,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -1276,7 +1314,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestRootSingleTypeArrayStringNulls()
   {
-    cannotVectorize();
     testBuilder()
         .sql("SELECT strings FROM druid.arrays, UNNEST(arrayStringNulls) as u(strings)")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -1293,7 +1330,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -1334,7 +1370,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestRootSingleTypeArrayDoubleNulls()
   {
-    cannotVectorize();
     testBuilder()
         .sql("SELECT doubles FROM druid.arrays, UNNEST(arrayDoubleNulls) as u(doubles)")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -1351,7 +1386,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -1612,8 +1646,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                             .setGranularity(Granularities.ALL)
                             .setDimFilter(
                                 or(
-                                    isNull("arrayLongNulls"),
-                                    equality("arrayLongNulls", new Object[]{null, 2L, 9L}, ColumnType.LONG_ARRAY)
+                                    equality("arrayLongNulls", new Object[]{null, 2L, 9L}, ColumnType.LONG_ARRAY),
+                                    isNull("arrayLongNulls")
                                 )
                             )
                             .setDimensions(
@@ -1653,27 +1687,25 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             + "FROM druid.arrays, UNNEST(arrayLongNulls) as u (longs) GROUP BY 1"
         )
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-        .expectedQueries(
-            ImmutableList.of(
-                GroupByQuery.builder()
-                            .setDataSource(
-                                UnnestDataSource.create(
-                                    TableDataSource.create(DATA_SOURCE_ARRAYS),
-                                    expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
-                                    null
-                                )
-                            )
-                            .setInterval(querySegmentSpec(Filtration.eternity()))
-                            .setGranularity(Granularities.ALL)
-                            .setDimensions(
-                                dimensions(
-                                    new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.LONG)
-                                )
-                            )
-                            .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
-                            .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                            .build()
-            )
+        .expectedQuery(
+            GroupByQuery.builder()
+                .setDataSource(
+                    UnnestDataSource.create(
+                        TableDataSource.create(DATA_SOURCE_ARRAYS),
+                        expressionVirtualColumn("j0.unnest", "\"arrayLongNulls\"", ColumnType.LONG_ARRAY),
+                        null
+                    )
+                )
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setDimensions(
+                    dimensions(
+                        new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.LONG)
+                    )
+                )
+                .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                .build()
         )
         .expectedResults(
             ImmutableList.of(
@@ -2242,7 +2274,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayLongElement()
   {
-    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -2290,7 +2321,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayLongElementFiltered()
   {
-    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -2338,7 +2368,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayLongElementDefault()
   {
-    cannotVectorize();
     testBuilder()
         .sql(
             "SELECT "
@@ -2654,7 +2683,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByPathSelectorFilterCoalesce()
   {
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT "
         + "JSON_VALUE(nest, '$.x'), "
@@ -2698,6 +2727,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonAndArrayAgg()
   {
+    // MSQ cannot handle non-primitive arrays
+    msqIncompatible();
     cannotVectorize();
     testQuery(
         "SELECT "
@@ -4826,7 +4857,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0", "v1")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -4876,7 +4906,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -4887,6 +4916,55 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{"{\"x\":null,\"n\":null}"},
             new Object[]{"{\"x\":\"100\",\"n\":{\"x\":1}}"},
             new Object[]{"{\"x\":null,\"n\":null}"}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.NESTED_DATA)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testJsonMerging()
+  {
+    testQuery(
+        "SELECT "
+        + "JSON_MERGE('{\"a\":\"x\"}',JSON_OBJECT(KEY 'x' VALUE JSON_VALUE(nest, '$.x')))\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      new ExpressionVirtualColumn(
+                          "v0",
+                          "json_merge('{\\u0022a\\u0022:\\u0022x\\u0022}',json_object('x',\"v1\"))",
+                          ColumnType.NESTED_DATA,
+                          queryFramework().macroTable()
+                      ),
+                      new NestedFieldVirtualColumn(
+                          "nest",
+                          "v1",
+                          ColumnType.STRING,
+                          ImmutableList.of(
+                            new NestedPathField("x")
+                          ),
+                          false,
+                          null,
+                          false
+                      )
+                  )
+                  .columns("v0")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"{\"a\":\"x\",\"x\":\"100\"}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"},
+            new Object[]{"{\"a\":\"x\",\"x\":\"200\"}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"},
+            new Object[]{"{\"a\":\"x\",\"x\":\"100\"}"},
+            new Object[]{"{\"a\":\"x\",\"x\":null}"}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.NESTED_DATA)
@@ -4924,7 +5002,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -4975,7 +5052,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("string", "v0", "v1", "v2")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -5071,7 +5147,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0", "v1", "v2")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -5108,7 +5183,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0", "v1")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -5147,7 +5221,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0", "v1")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -5276,7 +5349,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .filters(isNull("v0"))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -5423,29 +5495,32 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testScanStringNotNullCast()
   {
     skipVectorize();
-    testQuery(
-        "SELECT "
-        + "CAST(string_sparse as BIGINT)"
-        + "FROM druid.nested_mix WHERE CAST(string_sparse as BIGINT) IS NOT NULL",
-        ImmutableList.of(
-            Druids.newScanQueryBuilder()
-                  .dataSource(DATA_SOURCE_MIXED)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .virtualColumns(
-                      expressionVirtualColumn("v0", "CAST(\"string_sparse\", 'LONG')", ColumnType.LONG)
-                  )
-                  .filters(notNull("v0"))
-                  .columns("v0")
-                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
-                  .build()
-        ),
-        NullHandling.sqlCompatible() ?
-        ImmutableList.of(
+    final List<Object[]> expectedResults;
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = ImmutableList.of(
+          new Object[]{10L},
+          new Object[]{10L}
+      );
+    } else {
+      if (isRunningMSQ()) {
+        expectedResults = ImmutableList.of(
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
             new Object[]{10L},
-            new Object[]{10L}
-        ) :
-        ImmutableList.of(
+            new Object[]{10L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L},
+            new Object[]{0L}
+        );
+      } else {
+        expectedResults = ImmutableList.of(
             new Object[]{0L},
             new Object[]{0L},
             new Object[]{10L},
@@ -5460,7 +5535,26 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{0L},
             new Object[]{0L},
             new Object[]{0L}
+        );
+      }
+    }
+    testQuery(
+        "SELECT "
+        + "CAST(string_sparse as BIGINT)"
+        + "FROM druid.nested_mix WHERE CAST(string_sparse as BIGINT) IS NOT NULL",
+        ImmutableList.of(
+            Druids.newScanQueryBuilder()
+                  .dataSource(DATA_SOURCE_MIXED)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .virtualColumns(
+                      expressionVirtualColumn("v0", "CAST(\"string_sparse\", 'LONG')", ColumnType.LONG)
+                  )
+                  .filters(notNull("v0"))
+                  .columns("v0")
+                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                  .build()
         ),
+        expectedResults,
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.LONG)
                     .build()
@@ -5915,6 +6009,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testScanAllTypesAuto()
   {
+    // Variant types are not supported by MSQ.
+    msqIncompatible();
     skipVectorize();
     testQuery(
         "SELECT * FROM druid.all_auto",
@@ -5961,7 +6057,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       "variantWithArrays"
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         useDefault ?
@@ -6555,7 +6650,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .columns("nest")
                   .filters(notNull("nest"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         NullHandling.replaceWithDefault()
@@ -6585,7 +6679,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .columns("nest", "nester")
                   .filters(isNull("nest"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         // selector filter is wrong
@@ -6622,39 +6715,51 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCoalesceOnNestedColumns()
   {
-    // jo.unnest is first entry in coalesce
-    // so Calcite removes the coalesce to be used here
-    testQuery(
-        "select coalesce(c,long) as col "
-        + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) ",
-        ImmutableList.of(
-            Druids.newScanQueryBuilder()
-                  .dataSource(UnnestDataSource.create(
-                      new TableDataSource(DATA_SOURCE_ALL),
-                      new NestedFieldVirtualColumn("arrayNestedLong", "$[1]", "j0.unnest", ColumnType.LONG_ARRAY),
-                      null
-                  ))
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .columns("j0.unnest")
-                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ),
-        ImmutableList.of(
-            new Object[]{null},
-            new Object[]{3L},
-            new Object[]{4L},
-            new Object[]{3L},
-            new Object[]{4L},
-            new Object[]{1L},
-            new Object[]{2L},
-            new Object[]{null}
-        ),
-        RowSignature.builder()
-                    .add("col", ColumnType.LONG)
+    testBuilder()
+        .sql(
+            "select c,long,coalesce(c,long) as col "
+                + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) "
+        )
+        .expectedQueries(
+            ImmutableList.of(
+                Druids.newScanQueryBuilder()
+                    .dataSource(
+                        UnnestDataSource.create(
+                            new TableDataSource(DATA_SOURCE_ALL),
+                            new NestedFieldVirtualColumn("arrayNestedLong", "$[1]", "j0.unnest", ColumnType.LONG_ARRAY),
+                            null
+                        )
+                    )
+                    .virtualColumns(expressionVirtualColumn("v0", "nvl(\"j0.unnest\",\"long\")", ColumnType.LONG))
+                    .intervals(querySegmentSpec(Filtration.eternity()))
+                    .columns("j0.unnest", "long", "v0")
+                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                    .context(QUERY_CONTEXT_DEFAULT)
                     .build()
-    );
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                // with NullHandling.replaceWithDefault; isNull is not handled
+                // so COALESCE may never see `null`
+                new Object[]{null, 2L, NullHandling.sqlCompatible() ? 2L : 0L},
+                new Object[]{3L, 1L, 3L},
+                new Object[]{4L, 1L, 4L},
+                new Object[]{3L, 4L, 3L},
+                new Object[]{4L, 4L, 4L},
+                new Object[]{1L, 5L, 1L},
+                new Object[]{2L, 5L, 2L},
+                new Object[]{null, 5L, NullHandling.sqlCompatible() ? 5L : 0L}
+            )
+        )
+        .expectedSignature(
+            RowSignature.builder()
+                .add("c", ColumnType.LONG)
+                .add("long", ColumnType.LONG)
+                .add("col", ColumnType.LONG)
+                .build()
+        )
+        .run();
   }
 
   @Test
@@ -6676,7 +6781,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("long")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ) :
@@ -6691,7 +6795,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .virtualColumns(expressionVirtualColumn("v0", "nvl(\"long\",\"j0.unnest\")", ColumnType.LONG))
                   .columns("v0")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),
@@ -6756,7 +6859,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryDynamicArg()
   {
-    cannotVectorize();
     testQuery(
         "SELECT JSON_PATHS(nester), JSON_QUERY(nester, ARRAY_OFFSET(JSON_PATHS(nester), 0))\n"
         + "FROM druid.nested",
@@ -6778,7 +6880,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .columns("v0", "v1")
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -6801,7 +6902,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryArrays()
   {
-    cannotVectorize();
+    msqIncompatible();
     testBuilder()
         .sql("SELECT JSON_QUERY_ARRAY(arrayObject, '$') FROM druid.arrays")
         .queryContext(QUERY_CONTEXT_DEFAULT)
@@ -6819,7 +6920,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .columns("v0")
                       .context(QUERY_CONTEXT_DEFAULT)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -6853,7 +6953,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonQueryArrayNullArray()
   {
-    cannotVectorize();
+    // Array complex JSON isn't supported
+    msqIncompatible();
     testBuilder()
         .sql("SELECT JSON_QUERY_ARRAY(arrayObject, '$.') FROM druid.arrays where arrayObject is null limit 1")
         .queryContext(QUERY_CONTEXT_DEFAULT)
@@ -6873,7 +6974,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .columns("v0")
                       .limit(1)
                       .context(QUERY_CONTEXT_DEFAULT)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -6893,7 +6993,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestJsonQueryArrays()
   {
-    cannotVectorize();
     testBuilder()
         .sql("SELECT objects FROM druid.arrays, UNNEST(JSON_QUERY_ARRAY(arrayObject, '$')) as u(objects)")
         .queryContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
@@ -6914,7 +7013,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
-                      .legacy(false)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -7072,6 +7170,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJsonValueNestedEmptyArray()
   {
+    // The data set has empty arrays, however MSQ returns nulls. The root cause of the issue is the incorrect
+    // capabilities returned by NestedFieldVirtualColumn when planning which causes MSQ to treat the nested path
+    // as STRING, even though it is an array.
+    msqIncompatible();
     // test for regression
     skipVectorize();
     testQuery(
@@ -7092,7 +7194,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of(
@@ -7107,6 +7208,455 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
                     .build()
+    );
+  }
+
+  @Test
+  public void testNvlJsonValueDoubleMissingColumn()
+  {
+    testQuery(
+        "SELECT\n"
+        + "JSON_VALUE(nest, '$.nonexistent' RETURNING DOUBLE),\n"
+        + "NVL(JSON_VALUE(nest, '$.nonexistent' RETURNING DOUBLE), 1.0),\n"
+        + "NVL(JSON_VALUE(nest, '$.nonexistent' RETURNING DOUBLE), 1.0) > 0\n"
+        + "FROM druid.nested\n"
+        + "WHERE NVL(JSON_VALUE(nest, '$.nonexistent' RETURNING DOUBLE), 1.0) > 0\n"
+        + "LIMIT 1",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "nvl(\"v1\",1.0)", ColumnType.DOUBLE),
+                    new NestedFieldVirtualColumn(
+                        "nest",
+                        "$.nonexistent",
+                        "v1",
+                        ColumnType.DOUBLE
+                    ),
+                    expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
+                )
+                .filters(range("v0", ColumnType.LONG, NullHandling.sqlCompatible() ? 0.0 : "0", null, true, false))
+                .limit(1)
+                .columns("v0", "v1", "v2")
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(new Object[]{null, 1.0, true})
+        : ImmutableList.of(),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.DOUBLE)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testNvlJsonValueDoubleSometimesMissing()
+  {
+    testQuery(
+        "SELECT\n"
+        + "JSON_VALUE(nest, '$.y' RETURNING DOUBLE),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) > 0,\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) = 1.0\n"
+        + "FROM druid.nested",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    new NestedFieldVirtualColumn("nest", "$.y", "v0", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v1", "nvl(\"v0\",1.0)", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v2", "(nvl(\"v0\",1.0) > 0)", ColumnType.LONG),
+                    expressionVirtualColumn("v3", "(nvl(\"v0\",1.0) == 1.0)", ColumnType.LONG)
+                )
+                .columns("v0", "v1", "v2", "v3")
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{2.02, 2.02, true, false},
+            new Object[]{null, 1.0, true, true},
+            new Object[]{3.03, 3.03, true, false},
+            new Object[]{null, 1.0, true, true},
+            new Object[]{null, 1.0, true, true},
+            new Object[]{2.02, 2.02, true, false},
+            new Object[]{null, 1.0, true, true}
+        )
+        : ImmutableList.of(
+            new Object[]{2.02, 2.02, true, false},
+            new Object[]{null, 0.0, false, false},
+            new Object[]{3.03, 3.03, true, false},
+            new Object[]{null, 0.0, false, false},
+            new Object[]{null, 0.0, false, false},
+            new Object[]{2.02, 2.02, true, false},
+            new Object[]{null, 0.0, false, false}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.DOUBLE)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .add("EXPR$3", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testNvlJsonValueDoubleSometimesMissingRangeFilter()
+  {
+    testQuery(
+        "SELECT\n"
+        + "JSON_VALUE(nest, '$.y' RETURNING DOUBLE),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) > 0\n"
+        + "FROM druid.nested\n"
+        + "WHERE NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) > 0",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "nvl(\"v1\",1.0)", ColumnType.DOUBLE),
+                    new NestedFieldVirtualColumn("nest", "$.y", "v1", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
+                )
+                .filters(range("v0", ColumnType.LONG, NullHandling.sqlCompatible() ? 0.0 : "0", null, true, false))
+                .columns("v0", "v1", "v2")
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{2.02, 2.02, true},
+            new Object[]{null, 1.0, true},
+            new Object[]{3.03, 3.03, true},
+            new Object[]{null, 1.0, true},
+            new Object[]{null, 1.0, true},
+            new Object[]{2.02, 2.02, true},
+            new Object[]{null, 1.0, true}
+        )
+        : ImmutableList.of(
+            new Object[]{2.02, 2.02, true},
+            new Object[]{3.03, 3.03, true},
+            new Object[]{2.02, 2.02, true}
+        ),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.DOUBLE)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @NotYetSupported(Modes.ERROR_CANNOT_TRANSLATE_COUNT_DISTINCT)
+  @Test
+  public void testApproxCountDistinctOnUnsupportedComplexColumn()
+  {
+    assertQueryIsUnplannable(
+        "SELECT COUNT(DISTINCT nester) FROM druid.nested",
+        "Query could not be planned. A possible reason is [Using APPROX_COUNT_DISTINCT() or enabling "
+        + "approximation with COUNT(DISTINCT) is not supported for column type [COMPLEX<json>]. "
+        + "You can disable approximation by setting [useApproximateCountDistinct: false] in the query context."
+    );
+  }
+
+  @Test
+  public void testApproxCountDistinctFunctionOnUnsupportedComplexColumn()
+  {
+    DruidException druidException = Assert.assertThrows(
+        DruidException.class,
+        () -> testQuery(
+            "SELECT APPROX_COUNT_DISTINCT(nester) FROM druid.nested",
+            ImmutableList.of(),
+            ImmutableList.of()
+        )
+    );
+    Assert.assertTrue(druidException.getMessage().contains(
+        "Cannot apply 'APPROX_COUNT_DISTINCT' to arguments of type 'APPROX_COUNT_DISTINCT(<COMPLEX<JSON>>)'"
+    ));
+  }
+
+  @Test
+  public void testNvlJsonValueDoubleSometimesMissingEqualityFilter()
+  {
+    testQuery(
+        "SELECT\n"
+        + "JSON_VALUE(nest, '$.y' RETURNING DOUBLE),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0),\n"
+        + "NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) > 0\n"
+        + "FROM druid.nested\n"
+        + "WHERE NVL(JSON_VALUE(nest, '$.y' RETURNING DOUBLE), 1.0) = 1.0",
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(DATA_SOURCE)
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .virtualColumns(
+                    expressionVirtualColumn("v0", "nvl(\"v1\",1.0)", ColumnType.DOUBLE),
+                    new NestedFieldVirtualColumn("nest", "$.y", "v1", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
+                )
+                .filters(equality("v0", 1.0, ColumnType.DOUBLE))
+                .columns("v0", "v1", "v2")
+                .build()
+        ),
+        NullHandling.sqlCompatible()
+        ? ImmutableList.of(
+            new Object[]{null, 1.0, true},
+            new Object[]{null, 1.0, true},
+            new Object[]{null, 1.0, true},
+            new Object[]{null, 1.0, true}
+        )
+        : ImmutableList.of(),
+        RowSignature.builder()
+                    .add("EXPR$0", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.DOUBLE)
+                    .add("EXPR$2", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByAutoString()
+  {
+    final List<Object[]> expected;
+    if (NullHandling.sqlCompatible()) {
+      expected = ImmutableList.of(
+          new Object[]{null, 1L},
+          new Object[]{"", 1L},
+          new Object[]{"a", 1L},
+          new Object[]{"b", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L},
+          new Object[]{"null", 1L}
+      );
+    } else {
+      expected = ImmutableList.of(
+          new Object[]{NullHandling.defaultStringValue(), 2L},
+          new Object[]{"a", 1L},
+          new Object[]{"b", 1L},
+          new Object[]{"c", 1L},
+          new Object[]{"d", 1L},
+          new Object[]{"null", 1L}
+      );
+    }
+    testQuery(
+        "SELECT "
+        + "str, "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("str", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("str", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+
+    cannotVectorize();
+    msqIncompatible();
+    testQuery(
+        "SELECT "
+        + "str, "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto_realtime GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL_REALTIME)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("str", "d0")
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("str", ColumnType.STRING)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByAutoLong()
+  {
+    final List<Object[]> expected = ImmutableList.of(
+        new Object[]{NullHandling.defaultLongValue(), 2L},
+        new Object[]{1L, 1L},
+        new Object[]{2L, 1L},
+        new Object[]{3L, 1L},
+        new Object[]{4L, 1L},
+        new Object[]{5L, 1L}
+    );
+    testQuery(
+        "SELECT "
+        + "long, "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("long", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("long", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+
+    cannotVectorize();
+    msqIncompatible();
+    testQuery(
+        "SELECT "
+        + "long, "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto_realtime GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL_REALTIME)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("long", "d0", ColumnType.LONG)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("long", ColumnType.LONG)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testGroupByAutoDouble()
+  {
+    final List<Object[]> expected = ImmutableList.of(
+        new Object[]{NullHandling.defaultDoubleValue(), 2L},
+        new Object[]{1.0D, 1L},
+        new Object[]{2.0D, 1L},
+        new Object[]{3.3D, 1L},
+        new Object[]{4.4D, 1L},
+        new Object[]{5.9D, 1L}
+    );
+    testQuery(
+        "SELECT "
+        + "\"double\", "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("double", "d0", ColumnType.DOUBLE)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("double", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+
+    cannotVectorize();
+    msqIncompatible();
+    testQuery(
+        "SELECT "
+        + "\"double\", "
+        + "SUM(cnt) "
+        + "FROM druid.all_auto_realtime GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE_ALL_REALTIME)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("double", "d0", ColumnType.DOUBLE)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        expected,
+        RowSignature.builder()
+                    .add("double", ColumnType.DOUBLE)
+                    .add("EXPR$1", ColumnType.LONG)
+                    .build()
+    );
+  }
+
+  @Test
+  public void testToJsonString()
+  {
+    cannotVectorizeUnlessFallback();
+    testQuery(
+        "SELECT TO_JSON_STRING(nester) FROM druid.nested GROUP BY 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(DATA_SOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
+                            )
+                        )
+                        .setVirtualColumns(
+                            expressionVirtualColumn("v0", "to_json_string(\"nester\")", ColumnType.STRING)
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{"\"hello\""},
+            new Object[]{"2"},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"},
+            new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"}
+        ),
+        RowSignature.builder().add("EXPR$0", ColumnType.STRING).build()
     );
   }
 }

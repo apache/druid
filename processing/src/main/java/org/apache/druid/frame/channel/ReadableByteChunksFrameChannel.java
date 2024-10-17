@@ -132,13 +132,15 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
    * chunks. (This is not enforced; addChunk will continue to accept new chunks even if the channel is over its limit.)
    *
    * When done adding chunks call {@code doneWriting}.
+   *
+   * @throws ChannelClosedForWritesException if the channel is closed
    */
   @Nullable
   public ListenableFuture<?> addChunk(final byte[] chunk)
   {
     synchronized (lock) {
       if (noMoreWrites) {
-        throw new ISE("Channel is no longer accepting writes");
+        throw new ChannelClosedForWritesException();
       }
 
       try {
@@ -180,9 +182,9 @@ public class ReadableByteChunksFrameChannel implements ReadableFrameChannel
   public void setError(final Throwable t)
   {
     synchronized (lock) {
-      if (noMoreWrites) {
-        log.noStackTrace().warn(t, "Channel is no longer accepting writes, cannot propagate exception");
-      } else {
+      // Write error to the channel, unless "noMoreWrites" is set. If that's set, suppress errors, so regular channel
+      // shutdown doesn't trigger warnings in the log.
+      if (!noMoreWrites) {
         chunks.clear();
         chunks.add(Either.error(t));
         nextCompressedFrameLength = UNKNOWN_LENGTH;

@@ -21,7 +21,6 @@ package org.apache.druid.query;
 
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.Yielder;
@@ -77,7 +76,6 @@ public class IterableRowsCursorHelper
         null,
         Intervals.ETERNITY, // Setting the interval to eternity ensures that we are iterating over all of the rows
         VirtualColumns.EMPTY,
-        Granularities.ALL,
         false,
         rowSignature != null ? rowSignature : RowSignature.empty()
     );

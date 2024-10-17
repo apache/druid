@@ -70,7 +70,6 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
     siblingLocation = tempDir.newFolder();
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(intermediarySegmentsLocation, 1200L, null)))
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     final OverlordClient overlordClient = new NoopOverlordClient();
     intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);

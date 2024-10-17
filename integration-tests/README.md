@@ -57,7 +57,7 @@ export APACHE_ARCHIVE_MIRROR_HOST=https://example.com/remote-generic-repo
 This section describes how to start integration tests against Docker containers which will be brought up automatically by following commands.
 If you want to build Docker images and run tests separately, see the next section.
 
-To run all tests from a test group using Docker and Maven run the following command:
+To run all tests from a test group using Docker and Maven run the following command from `integration-tests` directory:
 
 ```bash
 mvn verify -P integration-tests -Dgroups=<test_group>
@@ -68,7 +68,7 @@ The list of test groups can be found at
 
 ### Run a single test
 
-To run only a single test using Maven:
+To run only a single test using Maven, run the following command from `integration-tests` directory:
 
 ```bash
 mvn verify -P integration-tests -Dgroups=<test_group> -Dit.test=<test_name>

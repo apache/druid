@@ -30,11 +30,10 @@ import java.util.Objects;
 import java.util.function.Function;
 
 /**
- * {@link SplitHintSpec} for IngestSegmentFirehoseFactory and DruidInputSource.
+ * {@link SplitHintSpec} for DruidInputSource.
  *
  * In DruidInputSource, this spec is converted into {@link MaxSizeSplitHintSpec}. As a result, its {@link #split}
- * method is never called (IngestSegmentFirehoseFactory creates splits on its own instead of calling the
- * {@code split()} method). This doesn't necessarily mean this class is deprecated in favor of the MaxSizeSplitHintSpec.
+ * method is never called. This doesn't necessarily mean this class is deprecated in favor of the MaxSizeSplitHintSpec.
  * We may want to create more optimized splits in the future. For example, segments can be split to maximize the rollup
  * ratio if the segments have different sets of columns or even different value ranges of columns.
  */

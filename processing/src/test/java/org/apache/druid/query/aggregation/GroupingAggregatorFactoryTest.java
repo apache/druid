@@ -131,6 +131,14 @@ public class GroupingAggregatorFactoryTest
       ));
       makeFactory(new String[Long.SIZE], null);
     }
+
+    @Test
+    public void testWithDuplicateGroupings()
+    {
+      exception.expect(IllegalArgumentException.class);
+      exception.expectMessage("Encountered same dimension more than once in groupings");
+      makeFactory(new String[]{"a", "a"}, null);
+    }
   }
 
   @RunWith(Parameterized.class)

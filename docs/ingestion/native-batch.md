@@ -28,12 +28,14 @@ sidebar_label: JSON-based batch
 :::
 
 Apache Druid supports the following types of JSON-based batch indexing tasks:
+
 - Parallel task indexing (`index_parallel`) that can run multiple indexing tasks concurrently. Parallel task works well for production ingestion tasks.
 - Simple task indexing (`index`) that run a single indexing task at a time. Simple task indexing is suitable for development and test environments.
 
 This topic covers the configuration for `index_parallel` ingestion specs.
 
 For related information on batch indexing, see:
+
 - [Batch ingestion method comparison table](./index.md#batch) for a comparison of batch ingestion methods.
 - [Tutorial: Loading a file](../tutorials/tutorial-batch.md) for a tutorial on JSON-based batch ingestion.
 - [Input sources](./input-sources.md) for possible input sources.
@@ -53,7 +55,7 @@ The parallel task type `index_parallel` is a task for multi-threaded batch index
 The `index_parallel` task is a supervisor task that orchestrates
 the whole indexing process. The supervisor task splits the input data and creates worker tasks to process the individual portions of data.
 
-Druid issues the worker tasks to the Overlord. The Overlord schedules and runs the workers on MiddleManagers or Indexers. After a worker task successfully processes the assigned input portion, it reports the resulting segment list to the Supervisor task.
+Druid issues the worker tasks to the Overlord. The Overlord schedules and runs the workers on Middle Managers or Indexers. After a worker task successfully processes the assigned input portion, it reports the resulting segment list to the Supervisor task.
 
 The Supervisor task periodically checks the status of worker tasks. If a task fails, the Supervisor retries the task until the number of retries reaches the configured limit. If all worker tasks succeed, it publishes the reported segments at once and finalizes ingestion.
 
@@ -97,7 +99,6 @@ By default, JSON-based batch ingestion replaces all data in the intervals in you
 
 You can also perform concurrent append and replace tasks. For more information, see [Concurrent append and replace](./concurrent-append-replace.md)
 
-
 #### Fully replacing existing segments using tombstones
 
 :::info
@@ -124,12 +125,12 @@ You want to re-ingest and overwrite with new data as follows:
 
 Unless you set `dropExisting` to true, the result after ingestion with overwrite using the same `MONTH` `segmentGranularity` would be:
 
-* **January**: 1 record  
-* **February**: 10 records  
-* **March**: 9 records
+- **January**: 1 record  
+- **February**: 10 records  
+- **March**: 9 records
 
 This may not be what it is expected since the new data has 0 records for January. Set `dropExisting` to true to replace the unneeded January segment with a tombstone.
-   
+
 ## Parallel indexing example
 
 The following example illustrates the configuration for a parallel indexing task.
@@ -214,6 +215,7 @@ The following example illustrates the configuration for a parallel indexing task
   }
 }
 ```
+
 </details>
 
 ## Parallel indexing configuration
@@ -305,7 +307,7 @@ The segments split hint spec is used only for [`DruidInputSource`](./input-sourc
 
 ### `partitionsSpec`
 
-The primary partition for Druid is time. You can define a secondary partitioning method in the partitions spec. Use the `partitionsSpec` type that applies for your [rollup](rollup.md) method. 
+The primary partition for Druid is time. You can define a secondary partitioning method in the partitions spec. Use the `partitionsSpec` type that applies for your [rollup](rollup.md) method.
 
 For perfect rollup, you can use:
 
@@ -366,12 +368,12 @@ In the `partial segment generation` phase, just like the Map phase in MapReduce,
 the Parallel task splits the input data based on the split hint spec
 and assigns each split to a worker task. Each worker task (type `partial_index_generate`) reads the assigned split, and partitions rows by the time chunk from `segmentGranularity` (primary partition key) in the `granularitySpec`
 and then by the hash value of `partitionDimensions` (secondary partition key) in the `partitionsSpec`.
-The partitioned data is stored in local storage of 
-the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
+The partitioned data is stored in local storage of
+the [middle Manager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
 
 The `partial segment merge` phase is similar to the Reduce phase in MapReduce.
 The Parallel task spawns a new set of worker tasks (type `partial_index_generic_merge`) to merge the partitioned data created in the previous phase. Here, the partitioned data is shuffled based on
-the time chunk and the hash value of `partitionDimensions` to be merged; each worker task reads the data falling in the same time chunk and the same hash value from multiple MiddleManager/Indexer processes and merges them to create the final segments. Finally, they push the final segments to the deep storage at once.
+the time chunk and the hash value of `partitionDimensions` to be merged; each worker task reads the data falling in the same time chunk and the same hash value from multiple Middle Manager/Indexer processes and merges them to create the final segments. Finally, they push the final segments to the deep storage at once.
 
 ##### Hash partition function
 
@@ -424,12 +426,12 @@ to create partitioned data. Each worker task reads a split created as in the pre
 partitions rows by the time chunk from the `segmentGranularity` (primary partition key) in the `granularitySpec`
 and then by the range partitioning found in the previous phase.
 The partitioned data is stored in local storage of
-the [middleManager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
+the [Middle Manager](../design/middlemanager.md) or the [indexer](../design/indexer.md).
 
 In the `partial segment merge` phase, the parallel index task spawns a new set of worker tasks (type `partial_index_generic_merge`) to merge the partitioned
 data created in the previous phase. Here, the partitioned data is shuffled based on
 the time chunk and the value of `partitionDimension`; each worker task reads the segments
-falling in the same partition of the same range from multiple MiddleManager/Indexer processes and merges
+falling in the same partition of the same range from multiple Middle Manager/Indexer processes and merges
 them to create the final segments. Finally, they push the final segments to the deep storage.
 
 :::info
@@ -709,12 +711,14 @@ The returned result contains the worker task spec, a current task status if exis
   "taskHistory": []
 }
 ```
+
 </details>
 
 `http://{PEON_IP}:{PEON_PORT}/druid/worker/v1/chat/{SUPERVISOR_TASK_ID}/subtaskspec/{SUB_TASK_SPEC_ID}/history`  
 Returns the task attempt history of the worker task spec of the given id, or HTTP 404 Not Found error if the supervisor task is running in the sequential mode.
 
 ## Segment pushing modes
+
 While ingesting data using the parallel task indexing, Druid creates segments from the input data and pushes them. For segment pushing,
 the parallel task index supports the following segment pushing modes based upon your type of [rollup](./rollup.md):
 
@@ -743,10 +747,12 @@ This may help the higher priority tasks to finish earlier than lower priority ta
 by assigning more task slots to them.
 
 ## Splittable input sources
+
 Use the `inputSource` object to define the location where your index can read data. Only the native parallel task and simple task support the input source.
 
 For details on available input sources see:
-- [S3 input source](./input-sources.md#s3-input-source) (`s3`) reads data from AWS S3 storage.
+
+- [S3 input source](./input-sources.md#s3-input-source) (`s3`) reads data from Amazon S3 storage.
 - [Google Cloud Storage input source](./input-sources.md#google-cloud-storage-input-source) (`gs`) reads data from Google Cloud Storage.
 - [Azure input source](./input-sources.md#azure-input-source) (`azure`) reads data from Azure Blob Storage and Azure Data Lake.
 - [HDFS input source](./input-sources.md#hdfs-input-source) (`hdfs`) reads data from HDFS storage.

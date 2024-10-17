@@ -77,7 +77,7 @@ public class MetadataResourceTest
           .toArray(new DataSegment[0]);
 
   private final List<DataSegmentPlus> segmentsPlus = Arrays.stream(segments)
-          .map(s -> new DataSegmentPlus(s, DateTimes.nowUtc(), DateTimes.nowUtc(), null, null, null))
+          .map(s -> new DataSegmentPlus(s, DateTimes.nowUtc(), DateTimes.nowUtc(), null, null, null, null))
           .collect(Collectors.toList());
   private HttpServletRequest request;
   private SegmentsMetadataManager segmentsMetadataManager;
@@ -484,6 +484,35 @@ public class MetadataResourceTest
         segments[5],
         metadataResource.getSegment(segments[5].getDataSource(), segments[5].getId().toString(), true).getEntity()
     );
+  }
+
+  @Test
+  public void testGetBootstrapSegments()
+  {
+    Mockito.doReturn(ImmutableSet.of(segments[0], segments[1])).when(coordinator).getBroadcastSegments();
+
+    Response response = metadataResource.getBootstrapSegments();
+    final List<DataSegment> observedSegments = extractResponseList(response);
+    Assert.assertEquals(2, observedSegments.size());
+  }
+
+  @Test
+  public void testEmptyGetBootstrapSegments()
+  {
+    Mockito.doReturn(ImmutableSet.of()).when(coordinator).getBroadcastSegments();
+
+    Response response = metadataResource.getBootstrapSegments();
+    final List<DataSegment> observedSegments = extractResponseList(response);
+    Assert.assertEquals(0, observedSegments.size());
+  }
+
+  @Test
+  public void testNullGetBootstrapSegments()
+  {
+    Mockito.doReturn(null).when(coordinator).getBroadcastSegments();
+
+    Response response = metadataResource.getBootstrapSegments();
+    Assert.assertEquals(503, response.getStatus());
   }
 
   private <T> List<T> extractResponseList(Response response)

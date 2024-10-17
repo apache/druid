@@ -35,9 +35,8 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
-import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 public class Appenderators
@@ -47,7 +46,7 @@ public class Appenderators
       String id,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
@@ -97,11 +96,11 @@ public class Appenderators
     );
   }
 
-  public static Appenderator createOffline(
+  public static Appenderator createBatch(
       String id,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
@@ -126,79 +125,6 @@ public class Appenderators
         indexMerger,
         rowIngestionMeters,
         parseExceptionHandler,
-        useMaxMemoryEstimates,
-        centralizedDatasourceSchemaConfig
-    );
-  }
-
-  public static Appenderator createOpenSegmentsOffline(
-      String id,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
-  {
-    // fallback to original code known to be working, this is just a fallback option in case new
-    // batch appenderator has some early bugs but we will remove this fallback as soon as
-    // we determine that batch appenderator code is stable
-    return new AppenderatorImpl(
-        id,
-        schema,
-        config,
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        new NoopDataSegmentAnnouncer(),
-        null,
-        indexIO,
-        indexMerger,
-        null,
-        rowIngestionMeters,
-        parseExceptionHandler,
-        true,
-        useMaxMemoryEstimates,
-        centralizedDatasourceSchemaConfig
-    );
-  }
-
-  public static Appenderator createClosedSegmentsOffline(
-      String id,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
-  {
-    return new AppenderatorImpl(
-        id,
-        schema,
-        config,
-        metrics,
-        dataSegmentPusher,
-        objectMapper,
-        new NoopDataSegmentAnnouncer(),
-        null,
-        indexIO,
-        indexMerger,
-        null,
-        rowIngestionMeters,
-        parseExceptionHandler,
-        false,
         useMaxMemoryEstimates,
         centralizedDatasourceSchemaConfig
     );

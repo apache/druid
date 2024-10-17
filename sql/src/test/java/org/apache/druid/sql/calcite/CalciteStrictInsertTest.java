@@ -24,7 +24,6 @@ import org.apache.druid.sql.calcite.CalciteStrictInsertTest.StrictInsertComponen
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.CatalogResolver.NullCatalogResolver;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -32,7 +31,7 @@ import org.junit.jupiter.api.Test;
  * to only work with existing datasources. The strict option is a config option which
  * we enable only for this one test.
  */
-@SqlTestFramework.SqlTestFrameWorkModule(StrictInsertComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(StrictInsertComponentSupplier.class)
 public class CalciteStrictInsertTest extends CalciteIngestionDmlTest
 {
   static class StrictInsertComponentSupplier extends IngestionDmlComponentSupplier

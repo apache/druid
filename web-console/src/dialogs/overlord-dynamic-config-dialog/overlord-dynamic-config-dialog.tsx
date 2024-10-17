@@ -46,17 +46,19 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
 
   const [historyRecordsState] = useQueryManager<null, any[]>({
     initQuery: null,
-    processQuery: async () => {
-      const historyResp = await Api.instance.get(`/druid/indexer/v1/worker/history?count=100`);
+    processQuery: async (_, cancelToken) => {
+      const historyResp = await Api.instance.get(`/druid/indexer/v1/worker/history?count=100`, {
+        cancelToken,
+      });
       return historyResp.data;
     },
   });
 
   useQueryManager<null, Record<string, any>>({
     initQuery: null,
-    processQuery: async () => {
+    processQuery: async (_, cancelToken) => {
       try {
-        const configResp = await Api.instance.get(`/druid/indexer/v1/worker`);
+        const configResp = await Api.instance.get(`/druid/indexer/v1/worker`, { cancelToken });
         setDynamicConfig(configResp.data || {});
       } catch (e) {
         AppToaster.show({
@@ -107,9 +109,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
           <p>
             Edit the overlord dynamic configuration at runtime. For more information please refer to
             the{' '}
-            <ExternalLink
-              href={`${getLink('DOCS')}/configuration/index.html#overlord-dynamic-configuration`}
-            >
+            <ExternalLink href={`${getLink('DOCS')}/configuration/#overlord-dynamic-configuration`}>
               documentation
             </ExternalLink>
             .

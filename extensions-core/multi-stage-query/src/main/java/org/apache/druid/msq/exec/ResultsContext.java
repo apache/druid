@@ -19,6 +19,8 @@
 
 package org.apache.druid.msq.exec;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.sql.calcite.run.SqlResults;
 
@@ -34,21 +36,24 @@ public class ResultsContext
   private final List<SqlTypeName> sqlTypeNames;
   private final SqlResults.Context sqlResultsContext;
 
+  @JsonCreator
   public ResultsContext(
-      final List<SqlTypeName> sqlTypeNames,
-      final SqlResults.Context sqlResultsContext
+      @JsonProperty("sqlTypeNames") final List<SqlTypeName> sqlTypeNames,
+      @JsonProperty("sqlResultsContext") final SqlResults.Context sqlResultsContext
   )
   {
     this.sqlTypeNames = sqlTypeNames;
     this.sqlResultsContext = sqlResultsContext;
   }
 
+  @JsonProperty("sqlTypeNames")
   @Nullable
   public List<SqlTypeName> getSqlTypeNames()
   {
     return sqlTypeNames;
   }
 
+  @JsonProperty("sqlResultsContext")
   @Nullable
   public SqlResults.Context getSqlResultsContext()
   {

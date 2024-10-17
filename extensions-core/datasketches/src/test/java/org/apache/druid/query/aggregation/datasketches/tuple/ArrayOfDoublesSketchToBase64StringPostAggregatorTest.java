@@ -51,9 +51,10 @@ public class ArrayOfDoublesSketchToBase64StringPostAggregatorTest
         new ConstantPostAggregator("", 0)
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    ArrayOfDoublesSketchToBase64StringPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new ArrayOfDoublesSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        ArrayOfDoublesSketchToBase64StringPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

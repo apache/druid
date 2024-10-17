@@ -27,6 +27,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
@@ -59,6 +60,7 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
   protected final ResultFetcherFactory fetcherFactory;
   protected Throwable throwable;
   protected DruidJdbcResultSet resultSet;
+  protected SqlQueryPlus sqlQuery;
 
   public AbstractDruidJdbcStatement(
       final String connectionId,
@@ -245,5 +247,10 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
   public int getStatementId()
   {
     return statementId;
+  }
+
+  public SqlQueryPlus getSqlQuery()
+  {
+    return sqlQuery;
   }
 }

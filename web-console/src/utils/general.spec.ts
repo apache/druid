@@ -18,11 +18,13 @@
 
 import {
   arrangeWithPrefixSuffix,
+  caseInsensitiveEquals,
   formatBytes,
   formatBytesCompact,
   formatInteger,
   formatMegabytes,
   formatMillions,
+  formatNumber,
   formatPercent,
   hashJoaat,
   moveElement,
@@ -92,6 +94,15 @@ describe('general', () => {
         'b',
         'd',
       ]);
+    });
+  });
+
+  describe('formatNumber', () => {
+    it('works', () => {
+      expect(formatNumber(null as any)).toEqual('0');
+      expect(formatNumber(0)).toEqual('0');
+      expect(formatNumber(5)).toEqual('5');
+      expect(formatNumber(5.1)).toEqual('5.1');
     });
   });
 
@@ -194,6 +205,16 @@ describe('general', () => {
         row: 2,
         column: 7,
       });
+    });
+  });
+
+  describe('caseInsensitiveEquals', () => {
+    it('works', () => {
+      expect(caseInsensitiveEquals(undefined, undefined)).toEqual(true);
+      expect(caseInsensitiveEquals(undefined, 'x')).toEqual(false);
+      expect(caseInsensitiveEquals('x', undefined)).toEqual(false);
+      expect(caseInsensitiveEquals('x', 'X')).toEqual(true);
+      expect(caseInsensitiveEquals(undefined, '')).toEqual(false);
     });
   });
 });

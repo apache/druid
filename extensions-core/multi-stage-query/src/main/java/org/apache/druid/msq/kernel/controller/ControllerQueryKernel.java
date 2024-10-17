@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.IAE;
@@ -302,7 +303,8 @@ public class ControllerQueryKernel
           workerInputs.inputsForWorker(workerNumber),
           extraInfoHolder,
           config.getWorkerIds(),
-          outputChannelMode
+          outputChannelMode,
+          config.getWorkerContextMap()
       );
 
       QueryValidator.validateWorkOrder(workOrder);
@@ -643,6 +645,20 @@ public class ControllerQueryKernel
   }
 
   /**
+   * Returns the set of all worker numbers that have participated in work done so far by this query.
+   */
+  public IntSet getAllParticipatingWorkers()
+  {
+    final IntSet retVal = new IntAVLTreeSet();
+
+    for (final ControllerStageTracker tracker : stageTrackers.values()) {
+      retVal.addAll(tracker.getWorkerInputs().workers());
+    }
+
+    return retVal;
+  }
+
+  /**
    * Fetches and returns the stage kernel corresponding to the provided stage id, else throws {@link IAE}
    */
   private ControllerStageTracker getStageTrackerOrThrow(StageId stageId)
@@ -676,11 +692,10 @@ public class ControllerQueryKernel
   {
     if (stageOutputChannelModes.get(stageId) == OutputChannelMode.MEMORY) {
       if (getStageDefinition(stageId).doesSortDuringShuffle()) {
-        // Stages that sort during shuffle go through a READING_INPUT phase followed by a POST_READING phase
-        // (once all input is read). These stages start producing output once POST_READING starts.
-        return newPhase == ControllerStagePhase.POST_READING;
+        // Sorting stages start producing output when they finish reading their input.
+        return newPhase.isDoneReadingInput();
       } else {
-        // Can read results immediately.
+        // Non-sorting stages start producing output immediately.
         return newPhase == ControllerStagePhase.NEW;
       }
     } else {

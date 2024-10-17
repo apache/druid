@@ -58,9 +58,9 @@ public class EncodedStringDictionaryWriter implements DictionaryWriter<String>
   }
 
   @Override
-  public void write(@Nullable String objectToWrite) throws IOException
+  public int write(@Nullable String objectToWrite) throws IOException
   {
-    delegate.write(StringUtils.toUtf8Nullable(NullHandling.emptyToNullIfNeeded(objectToWrite)));
+    return delegate.write(StringUtils.toUtf8Nullable(NullHandling.emptyToNullIfNeeded(objectToWrite)));
   }
 
   @Nullable

@@ -106,9 +106,13 @@ public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strate
   }
 
   /**
-   * Whether the {@link #read} methods return an object that may retain a reference to the provided {@link ByteBuffer}.
-   * If a reference is sometimes retained, this method returns true. It returns false if, and only if, a reference
-   * is *never* retained.
+   * Whether the {@link #read} methods return an object that may retain a reference to the underlying memory of the
+   * provided {@link ByteBuffer}. If a reference is sometimes retained, this method returns true. It returns false if,
+   * and only if, a reference is *never* retained.
+   * <p>
+   * If this method returns true, and the caller does not control the lifecycle of the underlying memory or cannot
+   * ensure that it will not change over the lifetime of the returned object, callers should copy the memory to a new
+   * location that they do control the lifecycle of and will be available for the duration of the returned object.
    */
   public boolean readRetainsBufferReference()
   {
@@ -152,5 +156,10 @@ public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strate
       return b == null;
     }
     return b != null && delegate.equals(a, b);
+  }
+
+  public Class<?> getClazz()
+  {
+    return delegate.getClazz();
   }
 }

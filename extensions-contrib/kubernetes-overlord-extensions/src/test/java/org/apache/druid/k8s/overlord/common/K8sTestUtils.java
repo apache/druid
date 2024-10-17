@@ -34,7 +34,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -66,20 +65,20 @@ public class K8sTestUtils
         null,
         null,
         new IndexTask.IndexIngestionSpec(
-            new DataSchema(
-                "foo",
-                new TimestampSpec(null, null, null),
-                DimensionsSpec.EMPTY,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    null,
-                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
-                ),
-                null
-            ),
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withDimensions(DimensionsSpec.EMPTY)
+                      .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              null,
+                              ImmutableList.of(Intervals.of("2010-01-01/P2D"))
+                          )
+                      )
+                      .build(),
             new IndexTask.IndexIOConfig(
-                null,
                 new LocalInputSource(new File("lol"), "rofl"),
                 new NoopInputFormat(),
                 true,

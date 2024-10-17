@@ -148,7 +148,6 @@ export const STAGES = new Stages(
             },
             resultFormat: 'compactedList',
             columns: ['Capital', 'Country', 'ISO3'],
-            legacy: false,
             context: {
               __resultFormat: 'array',
               executionMode: 'async',

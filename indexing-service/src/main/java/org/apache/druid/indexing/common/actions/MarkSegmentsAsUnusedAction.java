@@ -67,9 +67,4 @@ public class MarkSegmentsAsUnusedAction implements TaskAction<Integer>
                   .markSegmentsAsUnusedWithinInterval(dataSource, interval);
   }
 
-  @Override
-  public boolean isAudited()
-  {
-    return true;
-  }
 }

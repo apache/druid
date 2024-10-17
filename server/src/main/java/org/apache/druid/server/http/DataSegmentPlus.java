@@ -36,6 +36,8 @@ import java.util.Objects;
  * <li>{@link DataSegmentPlus#createdDate} - The time when the segment was created.</li>
  * <li>{@link DataSegmentPlus#usedStatusLastUpdatedDate} - The time when the segments
  * used status was last updated.</li>
+ * <li>{@link DataSegmentPlus#upgradedFromSegmentId} - The segment id to which the same load spec originally belonged.
+ * Load specs can be shared as a result of segment version upgrades.</li>
  * </ul>
  * <p>
  * This class closely resembles the row structure of the {@link MetadataStorageTablesConfig#getSegmentsTable()}.
@@ -53,6 +55,9 @@ public class DataSegmentPlus
   private final String schemaFingerprint;
   private final Long numRows;
 
+  @Nullable
+  private final String upgradedFromSegmentId;
+
   @JsonCreator
   public DataSegmentPlus(
       @JsonProperty("dataSegment") final DataSegment dataSegment,
@@ -60,7 +65,8 @@ public class DataSegmentPlus
       @JsonProperty("usedStatusLastUpdatedDate") @Nullable final DateTime usedStatusLastUpdatedDate,
       @JsonProperty("used") @Nullable final Boolean used,
       @JsonProperty("schemaFingerprint") @Nullable final String schemaFingerprint,
-      @JsonProperty("numRows") @Nullable final Long numRows
+      @JsonProperty("numRows") @Nullable final Long numRows,
+      @JsonProperty("upgradedFromSegmentId") @Nullable final String upgradedFromSegmentId
   )
   {
     this.dataSegment = dataSegment;
@@ -69,6 +75,7 @@ public class DataSegmentPlus
     this.used = used;
     this.schemaFingerprint = schemaFingerprint;
     this.numRows = numRows;
+    this.upgradedFromSegmentId = upgradedFromSegmentId;
   }
 
   @Nullable
@@ -112,6 +119,13 @@ public class DataSegmentPlus
     return numRows;
   }
 
+  @Nullable
+  @JsonProperty
+  public String getUpgradedFromSegmentId()
+  {
+    return upgradedFromSegmentId;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -127,7 +141,8 @@ public class DataSegmentPlus
            && Objects.equals(usedStatusLastUpdatedDate, that.getUsedStatusLastUpdatedDate())
            && Objects.equals(used, that.getUsed())
            && Objects.equals(schemaFingerprint, that.getSchemaFingerprint())
-           && Objects.equals(numRows, that.getNumRows());
+           && Objects.equals(numRows, that.getNumRows())
+           && Objects.equals(upgradedFromSegmentId, that.getUpgradedFromSegmentId());
   }
 
   @Override
@@ -139,7 +154,8 @@ public class DataSegmentPlus
         usedStatusLastUpdatedDate,
         used,
         schemaFingerprint,
-        numRows
+        numRows,
+        upgradedFromSegmentId
     );
   }
 
@@ -153,6 +169,7 @@ public class DataSegmentPlus
            ", used=" + getUsed() +
            ", schemaFingerprint=" + getSchemaFingerprint() +
            ", numRows=" + getNumRows() +
+           ", upgradedFromSegmentId=" + getUpgradedFromSegmentId() +
            '}';
   }
 }

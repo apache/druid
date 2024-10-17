@@ -27,8 +27,8 @@ import com.google.common.base.Suppliers;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
 import org.apache.druid.indexing.appenderator.ActionBasedSegmentAllocator;
-import org.apache.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -49,10 +49,10 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.ChatHandler;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
-import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -182,7 +182,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
 
   public Appenderator newAppenderator(
       TaskToolbox toolbox,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       RowIngestionMeters rowIngestionMeters,
       ParseExceptionHandler parseExceptionHandler
   )
@@ -215,7 +215,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   public StreamAppenderatorDriver newDriver(
       final Appenderator appenderator,
       final TaskToolbox toolbox,
-      final FireDepartmentMetrics metrics
+      final SegmentGenerationMetrics metrics
   )
   {
     return new StreamAppenderatorDriver(
@@ -237,7 +237,7 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
             )
         ),
         toolbox.getSegmentHandoffNotifierFactory(),
-        new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
+        new ActionBasedPublishedSegmentRetriever(toolbox.getTaskActionClient()),
         toolbox.getDataSegmentKiller(),
         toolbox.getJsonMapper(),
         metrics

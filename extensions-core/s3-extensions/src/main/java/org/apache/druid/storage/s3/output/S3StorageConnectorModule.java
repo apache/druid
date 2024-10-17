@@ -44,5 +44,6 @@ public class S3StorageConnectorModule implements DruidModule
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.export.storage.s3", S3ExportConfig.class);
+    JsonConfigProvider.bind(binder, "druid.msq.intermediate.storage", S3OutputConfig.class);
   }
 }

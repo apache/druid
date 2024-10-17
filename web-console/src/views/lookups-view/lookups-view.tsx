@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent } from '@blueprintjs/core';
+import { Button, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -123,16 +123,19 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     };
 
     this.lookupsQueryManager = new QueryManager({
-      processQuery: async () => {
+      processQuery: async (_, cancelToken) => {
         const tiersResp = await Api.instance.get(
           '/druid/coordinator/v1/lookups/config?discover=true',
+          { cancelToken },
         );
         const tiers =
           tiersResp.data && tiersResp.data.length > 0
             ? tiersResp.data.sort(tierNameCompare)
             : [DEFAULT_LOOKUP_TIER];
 
-        const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all');
+        const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all', {
+          cancelToken,
+        });
         const lookupData = lookupResp.data;
 
         const lookupEntries: LookupEntry[] = [];
@@ -295,8 +298,16 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           );
         }}
         confirmButtonText="Delete lookup"
-        successText="Lookup was deleted"
-        failText="Could not delete lookup"
+        successText={
+          <>
+            Lookup <Tag minimal>{deleteLookupName}</Tag> was deleted
+          </>
+        }
+        failText={
+          <>
+            Could not delete lookup <Tag minimal>{deleteLookupName}</Tag>
+          </>
+        }
         intent={Intent.DANGER}
         onClose={() => {
           this.setState({ deleteLookupTier: undefined, deleteLookupName: undefined });
@@ -456,6 +467,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
                     this.onDetail(original);
                   }}
                   actions={lookupActions}
+                  menuTitle={lookupId}
                 />
               );
             },

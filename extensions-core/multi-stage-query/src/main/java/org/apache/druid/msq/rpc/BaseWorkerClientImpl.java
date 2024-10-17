@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.frame.channel.ChannelClosedForWritesException;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.file.FrameFileHttpResponseHandler;
 import org.apache.druid.frame.file.FrameFilePartialFetch;
@@ -37,6 +38,8 @@ import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.exec.WorkerClient;
+import org.apache.druid.msq.indexing.client.SketchResponseHandler;
+import org.apache.druid.msq.indexing.client.WorkerChatHandler;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
@@ -55,6 +58,8 @@ import java.io.IOException;
  */
 public abstract class BaseWorkerClientImpl implements WorkerClient
 {
+  private static final Logger log = new Logger(BaseWorkerClientImpl.class);
+
   private final ObjectMapper objectMapper;
   private final String contentType;
 
@@ -88,21 +93,20 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerId,
-      StageId stageId
+      StageId stageId,
+      SketchEncoding sketchEncoding
   )
   {
     String path = StringUtils.format(
-        "/keyStatistics/%s/%d",
+        "/keyStatistics/%s/%d?sketchEncoding=%s",
         StringUtils.urlEncode(stageId.getQueryId()),
-        stageId.getStageNumber()
+        stageId.getStageNumber(),
+        sketchEncoding
     );
 
-    return FutureUtils.transform(
-        getClient(workerId).asyncRequest(
-            new RequestBuilder(HttpMethod.POST, path).header(HttpHeaders.ACCEPT, contentType),
-            new BytesFullResponseHandler()
-        ),
-        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>() {})
+    return getClient(workerId).asyncRequest(
+        new RequestBuilder(HttpMethod.POST, path),
+        new SketchResponseHandler(objectMapper)
     );
   }
 
@@ -110,22 +114,21 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerId,
       StageId stageId,
-      long timeChunk
+      long timeChunk,
+      SketchEncoding sketchEncoding
   )
   {
     String path = StringUtils.format(
-        "/keyStatisticsForTimeChunk/%s/%d/%d",
+        "/keyStatisticsForTimeChunk/%s/%d/%d?sketchEncoding=%s",
         StringUtils.urlEncode(stageId.getQueryId()),
         stageId.getStageNumber(),
-        timeChunk
+        timeChunk,
+        sketchEncoding
     );
 
-    return FutureUtils.transform(
-        getClient(workerId).asyncRequest(
-            new RequestBuilder(HttpMethod.POST, path).header(HttpHeaders.ACCEPT, contentType),
-            new BytesFullResponseHandler()
-        ),
-        holder -> deserialize(holder, new TypeReference<ClusterByStatisticsSnapshot>() {})
+    return getClient(workerId).asyncRequest(
+        new RequestBuilder(HttpMethod.POST, path),
+        new SketchResponseHandler(objectMapper)
     );
   }
 
@@ -150,7 +153,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
   }
 
   /**
-   * Client-side method for {@link org.apache.druid.msq.indexing.client.WorkerChatHandler#httpPostCleanupStage}.
+   * Client-side method for {@link WorkerChatHandler#httpPostCleanupStage}.
    */
   @Override
   public ListenableFuture<Void> postCleanupStage(
@@ -191,8 +194,6 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
     );
   }
 
-  private static final Logger log = new Logger(BaseWorkerClientImpl.class);
-
   @Override
   public ListenableFuture<Boolean> fetchChannelData(
       String workerId,
@@ -221,12 +222,18 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
           public void onSuccess(FrameFilePartialFetch partialFetch)
           {
             if (partialFetch.isExceptionCaught()) {
-              // Exception while reading channel. Recoverable.
-              log.noStackTrace().info(
-                  partialFetch.getExceptionCaught(),
-                  "Encountered exception while reading channel [%s]",
-                  channel.getId()
-              );
+              if (partialFetch.getExceptionCaught() instanceof ChannelClosedForWritesException) {
+                // Channel was closed. Stop trying.
+                retVal.setException(partialFetch.getExceptionCaught());
+                return;
+              } else {
+                // Exception while reading channel. Recoverable.
+                log.noStackTrace().warn(
+                    partialFetch.getExceptionCaught(),
+                    "Attempting recovery after exception while reading channel[%s]",
+                    channel.getId()
+                );
+              }
             }
 
             // Empty fetch means this is the last fetch for the channel.

@@ -195,7 +195,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .columns(ImmutableList.of("v0"))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         ),
         ImmutableList.of(
@@ -223,7 +222,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .columns(ImmutableList.of("v0"))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         ),
         ImmutableList.of(
@@ -252,7 +250,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .columns(ImmutableList.of("v0"))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         ),
         ImmutableList.of(
@@ -456,7 +453,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
                 .columns(ImmutableList.of("v0"))
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         ),
         ImmutableList.of(
@@ -473,9 +469,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringLength()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT dim1, MV_LENGTH(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1, 2 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -636,9 +630,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringPrependAppend()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
@@ -822,9 +814,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOffset()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT MV_OFFSET(dim3, 1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -861,9 +851,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOrdinal()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT MV_ORDINAL(dim3, 2), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -904,9 +892,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOffsetOf()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT MV_OFFSET_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -953,9 +939,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOrdinalOf()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT MV_ORDINAL_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -1003,9 +987,7 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringToString()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
+    cannotVectorizeUnlessFallback();
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
@@ -1122,9 +1104,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectAndFilterByStringToMV()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     testBuilder()
         .sql("SELECT STRING_TO_MV(CONCAT(MV_TO_STRING(dim3, ','), ',d'), ',') FROM druid.numfoo "
              + "WHERE MV_CONTAINS(STRING_TO_MV(CONCAT(MV_TO_STRING(dim3, ','), ',d'), ','), 'd')")
@@ -1167,9 +1146,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testStringToMVOfConstant()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     testBuilder()
         .sql("SELECT m1, STRING_TO_MV('a,b', ',') AS mv FROM druid.numfoo GROUP BY 1")
         .expectedQuery(
@@ -1339,9 +1315,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueListFilterNonLiteral()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     testQuery(
         "SELECT MV_FILTER_ONLY(dim3, ARRAY[dim2]) FROM druid.numfoo",
         ImmutableList.of(
@@ -1429,9 +1402,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueListFilterDenyNonLiteral()
   {
-    // Cannot vectorize due to usage of expressions.
-    cannotVectorize();
-
     testQuery(
         "SELECT MV_FILTER_NONE(dim3, ARRAY[dim2]) FROM druid.numfoo",
         ImmutableList.of(
@@ -2170,7 +2140,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMultiValueStringOverlapFilterCoalesceNvl()
   {
-    cannotVectorize();
     testQuery(
         "SELECT COALESCE(dim3, 'other') FROM druid.numfoo "
         + "WHERE MV_OVERLAP(COALESCE(MV_TO_ARRAY(dim3), ARRAY['other']), ARRAY['a', 'b', 'other']) OR "
@@ -2392,7 +2361,6 @@ public class CalciteMultiValueStringQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMvContainsSelectColumns()
   {
-    cannotVectorize();
     testQuery(
         "SELECT MV_CONTAINS(dim3, ARRAY['a', 'b']), MV_OVERLAP(dim3, ARRAY['a', 'b']) FROM druid.numfoo LIMIT 5",
         ImmutableList.of(

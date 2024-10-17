@@ -24,11 +24,12 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -56,6 +57,7 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -88,8 +90,10 @@ public class SqlGroupByBenchmark
   static {
     NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
+
+  private static final Logger log = new Logger(SqlGroupByBenchmark.class);
 
   private static final DruidProcessingConfig PROCESSING_CONFIG = new DruidProcessingConfig()
   {
@@ -328,7 +332,7 @@ public class SqlGroupByBenchmark
 
     // Hacky and pollutes global namespace, but it is fine since benchmarks are run in isolation. Wasn't able
     // to work up a cleaner way of doing it by modifying the injector.
-    CalciteTests.getJsonMapper().registerModules(NestedDataModule.getJacksonModulesList());
+    CalciteTests.getJsonMapper().registerModules(BuiltInTypesModule.getJacksonModulesList());
 
     final DruidSchemaCatalog rootSchema =
         CalciteTests.createMockRootSchema(conglomerate, walker, plannerConfig, AuthTestUtils.TEST_AUTHORIZER_MAPPER);
@@ -344,17 +348,20 @@ public class SqlGroupByBenchmark
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
 
     try {
       SqlVectorizedExpressionSanityTest.sanityTestVectorizedSqlQueries(
+          engine,
           plannerFactory,
           sqlQuery(groupingDimension)
       );
+      log.info("non-vectorized and vectorized results match");
     }
-    catch (Throwable ignored) {
-      // the show must go on
+    catch (Throwable ex) {
+      log.warn(ex, "non-vectorized and vectorized results do not match");
     }
   }
 

@@ -305,12 +305,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return true;
-  }
-
-  @Override
   public String toString()
   {
     return "SegmentTransactionalInsertAction{" +

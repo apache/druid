@@ -200,7 +200,7 @@ public class CalcitePlanner implements Planner, ViewExpander
 
     state = CalcitePlanner.State.STATE_2_READY;
 
-    // If user specify own traitDef, instead of default default trait,
+    // If user specifies own traitDef, instead of default trait,
     // register the trait def specified in traitDefs.
     if (this.traitDefs == null) {
       planner.addRelTraitDef(ConventionTraitDef.INSTANCE);

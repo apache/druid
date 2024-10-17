@@ -157,4 +157,27 @@ public class SqlReverseLookupBenchmark
       blackhole.consume(plannerResult);
     }
   }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void planEqualsInsideAndOutsideCase(Blackhole blackhole)
+  {
+    final String sql = StringUtils.format(
+        "SELECT COUNT(*) FROM foo\n"
+        + "WHERE\n"
+        + " CASE WHEN LOOKUP(dimZipf, 'benchmark-lookup', 'N/A') = '%s'\n"
+        + " THEN NULL\n"
+        + " ELSE LOOKUP(dimZipf, 'benchmark-lookup', 'N/A')\n"
+        + " END IN ('%s', '%s', '%s')",
+        LookupBenchmarkUtil.makeKeyOrValue(0),
+        LookupBenchmarkUtil.makeKeyOrValue(1),
+        LookupBenchmarkUtil.makeKeyOrValue(2),
+        LookupBenchmarkUtil.makeKeyOrValue(3)
+    );
+    try (final DruidPlanner planner = plannerFactory.createPlannerForTesting(engine, sql, ImmutableMap.of())) {
+      final PlannerResult plannerResult = planner.plan();
+      blackhole.consume(plannerResult);
+    }
+  }
 }

@@ -26,9 +26,25 @@ import org.junit.Assert;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 
 public class TestUtils
 {
+  public static void setUpCgroupsV2(
+      File procDir,
+      File cgroupDir
+  ) throws IOException
+  {
+    final File procMounts = new File(procDir, "mounts");
+    copyResource("/cgroupv2/proc.mounts", procMounts);
+
+    final String procMountsString = StringUtils.fromUtf8(Files.readAllBytes(procMounts.toPath()));
+    Files.write(
+        procMounts.toPath(),
+        StringUtils.toUtf8(StringUtils.replace(procMountsString, "/sys/fs/cgroup", cgroupDir.getAbsolutePath()))
+    );
+  }
+
   public static void setUpCgroups(
       File procDir,
       File cgroupDir
@@ -65,7 +81,7 @@ public class TestUtils
 
   public static void copyOrReplaceResource(String resource, File out) throws IOException
   {
-    Files.copy(TestUtils.class.getResourceAsStream(resource), out.toPath());
+    Files.copy(TestUtils.class.getResourceAsStream(resource), out.toPath(), StandardCopyOption.REPLACE_EXISTING);
     Assert.assertTrue(out.exists());
     Assert.assertNotEquals(0, out.length());
   }

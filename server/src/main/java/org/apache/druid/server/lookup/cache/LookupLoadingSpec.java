@@ -22,6 +22,11 @@ package org.apache.druid.server.lookup.cache;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.InvalidInput;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -39,6 +44,10 @@ import java.util.Set;
  */
 public class LookupLoadingSpec
 {
+
+  public static final String CTX_LOOKUP_LOADING_MODE = "lookupLoadingMode";
+  public static final String CTX_LOOKUPS_TO_LOAD = "lookupsToLoad";
+
   public enum Mode
   {
     ALL, NONE, ONLY_REQUIRED
@@ -80,6 +89,50 @@ public class LookupLoadingSpec
     return lookupsToLoad;
   }
 
+  public static LookupLoadingSpec createFromContext(Map<String, Object> context, LookupLoadingSpec defaultSpec)
+  {
+    if (context == null) {
+      return defaultSpec;
+    }
+
+    final Object lookupModeValue = context.get(CTX_LOOKUP_LOADING_MODE);
+    if (lookupModeValue == null) {
+      return defaultSpec;
+    }
+
+    final LookupLoadingSpec.Mode lookupLoadingMode;
+    try {
+      lookupLoadingMode = LookupLoadingSpec.Mode.valueOf(lookupModeValue.toString());
+    }
+    catch (IllegalArgumentException e) {
+      throw InvalidInput.exception("Invalid value of %s[%s]. Allowed values are %s",
+                                   CTX_LOOKUP_LOADING_MODE, lookupModeValue.toString(), Arrays.asList(LookupLoadingSpec.Mode.values()));
+    }
+
+    if (lookupLoadingMode == Mode.NONE) {
+      return NONE;
+    } else if (lookupLoadingMode == Mode.ALL) {
+      return ALL;
+    } else if (lookupLoadingMode == Mode.ONLY_REQUIRED) {
+      Collection<String> lookupsToLoad;
+      try {
+        lookupsToLoad = (Collection<String>) context.get(CTX_LOOKUPS_TO_LOAD);
+      }
+      catch (ClassCastException e) {
+        throw InvalidInput.exception("Invalid value of %s[%s]. Please provide a comma-separated list of "
+                                     + "lookup names. For example: [\"lookupName1\", \"lookupName2\"]",
+                                     CTX_LOOKUPS_TO_LOAD, context.get(CTX_LOOKUPS_TO_LOAD));
+      }
+
+      if (lookupsToLoad == null || lookupsToLoad.isEmpty()) {
+        throw InvalidInput.exception("Set of lookups to load cannot be %s for mode[ONLY_REQUIRED].", lookupsToLoad);
+      }
+      return LookupLoadingSpec.loadOnly(new HashSet<>(lookupsToLoad));
+    } else {
+      return defaultSpec;
+    }
+  }
+
   @Override
   public String toString()
   {
@@ -87,5 +140,24 @@ public class LookupLoadingSpec
            "mode=" + mode +
            ", lookupsToLoad=" + lookupsToLoad +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    LookupLoadingSpec that = (LookupLoadingSpec) o;
+    return mode == that.mode && Objects.equals(lookupsToLoad, that.lookupsToLoad);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(mode, lookupsToLoad);
   }
 }

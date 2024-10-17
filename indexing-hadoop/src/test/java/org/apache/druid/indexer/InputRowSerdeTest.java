@@ -220,7 +220,7 @@ public class InputRowSerdeTest
     );
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
-        Collections.singletonList("could not convert value [d1v] to long"),
+        Collections.singletonList("Could not convert value [d1v] to long."),
         result.getParseExceptionMessages()
     );
 
@@ -231,7 +231,7 @@ public class InputRowSerdeTest
     );
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
-        Collections.singletonList("could not convert value [d1v] to float"),
+        Collections.singletonList("Could not convert value [d1v] to float."),
         result.getParseExceptionMessages()
     );
 
@@ -242,7 +242,7 @@ public class InputRowSerdeTest
     );
     result = InputRowSerde.toBytes(InputRowSerde.getTypeHelperMap(dimensionsSpec), in, aggregatorFactories);
     Assert.assertEquals(
-        Collections.singletonList("could not convert value [d1v] to double"),
+        Collections.singletonList("Could not convert value [d1v] to double."),
         result.getParseExceptionMessages()
     );
   }

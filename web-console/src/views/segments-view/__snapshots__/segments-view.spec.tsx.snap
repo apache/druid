@@ -12,37 +12,36 @@ exports[`SegmentsView matches snapshot 1`] = `
         localStorageKey="segments-refresh-rate"
         onRefresh={[Function]}
       />
-      <Unknown>
+      <ForwardRef>
         Group by
-      </Unknown>
-      <Blueprint4.ButtonGroup>
-        <Blueprint4.Button
+      </ForwardRef>
+      <Blueprint5.ButtonGroup>
+        <Blueprint5.Button
           active={true}
           onClick={[Function]}
         >
           None
-        </Blueprint4.Button>
-        <Blueprint4.Button
+        </Blueprint5.Button>
+        <Blueprint5.Button
           active={false}
           onClick={[Function]}
         >
           Interval
-        </Blueprint4.Button>
-      </Blueprint4.ButtonGroup>
+        </Blueprint5.Button>
+      </Blueprint5.ButtonGroup>
       <Memo(MoreButton)>
-        <Blueprint4.MenuItem
+        <Blueprint5.MenuItem
           active={false}
           disabled={true}
           icon="application"
           multiline={false}
           onClick={[Function]}
           popoverProps={{}}
-          selected={false}
           shouldDismissPopover={true}
           text="View SQL query for table"
         />
       </Memo(MoreButton)>
-      <Blueprint4.Switch
+      <Blueprint5.Switch
         checked={false}
         disabled={false}
         label="Show segment timeline"
@@ -56,7 +55,10 @@ exports[`SegmentsView matches snapshot 1`] = `
             "Start",
             "End",
             "Version",
-            "Time span",
+            {
+              "label": "𝑓(sys.segments)",
+              "text": "Time span",
+            },
             "Shard type",
             "Shard spec",
             "Partition",

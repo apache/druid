@@ -83,13 +83,21 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   @Override
-  public RelDataType resultTypeForSelect(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForSelect(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     return validatedRowType;
   }
 
   @Override
-  public RelDataType resultTypeForInsert(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForInsert(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     throw new UnsupportedOperationException();
   }

@@ -19,8 +19,8 @@
 
 package org.apache.druid.query.rowsandcols.column;
 
-import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Numbers;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.query.rowsandcols.util.FindResult;
 import org.apache.druid.segment.column.ColumnType;
 
@@ -54,11 +54,13 @@ public class IntArrayColumn implements Column
     if (VectorCopier.class.equals(clazz)) {
       return (T) (VectorCopier) (into, intoStart) -> {
         if (Integer.MAX_VALUE - vals.length < intoStart) {
-          throw new ISE(
-              "too many rows!!! intoStart[%,d], vals.length[%,d] combine to exceed max_int",
-              intoStart,
-              vals.length
-          );
+          throw DruidException.forPersona(DruidException.Persona.USER)
+                              .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                              .build(
+                                  "too many rows!!! intoStart[%,d], vals.length[%,d] combine to exceed max_int",
+                                  intoStart,
+                                  vals.length
+                                  );
         }
         for (int i = 0; i < vals.length; ++i) {
           into[intoStart + i] = vals[i];
@@ -189,13 +191,13 @@ public class IntArrayColumn implements Column
     @Override
     public FindResult findString(int startIndex, int endIndex, String val)
     {
-      return findInt(startIndex, endIndex, (int) Numbers.tryParseLong(val, 0));
+      throw NotYetImplemented.ex(null, "findString is not currently supported for IntArrayColumns");
     }
 
     @Override
     public FindResult findComplex(int startIndex, int endIndex, Object val)
     {
-      return findDouble(startIndex, endIndex, (int) Numbers.tryParseLong(val, 0));
+      throw NotYetImplemented.ex(null, "findComplex is not currently supported for IntArrayColumns");
     }
   }
 }

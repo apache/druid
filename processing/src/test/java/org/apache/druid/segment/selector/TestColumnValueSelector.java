@@ -26,7 +26,6 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
@@ -38,26 +37,24 @@ public class TestColumnValueSelector<T> implements ColumnValueSelector<Object>, 
 {
   private final Class<T> clazz;
   private final Supplier<Iterator<Object>> iteratorSupplier;
-  private final DateTime time;
 
   private Iterator<Object> iterator;
   private Object value;
 
-  public static <T> TestColumnValueSelector<T> of(Class<T> clazz, Collection<Object> collection, DateTime time)
+  public static <T> TestColumnValueSelector<T> of(Class<T> clazz, Collection<Object> collection)
   {
-    return new TestColumnValueSelector<>(clazz, collection::iterator, time);
+    return new TestColumnValueSelector<>(clazz, collection::iterator);
   }
 
-  public static <T> TestColumnValueSelector<T> of(Class<T> clazz, Stream<Object> stream, DateTime time)
+  public static <T> TestColumnValueSelector<T> of(Class<T> clazz, Stream<Object> stream)
   {
-    return new TestColumnValueSelector<>(clazz, stream::iterator, time);
+    return new TestColumnValueSelector<>(clazz, stream::iterator);
   }
 
-  protected TestColumnValueSelector(Class<T> clazz, Supplier<Iterator<Object>> iteratorSupplier, DateTime time)
+  protected TestColumnValueSelector(Class<T> clazz, Supplier<Iterator<Object>> iteratorSupplier)
   {
     this.clazz = clazz;
     this.iteratorSupplier = iteratorSupplier;
-    this.time = time;
     this.iterator = iteratorSupplier.get();
   }
 
@@ -85,12 +82,6 @@ public class TestColumnValueSelector<T> implements ColumnValueSelector<Object>, 
         return null;
       }
     };
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    return time;
   }
 
   @Override

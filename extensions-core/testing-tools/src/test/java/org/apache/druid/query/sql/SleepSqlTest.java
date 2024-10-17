@@ -30,13 +30,13 @@ import org.apache.druid.query.sql.SleepSqlTest.SleepComponentSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.junit.jupiter.api.Test;
 
-@SqlTestFrameWorkModule(SleepComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(SleepComponentSupplier.class)
 public class SleepSqlTest extends BaseCalciteQueryTest
 {
   public static class SleepComponentSupplier extends StandardComponentSupplier
@@ -74,7 +74,6 @@ public class SleepSqlTest extends BaseCalciteQueryTest
                   .columns("v0")
                   .filters(range("m1", ColumnType.DOUBLE, null, 2.0, false, true))
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
         ),

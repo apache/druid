@@ -55,9 +55,10 @@ public class DoublesSketchToCDFPostAggregatorTest
         new double[]{0.25, 0.75}
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    DoublesSketchToCDFPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new DoublesSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        DoublesSketchToCDFPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

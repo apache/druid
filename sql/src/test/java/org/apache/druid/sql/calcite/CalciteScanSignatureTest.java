@@ -37,7 +37,6 @@ import org.apache.druid.sql.calcite.run.EngineFeature;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.destination.IngestDestination;
 import org.junit.jupiter.api.Test;
@@ -45,7 +44,7 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.Map;
 
-@SqlTestFramework.SqlTestFrameWorkModule(ScanSignatureComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(ScanSignatureComponentSupplier.class)
 public class CalciteScanSignatureTest extends BaseCalciteQueryTest
 {
   @Test
@@ -156,13 +155,21 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
       }
 
       @Override
-      public RelDataType resultTypeForSelect(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+      public RelDataType resultTypeForSelect(
+          RelDataTypeFactory typeFactory,
+          RelDataType validatedRowType,
+          Map<String, Object> queryContext
+      )
       {
         return validatedRowType;
       }
 
       @Override
-      public RelDataType resultTypeForInsert(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+      public RelDataType resultTypeForInsert(
+          RelDataTypeFactory typeFactory,
+          RelDataType validatedRowType,
+          Map<String, Object> queryContext
+      )
       {
         throw new UnsupportedOperationException();
       }

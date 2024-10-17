@@ -314,10 +314,13 @@ public class ForkingTaskRunner
                         if (context != null) {
                           for (String propName : context.keySet()) {
                             if (propName.startsWith(CHILD_PROPERTY_PREFIX)) {
-                              command.addSystemProperty(
-                                  propName.substring(CHILD_PROPERTY_PREFIX.length()),
-                                  task.getContextValue(propName)
-                              );
+                              Object contextValue = task.getContextValue(propName);
+                              if (contextValue != null) {
+                                command.addSystemProperty(
+                                    propName.substring(CHILD_PROPERTY_PREFIX.length()),
+                                    String.valueOf(contextValue)
+                                );
+                              }
                             }
                           }
                         }
@@ -373,11 +376,15 @@ public class ForkingTaskRunner
                         }
 
                         // If the task type is queryable, we need to load broadcast segments on the peon, used for
-                        // join queries
+                        // join queries. This is replaced by --loadBroadcastDatasourceMode option, but is preserved here
+                        // for backwards compatibility and can be removed in a future release.
                         if (task.supportsQueries()) {
                           command.add("--loadBroadcastSegments");
                           command.add("true");
                         }
+
+                        command.add("--loadBroadcastDatasourceMode");
+                        command.add(task.getBroadcastDatasourceLoadingSpec().getMode().toString());
 
                         if (!taskFile.exists()) {
                           jsonMapper.writeValue(taskFile, task);

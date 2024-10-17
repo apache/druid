@@ -20,7 +20,9 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nonnull;
 import java.util.Arrays;
@@ -50,6 +52,12 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
 {
   final ColumnValueSelector timestampSelector;
   /**
+   * Position of {@link ColumnHolder#TIME_COLUMN_NAME} in the sort order, relative to elements of
+   * {@link #dimensionSelectors}. For example, for the sort order [x, __time, y], {@link #dimensionSelectors}
+   * contains [x, y] and timePosition is 1.
+   */
+  final int timePosition;
+  /**
    * This collection of dimension selectors is stored as array rather than List in order to minimize indirection in hot
    * spots, in particular in {@link #compareTo}.
    *
@@ -76,6 +84,7 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
    */
   TimeAndDimsPointer(
       ColumnValueSelector timestampSelector,
+      int timePosition,
       ColumnValueSelector[] dimensionSelectors,
       List<DimensionHandler> dimensionHandlers,
       ColumnValueSelector[] metricSelectors,
@@ -83,6 +92,13 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
   )
   {
     this.timestampSelector = timestampSelector;
+    this.timePosition = timePosition;
+    Preconditions.checkArgument(
+        timePosition <= dimensionSelectors.length,
+        "timePosition[%s] must be less than [%s]",
+        timePosition,
+        dimensionSelectors.length
+    );
     Preconditions.checkArgument(dimensionSelectors.length == dimensionHandlers.size());
     this.dimensionSelectors = dimensionSelectors;
     this.dimensionHandlers = dimensionHandlers;
@@ -131,10 +147,23 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
     return metricNames;
   }
 
+  /**
+   * Replace {@link #dimensionSelectors} with a new set of selectors. The new selectors must be the same length.
+   * Time position ({@link #timePosition}) is unchanged.
+   */
   TimeAndDimsPointer withDimensionSelectors(ColumnValueSelector[] newDimensionSelectors)
   {
+    if (dimensionSelectors.length != newDimensionSelectors.length) {
+      throw DruidException.defensive(
+          "Lengths of dimensionSelectors[%d] and newDimensionSelectors[%d] do not match",
+          dimensionSelectors.length,
+          newDimensionSelectors.length
+      );
+    }
+
     return new TimeAndDimsPointer(
         timestampSelector,
+        timePosition,
         newDimensionSelectors,
         dimensionHandlers,
         metricSelectors,
@@ -148,19 +177,23 @@ public class TimeAndDimsPointer implements Comparable<TimeAndDimsPointer>
   @Override
   public int compareTo(@Nonnull TimeAndDimsPointer rhs)
   {
-    long timestamp = getTimestamp();
-    long rhsTimestamp = rhs.getTimestamp();
-    int timestampDiff = Long.compare(timestamp, rhsTimestamp);
-    if (timestampDiff != 0) {
-      return timestampDiff;
-    }
-    for (int dimIndex = 0; dimIndex < dimensionSelectors.length; dimIndex++) {
-      int dimDiff = dimensionSelectorComparators[dimIndex].compare(
-          dimensionSelectors[dimIndex],
-          rhs.dimensionSelectors[dimIndex]
-      );
-      if (dimDiff != 0) {
-        return dimDiff;
+    for (int index = 0; index < (dimensionSelectors.length + 1); index++) {
+      if (index == timePosition) {
+        final long timestamp = getTimestamp();
+        final long rhsTimestamp = rhs.getTimestamp();
+        final int timestampDiff = Long.compare(timestamp, rhsTimestamp);
+        if (timestampDiff != 0) {
+          return timestampDiff;
+        }
+      } else {
+        final int dimIndex = index < timePosition ? index : index - 1;
+        final int dimDiff = dimensionSelectorComparators[dimIndex].compare(
+            dimensionSelectors[dimIndex],
+            rhs.dimensionSelectors[dimIndex]
+        );
+        if (dimDiff != 0) {
+          return dimDiff;
+        }
       }
     }
     return 0;

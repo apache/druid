@@ -8,24 +8,24 @@ exports[`FormEditor matches snapshot 1`] = `
     class="auto-form"
   >
     <div
-      class="bp4-form-group form-group-with-info"
+      class="bp5-form-group form-group-with-info"
     >
       <label
-        class="bp4-label"
+        class="bp5-label"
       >
         Input format
          
         <span
-          class="bp4-text-muted"
+          class="bp5-text-muted"
         >
           <span
-            aria-haspopup="true"
-            class="info-popover bp4-popover2-target"
+            class="info-popover bp5-popover-target"
           >
             <span
+              aria-expanded="false"
+              aria-haspopup="menu"
               aria-hidden="true"
-              class="bp4-icon bp4-icon-info-sign"
-              icon="info-sign"
+              class="bp5-icon bp5-icon-info-sign"
             >
               <svg
                 data-icon="info-sign"
@@ -44,16 +44,17 @@ exports[`FormEditor matches snapshot 1`] = `
         </span>
       </label>
       <div
-        class="bp4-form-content"
+        class="bp5-form-content"
       >
         <div
           class="formatted-input suggestible-input"
         >
           <div
-            class="bp4-input-group bp4-intent-primary"
+            class="bp5-input-group bp5-intent-primary"
           >
             <input
-              class="bp4-input"
+              aria-disabled="false"
+              class="bp5-input"
               placeholder=""
               type="text"
               value=""
@@ -67,13 +68,12 @@ exports[`FormEditor matches snapshot 1`] = `
     class="apply-cancel-buttons"
   >
     <button
-      class="bp4-button bp4-intent-danger delete"
+      class="bp5-button bp5-intent-danger delete"
       type="button"
     >
       <span
         aria-hidden="true"
-        class="bp4-icon bp4-icon-trash"
-        icon="trash"
+        class="bp5-icon bp5-icon-trash"
       >
         <svg
           data-icon="trash"
@@ -90,23 +90,23 @@ exports[`FormEditor matches snapshot 1`] = `
       </span>
     </button>
     <button
-      class="bp4-button"
+      class="bp5-button"
       type="button"
     >
       <span
-        class="bp4-button-text"
+        class="bp5-button-text"
       >
         Cancel
       </span>
     </button>
     <button
-      class="bp4-button bp4-disabled bp4-intent-primary"
+      class="bp5-button bp5-disabled bp5-intent-primary"
       disabled=""
       tabindex="-1"
       type="button"
     >
       <span
-        class="bp4-button-text"
+        class="bp5-button-text"
       >
         Apply
       </span>

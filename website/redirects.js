@@ -21,6 +21,14 @@
 
 const Redirects=[
   {
+    "from": "/docs/latest/tutorials/tutorial-transform-spec",
+    "to": "/docs/latest/tutorials/tutorial-transform"
+  },
+  {
+    "from": "/docs/latest/development/extensions-core/kafka-extraction-namespace/",
+    "to": "/docs/latest/querying/kafka-extraction-namespace"
+  },
+  {
     "from": [
       "/docs/latest/configuration/auth.html",
       "/docs/latest/design/auth.html"
@@ -148,8 +156,11 @@ const Redirects=[
     "to": "/docs/latest/querying/scan-query"
   },
   {
-    "from": "/docs/latest/development/extensions-core/namespaced-lookup.html",
-    "to": "/docs/latest/development/extensions-core/lookups-cached-global"
+    "from": [
+      "/docs/latest/development/extensions-core/namespaced-lookup.html",
+      "/docs/latest/development/extensions-core/lookups-cached-global"
+    ],
+    "to": "/docs/latest/querying/lookups-cached-global"
   },
   {
     "from": "/docs/latest/development/indexer.html",
@@ -198,8 +209,8 @@ const Redirects=[
   },
   {
     "from": [
-      "/docs/latest/ingestion/flatten-json.html",
-      "/docs/latest/ingestion/transform-spec.html"
+      "/docs/latest/ingestion/transform-spec.html",
+      "/docs/latest/ingestion/flatten-json.html"
     ],
     "to": "/docs/latest/ingestion/ingestion-spec"
   },

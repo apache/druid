@@ -115,7 +115,6 @@ public class CountSqlAggregator implements SqlAggregator
       return null;
     }
 
-    // FIXME: is-all-literal
     if (args.isEmpty()) {
       // COUNT(*)
       return Aggregation.create(new CountAggregatorFactory(name));

@@ -65,5 +65,4 @@ public class HashShuffleSpec implements ShuffleSpec
   {
     return numPartitions;
   }
-
 }

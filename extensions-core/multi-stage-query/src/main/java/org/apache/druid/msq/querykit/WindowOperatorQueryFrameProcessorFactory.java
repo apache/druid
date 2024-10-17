@@ -59,23 +59,17 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   private final WindowOperatorQuery query;
   private final List<OperatorFactory> operatorList;
   private final RowSignature stageRowSignature;
-  private final boolean isEmptyOver;
-  private final int maxRowsMaterializedInWindow;
 
   @JsonCreator
   public WindowOperatorQueryFrameProcessorFactory(
       @JsonProperty("query") WindowOperatorQuery query,
       @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
-      @JsonProperty("stageRowSignature") RowSignature stageRowSignature,
-      @JsonProperty("emptyOver") boolean emptyOver,
-      @JsonProperty("maxRowsMaterializedInWindow") int maxRowsMaterializedInWindow
+      @JsonProperty("stageRowSignature") RowSignature stageRowSignature
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
     this.operatorList = Preconditions.checkNotNull(operatorFactoryList, "bad operator");
     this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
-    this.isEmptyOver = emptyOver;
-    this.maxRowsMaterializedInWindow = maxRowsMaterializedInWindow;
   }
 
   @JsonProperty("query")
@@ -96,18 +90,6 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
     return stageRowSignature;
   }
 
-  @JsonProperty("emptyOver")
-  public boolean isEmptyOverFound()
-  {
-    return isEmptyOver;
-  }
-
-  @JsonProperty("maxRowsMaterializedInWindow")
-  public int getMaxRowsMaterializedInWindow()
-  {
-    return maxRowsMaterializedInWindow;
-  }
-
   @Override
   public ProcessorsAndChannels<Object, Long> makeProcessors(
       StageDefinition stageDefinition,
@@ -119,7 +101,8 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      final boolean removeNullBytes
   )
   {
     // Expecting a single input slice from some prior stage.
@@ -152,13 +135,10 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
               query,
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
-              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
+              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes),
               readableInput.getChannelFrameReader(),
               frameContext.jsonMapper(),
-              operatorList,
-              stageRowSignature,
-              isEmptyOver,
-              maxRowsMaterializedInWindow
+              operatorList
           );
         }
     );
@@ -169,6 +149,11 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
     );
   }
 
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -180,9 +165,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       return false;
     }
     WindowOperatorQueryFrameProcessorFactory that = (WindowOperatorQueryFrameProcessorFactory) o;
-    return isEmptyOver == that.isEmptyOver
-           && maxRowsMaterializedInWindow == that.maxRowsMaterializedInWindow
-           && Objects.equals(query, that.query)
+    return Objects.equals(query, that.query)
            && Objects.equals(operatorList, that.operatorList)
            && Objects.equals(stageRowSignature, that.stageRowSignature);
   }
@@ -190,6 +173,6 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, operatorList, stageRowSignature, isEmptyOver, maxRowsMaterializedInWindow);
+    return Objects.hash(query, operatorList, stageRowSignature);
   }
 }

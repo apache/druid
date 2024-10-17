@@ -51,14 +51,12 @@ import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.SegmentLazyLoadFailCallback;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
-import org.apache.druid.segment.loading.SegmentLoader;
 import org.apache.druid.segment.loading.SegmentLoadingException;
-import org.apache.druid.segment.loading.SegmentLocalCacheLoader;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -76,10 +74,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   protected static final Granularity SEGMENT_GRANULARITY = Granularities.DAY;
 
   private static final ScanQueryRunnerFactory SCAN_QUERY_RUNNER_FACTORY = new ScanQueryRunnerFactory(
-      new ScanQueryQueryToolChest(
-          new ScanQueryConfig().setLegacy(false),
-          DefaultGenericQueryMetricsFactory.instance()
-      ),
+      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
       new ScanQueryEngine(),
       new ScanQueryConfig()
   );
@@ -220,42 +215,38 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     if (useInputFormatApi) {
       Preconditions.checkArgument(parseSpec == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new LocalInputSource(inputDirectory, filter),
           inputFormat,
           appendToExisting,
           dropExisting
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              timestampSpec,
-              dimensionsSpec,
-              DEFAULT_METRICS_SPEC,
-              granularitySpec,
-              null
-          ),
+          DataSchema.builder()
+                    .withDataSource(DATASOURCE)
+                    .withTimestamp(timestampSpec)
+                    .withDimensions(dimensionsSpec)
+                    .withAggregators(DEFAULT_METRICS_SPEC)
+                    .withGranularity(granularitySpec)
+                    .build(),
           ioConfig,
           tuningConfig
       );
     } else {
       Preconditions.checkArgument(inputFormat == null && parseSpec != null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new LocalInputSource(inputDirectory, filter),
           createInputFormatFromParseSpec(parseSpec),
           appendToExisting,
           dropExisting
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              parseSpec.getTimestampSpec(),
-              parseSpec.getDimensionsSpec(),
-              DEFAULT_METRICS_SPEC,
-              granularitySpec,
-              null
-          ),
+          DataSchema.builder()
+                    .withDataSource(DATASOURCE)
+                    .withTimestamp(parseSpec.getTimestampSpec())
+                    .withDimensions(parseSpec.getDimensionsSpec())
+                    .withAggregators(DEFAULT_METRICS_SPEC)
+                    .withGranularity(granularitySpec)
+                    .build(),
           ioConfig,
           tuningConfig
       );
@@ -295,7 +286,6 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
                 null,
                 null,
                 columns,
-                false,
                 null,
                 null
             )
@@ -305,11 +295,10 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
 
   private Segment loadSegment(DataSegment dataSegment, File tempSegmentDir)
   {
-    final SegmentCacheManager cacheManager = new SegmentCacheManagerFactory(getObjectMapper())
+    final SegmentCacheManager cacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper())
         .manufacturate(tempSegmentDir);
-    final SegmentLoader loader = new SegmentLocalCacheLoader(cacheManager, getIndexIO(), getObjectMapper());
     try {
-      return loader.getSegment(dataSegment, false, SegmentLazyLoadFailCallback.NOOP);
+      return cacheManager.getSegment(dataSegment);
     }
     catch (SegmentLoadingException e) {
       throw new RuntimeException(e);

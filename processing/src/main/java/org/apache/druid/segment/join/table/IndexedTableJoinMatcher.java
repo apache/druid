@@ -46,7 +46,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.SimpleAscendingOffset;
-import org.apache.druid.segment.SimpleDescendingOffset;
 import org.apache.druid.segment.SimpleSettableOffset;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -95,16 +94,11 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       final ColumnSelectorFactory leftSelectorFactory,
       final JoinConditionAnalysis condition,
       final boolean remainderNeeded,
-      final boolean descending,
       final Closer closer
   )
   {
     this.table = table;
-    if (descending) {
-      this.joinableOffset = new SimpleDescendingOffset(table.numRows());
-    } else {
-      this.joinableOffset = new SimpleAscendingOffset(table.numRows());
-    }
+    this.joinableOffset = new SimpleAscendingOffset(table.numRows());
     reset();
 
     if (condition.isAlwaysTrue()) {
@@ -133,7 +127,7 @@ public class IndexedTableJoinMatcher implements JoinMatcher
       );
     }
 
-    ColumnSelectorFactory selectorFactory = table.makeColumnSelectorFactory(joinableOffset, descending, closer);
+    ColumnSelectorFactory selectorFactory = table.makeColumnSelectorFactory(joinableOffset, closer);
     this.selectorFactory = selectorFactory != null
                            ? selectorFactory
                            : new IndexedTableColumnSelectorFactory(table, () -> currentRow, closer);

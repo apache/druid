@@ -39,7 +39,7 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.joda.time.Interval;
 
@@ -67,7 +67,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper jsonMapper,
       IndexIO indexIO,
@@ -118,11 +118,11 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
   }
 
   @Override
-  public Appenderator createOfflineAppenderatorForTask(
+  public Appenderator createBatchAppenderatorForTask(
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       IndexIO indexIO,
@@ -137,7 +137,7 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
     if (realtimeAppenderator != null) {
       throw new ISE("A realtime appenderator was already created for this peon's task.");
     } else {
-      batchAppenderator = Appenderators.createOffline(
+      batchAppenderator = Appenderators.createBatch(
           taskId,
           schema,
           config,
@@ -155,81 +155,6 @@ public class PeonAppenderatorsManager implements AppenderatorsManager
     }
   }
 
-  @Override
-  public Appenderator createOpenSegmentsOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
-  {
-    // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
-    if (realtimeAppenderator != null) {
-      throw new ISE("A realtime appenderator was already created for this peon's task.");
-    } else {
-      batchAppenderator = Appenderators.createOpenSegmentsOffline(
-          taskId,
-          schema,
-          config,
-          metrics,
-          dataSegmentPusher,
-          objectMapper,
-          indexIO,
-          indexMerger,
-          rowIngestionMeters,
-          parseExceptionHandler,
-          useMaxMemoryEstimates,
-          centralizedDatasourceSchemaConfig
-      );
-      return batchAppenderator;
-    }
-  }
-
-  @Override
-  public Appenderator createClosedSegmentsOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      FireDepartmentMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
-  {
-    // CompactionTask does run multiple sub-IndexTasks, so we allow multiple batch appenderators
-    if (realtimeAppenderator != null) {
-      throw new ISE("A realtime appenderator was already created for this peon's task.");
-    } else {
-      batchAppenderator = Appenderators.createClosedSegmentsOffline(
-          taskId,
-          schema,
-          config,
-          metrics,
-          dataSegmentPusher,
-          objectMapper,
-          indexIO,
-          indexMerger,
-          rowIngestionMeters,
-          parseExceptionHandler,
-          useMaxMemoryEstimates,
-          centralizedDatasourceSchemaConfig
-      );
-      return batchAppenderator;
-    }
-  }
   @Override
   public void removeAppenderatorsForTask(String taskId, String dataSource)
   {

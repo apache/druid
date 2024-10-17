@@ -65,7 +65,6 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.SqlTestFrameWorkModule;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.sql.http.SqlParameter;
@@ -77,7 +76,6 @@ import org.junit.jupiter.api.AfterEach;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -90,7 +88,7 @@ import java.util.stream.Stream;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 
-@SqlTestFrameWorkModule(IngestionDmlComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(IngestionDmlComponentSupplier.class)
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
   protected static final Map<String, Object> DEFAULT_CONTEXT =
@@ -118,7 +116,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected final ExternalDataSource externalDataSource = new ExternalDataSource(
       new InlineInputSource("a,b,1\nc,d,2\n"),
-      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
+      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null),
       RowSignature.builder()
                   .add("x", ColumnType.STRING)
                   .add("y", ColumnType.STRING)

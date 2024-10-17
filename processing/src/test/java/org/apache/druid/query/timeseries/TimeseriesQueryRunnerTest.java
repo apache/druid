@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
@@ -115,7 +116,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                 new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            false
         ),
         // descending?
         Arrays.asList(false, true),
@@ -2268,8 +2270,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeSeriesWithFilteredAggAndExpressionFilteredAgg()
   {
-    // can't vectorize if expression
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
     TimeseriesQuery query = Druids
         .newTimeseriesQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -3275,6 +3276,14 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   protected void cannotVectorize()
   {
     if (vectorize) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("Cannot vectorize!");
+    }
+  }
+
+  protected void cannotVectorizeUnlessFallback()
+  {
+    if (vectorize && !ExpressionProcessing.allowVectorizeFallback()) {
       expectedException.expect(RuntimeException.class);
       expectedException.expectMessage("Cannot vectorize!");
     }

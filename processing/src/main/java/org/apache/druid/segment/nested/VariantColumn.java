@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -69,8 +70,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Function;
 
 /**
  * {@link NestedCommonFormatColumn} for single type array columns, and mixed type columns. If {@link #variantTypes}
@@ -80,6 +83,9 @@ import java.util.TreeMap;
 public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     implements DictionaryEncodedColumn<String>, NestedCommonFormatColumn
 {
+  private static final Map<Class<?>, Function<VariantColumn, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(VariantColumn.class);
+
   private final TStringDictionary stringDictionary;
   private final FixedIndexed<Long> longDictionary;
   private final FixedIndexed<Double> doubleDictionary;
@@ -1007,5 +1013,14 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     {
       return offset.getCurrentVectorSize();
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(Class<? extends T> clazz)
+  {
+    //noinspection ReturnOfNull
+    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
   }
 }

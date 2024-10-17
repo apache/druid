@@ -87,7 +87,8 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      final boolean removeNullBytes
   ) throws IOException
   {
     // BaseLeafFrameProcessorFactory is used for native Druid queries, where the following input cases can happen:
@@ -125,7 +126,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       final OutputChannel outputChannel = outputChannelFactory.openChannel(0 /* Partition number doesn't matter */);
       outputChannels.add(outputChannel);
       channelQueue.add(outputChannel.getWritableChannel());
-      frameWriterFactoryQueue.add(stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()));
+      frameWriterFactoryQueue.add(stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes));
     }
 
 
@@ -351,7 +352,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       return BroadcastJoinSegmentMapFnProcessor.create(
           query,
           broadcastInputs,
-          frameContext.memoryParameters().getBroadcastJoinMemory()
+          frameContext.memoryParameters().getBroadcastBufferMemory()
       );
     }
   }

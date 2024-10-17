@@ -75,10 +75,10 @@ import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.ChatHandler;
+import org.apache.druid.segment.realtime.ChatHandlers;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
-import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -290,9 +290,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
-      throw getInputSecurityOnFirehoseUnsupportedError();
-    }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                                .stream()
@@ -441,9 +438,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         ingestionSchema.getDataSchema(),
         ioConfigs,
         ingestionSchema.getTuningConfig(),
-        getContext(),
-        toolbox.getJsonMapper(),
-        toolbox.getCentralizedTableSchemaConfig()
+        getContext()
     );
   }
 
@@ -558,7 +553,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       } else {
         if (!baseInputSource.isSplittable()) {
           LOG.warn(
-              "firehoseFactory[%s] is not splittable. Running sequentially.",
+              "inputSource[%s] is not splittable. Running sequentially.",
               baseInputSource.getClass().getSimpleName()
           );
         } else if (ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() <= 1) {
@@ -1256,7 +1251,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
    */
   private TaskReport.ReportMap getTaskCompletionReports(TaskStatus taskStatus)
   {
-    return buildIngestionStatsReport(
+    return buildIngestionStatsAndContextReport(
         IngestionState.COMPLETED,
         taskStatus.getErrorMsg(),
         segmentsRead,
@@ -1620,7 +1615,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     for (PushedSegmentsReport pushedSegmentsReport : completedSubtaskReports.values()) {
       TaskReport.ReportMap taskReport = pushedSegmentsReport.getTaskReport();
       if (taskReport == null || taskReport.isEmpty()) {
-        LOG.warn("Received an empty report from subtask[%s]" + pushedSegmentsReport.getTaskId());
+        LOG.warn("Received an empty report from sub-task[%s].", pushedSegmentsReport.getTaskId());
         continue;
       }
       RowIngestionMetersTotals rowIngestionMetersTotals = getBuildSegmentsStatsFromTaskReport(

@@ -26,6 +26,96 @@ The upgrade notes assume that you are upgrading from the Druid version that imme
 
 For the full release notes for a specific version, see the [releases page](https://github.com/apache/druid/releases).
 
+## Announcements
+
+#### Front-coded dictionaries
+
+In Druid 32.0.0, the front coded dictionaries feature will be turned on by default. Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
+
+Once this feature is on, you cannot easily downgrade to an earlier version that does not support the feature. 
+
+For more information, see [Migration guide: front-coded dictionaries](./migr-front-coded-dict.md).
+
+If you're already using this feature, you don't need to take any action. 
+
+## 30.0.0
+
+### Upgrade notes
+
+#### Append JsonPath function
+
+The `append` function for JsonPath for ORC format now fails with an exception. Previously, it would run but not append anything.
+
+[#15772](https://github.com/apache/druid/pull/15772)
+
+#### Kinesis ingestion tuning
+
+The following properties have been deprecated as part of simplifying the memory tuning for Kinesis ingestion:
+
+- `recordBufferSize`,  use `recordBufferSizeBytes` instead
+- `maxRecordsPerPoll`, use `maxBytesPerPoll` instead
+
+[#15360](https://github.com/apache/druid/pull/15360)
+
+#### Improved Supervisor rolling restarts
+
+The `stopTaskCount` config now prioritizes stopping older tasks first. As part of this change, you must also explicitly set a value for `stopTaskCount`. It no longer defaults to the same value as `taskCount`.
+
+[#15859](https://github.com/apache/druid/pull/15859)
+
+#### Changes to Coordinator default values
+
+The following are the changes to the default values for the Coordinator service:
+
+* The default value for `druid.coordinator.kill.period` (if unspecified) has changed from `P1D` to the value of `druid.coordinator.period.indexingPeriod`. Operators can choose to override `druid.coordinator.kill.period` and that takes precedence over the default behavior.
+* The default value for the dynamic configuration property `killTaskSlotRatio` has been updated from `1.0` to `0.1`. This ensures that kill tasks take up only one task slot by default instead of consuming all available task slots.
+
+[#16247](https://github.com/apache/druid/pull/16247)
+
+#### `GoogleTaskLogs` upload buffer size
+
+Changed the upload buffer size in `GoogleTaskLogs` to 1 MB instead of 15 MB to allow more uploads in parallel and prevent the Middle Manager service from running out of memory.
+
+[#16236](https://github.com/apache/druid/pull/16236)
+
+### Incompatible changes
+
+#### Changes to `targetDataSource` in EXPLAIN queries
+
+Druid 30.0.0 includes a breaking change that restores the behavior for `targetDataSource` to its 28.0.0 and earlier state, different from Druid 29.0.0 and only 29.0.0. In 29.0.0, `targetDataSource` returns a JSON object that includes the datasource name. In all other versions, `targetDataSource` returns a string containing the name of the datasource.
+
+If you're upgrading from any version other than 29.0.0, there is no change in behavior.
+
+If you are upgrading from 29.0.0, this is an incompatible change.
+
+[#16004](https://github.com/apache/druid/pull/16004)
+
+#### Removed ZooKeeper-based segment loading
+
+ZooKeeper-based segment loading is being removed due to known issues.
+It has been deprecated for several releases.
+Recent improvements to the Druid Coordinator have significantly enhanced performance with HTTP-based segment loading.
+
+[#15705](https://github.com/apache/druid/pull/15705)
+
+#### Removed Coordinator configs
+
+Removed the following Coordinator configs:
+
+* `druid.coordinator.load.timeout`: Not needed as the default value of this parameter (15 minutes) is known to work well for all clusters.
+* `druid.coordinator.loadqueuepeon.type`: Not needed as this value is always `http`.
+* `druid.coordinator.curator.loadqueuepeon.numCallbackThreads`: Not needed as ZooKeeper(curator)-based segment loading isn't an option anymore.
+
+Auto-cleanup of compaction configs of inactive datasources is now enabled by default.
+
+[#15705](https://github.com/apache/druid/pull/15705)
+
+#### Changed `useMaxMemoryEstimates` for Hadoop jobs
+
+The default value of the `useMaxMemoryEstimates` parameter for Hadoop jobs is now `false`.
+
+[#16280](https://github.com/apache/druid/pull/16280)
+
 ## 29.0.1
 
 ### Incompatible changes

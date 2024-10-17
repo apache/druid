@@ -21,6 +21,7 @@ package org.apache.druid.benchmark.frame;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.FutureUtils;
@@ -37,6 +38,8 @@ import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.write.FrameWriters;
+import org.apache.druid.guice.BuiltInTypesModule;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -47,6 +50,7 @@ import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -82,6 +86,7 @@ public class FrameChannelMergerBenchmark
 {
   static {
     NullHandling.initializeForTests();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   private static final String KEY = "key";
@@ -98,6 +103,9 @@ public class FrameChannelMergerBenchmark
 
   @Param({"100"})
   private int rowLength;
+
+  @Param({"string", "nested"})
+  private String columnType;
 
   /**
    * Linked to {@link KeyGenerator}.
@@ -121,13 +129,20 @@ public class FrameChannelMergerBenchmark
      */
     RANDOM {
       @Override
-      public String generateKey(int rowNumber, int keyLength)
+      public Comparable generateKey(int rowNumber, int keyLength, String columnType)
       {
         final StringBuilder builder = new StringBuilder(keyLength);
         for (int i = 0; i < keyLength; i++) {
           builder.append((char) ('a' + ThreadLocalRandom.current().nextInt(26)));
         }
-        return builder.toString();
+        String str = builder.toString();
+        if ("string".equals(columnType)) {
+          return str;
+        } else if ("nested".equals(columnType)) {
+          return StructuredData.wrap(str);
+        } else {
+          throw new IAE("unsupported column type");
+        }
       }
     },
 
@@ -136,13 +151,20 @@ public class FrameChannelMergerBenchmark
      */
     SEQUENTIAL {
       @Override
-      public String generateKey(int rowNumber, int keyLength)
+      public Comparable generateKey(int rowNumber, int keyLength, String columnType)
       {
-        return StringUtils.format("%0" + keyLength + "d", rowNumber);
+        String str = StringUtils.format("%0" + keyLength + "d", rowNumber);
+        if ("string".equals(columnType)) {
+          return str;
+        } else if ("nested".equals(columnType)) {
+          return StructuredData.wrap(str);
+        } else {
+          throw new IAE("unsupported column type");
+        }
       }
     };
 
-    public abstract String generateKey(int rowNumber, int keyLength);
+    public abstract Comparable generateKey(int rowNumber, int keyLength, String columnType);
   }
 
   /**
@@ -176,16 +198,13 @@ public class FrameChannelMergerBenchmark
     public abstract int getChannelNumber(int rowNumber, int numRows, int numChannels);
   }
 
-  private final RowSignature signature =
-      RowSignature.builder()
-                  .add(KEY, ColumnType.STRING)
-                  .add(VALUE, ColumnType.STRING)
-                  .build();
+  private RowSignature signature;
+  private FrameReader frameReader;
 
-  private final FrameReader frameReader = FrameReader.create(signature);
   private final List<KeyColumn> sortKey = ImmutableList.of(new KeyColumn(KEY, KeyOrder.ASCENDING));
 
   private List<List<Frame>> channelFrames;
+  private ListeningExecutorService innerExec;
   private FrameProcessorExecutor exec;
   private List<BlockingQueueFrameChannel> channels;
 
@@ -200,8 +219,16 @@ public class FrameChannelMergerBenchmark
   @Setup(Level.Trial)
   public void setupTrial()
   {
+    signature =
+        RowSignature.builder()
+                    .add(KEY, createKeyColumnTypeFromTypeString(columnType))
+                    .add(VALUE, ColumnType.STRING)
+                    .build();
+
+    frameReader = FrameReader.create(signature);
+
     exec = new FrameProcessorExecutor(
-        MoreExecutors.listeningDecorator(
+        innerExec = MoreExecutors.listeningDecorator(
             Execs.singleThreaded(StringUtils.encodeForFormat(getClass().getSimpleName()))
         )
     );
@@ -211,14 +238,15 @@ public class FrameChannelMergerBenchmark
         ChannelDistribution.valueOf(StringUtils.toUpperCase(channelDistributionString));
 
     // Create channelRows which holds rows for each channel.
-    final List<List<NonnullPair<String, String>>> channelRows = new ArrayList<>();
+    final List<List<NonnullPair<Comparable, String>>> channelRows = new ArrayList<>();
     channelFrames = new ArrayList<>();
     for (int channelNumber = 0; channelNumber < numChannels; channelNumber++) {
       channelRows.add(new ArrayList<>());
       channelFrames.add(new ArrayList<>());
     }
 
-    // Create "valueString", a string full of spaces to pad out the row.
+    // Create "valueString", a string full of spaces to pad out the row. Nested columns wrap up strings with the
+    // corresponding keyLength, therefore the padding works out for the nested types as well.
     final StringBuilder valueStringBuilder = new StringBuilder();
     for (int i = 0; i < rowLength - keyLength; i++) {
       valueStringBuilder.append(' ');
@@ -227,20 +255,20 @@ public class FrameChannelMergerBenchmark
 
     // Populate "channelRows".
     for (int rowNumber = 0; rowNumber < numRows; rowNumber++) {
-      final String keyString = keyGenerator.generateKey(rowNumber, keyLength);
-      final NonnullPair<String, String> row = new NonnullPair<>(keyString, valueString);
+      final Comparable keyObject = keyGenerator.generateKey(rowNumber, keyLength, columnType);
+      final NonnullPair<Comparable, String> row = new NonnullPair<>(keyObject, valueString);
       channelRows.get(channelDistribution.getChannelNumber(rowNumber, numRows, numChannels)).add(row);
     }
 
     // Sort each "channelRows".
-    for (List<NonnullPair<String, String>> rows : channelRows) {
+    for (List<NonnullPair<Comparable, String>> rows : channelRows) {
       rows.sort(Comparator.comparing(row -> row.lhs));
     }
 
     // Populate each "channelFrames".
     for (int channelNumber = 0; channelNumber < numChannels; channelNumber++) {
-      final List<NonnullPair<String, String>> rows = channelRows.get(channelNumber);
-      final RowBasedSegment<NonnullPair<String, String>> segment =
+      final List<NonnullPair<Comparable, String>> rows = channelRows.get(channelNumber);
+      final RowBasedSegment<NonnullPair<Comparable, String>> segment =
           new RowBasedSegment<>(
               SegmentId.dummy("__dummy"),
               Sequences.simple(rows),
@@ -258,7 +286,7 @@ public class FrameChannelMergerBenchmark
               signature
           );
       final Sequence<Frame> frameSequence =
-          FrameSequenceBuilder.fromAdapter(segment.asStorageAdapter())
+          FrameSequenceBuilder.fromCursorFactory(segment.asCursorFactory())
                               .allocator(ArenaMemoryAllocator.createOnHeap(10_000_000))
                               .frameType(FrameType.ROW_BASED)
                               .frames();
@@ -309,8 +337,8 @@ public class FrameChannelMergerBenchmark
   @TearDown(Level.Trial)
   public void tearDown() throws Exception
   {
-    exec.getExecutorService().shutdownNow();
-    if (!exec.getExecutorService().awaitTermination(1, TimeUnit.MINUTES)) {
+    innerExec.shutdownNow();
+    if (!innerExec.awaitTermination(1, TimeUnit.MINUTES)) {
       throw new ISE("Could not terminate executor after 1 minute");
     }
   }
@@ -325,11 +353,11 @@ public class FrameChannelMergerBenchmark
         channels.stream().map(BlockingQueueFrameChannel::readable).collect(Collectors.toList()),
         frameReader,
         outputChannel.writable(),
-        FrameWriters.makeFrameWriterFactory(
-            FrameType.ROW_BASED,
+        FrameWriters.makeRowBasedFrameWriterFactory(
             new ArenaMemoryAllocatorFactory(1_000_000),
             signature,
-            sortKey
+            sortKey,
+            false
         ),
         sortKey,
         null,
@@ -349,5 +377,15 @@ public class FrameChannelMergerBenchmark
     if (FutureUtils.getUnchecked(retVal, true) != numRows) {
       throw new ISE("Incorrect numRows[%s], expected[%s]", FutureUtils.getUncheckedImmediately(retVal), numRows);
     }
+  }
+
+  private ColumnType createKeyColumnTypeFromTypeString(final String columnTypeString)
+  {
+    if ("string".equals(columnTypeString)) {
+      return ColumnType.STRING;
+    } else if ("nested".equals(columnTypeString)) {
+      return ColumnType.NESTED_DATA;
+    }
+    throw new IAE("Unsupported type [%s]", columnTypeString);
   }
 }

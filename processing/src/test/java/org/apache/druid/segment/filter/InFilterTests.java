@@ -47,9 +47,9 @@ import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
@@ -87,7 +87,7 @@ public class InFilterTests
     public InFilterTest(
         String testName,
         IndexBuilder indexBuilder,
-        Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+        Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
         boolean cnf,
         boolean optimize
     )
@@ -138,6 +138,29 @@ public class InFilterTests
           NotDimFilter.of(inFilter("dim0", ColumnType.STRING, Arrays.asList("e", "x"))),
           ImmutableList.of("a", "b", "c", "d", "f")
       );
+
+      if (NullHandling.sqlCompatible()) {
+        assertTypedFilterMatches(
+            inFilter("dim1", ColumnType.LONG, Arrays.asList(2L, 10L)),
+            ImmutableList.of("b", "c")
+        );
+
+        assertTypedFilterMatches(
+            inFilter("dim1", ColumnType.DOUBLE, Arrays.asList(2.0, 10.0)),
+            ImmutableList.of("b", "c")
+        );
+      } else {
+        // in default value mode, we actually end up using a classic InDimFilter, it does not match numbers well
+        assertTypedFilterMatches(
+            inFilter("dim1", ColumnType.LONG, Arrays.asList(2L, 10L)),
+            ImmutableList.of("b", "c")
+        );
+
+        assertTypedFilterMatches(
+            inFilter("dim1", ColumnType.DOUBLE, Arrays.asList(2.0, 10.0)),
+            ImmutableList.of()
+        );
+      }
     }
     @Test
     public void testSingleValueStringColumnWithNulls()

@@ -64,12 +64,6 @@ public class UpdateLocationAction implements TaskAction<Void>
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return true;
-  }
-
-  @Override
   public String toString()
   {
     return "UpdateLocationAction{" +

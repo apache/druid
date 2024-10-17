@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -40,7 +40,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.ByteBuffer;
@@ -66,7 +65,7 @@ public class FunctionTest extends InitializedNullHandlingTest
         TypeStrategiesTest.NULLABLE_TEST_PAIR_TYPE.getComplexTypeName(),
         new TypeStrategiesTest.NullableLongPairTypeStrategy()
     );
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   @Before
@@ -310,7 +309,7 @@ public class FunctionTest extends InitializedNullHandlingTest
   public void testArrayConstructor()
   {
     assertArrayExpr("array(1, 2, 3, 4)", new Long[]{1L, 2L, 3L, 4L});
-    assertArrayExpr("array(1, 2, 3, 'bar')", new Long[]{1L, 2L, 3L, null});
+    assertArrayExpr("array(1, 2, 3, 'bar')", new String[]{"1", "2", "3", "bar"});
     assertArrayExpr("array(1.0)", new Double[]{1.0});
     assertArrayExpr("array('foo', 'bar')", new String[]{"foo", "bar"});
     assertArrayExpr(
@@ -677,6 +676,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("greatest()", null);
     assertExpr("greatest(null, null)", null);
     assertExpr("greatest(1, null, 'A')", "A");
+    assertExpr("greatest(1.0, 1, null)", 1.0);
   }
 
   @Test
@@ -703,6 +703,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertExpr("least()", null);
     assertExpr("least(null, null)", null);
     assertExpr("least(1, null, 'A')", "1");
+    assertExpr("least(1.0, 1, null)", 1.0);
   }
 
   @Test
@@ -961,12 +962,64 @@ public class FunctionTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testLeft()
+  {
+    assertExpr("left('hello', 0)", NullHandling.sqlCompatible() ? "" : null);
+    assertExpr("left('hello', 2)", "he");
+    assertExpr("left('hello', '2')", "he");
+    assertExpr("left('hello', 'hello')", null);
+    assertExpr("left('hello', 10)", "hello");
+    assertExpr("left('hello', null)", null);
+    assertExpr("left(31337, 2)", "31");
+    assertExpr("left(null, 10)", null);
+    assertExpr("left(nonexistent, 10)", null);
+
+    Throwable t1 = Assert.assertThrows(
+        DruidException.class,
+        () -> assertExpr("left('foo', -2)", null)
+    );
+    Assert.assertEquals("Function[left] needs a positive integer as the second argument", t1.getMessage());
+  }
+
+  @Test
+  public void testRight()
+  {
+    assertExpr("right('hello', 0)", NullHandling.sqlCompatible() ? "" : null);
+    assertExpr("right('hello', 2)", "lo");
+    assertExpr("right('hello', '2')", "lo");
+    assertExpr("right('hello', 'hello')", null);
+    assertExpr("right('hello', 10)", "hello");
+    assertExpr("right('hello', null)", null);
+    assertExpr("right(31337, 2)", "37");
+    assertExpr("right(null, 10)", null);
+    assertExpr("right(nonexistent, 10)", null);
+
+    Throwable t1 = Assert.assertThrows(
+        DruidException.class,
+        () -> assertExpr("right('foo', -2)", null)
+    );
+    Assert.assertEquals("Function[right] needs a positive integer as the second argument", t1.getMessage());
+  }
+
+  @Test
   public void testRepeat()
   {
+    assertExpr("repeat('hello', 0)", null);
     assertExpr("repeat('hello', 2)", "hellohello");
+    assertExpr("repeat('hello', '2')", "hellohello");
+    assertExpr("repeat('hello', 'hello')", null);
     assertExpr("repeat('hello', -1)", null);
+    assertExpr("repeat('hello', null)", null);
     assertExpr("repeat(null, 10)", null);
     assertExpr("repeat(nonexistent, 10)", null);
+    assertExpr("repeat(4, 3)", "444");
+    assertExpr("repeat(4.1, 3)", "4.14.14.1");
+
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> assertExpr("repeat('foo', 9999999999)", null)
+    );
+    Assert.assertEquals("Function[repeat] needs an integer as the second argument", t.getMessage());
   }
 
   @Test
@@ -1165,7 +1218,7 @@ public class FunctionTest extends InitializedNullHandlingTest
     assertArrayExpr("array_to_mv(a)", new String[]{"foo", "bar", "baz", "foobar"});
     assertArrayExpr("array_to_mv(b)", new String[]{"1", "2", "3", "4", "5"});
     assertArrayExpr("array_to_mv(c)", new String[]{"3.1", "4.2", "5.3"});
-    assertArrayExpr("array_to_mv(array(y,z))", new String[]{"2", "3"});
+    assertArrayExpr("array_to_mv(array(y,z))", new String[]{"2.0", "3.1"});
     // array type is determined by the first array type
     assertArrayExpr("array_to_mv(array_concat(b,c))", new String[]{"1", "2", "3", "4", "5", "3", "4", "5"});
     assertArrayExpr(

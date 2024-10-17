@@ -36,7 +36,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -76,13 +76,12 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
 import org.apache.druid.segment.realtime.FireHydrant;
-import org.apache.druid.segment.realtime.plumber.Sink;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
+import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -95,6 +94,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -134,7 +134,7 @@ public class StreamAppenderator implements Appenderator
   private final String myId;
   private final DataSchema schema;
   private final AppenderatorConfig tuningConfig;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final DataSegmentPusher dataSegmentPusher;
   private final ObjectMapper objectMapper;
   private final DataSegmentAnnouncer segmentAnnouncer;
@@ -150,7 +150,6 @@ public class StreamAppenderator implements Appenderator
   private final ConcurrentMap<SegmentIdWithShardSpec, Sink> sinks = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, SegmentIdWithShardSpec> idToPendingSegment = new ConcurrentHashMap<>();
   private final Set<SegmentIdWithShardSpec> droppingSinks = Sets.newConcurrentHashSet();
-  private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
   private final long maxBytesTuningConfig;
   private final boolean skipBytesInMemoryOverheadCheck;
   private final boolean useMaxMemoryEstimates;
@@ -221,7 +220,7 @@ public class StreamAppenderator implements Appenderator
       String id,
       DataSchema schema,
       AppenderatorConfig tuningConfig,
-      FireDepartmentMetrics metrics,
+      SegmentGenerationMetrics metrics,
       DataSegmentPusher dataSegmentPusher,
       ObjectMapper objectMapper,
       DataSegmentAnnouncer segmentAnnouncer,
@@ -249,14 +248,6 @@ public class StreamAppenderator implements Appenderator
     this.texasRanger = sinkQuerySegmentWalker;
     this.rowIngestionMeters = Preconditions.checkNotNull(rowIngestionMeters, "rowIngestionMeters");
     this.parseExceptionHandler = Preconditions.checkNotNull(parseExceptionHandler, "parseExceptionHandler");
-
-    if (sinkQuerySegmentWalker == null) {
-      this.sinkTimeline = new VersionedIntervalTimeline<>(
-          String.CASE_INSENSITIVE_ORDER
-      );
-    } else {
-      this.sinkTimeline = sinkQuerySegmentWalker.getSinkTimeline();
-    }
 
     maxBytesTuningConfig = tuningConfig.getMaxBytesInMemoryOrDefault();
     skipBytesInMemoryOverheadCheck = tuningConfig.isSkipBytesInMemoryOverheadCheck();
@@ -465,6 +456,7 @@ public class StreamAppenderator implements Appenderator
             MoreExecutors.directExecutor()
         );
       } else {
+        log.info("Marking ready for non-incremental async persist due to reasons[%s].", persistReasons);
         isPersistRequired = true;
       }
     }
@@ -532,8 +524,7 @@ public class StreamAppenderator implements Appenderator
           tuningConfig.getAppendableIndexSpec(),
           tuningConfig.getMaxRowsInMemory(),
           maxBytesTuningConfig,
-          useMaxMemoryEstimates,
-          null
+          useMaxMemoryEstimates
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
 
@@ -612,12 +603,35 @@ public class StreamAppenderator implements Appenderator
     }
   }
 
+  /**
+   * Mark a given version of a segment as abandoned and return its base segment if it can be dropped.
+   * Return null if there are other valid versions of the segment that are yet to be dropped.
+   */
+  private SegmentIdWithShardSpec abandonUpgradedIdentifier(final SegmentIdWithShardSpec identifier)
+  {
+    final SegmentIdWithShardSpec baseIdentifier = upgradedSegmentToBaseSegment.getOrDefault(identifier, identifier);
+    synchronized (abandonedSegments) {
+      abandonedSegments.add(identifier);
+      if (baseSegmentToUpgradedSegments.containsKey(baseIdentifier)) {
+        Set<SegmentIdWithShardSpec> relevantSegments = new HashSet<>(baseSegmentToUpgradedSegments.get(baseIdentifier));
+        relevantSegments.removeAll(abandonedSegments);
+        // If there are unabandoned segments associated with the sink, return early
+        // This may be the case if segments have been upgraded as the result of a concurrent replace
+        if (!relevantSegments.isEmpty()) {
+          return null;
+        }
+      }
+    }
+    return baseIdentifier;
+  }
+
   @Override
   public ListenableFuture<?> drop(final SegmentIdWithShardSpec identifier)
   {
-    final Sink sink = sinks.get(identifier);
+    final SegmentIdWithShardSpec baseIdentifier = abandonUpgradedIdentifier(identifier);
+    final Sink sink = baseIdentifier == null ? null : sinks.get(baseIdentifier);
     if (sink != null) {
-      return abandonSegment(identifier, sink, true);
+      return abandonSegment(baseIdentifier, sink, true);
     } else {
       return Futures.immediateFuture(null);
     }
@@ -934,7 +948,7 @@ public class StreamAppenderator implements Appenderator
       try {
         for (FireHydrant fireHydrant : sink) {
           Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
-          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.as(QueryableIndex.class);
           log.debug("Segment[%s] adding hydrant[%s]", identifier, fireHydrant);
           indexes.add(queryableIndex);
           closer.register(segmentAndCloseable.rhs);
@@ -1107,13 +1121,17 @@ public class StreamAppenderator implements Appenderator
 
   /**
    * Unannounces the given base segment and all its upgraded versions.
+   *
+   * @param baseSegment base segment
+   * @param sink sink corresponding to the base segment
+   * @return the set of all segment ids associated with the base segment containing the upgraded ids and itself.
    */
-  private void unannounceAllVersionsOfSegment(DataSegment baseSegment, Sink sink)
+  private Set<SegmentIdWithShardSpec> unannounceAllVersionsOfSegment(DataSegment baseSegment, Sink sink)
   {
     synchronized (sink) {
       final SegmentIdWithShardSpec baseId = SegmentIdWithShardSpec.fromDataSegment(baseSegment);
       if (!baseSegmentToUpgradedSegments.containsKey(baseId)) {
-        return;
+        return Collections.emptySet();
       }
 
       final Set<SegmentIdWithShardSpec> upgradedVersionsOfSegment = baseSegmentToUpgradedSegments.remove(baseId);
@@ -1132,6 +1150,7 @@ public class StreamAppenderator implements Appenderator
         unannounceSegment(newSegment);
         upgradedSegmentToBaseSegment.remove(newId);
       }
+      return upgradedVersionsOfSegment;
     }
   }
 
@@ -1155,11 +1174,13 @@ public class StreamAppenderator implements Appenderator
       return;
     }
 
+    final Sink sink = sinks.get(basePendingSegment);
+
     // Update query mapping with SinkQuerySegmentWalker
-    ((SinkQuerySegmentWalker) texasRanger).registerUpgradedPendingSegment(basePendingSegment, upgradedPendingSegment);
+    ((SinkQuerySegmentWalker) texasRanger).registerUpgradedPendingSegment(upgradedPendingSegment, sink);
 
     // Announce segments
-    final DataSegment baseSegment = sinks.get(basePendingSegment).getSegment();
+    final DataSegment baseSegment = sink.getSegment();
     final DataSegment newSegment = getUpgradedSegment(baseSegment, upgradedPendingSegment);
 
     segmentAnnouncer.announceSegment(newSegment);
@@ -1234,7 +1255,7 @@ public class StreamAppenderator implements Appenderator
     }
 
     if (pushExecutor == null) {
-      // use a blocking single threaded executor to throttle the firehose when write to disk is slow
+      // use a blocking single threaded executor to throttle the input source when write to disk is slow
       pushExecutor = MoreExecutors.listeningDecorator(
           Execs.newBlockingSingleThreaded("[" + StringUtils.encodeForFormat(myId) + "]-appenderator-merge", 1)
       );
@@ -1390,7 +1411,6 @@ public class StreamAppenderator implements Appenderator
             tuningConfig.getMaxRowsInMemory(),
             maxBytesTuningConfig,
             useMaxMemoryEstimates,
-            null,
             hydrants
         );
         rowsSoFar += currSink.getNumRows();
@@ -1435,11 +1455,7 @@ public class StreamAppenderator implements Appenderator
     baseSegmentToUpgradedSegments.put(identifier, new HashSet<>());
     baseSegmentToUpgradedSegments.get(identifier).add(identifier);
 
-    sinkTimeline.add(
-        sink.getInterval(),
-        sink.getVersion(),
-        identifier.getShardSpec().createChunk(sink)
-    );
+    ((SinkQuerySegmentWalker) texasRanger).registerUpgradedPendingSegment(identifier, sink);
   }
 
   private ListenableFuture<?> abandonSegment(
@@ -1448,19 +1464,6 @@ public class StreamAppenderator implements Appenderator
       final boolean removeOnDiskData
   )
   {
-    abandonedSegments.add(identifier);
-    final SegmentIdWithShardSpec baseIdentifier = upgradedSegmentToBaseSegment.getOrDefault(identifier, identifier);
-    synchronized (sink) {
-      if (baseSegmentToUpgradedSegments.containsKey(baseIdentifier)) {
-        Set<SegmentIdWithShardSpec> relevantSegments = new HashSet<>(baseSegmentToUpgradedSegments.get(baseIdentifier));
-        relevantSegments.removeAll(abandonedSegments);
-        // If there are unabandoned segments associated with the sink, return early
-        // This may be the case if segments have been upgraded as the result of a concurrent replace
-        if (!relevantSegments.isEmpty()) {
-          return Futures.immediateFuture(null);
-        }
-      }
-    }
     // Ensure no future writes will be made to this sink.
     if (sink.finishWriting()) {
       // Decrement this sink's rows from the counters. we only count active sinks so that we don't double decrement,
@@ -1478,7 +1481,7 @@ public class StreamAppenderator implements Appenderator
     }
 
     // Mark this identifier as dropping, so no future push tasks will pick it up.
-    droppingSinks.add(baseIdentifier);
+    droppingSinks.add(identifier);
 
     // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
@@ -1489,8 +1492,8 @@ public class StreamAppenderator implements Appenderator
           @Override
           public Void apply(@Nullable Object input)
           {
-            if (!sinks.remove(baseIdentifier, sink)) {
-              log.error("Sink for segment[%s] no longer valid, not abandoning.", baseIdentifier);
+            if (!sinks.remove(identifier, sink)) {
+              log.error("Sink for segment[%s] no longer valid, not abandoning.", identifier);
               return null;
             }
 
@@ -1498,17 +1501,17 @@ public class StreamAppenderator implements Appenderator
 
             if (removeOnDiskData) {
               // Remove this segment from the committed list. This must be done from the persist thread.
-              log.debug("Removing commit metadata for segment[%s].", baseIdentifier);
+              log.debug("Removing commit metadata for segment[%s].", identifier);
               try {
                 commitLock.lock();
                 final Committed oldCommit = readCommit();
                 if (oldCommit != null) {
-                  writeCommit(oldCommit.without(baseIdentifier.toString()));
+                  writeCommit(oldCommit.without(identifier.toString()));
                 }
               }
               catch (Exception e) {
                 log.makeAlert(e, "Failed to update committed segments[%s]", schema.getDataSource())
-                   .addData("identifier", baseIdentifier.toString())
+                   .addData("identifier", identifier.toString())
                    .emit();
                 throw new RuntimeException(e);
               }
@@ -1517,15 +1520,14 @@ public class StreamAppenderator implements Appenderator
               }
             }
 
-            unannounceAllVersionsOfSegment(sink.getSegment(), sink);
+            final Set<SegmentIdWithShardSpec> allVersionIds = unannounceAllVersionsOfSegment(sink.getSegment(), sink);
 
             Runnable removeRunnable = () -> {
-              droppingSinks.remove(baseIdentifier);
-              sinkTimeline.remove(
-                  sink.getInterval(),
-                  sink.getVersion(),
-                  baseIdentifier.getShardSpec().createChunk(sink)
-              );
+              droppingSinks.remove(identifier);
+              for (SegmentIdWithShardSpec id : allVersionIds) {
+                // Update query mapping with SinkQuerySegmentWalker
+                ((SinkQuerySegmentWalker) texasRanger).unregisterUpgradedPendingSegment(id, sink);
+              }
               for (FireHydrant hydrant : sink) {
                 if (cache != null) {
                   cache.close(SinkQuerySegmentWalker.makeHydrantCacheIdentifier(hydrant));
@@ -1534,7 +1536,7 @@ public class StreamAppenderator implements Appenderator
               }
 
               if (removeOnDiskData) {
-                removeDirectory(computePersistDir(baseIdentifier));
+                removeDirectory(computePersistDir(identifier));
               }
 
               log.info("Dropped segment[%s].", identifier);
@@ -1648,7 +1650,7 @@ public class StreamAppenderator implements Appenderator
 
       try {
         final long startTime = System.nanoTime();
-        int numRows = indexToPersist.getIndex().size();
+        int numRows = indexToPersist.getIndex().numRows();
 
         final File persistedFile;
         final File persistDir = createPersistDirIfNeeded(identifier);

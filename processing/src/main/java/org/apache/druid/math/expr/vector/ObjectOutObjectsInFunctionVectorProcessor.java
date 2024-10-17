@@ -36,8 +36,8 @@ public abstract class ObjectOutObjectsInFunctionVectorProcessor
   )
   {
     super(
-        CastToTypeVectorProcessor.cast(left, expressionType),
-        CastToTypeVectorProcessor.cast(right, expressionType),
+        CastToTypeVectorProcessor.cast(left, expressionType, maxVectorSize),
+        CastToTypeVectorProcessor.cast(right, expressionType, maxVectorSize),
         new Object[maxVectorSize]
     );
     this.expressionType = expressionType;
@@ -61,7 +61,7 @@ public abstract class ObjectOutObjectsInFunctionVectorProcessor
   @Override
   ExprEvalVector<Object[]> asEval()
   {
-    return new ExprEvalObjectVector(outValues);
+    return new ExprEvalObjectVector(outValues, expressionType);
   }
 
   @Override

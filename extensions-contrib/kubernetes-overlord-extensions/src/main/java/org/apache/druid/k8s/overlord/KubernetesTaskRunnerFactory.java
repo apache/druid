@@ -21,27 +21,15 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
-import org.apache.druid.guice.IndexingServiceModuleHelper;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
-import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
-import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
-import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
-import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
-import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
-import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
-import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.TaskLogs;
-
-import java.util.Locale;
-import java.util.Properties;
 
 public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<KubernetesTaskRunner>
 {
@@ -49,39 +37,30 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
   private final KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig;
-  private final StartupLoggingConfig startupLoggingConfig;
   private final TaskLogs taskLogs;
-  private final DruidNode druidNode;
-  private final TaskConfig taskConfig;
-  private final Properties properties;
   private final DruidKubernetesClient druidKubernetesClient;
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
+  private final TaskAdapter taskAdapter;
 
   @Inject
   public KubernetesTaskRunnerFactory(
       @Smile ObjectMapper smileMapper,
       @EscalatedGlobal final HttpClient httpClient,
       KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
-      StartupLoggingConfig startupLoggingConfig,
       TaskLogs taskLogs,
-      @Self DruidNode druidNode,
-      TaskConfig taskConfig,
-      Properties properties,
       DruidKubernetesClient druidKubernetesClient,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      TaskAdapter taskAdapter
   )
   {
     this.smileMapper = smileMapper;
     this.httpClient = httpClient;
     this.kubernetesTaskRunnerConfig = kubernetesTaskRunnerConfig;
-    this.startupLoggingConfig = startupLoggingConfig;
     this.taskLogs = taskLogs;
-    this.druidNode = druidNode;
-    this.taskConfig = taskConfig;
-    this.properties = properties;
     this.druidKubernetesClient = druidKubernetesClient;
     this.emitter = emitter;
+    this.taskAdapter = taskAdapter;
   }
 
   @Override
@@ -96,7 +75,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     );
 
     runner = new KubernetesTaskRunner(
-        buildTaskAdapter(druidKubernetesClient),
+        taskAdapter,
         kubernetesTaskRunnerConfig,
         peonClient,
         httpClient,
@@ -112,52 +91,4 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     return runner;
   }
 
-  private TaskAdapter buildTaskAdapter(DruidKubernetesClient client)
-  {
-    String adapter = properties.getProperty(String.format(
-        Locale.ROOT,
-        "%s.%s.adapter.type",
-        IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX,
-        TYPE_NAME
-    ));
-
-    if (adapter != null && !MultiContainerTaskAdapter.TYPE.equals(adapter) && kubernetesTaskRunnerConfig.isSidecarSupport()) {
-      throw new IAE(
-          "Invalid pod adapter [%s], only pod adapter [%s] can be specified when sidecarSupport is enabled",
-          adapter,
-          MultiContainerTaskAdapter.TYPE
-      );
-    }
-
-    if (MultiContainerTaskAdapter.TYPE.equals(adapter) || kubernetesTaskRunnerConfig.isSidecarSupport()) {
-      return new MultiContainerTaskAdapter(
-          client,
-          kubernetesTaskRunnerConfig,
-          taskConfig,
-          startupLoggingConfig,
-          druidNode,
-          smileMapper,
-          taskLogs
-      );
-    } else if (PodTemplateTaskAdapter.TYPE.equals(adapter)) {
-      return new PodTemplateTaskAdapter(
-          kubernetesTaskRunnerConfig,
-          taskConfig,
-          druidNode,
-          smileMapper,
-          properties,
-          taskLogs
-      );
-    } else {
-      return new SingleContainerTaskAdapter(
-          client,
-          kubernetesTaskRunnerConfig,
-          taskConfig,
-          startupLoggingConfig,
-          druidNode,
-          smileMapper,
-          taskLogs
-      );
-    }
-  }
 }

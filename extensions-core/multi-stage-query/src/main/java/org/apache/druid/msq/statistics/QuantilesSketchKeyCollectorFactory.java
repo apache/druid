@@ -27,6 +27,7 @@ import org.apache.datasketches.memory.WritableMemory;
 import org.apache.datasketches.quantiles.ItemsSketch;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.column.RowSignature;
 
 import java.nio.ByteOrder;
 import java.util.Arrays;
@@ -46,9 +47,9 @@ public class QuantilesSketchKeyCollectorFactory
     this.comparator = comparator;
   }
 
-  static QuantilesSketchKeyCollectorFactory create(final ClusterBy clusterBy)
+  static QuantilesSketchKeyCollectorFactory create(final ClusterBy clusterBy, final RowSignature rowSignature)
   {
-    return new QuantilesSketchKeyCollectorFactory(clusterBy.byteKeyComparator());
+    return new QuantilesSketchKeyCollectorFactory(clusterBy.byteKeyComparator(rowSignature));
   }
 
   @Override

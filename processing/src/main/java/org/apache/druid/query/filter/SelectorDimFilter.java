@@ -34,7 +34,6 @@ import org.apache.druid.segment.filter.DimensionPredicateFilter;
 import org.apache.druid.segment.filter.SelectorFilter;
 
 import javax.annotation.Nullable;
-
 import java.util.Objects;
 import java.util.Set;
 

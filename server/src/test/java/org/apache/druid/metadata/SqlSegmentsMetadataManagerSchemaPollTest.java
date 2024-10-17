@@ -70,21 +70,17 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector,
         segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        NoopServiceEmitter.instance()
     );
     sqlSegmentsMetadataManager.start();
-
-    publisher = new SQLMetadataSegmentPublisher(
-        jsonMapper,
-        derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        connector
-    );
+    storageConfig = derbyConnectorRule.metadataTablesConfigSupplier().get();
 
     connector.createSegmentSchemasTable();
     connector.createSegmentTable();
 
-    publisher.publishSegment(segment1);
-    publisher.publishSegment(segment2);
+    publishSegment(segment1);
+    publishSegment(segment2);
   }
 
   @After
@@ -142,7 +138,8 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector,
         segmentSchemaCache,
-        centralizedDatasourceSchemaConfig
+        centralizedDatasourceSchemaConfig,
+        NoopServiceEmitter.instance()
     );
 
     sqlSegmentsMetadataManager.start();
@@ -230,7 +227,8 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
         derbyConnectorRule.metadataTablesConfigSupplier(),
         connector,
         segmentSchemaCache,
-        centralizedDatasourceSchemaConfig
+        centralizedDatasourceSchemaConfig,
+        NoopServiceEmitter.instance()
     );
 
     sqlSegmentsMetadataManager.start();

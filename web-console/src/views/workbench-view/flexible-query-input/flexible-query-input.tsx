@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
+import { Intent, ResizeSensor } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { ResizeSensor2 } from '@blueprintjs/popover2';
 import { C, dedupe, T } from '@druid-toolkit/query';
 import type { Ace } from 'ace-builds';
 import ace from 'ace-builds';
@@ -82,6 +81,10 @@ export class FlexibleQueryInput extends React.PureComponent<
     // Local completions
     {
       getCompletions: (_state, session, pos, prefix, callback) => {
+        if (/^\d+$/.test(prefix)) {
+          callback(null, []); // Don't start completing if the user is typing a number
+          return;
+        }
         const charBeforePrefix = session.getLine(pos.row)[pos.column - prefix.length - 1];
         callback(
           null,
@@ -190,7 +193,7 @@ export class FlexibleQueryInput extends React.PureComponent<
     const found = dedupe(findAllSqlQueriesInText(queryString), ({ startRowColumn }) =>
       String(startRowColumn.row),
     );
-    if (found.length <= 1) return []; // Do not highlight a single query or no queries
+    if (!found.length) return [];
 
     // Do not report the first query if it is basically the main query minus whitespace
     const firstQuery = found[0].sql;
@@ -294,7 +297,7 @@ export class FlexibleQueryInput extends React.PureComponent<
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
     return (
       <div className="flexible-query-input">
-        <ResizeSensor2 onResize={this.handleAceContainerResize}>
+        <ResizeSensor onResize={this.handleAceContainerResize}>
           <div
             className={classNames('ace-container', running ? 'query-running' : 'query-idle')}
             onClick={e => {
@@ -365,7 +368,7 @@ export class FlexibleQueryInput extends React.PureComponent<
           >
             {this.renderAce()}
           </div>
-        </ResizeSensor2>
+        </ResizeSensor>
       </div>
     );
   }

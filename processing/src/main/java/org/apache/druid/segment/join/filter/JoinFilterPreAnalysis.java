@@ -50,12 +50,12 @@ public class JoinFilterPreAnalysis
   private final List<Filter> normalizedBaseTableClauses;
   private final List<Filter> normalizedJoinTableClauses;
   private final JoinFilterCorrelations correlations;
-  private final List<VirtualColumn> postJoinVirtualColumns;
+  private final Set<VirtualColumn> postJoinVirtualColumns;
   private final Equiconditions equiconditions;
 
   private JoinFilterPreAnalysis(
       final JoinFilterPreAnalysisKey key,
-      final List<VirtualColumn> postJoinVirtualColumns,
+      final Set<VirtualColumn> postJoinVirtualColumns,
       final List<Filter> normalizedBaseTableClauses,
       final List<Filter> normalizedJoinTableClauses,
       final JoinFilterCorrelations correlations,
@@ -86,7 +86,7 @@ public class JoinFilterPreAnalysis
     return key.getFilter();
   }
 
-  public List<VirtualColumn> getPostJoinVirtualColumns()
+  public Set<VirtualColumn> getPostJoinVirtualColumns()
   {
     return postJoinVirtualColumns;
   }
@@ -140,13 +140,13 @@ public class JoinFilterPreAnalysis
     @Nullable
     private JoinFilterCorrelations correlations;
     @Nonnull
-    private final List<VirtualColumn> postJoinVirtualColumns;
+    private final Set<VirtualColumn> postJoinVirtualColumns;
     @Nonnull
     private Equiconditions equiconditions = new Equiconditions(Collections.emptyMap());
 
     public Builder(
         @Nonnull JoinFilterPreAnalysisKey key,
-        @Nonnull List<VirtualColumn> postJoinVirtualColumns
+        @Nonnull Set<VirtualColumn> postJoinVirtualColumns
     )
     {
       this.key = key;

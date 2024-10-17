@@ -27,11 +27,11 @@ import {
   Navbar,
   NavbarDivider,
   NavbarGroup,
+  Popover,
   Position,
   Tag,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import {
@@ -59,7 +59,6 @@ import './header-bar.scss';
 const capabilitiesOverride = localStorageGetJson(LocalStorageKeys.CAPABILITIES_OVERRIDE);
 
 export type HeaderActiveTab =
-  | null
   | 'data-loader'
   | 'streaming-data-loader'
   | 'classic-batch-data-loader'
@@ -93,7 +92,7 @@ const DruidLogo = React.memo(function DruidLogo() {
 });
 
 export interface HeaderBarProps {
-  active: HeaderActiveTab;
+  active: HeaderActiveTab | null;
   capabilities: Capabilities;
   onUnrestrict(capabilities: Capabilities): void;
 }
@@ -107,7 +106,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
   const [overlordDynamicConfigDialogOpen, setOverlordDynamicConfigDialogOpen] = useState(false);
   const [compactionDynamicConfigDialogOpen, setCompactionDynamicConfigDialogOpen] = useState(false);
 
-  const showSplitDataLoaderMenu = capabilities.hasMultiStageQuery();
+  const showSplitDataLoaderMenu = capabilities.hasMultiStageQueryTask();
 
   const loadDataViewsMenuActive = oneOf(
     active,
@@ -284,7 +283,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           disabled={!capabilities.hasQuerying()}
         />
         {showSplitDataLoaderMenu ? (
-          <Popover2
+          <Popover
             content={loadDataViewsMenu}
             disabled={!capabilities.hasEverything()}
             position={Position.BOTTOM_LEFT}
@@ -297,7 +296,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
               active={loadDataViewsMenuActive}
               disabled={!capabilities.hasEverything()}
             />
-          </Popover2>
+          </Popover>
         ) : (
           <AnchorButton
             className="header-entry"
@@ -355,14 +354,15 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           href="#services"
           disabled={!capabilities.hasSqlOrCoordinatorAccess()}
         />
-        <Popover2 content={moreViewsMenu} position={Position.BOTTOM_LEFT}>
+        <Popover content={moreViewsMenu} position={Position.BOTTOM_LEFT}>
           <Button
             className="header-entry"
             minimal
             icon={IconNames.MORE}
             active={moreViewsMenuActive}
+            data-tooltip="More views"
           />
-        </Popover2>
+        </Popover>
       </NavbarGroup>
       <NavbarGroup align={Alignment.RIGHT}>
         <RestrictedMode
@@ -373,7 +373,7 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
           }
         />
         {capabilitiesOverride && (
-          <Popover2
+          <Popover
             content={
               <PopoverText>
                 <p>
@@ -405,14 +405,14 @@ export const HeaderBar = React.memo(function HeaderBar(props: HeaderBarProps) {
               intent={Intent.DANGER}
               minimal
             />
-          </Popover2>
+          </Popover>
         )}
-        <Popover2 content={configMenu} position={Position.BOTTOM_RIGHT}>
-          <Button className="header-entry" minimal icon={IconNames.COG} />
-        </Popover2>
-        <Popover2 content={helpMenu} position={Position.BOTTOM_RIGHT}>
-          <Button className="header-entry" minimal icon={IconNames.HELP} />
-        </Popover2>
+        <Popover content={configMenu} position={Position.BOTTOM_RIGHT}>
+          <Button className="header-entry" minimal icon={IconNames.COG} data-tooltip="Settings" />
+        </Popover>
+        <Popover content={helpMenu} position={Position.BOTTOM_RIGHT}>
+          <Button className="header-entry" minimal icon={IconNames.HELP} data-tooltip="Help" />
+        </Popover>
       </NavbarGroup>
       {aboutDialogOpen && <AboutDialog onClose={() => setAboutDialogOpen(false)} />}
       {doctorDialogOpen && <DoctorDialog onClose={() => setDoctorDialogOpen(false)} />}

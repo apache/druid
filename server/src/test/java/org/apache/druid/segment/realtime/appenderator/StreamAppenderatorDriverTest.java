@@ -41,7 +41,7 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -127,10 +127,10 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         streamAppenderatorTester.getAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new TestUsedSegmentChecker(streamAppenderatorTester.getPushedSegments()),
+        new TestPublishedSegmentRetriever(streamAppenderatorTester.getPushedSegments()),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new FireDepartmentMetrics()
+        new SegmentGenerationMetrics()
     );
 
     EasyMock.replay(dataSegmentKiller);
@@ -543,7 +543,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     }
 
     @Override
-    public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+    public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId)
     {
       return new SegmentHandoffNotifier()
       {

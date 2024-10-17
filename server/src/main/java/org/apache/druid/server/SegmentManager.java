@@ -29,12 +29,12 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.join.table.IndexedTable;
 import org.apache.druid.segment.join.table.ReferenceCountingIndexedTable;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
@@ -45,24 +45,26 @@ import org.apache.druid.timeline.partition.ShardSpec;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 /**
  * This class is responsible for managing data sources and their states like timeline, total segment size, and number of
- * segments.  All public methods of this class must be thread-safe.
+ * segments. All public methods of this class must be thread-safe.
  */
 public class SegmentManager
 {
   private static final EmittingLogger log = new EmittingLogger(SegmentManager.class);
 
-  private final SegmentLoader segmentLoader;
+  private final SegmentCacheManager cacheManager;
+
   private final ConcurrentHashMap<String, DataSourceState> dataSources = new ConcurrentHashMap<>();
 
   /**
@@ -139,13 +141,10 @@ public class SegmentManager
     }
   }
 
-
   @Inject
-  public SegmentManager(
-      SegmentLoader segmentLoader
-  )
+  public SegmentManager(SegmentCacheManager cacheManager)
   {
-    this.segmentLoader = segmentLoader;
+    this.cacheManager = cacheManager;
   }
 
   @VisibleForTesting
@@ -241,53 +240,95 @@ public class SegmentManager
                    .orElseThrow(() -> new ISE("Cannot handle datasource: %s", analysis.getBaseDataSource()));
   }
 
-  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed)
-      throws SegmentLoadingException
+  /**
+   * Load the supplied segment into page cache on bootstrap. If the segment is already loaded, this method does not
+   * reload the segment into the page cache.
+   *
+   * @param dataSegment segment to bootstrap
+   * @param loadFailed callback to execute when segment lazy load fails. This applies only
+   *                   when lazy loading is enabled.
+   *
+   * @throws SegmentLoadingException if the segment cannot be loaded
+   * @throws IOException if the segment info cannot be cached on disk
+   */
+  public void loadSegmentOnBootstrap(
+      final DataSegment dataSegment,
+      final SegmentLazyLoadFailCallback loadFailed
+  ) throws SegmentLoadingException, IOException
   {
-    return loadSegment(segment, lazy, loadFailed, null);
+    final ReferenceCountingSegment segment;
+    try {
+      segment = cacheManager.getBootstrapSegment(dataSegment, loadFailed);
+      if (segment == null) {
+        throw new SegmentLoadingException(
+            "No segment adapter found for bootstrap segment[%s] with loadSpec[%s].",
+            dataSegment.getId(), dataSegment.getLoadSpec()
+        );
+      }
+    }
+    catch (SegmentLoadingException e) {
+      cacheManager.cleanup(dataSegment);
+      throw e;
+    }
+    loadSegment(dataSegment, segment, cacheManager::loadSegmentIntoPageCacheOnBootstrap);
   }
 
   /**
-   * Load a single segment.
+   * Load the supplied segment into page cache. If the segment is already loaded, this method does not reload the
+   * segment into the page cache. This method should be called for non-bootstrapping flows. Unlike
+   * {@link #loadSegmentOnBootstrap(DataSegment, SegmentLazyLoadFailCallback)}, this method doesn't accept a lazy load
+   * fail callback because the segment is loaded immediately.
    *
-   * @param segment segment to load
-   * @param lazy    whether to lazy load columns metadata
-   * @param loadFailed callBack to execute when segment lazy load failed
-   * @param loadSegmentIntoPageCacheExec If null is specified, the default thread pool in segment loader to load
-   *                                     segments into page cache on download will be used. You can specify a dedicated
-   *                                     thread pool of larger capacity when this function is called during historical
-   *                                     process bootstrap to speed up initial loading.
-   *
-   * @return true if the segment was newly loaded, false if it was already loaded
+   * @param dataSegment segment to load
    *
    * @throws SegmentLoadingException if the segment cannot be loaded
+   * @throws IOException if the segment info cannot be cached on disk
    */
-  public boolean loadSegment(final DataSegment segment, boolean lazy, SegmentLazyLoadFailCallback loadFailed,
-                             ExecutorService loadSegmentIntoPageCacheExec) throws SegmentLoadingException
+  public void loadSegment(final DataSegment dataSegment) throws SegmentLoadingException, IOException
   {
-    final ReferenceCountingSegment adapter = getSegmentReference(segment, lazy, loadFailed);
+    final ReferenceCountingSegment segment;
+    try {
+      segment = cacheManager.getSegment(dataSegment);
+      if (segment == null) {
+        throw new SegmentLoadingException(
+            "No segment adapter found for segment[%s] with loadSpec[%s].",
+            dataSegment.getId(), dataSegment.getLoadSpec()
+        );
+      }
+    }
+    catch (SegmentLoadingException e) {
+      cacheManager.cleanup(dataSegment);
+      throw e;
+    }
+    loadSegment(dataSegment, segment, cacheManager::loadSegmentIntoPageCache);
+  }
 
+  private void loadSegment(
+      final DataSegment dataSegment,
+      final ReferenceCountingSegment segment,
+      final Consumer<DataSegment> pageCacheLoadFunction
+  ) throws IOException
+  {
     final SettableSupplier<Boolean> resultSupplier = new SettableSupplier<>();
 
     // compute() is used to ensure that the operation for a data source is executed atomically
     dataSources.compute(
-        segment.getDataSource(),
+        dataSegment.getDataSource(),
         (k, v) -> {
           final DataSourceState dataSourceState = v == null ? new DataSourceState() : v;
           final VersionedIntervalTimeline<String, ReferenceCountingSegment> loadedIntervals =
               dataSourceState.getTimeline();
           final PartitionChunk<ReferenceCountingSegment> entry = loadedIntervals.findChunk(
-              segment.getInterval(),
-              segment.getVersion(),
-              segment.getShardSpec().getPartitionNum()
+              dataSegment.getInterval(),
+              dataSegment.getVersion(),
+              dataSegment.getShardSpec().getPartitionNum()
           );
 
           if (entry != null) {
-            log.warn("Told to load an adapter for segment[%s] that already exists", segment.getId());
+            log.warn("Told to load an adapter for segment[%s] that already exists", dataSegment.getId());
             resultSupplier.set(false);
           } else {
-
-            IndexedTable table = adapter.as(IndexedTable.class);
+            final IndexedTable table = segment.as(IndexedTable.class);
             if (table != null) {
               if (dataSourceState.isEmpty() || dataSourceState.numSegments == dataSourceState.tablesLookup.size()) {
                 dataSourceState.tablesLookup.put(segment.getId(), new ReferenceCountingIndexedTable(table));
@@ -298,41 +339,30 @@ public class SegmentManager
               log.error("Cannot load segment[%s] without IndexedTable, all existing segments are joinable", segment.getId());
             }
             loadedIntervals.add(
-                segment.getInterval(),
-                segment.getVersion(),
-                segment.getShardSpec().createChunk(adapter)
+                dataSegment.getInterval(),
+                dataSegment.getVersion(),
+                dataSegment.getShardSpec().createChunk(segment)
             );
-            StorageAdapter storageAdapter = adapter.asStorageAdapter();
-            long numOfRows = (segment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
-            dataSourceState.addSegment(segment, numOfRows);
-            // Asyncly load segment index files into page cache in a thread pool
-            segmentLoader.loadSegmentIntoPageCache(segment, loadSegmentIntoPageCacheExec);
-            resultSupplier.set(true);
+            final PhysicalSegmentInspector countInspector = segment.as(PhysicalSegmentInspector.class);
+            final long numOfRows;
+            if (dataSegment.isTombstone() || countInspector == null) {
+              numOfRows = 0;
+            } else {
+              numOfRows = countInspector.getNumRows();
+            }
+            dataSourceState.addSegment(dataSegment, numOfRows);
 
+            pageCacheLoadFunction.accept(dataSegment);
+            resultSupplier.set(true);
           }
 
           return dataSourceState;
         }
     );
-
-    return resultSupplier.get();
-  }
-
-  private ReferenceCountingSegment getSegmentReference(final DataSegment dataSegment, boolean lazy, SegmentLazyLoadFailCallback loadFailed) throws SegmentLoadingException
-  {
-    final ReferenceCountingSegment segment;
-    try {
-      segment = segmentLoader.getSegment(dataSegment, lazy, loadFailed);
+    final boolean loadResult = resultSupplier.get();
+    if (loadResult) {
+      cacheManager.storeInfoFile(dataSegment);
     }
-    catch (SegmentLoadingException e) {
-      segmentLoader.cleanup(dataSegment);
-      throw e;
-    }
-
-    if (segment == null) {
-      throw new SegmentLoadingException("Null adapter from loadSpec[%s]", dataSegment.getLoadSpec());
-    }
-    return segment;
   }
 
   public void dropSegment(final DataSegment segment)
@@ -360,15 +390,19 @@ public class SegmentManager
             );
             final ReferenceCountingSegment oldQueryable = (removed == null) ? null : removed.getObject();
 
-
             if (oldQueryable != null) {
               try (final Closer closer = Closer.create()) {
-                StorageAdapter storageAdapter = oldQueryable.asStorageAdapter();
-                long numOfRows = (segment.isTombstone() || storageAdapter == null) ? 0 : storageAdapter.getNumRows();
+                final PhysicalSegmentInspector countInspector = oldQueryable.as(PhysicalSegmentInspector.class);
+                final long numOfRows;
+                if (segment.isTombstone() || countInspector == null) {
+                  numOfRows = 0;
+                } else {
+                  numOfRows = countInspector.getNumRows();
+                }
                 dataSourceState.removeSegment(segment, numOfRows);
 
                 closer.register(oldQueryable);
-                log.info("Attempting to close segment %s", segment.getId());
+                log.info("Attempting to close segment[%s]", segment.getId());
                 final ReferenceCountingIndexedTable oldTable = dataSourceState.tablesLookup.remove(segment.getId());
                 if (oldTable != null) {
                   closer.register(oldTable);
@@ -392,6 +426,33 @@ public class SegmentManager
         }
     );
 
-    segmentLoader.cleanup(segment);
+    cacheManager.removeInfoFile(segment);
+    cacheManager.cleanup(segment);
+  }
+
+  /**
+   * Return whether the cache manager can handle segments or not.
+   */
+  public boolean canHandleSegments()
+  {
+    return cacheManager.canHandleSegments();
+  }
+
+  /**
+   * Return a list of cached segments, if any. This should be called only when
+   * {@link #canHandleSegments()} is true.
+   */
+  public List<DataSegment> getCachedSegments() throws IOException
+  {
+    return cacheManager.getCachedSegments();
+  }
+
+  /**
+   * Shutdown the bootstrap executor to save resources.
+   * This should be called after loading bootstrap segments into the page cache.
+   */
+  public void shutdownBootstrap()
+  {
+    cacheManager.shutdownBootstrap();
   }
 }

@@ -27,15 +27,15 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.filter.ArrayContainsElementFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.NotDimFilter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
@@ -56,7 +56,7 @@ public class ArrayContainsElementFilterTests
     public ArrayContainsElementFilterTest(
         String testName,
         IndexBuilder indexBuilder,
-        Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+        Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
         boolean cnf,
         boolean optimize
     )
@@ -1071,7 +1071,7 @@ public class ArrayContainsElementFilterTests
       Assert.assertFalse(Arrays.equals(f1.getCacheKey(), f2.getCacheKey()));
       Assert.assertArrayEquals(f1.getCacheKey(), f3.getCacheKey());
 
-      NestedDataModule.registerHandlersAndSerde();
+      BuiltInTypesModule.registerHandlersAndSerde();
       f1 = new ArrayContainsElementFilter(
           "x",
           ColumnType.NESTED_DATA,

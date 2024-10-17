@@ -34,6 +34,7 @@ public class CounterNames
   private static final String INPUT = "input";
   private static final String OUTPUT = "output";
   private static final String SHUFFLE = "shuffle";
+  private static final String CPU = "cpu";
   private static final String SORT_PROGRESS = "sortProgress";
   private static final String SEGMENT_GENERATION_PROGRESS = "segmentGenerationProgress";
   private static final String WARNINGS = "warnings";
@@ -66,6 +67,14 @@ public class CounterNames
   public static String shuffleChannel()
   {
     return SHUFFLE;
+  }
+
+  /**
+   * Standard name for CPU counters created by {@link CounterTracker#cpu}.
+   */
+  public static String cpu()
+  {
+    return CPU;
   }
 
   /**

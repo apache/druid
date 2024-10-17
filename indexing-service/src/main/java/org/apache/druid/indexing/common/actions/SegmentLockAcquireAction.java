@@ -120,12 +120,6 @@ public class SegmentLockAcquireAction implements TaskAction<LockResult>
   }
 
   @Override
-  public boolean isAudited()
-  {
-    return false;
-  }
-
-  @Override
   public String toString()
   {
     return "SegmentLockAcquireAction{" +

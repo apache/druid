@@ -68,9 +68,11 @@ import org.apache.druid.sql.calcite.table.RowSignatures;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Maps onto a {@link org.apache.druid.query.operator.WindowOperatorQuery}.
@@ -123,45 +125,14 @@ public class Windowing
   {
     final Window window = Preconditions.checkNotNull(partialQuery.getWindow(), "window");
 
-    ArrayList<OperatorFactory> ops = new ArrayList<>();
-
+    final List<WindowComputationProcessor> windowGroupProcessors = new ArrayList<>();
     final List<String> windowOutputColumns = new ArrayList<>(sourceRowSignature.getColumnNames());
+
     final String outputNamePrefix = Calcites.findUnusedPrefixForDigits("w", sourceRowSignature.getColumnNames());
     int outputNameCounter = 0;
 
-    // Track prior partition columns and sort columns group-to-group, so we only insert sorts and repartitions if
-    // we really need to.
-    List<String> priorPartitionColumns = null;
-    LinkedHashSet<ColumnWithDirection> priorSortColumns = new LinkedHashSet<>();
-
-    final RelCollation priorCollation = partialQuery.getScan().getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
-    if (priorCollation != null) {
-      // Populate initial priorSortColumns using collation of the input to the window operation. Allows us to skip
-      // the initial sort operator if the rows were already in the desired order.
-      priorSortColumns = computeSortColumnsFromRelCollation(priorCollation, sourceRowSignature);
-    }
-
-    for (int i = 0; i < window.groups.size(); ++i) {
-      final WindowGroup group = new WindowGroup(window, window.groups.get(i), sourceRowSignature);
-
-      final LinkedHashSet<ColumnWithDirection> sortColumns = new LinkedHashSet<>();
-      for (String partitionColumn : group.getPartitionColumns()) {
-        sortColumns.add(ColumnWithDirection.ascending(partitionColumn));
-      }
-      sortColumns.addAll(group.getOrdering());
-
-      // Add sorting and partitioning if needed.
-      if (!sortMatches(priorSortColumns, sortColumns)) {
-        // Sort order needs to change. Resort and repartition.
-        ops.add(new NaiveSortOperatorFactory(new ArrayList<>(sortColumns)));
-        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
-        priorSortColumns = sortColumns;
-        priorPartitionColumns = group.getPartitionColumns();
-      } else if (!group.getPartitionColumns().equals(priorPartitionColumns)) {
-        // Sort order doesn't need to change, but partitioning does. Only repartition.
-        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
-        priorPartitionColumns = group.getPartitionColumns();
-      }
+    for (Window.Group windowGroup : window.groups) {
+      final WindowGroup group = new WindowGroup(window, windowGroup, sourceRowSignature);
 
       // Add aggregations.
       final List<AggregateCall> aggregateCalls = group.getAggregateCalls();
@@ -184,19 +155,18 @@ public class Windowing
               InputAccessor.buildFor(
                   window,
                   partialQuery.getSelectProject(),
-                  sourceRowSignature),
+                  sourceRowSignature
+              ),
               Collections.emptyList(),
               aggName,
               aggregateCall,
-              false // Windowed aggregations don't currently finalize.  This means that sketches won't work as expected.
+              false // Windowed aggregations finalize later when we write the computed value to result RAC
           );
 
           if (aggregation == null
               || aggregation.getPostAggregator() != null
               || aggregation.getAggregatorFactories().size() != 1) {
-            if (null == plannerContext.getPlanningError()) {
-              plannerContext.setPlanningError("Aggregation [%s] is not supported", aggregateCall);
-            }
+            plannerContext.setPlanningError("Aggregation [%s] is currently not supported for window functions", aggregateCall.getAggregation().getName());
             throw new CannotBuildQueryException(window, aggregateCall);
           }
 
@@ -232,11 +202,13 @@ public class Windowing
         throw new ISE("No processors from Window[%s], why was this code called?", window);
       }
 
-      ops.add(new WindowOperatorFactory(
+      windowGroupProcessors.add(new WindowComputationProcessor(group, new WindowOperatorFactory(
           processors.size() == 1 ?
           processors.get(0) : new ComposingProcessor(processors.toArray(new Processor[0]))
-      ));
+      )));
     }
+
+    List<OperatorFactory> ops = computeWindowOperations(partialQuery, sourceRowSignature, windowGroupProcessors);
 
     // Apply windowProject, if present.
     if (partialQuery.getWindowProject() != null) {
@@ -267,6 +239,119 @@ public class Windowing
           RowSignatures.fromRelDataType(windowOutputColumns, window.getRowType()),
           ops
       );
+    }
+  }
+
+  /**
+   * Computes the list of operators that are to be applied in an optimised order
+   */
+  private static List<OperatorFactory> computeWindowOperations(
+      final PartialDruidQuery partialQuery,
+      final RowSignature sourceRowSignature,
+      List<WindowComputationProcessor> windowGroupProcessors
+  )
+  {
+    final List<OperatorFactory> ops = new ArrayList<>();
+    // Track prior partition columns and sort columns group-to-group, so we only insert sorts and repartitions if
+    // we really need to.
+    List<String> priorPartitionColumns = null;
+    LinkedHashSet<ColumnWithDirection> priorSortColumns = new LinkedHashSet<>();
+
+    final RelCollation priorCollation = partialQuery.getScan().getTraitSet().getTrait(RelCollationTraitDef.INSTANCE);
+    if (priorCollation != null) {
+      // Populate initial priorSortColumns using collation of the input to the window operation. Allows us to skip
+      // the initial sort operator if the rows were already in the desired order.
+      priorSortColumns = computeSortColumnsFromRelCollation(priorCollation, sourceRowSignature);
+    }
+
+    // sort the processors to optimise the order of window operators
+    // currently we are moving the empty groups to the front
+    windowGroupProcessors.sort(WindowComputationProcessor.MOVE_EMPTY_GROUPS_FIRST);
+
+    for (WindowComputationProcessor windowComputationProcessor : windowGroupProcessors) {
+      final WindowGroup group = windowComputationProcessor.getGroup();
+      final LinkedHashSet<ColumnWithDirection> sortColumns = new LinkedHashSet<>();
+      for (String partitionColumn : group.getPartitionColumns()) {
+        sortColumns.add(ColumnWithDirection.ascending(partitionColumn));
+      }
+      sortColumns.addAll(group.getOrdering());
+
+      // Add sorting and partitioning if needed.
+      if (!sortMatches(priorSortColumns, sortColumns)) {
+        // Sort order needs to change. Resort and repartition.
+        ops.add(new NaiveSortOperatorFactory(new ArrayList<>(sortColumns)));
+        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
+        priorSortColumns = sortColumns;
+        priorPartitionColumns = group.getPartitionColumns();
+      } else if (!group.getPartitionColumns().equals(priorPartitionColumns)) {
+        // Sort order doesn't need to change, but partitioning does. Only repartition.
+        ops.add(new NaivePartitioningOperatorFactory(group.getPartitionColumns()));
+        priorPartitionColumns = group.getPartitionColumns();
+      }
+
+      ops.add(windowComputationProcessor.getProcessorOperatorFactory());
+    }
+
+    return ops;
+  }
+
+  private static class WindowComputationProcessor
+  {
+    private final WindowGroup group;
+    private final OperatorFactory processorOperatorFactory;
+
+    public WindowComputationProcessor(WindowGroup group, OperatorFactory processorOperatorFactory)
+    {
+      this.group = group;
+      this.processorOperatorFactory = processorOperatorFactory;
+    }
+
+    public WindowGroup getGroup()
+    {
+      return group;
+    }
+
+    public OperatorFactory getProcessorOperatorFactory()
+    {
+      return processorOperatorFactory;
+    }
+
+    /**
+     * Comparator to move the empty windows to the front
+     */
+    public static final Comparator<WindowComputationProcessor> MOVE_EMPTY_GROUPS_FIRST = (o1, o2) -> {
+      if (o1.getGroup().getPartitionColumns().isEmpty() && o2.getGroup().getPartitionColumns().isEmpty()) {
+        return 0;
+      }
+      if (o1.getGroup().getPartitionColumns().isEmpty()) {
+        return -1;
+      }
+      if (o2.getGroup().getPartitionColumns().isEmpty()) {
+        return 1;
+      }
+      return 0;
+    };
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      WindowComputationProcessor obj = (WindowComputationProcessor) o;
+      return Objects.equals(group, obj.group) && Objects.equals(
+          processorOperatorFactory,
+          obj.processorOperatorFactory
+      );
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return Objects.hash(group, processorOperatorFactory);
     }
   }
 
@@ -364,22 +449,27 @@ public class Windowing
       if (group.lowerBound.isUnbounded() && group.upperBound.isUnbounded()) {
         return WindowFrame.unbounded();
       }
-      return new WindowFrame(
-          group.isRows ? WindowFrame.PeerType.ROWS : WindowFrame.PeerType.RANGE,
-          group.lowerBound.isUnbounded(),
-          figureOutOffset(group.lowerBound),
-          group.upperBound.isUnbounded(),
-          figureOutOffset(group.upperBound),
-          group.isRows ? null : getOrdering()
-      );
+      if (group.isRows) {
+        return WindowFrame.rows(getBoundAsInteger(group.lowerBound), getBoundAsInteger(group.upperBound));
+      } else {
+        /* Right now we support GROUPS based framing in the native layer;
+         * but the SQL layer doesn't accept that as of now.
+         */
+        return WindowFrame.groups(getBoundAsInteger(group.lowerBound), getBoundAsInteger(group.upperBound), getOrderingColumNames());
+      }
     }
 
-    private int figureOutOffset(RexWindowBound bound)
+    private Integer getBoundAsInteger(RexWindowBound bound)
     {
-      if (bound.isUnbounded() || bound.isCurrentRow()) {
+      if (bound.isUnbounded()) {
+        return null;
+      }
+      if (bound.isCurrentRow()) {
         return 0;
       }
-      return getConstant(((RexInputRef) bound.getOffset()).getIndex());
+
+      final int value = getConstant(((RexInputRef) bound.getOffset()).getIndex());
+      return bound.isPreceding() ? -value : value;
     }
 
     private int getConstant(int refIndex)

@@ -34,6 +34,7 @@ import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
 
@@ -48,7 +49,8 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
       ByteOrder byteOrder,
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
-      ColumnBuilder columnBuilder
+      ColumnBuilder columnBuilder,
+      @Nullable ScalarStringColumnAndIndexSupplier parent
   )
   {
     final byte version = bb.get();
@@ -60,21 +62,26 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
         final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
 
-        final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            NestedCommonFormatColumnSerializer.STRING_DICTIONARY_FILE_NAME
-        );
+        if (parent != null) {
+          dictionarySupplier = parent.dictionarySupplier;
+        } else {
+          final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
+          );
 
-        dictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
-            mapper,
-            stringDictionaryBuffer,
-            byteOrder
-        );
+          dictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
+              mapper,
+              stringDictionaryBuffer,
+              byteOrder
+          );
+        }
+
         final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.ENCODED_VALUE_COLUMN_FILE_NAME
+            ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME
         );
         final CompressedVSizeColumnarIntsSupplier ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
             encodedValueColumn,
@@ -83,7 +90,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.BITMAP_INDEX_FILE_NAME
+            ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME
         );
         GenericIndexed<ImmutableBitmap> valueIndexes = GenericIndexed.read(
             valueIndexBuffer,
@@ -104,6 +111,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
       throw new RE("Unknown version " + version);
     }
   }
+
 
   private final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
   private final Supplier<ColumnarInts> encodedColumnSupplier;

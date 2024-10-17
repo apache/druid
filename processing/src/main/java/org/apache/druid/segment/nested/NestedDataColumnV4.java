@@ -29,6 +29,7 @@ import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -81,7 +82,7 @@ public final class NestedDataColumnV4<TStringDictionary extends Indexed<ByteBuff
   @Override
   public String getFieldFileName(String fileNameBase, String field, int fieldIndex)
   {
-    return NestedCommonFormatColumnSerializer.getInternalFileName(
+    return ColumnSerializerUtils.getInternalFileName(
         fileNameBase,
         NestedCommonFormatColumnSerializer.NESTED_FIELD_PREFIX + fieldIndex
     );

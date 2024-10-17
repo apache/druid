@@ -92,6 +92,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -120,12 +121,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-@Fork(value = 2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Fork(value = 1)
+@Warmup(iterations = 5)
+@Measurement(iterations = 15)
 public class GroupByBenchmark
 {
-  @Param({"2", "4"})
+  @Param({"4"})
   private int numProcessingThreads;
 
   @Param({"-1"})
@@ -140,7 +141,7 @@ public class GroupByBenchmark
   @Param({"all", "day"})
   private String queryGranularity;
 
-  @Param({"force", "false"})
+  @Param({"false", "force"})
   private String vectorize;
 
   private static final Logger log = new Logger(GroupByBenchmark.class);
@@ -433,7 +434,8 @@ public class GroupByBenchmark
     String queryName = schemaQuery[1];
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schemaName);
-    query = SCHEMA_QUERY_MAP.get(schemaName).get(queryName);
+    query = (GroupByQuery) ResourceIdPopulatingQueryRunner.populateResourceId(SCHEMA_QUERY_MAP.get(schemaName)
+                                                                                              .get(queryName));
 
     generator = new DataGenerator(
         schemaInfo.getColumnSchemas(),
@@ -493,7 +495,6 @@ public class GroupByBenchmark
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
@@ -502,7 +503,8 @@ public class GroupByBenchmark
 
     factory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool)
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool),
+        bufferPool
     );
   }
 
@@ -512,7 +514,7 @@ public class GroupByBenchmark
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
-    @Param({"onheap", "offheap"})
+    @Param({"onheap"})
     private String indexType;
 
     IncrementalIndex incIndex;
@@ -762,12 +764,12 @@ public class GroupByBenchmark
     //noinspection unchecked
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new SerializingQueryRunner<>(
-                new DefaultObjectMapper(new SmileFactory(), null),
+            new SerializingQueryRunner(
+                toolChest.decorateObjectMapper(new DefaultObjectMapper(new SmileFactory(), null), query),
                 ResultRow.class,
-                toolChest.mergeResults(
+                (queryPlus, responseContext) -> toolChest.mergeResults(
                     factory.mergeRunners(state.executorService, makeMultiRunners(state))
-                )
+                ).run(QueryPlus.wrap(ResourceIdPopulatingQueryRunner.populateResourceId(query)))
             )
         ),
         (QueryToolChest) toolChest

@@ -393,15 +393,13 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
           // if we created no segments and didn't change any offsets, just do nothing and return.
           log.info(
               "With empty segment set, start offsets [%s] and end offsets [%s] are the same, skipping metadata commit.",
-              startPartitions,
-              finalPartitions
+              startPartitions, finalPartitions
           );
           return SegmentPublishResult.ok(segmentsToPush);
         } else {
           log.info(
               "With empty segment set, start offsets [%s] and end offsets [%s] changed, committing new metadata.",
-              startPartitions,
-              finalPartitions
+              startPartitions, finalPartitions
           );
           action = SegmentTransactionalInsertAction.commitMetadataOnlyAction(
               runner.getAppenderator().getDataSource(),
@@ -419,12 +417,10 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
         );
         final DataSourceMetadata endMetadata = runner.createDataSourceMetadata(finalPartitions);
         action = taskLockType == TaskLockType.APPEND
-                 ? SegmentTransactionalAppendAction.forSegmentsAndMetadata(segmentsToPush, startMetadata, endMetadata,
-                                                                           segmentSchemaMapping
-        )
-                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, startMetadata, endMetadata,
-                                                                 segmentSchemaMapping
-                 );
+                 ? SegmentTransactionalAppendAction
+                     .forSegmentsAndMetadata(segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping)
+                 : SegmentTransactionalInsertAction
+                     .appendAction(segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping);
       } else {
         action = taskLockType == TaskLockType.APPEND
                  ? SegmentTransactionalAppendAction.forSegments(segmentsToPush, segmentSchemaMapping)

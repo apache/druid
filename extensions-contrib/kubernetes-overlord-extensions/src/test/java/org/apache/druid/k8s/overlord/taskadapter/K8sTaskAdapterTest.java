@@ -19,7 +19,6 @@
 
 package org.apache.druid.k8s.overlord.taskadapter;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Joiner;
@@ -41,10 +40,9 @@ import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.JobList;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.server.mock.EnableKubernetesMockClient;
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
@@ -101,9 +99,6 @@ class K8sTaskAdapterTest
   {
     TestUtils utils = new TestUtils();
     jsonMapper = utils.getTestObjectMapper();
-    for (Module jacksonModule : new FirehoseModule().getJacksonModules()) {
-      jsonMapper.registerModule(jacksonModule);
-    }
     jsonMapper.registerSubtypes(
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
         new NamedType(IndexTask.IndexTuningConfig.class, "index")

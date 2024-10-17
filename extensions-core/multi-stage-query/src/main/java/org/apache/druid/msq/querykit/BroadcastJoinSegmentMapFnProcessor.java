@@ -83,7 +83,7 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Functi
    * @param channels                         list of input channels
    * @param channelReaders                   list of input channel readers; corresponds one-to-one with "channels"
    * @param memoryReservedForBroadcastJoin   total bytes of frames we are permitted to use; derived from
-   *                                         {@link WorkerMemoryParameters#getBroadcastJoinMemory()}
+   *                                         {@link WorkerMemoryParameters#getBroadcastBufferMemory()}
    */
   public BroadcastJoinSegmentMapFnProcessor(
       final Query<?> query,

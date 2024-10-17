@@ -20,6 +20,7 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidObjectPredicate;
@@ -52,6 +53,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
  * {@link DictionaryEncodedColumn<String>} for a column which has a {@link ByteBuffer} based UTF-8 dictionary.
@@ -62,6 +65,9 @@ import java.util.List;
  */
 public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColumn<String>, NestedCommonFormatColumn
 {
+  private static final Map<Class<?>, Function<StringUtf8DictionaryEncodedColumn, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(StringUtf8DictionaryEncodedColumn.class);
+
   @Nullable
   private final ColumnarInts column;
   @Nullable
@@ -220,13 +226,6 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
         public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
         {
           return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
-        }
-
-        @Nullable
-        @Override
-        public Object getObject()
-        {
-          return defaultGetObject();
         }
 
         @Override
@@ -505,6 +504,15 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     }
   }
 
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(Class<? extends T> clazz)
+  {
+    //noinspection ReturnOfNull
+    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
+  }
+
   @Override
   public void close() throws IOException
   {
@@ -528,11 +536,11 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
   /**
    * Base type for a {@link SingleValueDimensionVectorSelector} for a dictionary encoded {@link ColumnType#STRING}
    * built around a {@link ColumnarInts}. Dictionary not included - BYO dictionary lookup methods.
-   *
+   * <p>
    * Assumes that all implementations return true for {@link #supportsLookupNameUtf8()}.
    */
   public abstract static class StringSingleValueDimensionVectorSelector
-          implements SingleValueDimensionVectorSelector, IdLookup
+      implements SingleValueDimensionVectorSelector, IdLookup
   {
     private final ColumnarInts column;
     private final ReadableVectorOffset offset;
@@ -540,8 +548,8 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     private int id = ReadableVectorInspector.NULL_ID;
 
     public StringSingleValueDimensionVectorSelector(
-            ColumnarInts column,
-            ReadableVectorOffset offset
+        ColumnarInts column,
+        ReadableVectorOffset offset
     )
     {
       this.column = column;
@@ -601,11 +609,11 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
   /**
    * Base type for a {@link MultiValueDimensionVectorSelector} for a dictionary encoded {@link ColumnType#STRING}
    * built around a {@link ColumnarMultiInts}. Dictionary not included - BYO dictionary lookup methods.
-   *
+   * <p>
    * Assumes that all implementations return true for {@link #supportsLookupNameUtf8()}.
    */
   public abstract static class StringMultiValueDimensionVectorSelector
-          implements MultiValueDimensionVectorSelector, IdLookup
+      implements MultiValueDimensionVectorSelector, IdLookup
   {
     private final ColumnarMultiInts multiValueColumn;
     private final ReadableVectorOffset offset;
@@ -614,8 +622,8 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     private int id = ReadableVectorInspector.NULL_ID;
 
     public StringMultiValueDimensionVectorSelector(
-            ColumnarMultiInts multiValueColumn,
-            ReadableVectorOffset offset
+        ColumnarMultiInts multiValueColumn,
+        ReadableVectorOffset offset
     )
     {
       this.multiValueColumn = multiValueColumn;
@@ -670,6 +678,7 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     {
       return this;
     }
+
     @Override
     public int getCurrentVectorSize()
     {
@@ -697,8 +706,8 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     private int id = ReadableVectorInspector.NULL_ID;
 
     public StringVectorObjectSelector(
-            ColumnarInts column,
-            ReadableVectorOffset offset
+        ColumnarInts column,
+        ReadableVectorOffset offset
     )
     {
       this.column = column;
@@ -757,8 +766,8 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     private int id = ReadableVectorInspector.NULL_ID;
 
     public MultiValueStringVectorObjectSelector(
-            ColumnarMultiInts multiValueColumn,
-            ReadableVectorOffset offset
+        ColumnarMultiInts multiValueColumn,
+        ReadableVectorOffset offset
     )
     {
       this.multiValueColumn = multiValueColumn;

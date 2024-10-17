@@ -20,11 +20,11 @@
 package org.apache.druid.delta.input;
 
 import io.delta.kernel.Scan;
-import io.delta.kernel.TableNotFoundException;
 import io.delta.kernel.data.Row;
-import io.delta.kernel.defaults.client.DefaultTableClient;
+import io.delta.kernel.defaults.engine.DefaultEngine;
+import io.delta.kernel.exceptions.TableNotFoundException;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -37,7 +37,9 @@ public class RowSerdeTest
   {
     Object[][] data = new Object[][]{
         {NonPartitionedDeltaTable.DELTA_TABLE_PATH},
-        {PartitionedDeltaTable.DELTA_TABLE_PATH}
+        {PartitionedDeltaTable.DELTA_TABLE_PATH},
+        {ComplexTypesDeltaTable.DELTA_TABLE_PATH},
+        {SnapshotDeltaTable.DELTA_TABLE_PATH}
     };
     return Arrays.asList(data);
   }
@@ -46,13 +48,13 @@ public class RowSerdeTest
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testSerializeDeserializeRoundtrip(final String tablePath) throws TableNotFoundException
   {
-    final DefaultTableClient tableClient = DefaultTableClient.create(new Configuration());
-    final Scan scan = DeltaTestUtils.getScan(tableClient, tablePath);
-    final Row scanState = scan.getScanState(tableClient);
+    final DefaultEngine engine = DefaultEngine.create(new Configuration());
+    final Scan scan = DeltaTestUtils.getScan(engine, tablePath);
+    final Row scanState = scan.getScanState(engine);
 
     final String rowJson = RowSerde.serializeRowToJson(scanState);
-    final Row row = RowSerde.deserializeRowFromJson(tableClient, rowJson);
+    final Row row = RowSerde.deserializeRowFromJson(engine, rowJson);
 
-    Assert.assertEquals(scanState.getSchema(), row.getSchema());
+    Assertions.assertEquals(scanState.getSchema(), row.getSchema());
   }
 }

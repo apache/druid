@@ -39,32 +39,15 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * Handles metadata transactions performed by the Overlord.
  */
 public interface IndexerMetadataStorageCoordinator
 {
   /**
-   * Retrieve all published segments which may include any data in the interval and are marked as used from the
-   * metadata store.
-   *
-   * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
-   * the collection only once.
-   *
-   * @param dataSource The data source to query
-   * @param interval   The interval for which all applicable and used segmented are requested.
-   * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
-   *                   visibility is considered within the specified interval: that is, a segment which is visible
-   *                   outside of the specified interval, but overshadowed within the specified interval will not be
-   *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
-   *                   {@link Segments}.
-   * @return The DataSegments which include data in the requested interval. These segments may contain data outside the
-   *         requested interval.
-   *
-   * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
-   * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
-   * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
-   * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
+   * Retrieves all published segments that have partial or complete overlap with
+   * the given interval and are marked as used.
    */
-  default Collection<DataSegment> retrieveUsedSegmentsForInterval(
+  default Set<DataSegment> retrieveUsedSegmentsForInterval(
       String dataSource,
       Interval interval,
       Segments visibility
@@ -74,21 +57,16 @@ public interface IndexerMetadataStorageCoordinator
   }
 
   /**
-   * Retrieve all published used segments in the data source from the metadata store.
+   * Retrieves all published used segments for the given data source.
    *
-   * @param dataSource The data source to query
-   *
-   * @return all segments belonging to the given data source
-   * @see #retrieveUsedSegmentsForInterval(String, Interval, Segments) similar to this method but also accepts data
-   * interval.
+   * @see #retrieveUsedSegmentsForInterval(String, Interval, Segments)
    */
-  Collection<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility);
+  Set<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility);
 
   /**
-   *
    * Retrieve all published segments which are marked as used and the created_date of these segments belonging to the
    * given data source and list of intervals from the metadata store.
-   *
+   * <p>
    * Unlike other similar methods in this interface, this method doesn't accept a {@link Segments} "visibility"
    * parameter. The returned collection may include overshadowed segments and their created_dates, as if {@link
    * Segments#INCLUDING_OVERSHADOWED} was passed. It's the responsibility of the caller to filter out overshadowed ones
@@ -99,32 +77,16 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return The DataSegments and the related created_date of segments
    */
-  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals);
+  Collection<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(
+      String dataSource,
+      List<Interval> intervals
+  );
 
   /**
-   * Retrieve all published segments which may include any data in the given intervals and are marked as used from the
-   * metadata store.
-   * <p>
-   * The order of segments within the returned collection is unspecified, but each segment is guaranteed to appear in
-   * the collection only once.
-   * </p>
-   *
-   * @param dataSource The data source to query
-   * @param intervals  The intervals for which all applicable and used segments are requested.
-   * @param visibility Whether only visible or visible as well as overshadowed segments should be returned. The
-   *                   visibility is considered within the specified intervals: that is, a segment which is visible
-   *                   outside of the specified intervals, but overshadowed on the specified intervals will not be
-   *                   returned if {@link Segments#ONLY_VISIBLE} is passed. See more precise description in the doc for
-   *                   {@link Segments}.
-   * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the
-   *         requested intervals.
-   *
-   * @implNote This method doesn't return a {@link Set} because there may be an expectation that {@code Set.contains()}
-   * is O(1) operation, while it's not the case for the returned collection unless it copies all segments into a new
-   * {@link java.util.HashSet} or {@link com.google.common.collect.ImmutableSet} which may in turn be unnecessary in
-   * other use cases. So clients should perform such copy themselves if they need {@link Set} semantics.
+   * Retrieves all published segments that have partial or complete overlap with
+   * the given intervals and are marked as used.
    */
-  Collection<DataSegment> retrieveUsedSegmentsForIntervals(
+  Set<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
       Segments visibility
@@ -180,6 +142,12 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
+   * Retrieves segments for the given IDs, regardless of their visibility
+   * (visible, overshadowed or unused).
+   */
+  Set<DataSegment> retrieveSegmentsById(String dataSource, Set<String> segmentIds);
+
+  /**
    * Mark as unused segments which include ONLY data within the given interval.
    *
    * @param dataSource The data source the segments belong to
@@ -198,7 +166,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  Set<DataSegment> commitSegments(Set<DataSegment> segments, @Nullable SegmentSchemaMapping segmentSchemaMapping) throws IOException;
+  Set<DataSegment> commitSegments(Set<DataSegment> segments, @Nullable SegmentSchemaMapping segmentSchemaMapping);
 
   /**
    * Allocates pending segments for the given requests in the pending segments table.
@@ -310,7 +278,7 @@ public interface IndexerMetadataStorageCoordinator
       @Nullable DataSourceMetadata startMetadata,
       @Nullable DataSourceMetadata endMetadata,
       @Nullable SegmentSchemaMapping segmentSchemaMapping
-  ) throws IOException;
+  );
 
   /**
    * Commits segments and corresponding schema created by an APPEND task.
@@ -505,4 +473,21 @@ public interface IndexerMetadataStorageCoordinator
    * @return List of pending segment records
    */
   List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval);
+
+  /**
+   * Map from a segment ID to the segment ID from which it was upgraded
+   * There should be no entry in the map for an original non-upgraded segment
+   * @param dataSource data source
+   * @param segmentIds ids of segments
+   */
+  Map<String, String> retrieveUpgradedFromSegmentIds(String dataSource, Set<String> segmentIds);
+
+  /**
+   * Map from a segment ID to a set containing
+   * 1) all segment IDs that were upgraded from it AND are still present in the metadata store
+   * 2) the segment ID itself if and only if it is still present in the metadata store
+   * @param dataSource data source
+   * @param segmentIds ids of the first segments which had the corresponding load spec
+   */
+  Map<String, Set<String>> retrieveUpgradedToSegmentIds(String dataSource, Set<String> segmentIds);
 }

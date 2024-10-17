@@ -27,7 +27,6 @@ import com.google.common.base.Suppliers;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
@@ -145,6 +144,13 @@ public class StageDefinition
         throw new ISE("Broadcast input number out of range [%s]", broadcastInputNumber);
       }
     }
+  }
+
+  public static boolean mustGatherResultKeyStatistics(@Nullable final ShuffleSpec shuffleSpec)
+  {
+    return shuffleSpec != null
+           && shuffleSpec.kind() == ShuffleKind.GLOBAL_SORT
+           && ((GlobalSortShuffleSpec) shuffleSpec).mustGatherResultKeyStatistics();
   }
 
   public static StageDefinitionBuilder builder(final int stageNumber)
@@ -303,14 +309,10 @@ public class StageDefinition
    * For eg: we know there's exactly one partition in query shapes like `select with limit`.
    * <br></br>
    * In such cases, we return a false.
-   *
-   * @return
    */
   public boolean mustGatherResultKeyStatistics()
   {
-    return shuffleSpec != null
-           && shuffleSpec.kind() == ShuffleKind.GLOBAL_SORT
-           && ((GlobalSortShuffleSpec) shuffleSpec).mustGatherResultKeyStatistics();
+    return mustGatherResultKeyStatistics(shuffleSpec);
   }
 
   public Either<Long, ClusterByPartitions> generatePartitionBoundariesForShuffle(
@@ -355,17 +357,17 @@ public class StageDefinition
    *
    * Calls {@link MemoryAllocatorFactory#newAllocator()} for each frame.
    */
-  public FrameWriterFactory createFrameWriterFactory(final MemoryAllocatorFactory memoryAllocatorFactory)
+  public FrameWriterFactory createFrameWriterFactory(final MemoryAllocatorFactory memoryAllocatorFactory, final boolean removeNullBytes)
   {
-    return FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
+    return FrameWriters.makeRowBasedFrameWriterFactory(
         memoryAllocatorFactory,
         signature,
 
         // Main processor does not sort when there is a hash going on, even if isSort = true. This is because
         // FrameChannelHashPartitioner is expected to be attached to the processor and do the sorting. We don't
         // want to double-sort.
-        doesShuffle() && !shuffleSpec.kind().isHash() ? getClusterBy().getColumns() : Collections.emptyList()
+        doesShuffle() && !shuffleSpec.kind().isHash() ? getClusterBy().getColumns() : Collections.emptyList(),
+        removeNullBytes
     );
   }
 
@@ -374,9 +376,9 @@ public class StageDefinition
    *
    * Re-uses the same {@link MemoryAllocator} for each frame.
    */
-  public FrameWriterFactory createFrameWriterFactory(final MemoryAllocator allocator)
+  public FrameWriterFactory createFrameWriterFactory(final MemoryAllocator allocator, final boolean removeNullBytes)
   {
-    return createFrameWriterFactory(new SingleMemoryAllocatorFactory(allocator));
+    return createFrameWriterFactory(new SingleMemoryAllocatorFactory(allocator), removeNullBytes);
   }
 
   public FrameReader getFrameReader()

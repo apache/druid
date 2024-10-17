@@ -29,8 +29,24 @@
     display: flex;
     flex-direction: column;
 
-    .rule-editor {
+    .rule-form {
+      position: relative;
+      flex: 1;
+
+      .rule-form-content {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+      }
+    }
+
+    .rule-editor:not(:last-child) {
       margin-bottom: 15px;
+    }
+
+    .json-input {
+      margin-bottom: 10px;
     }
 
     .no-rules-message {

@@ -389,9 +389,9 @@ public class ForkingTaskRunnerTest
                                + "  \"runTime\" : 2500,\n"
                                + "  \"isReadyTime\" : 0,\n"
                                + "  \"isReadyResult\" : \"YES\",\n"
-                               + "  \"firehose\" : null,\n"
                                + "  \"context\" : {\n"
                                + "    \"druid.indexer.runner.javaOptsArray\" : [ \"-Xmx10g\", \"-Xms10g\" ],\n"
+                               + "    \"druid.indexer.fork.property.druid.processing.numThreads\" : 4,\n"
                                + "    \"druid.indexer.runner.javaOpts\" : \"-Xmx1g -Xms1g\"\n"
                                + "  }\n"
                                + "}";
@@ -446,7 +446,6 @@ public class ForkingTaskRunnerTest
                                + "  \"runTime\" : 2500,\n"
                                + "  \"isReadyTime\" : 0,\n"
                                + "  \"isReadyResult\" : \"YES\",\n"
-                               + "  \"firehose\" : null,\n"
                                + "  \"context\" : {\n"
                                + "    \"druid.indexer.runner.javaOptsArray\" : \"not a string array\",\n"
                                + "    \"druid.indexer.runner.javaOpts\" : \"-Xmx1g -Xms1g\"\n"
@@ -542,8 +541,7 @@ public class ForkingTaskRunnerTest
         .setDefaultHadoopCoordinates(ImmutableList.of())
         .setGracefulShutdownTimeout(new Period("PT0S"))
         .setDirectoryLockTimeout(new Period("PT10S"))
-        .setShuffleDataLocations(ImmutableList.of())
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name());
+        .setShuffleDataLocations(ImmutableList.of());
   }
 
   @Nonnull

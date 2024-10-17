@@ -19,6 +19,8 @@
 
 package org.apache.druid.frame.key;
 
+import org.apache.druid.segment.column.RowSignature;
+
 import java.util.Comparator;
 import java.util.List;
 
@@ -36,9 +38,9 @@ public class RowKeyComparator implements Comparator<RowKey>
     this.byteRowKeyComparatorDelegate = byteRowKeyComparatorDelegate;
   }
 
-  public static RowKeyComparator create(final List<KeyColumn> keyColumns)
+  public static RowKeyComparator create(final List<KeyColumn> keyColumns, RowSignature rowSignature)
   {
-    return new RowKeyComparator(ByteRowKeyComparator.create(keyColumns));
+    return new RowKeyComparator(ByteRowKeyComparator.create(keyColumns, rowSignature));
   }
 
   @Override

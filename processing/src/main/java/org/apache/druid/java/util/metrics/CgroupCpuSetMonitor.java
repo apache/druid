@@ -24,6 +24,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.CpuSet;
+import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
 import java.util.Map;
 
@@ -41,7 +42,7 @@ public class CgroupCpuSetMonitor extends FeedDefiningMonitor
 
   public CgroupCpuSetMonitor(final Map<String, String[]> dimensions, String feed)
   {
-    this(null, dimensions, feed);
+    this(new ProcSelfCgroupDiscoverer(), dimensions, feed);
   }
 
   public CgroupCpuSetMonitor(final Map<String, String[]> dimensions)

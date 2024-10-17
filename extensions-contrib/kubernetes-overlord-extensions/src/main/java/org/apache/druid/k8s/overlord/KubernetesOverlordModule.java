@@ -19,6 +19,8 @@
 
 package org.apache.druid.k8s.overlord;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -32,12 +34,17 @@ import io.fabric8.kubernetes.client.ConfigBuilder;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.IndexingServiceModuleHelper;
+import org.apache.druid.guice.JacksonConfigProvider;
+import org.apache.druid.guice.Jerseys;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.PolyBind;
 import org.apache.druid.guice.annotations.LoadScope;
+import org.apache.druid.guice.annotations.Self;
+import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.indexing.common.config.FileTaskLogsConfig;
+import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.tasklogs.FileTaskLogs;
 import org.apache.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.TaskRunnerFactory;
@@ -45,16 +52,27 @@ import org.apache.druid.indexing.overlord.WorkerTaskRunner;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskExecutionConfigResource;
+import org.apache.druid.k8s.overlord.execution.KubernetesTaskRunnerDynamicConfig;
 import org.apache.druid.k8s.overlord.runnerstrategy.RunnerStrategy;
+import org.apache.druid.k8s.overlord.taskadapter.DynamicConfigPodTemplateSelector;
+import org.apache.druid.k8s.overlord.taskadapter.MultiContainerTaskAdapter;
+import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
+import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
+import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
+import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.log.StartupLoggingConfig;
 import org.apache.druid.tasklogs.NoopTaskLogs;
 import org.apache.druid.tasklogs.TaskLogKiller;
 import org.apache.druid.tasklogs.TaskLogPusher;
 import org.apache.druid.tasklogs.TaskLogs;
 
+import java.util.Locale;
 import java.util.Properties;
 
 
@@ -75,6 +93,7 @@ public class KubernetesOverlordModule implements DruidModule
     JsonConfigProvider.bind(binder, IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX, KubernetesTaskRunnerConfig.class);
     JsonConfigProvider.bind(binder, K8SANDWORKER_PROPERTIES_PREFIX, KubernetesAndWorkerTaskRunnerConfig.class);
     JsonConfigProvider.bind(binder, "druid.indexer.queue", TaskQueueConfig.class);
+    JacksonConfigProvider.bind(binder, KubernetesTaskRunnerDynamicConfig.CONFIG_KEY, KubernetesTaskRunnerDynamicConfig.class, null);
     PolyBind.createChoice(
         binder,
         "druid.indexer.runner.type",
@@ -98,6 +117,8 @@ public class KubernetesOverlordModule implements DruidModule
           .toProvider(RunnerStrategyProvider.class)
           .in(LazySingleton.class);
     configureTaskLogs(binder);
+
+    Jerseys.addResource(binder, KubernetesTaskExecutionConfigResource.class);
   }
 
   @Provides
@@ -153,6 +174,70 @@ public class KubernetesOverlordModule implements DruidModule
     return HttpRemoteTaskRunnerFactory.TYPE_NAME.equals(workerType)
            ? injector.getInstance(HttpRemoteTaskRunnerFactory.class)
            : injector.getInstance(RemoteTaskRunnerFactory.class);
+  }
+
+  /**
+   * Provides a TaskAdapter instance for the KubernetesTaskRunner.
+   */
+  @Provides
+  @LazySingleton
+  TaskAdapter provideTaskAdapter(
+      DruidKubernetesClient client,
+      Properties properties,
+      KubernetesTaskRunnerConfig kubernetesTaskRunnerConfig,
+      TaskConfig taskConfig,
+      StartupLoggingConfig startupLoggingConfig,
+      @Self DruidNode druidNode,
+      @Smile ObjectMapper smileMapper,
+      TaskLogs taskLogs,
+      Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef
+  )
+  {
+    String adapter = properties.getProperty(String.format(
+        Locale.ROOT,
+        "%s.%s.adapter.type",
+        IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX,
+        "k8s"
+    ));
+
+    if (adapter != null && !MultiContainerTaskAdapter.TYPE.equals(adapter) && kubernetesTaskRunnerConfig.isSidecarSupport()) {
+      throw new IAE(
+          "Invalid pod adapter [%s], only pod adapter [%s] can be specified when sidecarSupport is enabled",
+          adapter,
+          MultiContainerTaskAdapter.TYPE
+      );
+    }
+
+    if (MultiContainerTaskAdapter.TYPE.equals(adapter) || kubernetesTaskRunnerConfig.isSidecarSupport()) {
+      return new MultiContainerTaskAdapter(
+          client,
+          kubernetesTaskRunnerConfig,
+          taskConfig,
+          startupLoggingConfig,
+          druidNode,
+          smileMapper,
+          taskLogs
+      );
+    } else if (PodTemplateTaskAdapter.TYPE.equals(adapter)) {
+      return new PodTemplateTaskAdapter(
+          kubernetesTaskRunnerConfig,
+          taskConfig,
+          druidNode,
+          smileMapper,
+          taskLogs,
+          new DynamicConfigPodTemplateSelector(properties, dynamicConfigRef)
+      );
+    } else {
+      return new SingleContainerTaskAdapter(
+          client,
+          kubernetesTaskRunnerConfig,
+          taskConfig,
+          startupLoggingConfig,
+          druidNode,
+          smileMapper,
+          taskLogs
+      );
+    }
   }
 
   private static class RunnerStrategyProvider implements Provider<RunnerStrategy>

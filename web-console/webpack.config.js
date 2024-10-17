@@ -24,14 +24,20 @@ const webpack = require('webpack');
 
 const { version } = require('./package.json');
 
+const supportedLocales = ['en-US'];
+
 function friendlyErrorFormatter(e) {
   return `${e.severity}: ${e.content} [TS${e.code}]\n    at (${e.file}:${e.line}:${e.character})`;
 }
 
 module.exports = env => {
   let druidUrl = (env || {}).druid_host || process.env.druid_host || 'localhost';
-  if (!druidUrl.startsWith('http')) druidUrl = 'http://' + druidUrl;
-  if (!/:\d+$/.test(druidUrl)) druidUrl += ':8888';
+  if (!druidUrl.startsWith('http')) {
+    druidUrl = (druidUrl.endsWith(':9088') ? 'https://' : 'http://') + druidUrl;
+  }
+  if (!/:\d+$/.test(druidUrl)) {
+    druidUrl += druidUrl.startsWith('https://') ? ':9088' : ':8888';
+  }
 
   const proxyTarget = {
     target: druidUrl,
@@ -47,13 +53,20 @@ module.exports = env => {
       'global': {},
       'NODE_ENV': JSON.stringify(mode),
     }),
+
+    // Prune date-fns locales to only those that are supported
+    // https://date-fns.org/v2.30.0/docs/webpack
+    new webpack.ContextReplacementPlugin(
+      /^date-fns[/\\]locale$/,
+      new RegExp(`\\.[/\\\\](${supportedLocales.join('|')})[/\\\\]index\\.js$`),
+    ),
   ];
 
   return {
     mode: mode,
     devtool: mode === 'production' ? undefined : 'eval-cheap-module-source-map',
     entry: {
-      'web-console': './src/entry.ts',
+      'web-console': './src/entry.tsx',
     },
     output: {
       path: path.resolve(__dirname, './public'),
@@ -137,7 +150,7 @@ module.exports = env => {
                     // have access to them at this point. None of the components that use svg icons
                     // via CSS are themselves being used by the web console, so we can safely omit the icons.
                     //
-                    // TODO: Re-evaluate after upgrading to Blueprint v5
+                    // TODO: Re-evaluate after upgrading to Blueprint v6
                     'svg-icon($_icon, $_path)': () => new SassString('transparent'),
                   },
                 },
@@ -147,11 +160,9 @@ module.exports = env => {
         },
         {
           test: /\.(woff|woff2|ttf|eot)$/,
-          use: {
-            loader: 'file-loader',
-            options: {
-              name: '[name].[ext]',
-            },
+          type: 'asset/resource',
+          generator: {
+            filename: 'fonts/[name].[ext]',
           },
         },
       ],

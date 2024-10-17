@@ -74,8 +74,8 @@
   "worker/task/assigned/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "worker/task/running/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "worker/task/completed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
-  "worker/task/failed/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
-  "worker/task/success/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
+  "worker/task/failed/count" : { "dimensions" : ["category", "workerVersion", "dataSource"], "type" : "count" },
+  "worker/task/success/count" : { "dimensions" : ["category", "workerVersion", "dataSource"], "type" : "count" },
   "worker/taskSlot/idle/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
   "worker/taskSlot/total/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
   "worker/taskSlot/used/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
@@ -159,7 +159,7 @@
   "jetty/threadPool/queueSize": { "dimensions" : [], "type" : "gauge" },
 
   "coordinator/time" : { "dimensions" : [], "type" : "timer"},
-  "coordinator/global/time" : { "dimensions" : [], "type" : "timer"},
+  "coordinator/global/time" : { "dimensions" : ["dutyGroup"], "type" : "timer"},
 
   "tier/required/capacity" : { "dimensions" : ["tier"], "type" : "gauge" },
   "tier/total/capacity" : { "dimensions" : ["tier"], "type" : "gauge" },

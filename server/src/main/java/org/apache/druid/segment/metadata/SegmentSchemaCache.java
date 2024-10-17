@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.metadata;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.guice.LazySingleton;
@@ -145,6 +146,12 @@ public class SegmentSchemaCache
   public void updateFinalizedSegmentSchema(FinalizedSegmentSchemaInfo finalizedSegmentSchemaInfo)
   {
     this.finalizedSegmentSchemaInfo = finalizedSegmentSchemaInfo;
+
+    // remove metadata for segments which have been polled in the last database poll
+    temporaryPublishedMetadataQueryResults
+        .keySet()
+        .removeAll(finalizedSegmentSchemaInfo.getFinalizedSegmentMetadata().keySet());
+
     setInitialized();
   }
 
@@ -173,22 +180,16 @@ public class SegmentSchemaCache
    * After, metadata query result is published to the DB, it is removed from temporaryMetadataQueryResults
    * and added to temporaryPublishedMetadataQueryResults.
    */
-  public void markInMetadataQueryResultPublished(SegmentId segmentId)
+  public void markMetadataQueryResultPublished(SegmentId segmentId)
   {
-    if (!temporaryMetadataQueryResults.containsKey(segmentId)) {
+    SchemaPayloadPlus temporaryMetadataQueryResult = temporaryMetadataQueryResults.get(segmentId);
+    if (temporaryMetadataQueryResult == null) {
       log.error("SegmentId [%s] not found in temporaryMetadataQueryResults map.", segmentId);
+    } else {
+      temporaryPublishedMetadataQueryResults.put(segmentId, temporaryMetadataQueryResult);
     }
 
-    temporaryPublishedMetadataQueryResults.put(segmentId, temporaryMetadataQueryResults.get(segmentId));
     temporaryMetadataQueryResults.remove(segmentId);
-  }
-
-  /**
-   * temporaryPublishedMetadataQueryResults is reset after each DB poll.
-   */
-  public void resetTemporaryPublishedMetadataQueryResultOnDBPoll()
-  {
-    temporaryPublishedMetadataQueryResults.clear();
   }
 
   /**
@@ -321,6 +322,12 @@ public class SegmentSchemaCache
                      temporaryPublishedMetadataQueryResults.size()
                  )
     );
+  }
+
+  @VisibleForTesting
+  SchemaPayloadPlus getTemporaryPublishedMetadataQueryResults(SegmentId id)
+  {
+    return temporaryPublishedMetadataQueryResults.get(id);
   }
 
   /**

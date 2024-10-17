@@ -26,7 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -105,7 +105,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void staticSetup()
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   @Before
@@ -157,7 +157,7 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
           globalDictionarySortedCollector.getSortedDoubles(),
           () -> new AutoTypeColumnMerger.ArrayDictionaryMergingIterator(
               new Iterable[]{globalDictionarySortedCollector.getSortedArrays()},
-              serializer.getGlobalLookup()
+              serializer.getDictionaryIdLookup()
           )
       );
       serializer.open();
@@ -192,7 +192,8 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         bitmapSerdeFactory,
         baseBuffer,
         bob,
-        ColumnConfig.SELECTION_SIZE
+        ColumnConfig.SELECTION_SIZE,
+        null
     );
     try (ScalarLongColumn column = (ScalarLongColumn) supplier.get()) {
       smokeTest(supplier, column);
@@ -210,7 +211,8 @@ public class ScalarLongColumnSupplierTest extends InitializedNullHandlingTest
         bitmapSerdeFactory,
         baseBuffer,
         bob,
-        ColumnConfig.SELECTION_SIZE
+        ColumnConfig.SELECTION_SIZE,
+        null
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);

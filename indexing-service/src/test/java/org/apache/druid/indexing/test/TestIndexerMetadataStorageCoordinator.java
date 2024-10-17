@@ -85,9 +85,9 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
+  public Set<DataSegment> retrieveAllUsedSegments(String dataSource, Segments visibility)
   {
-    return ImmutableList.of();
+    return ImmutableSet.of();
   }
 
   @Override
@@ -97,13 +97,13 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
-  public List<DataSegment> retrieveUsedSegmentsForIntervals(
+  public Set<DataSegment> retrieveUsedSegmentsForIntervals(
       String dataSource,
       List<Interval> intervals,
       Segments visibility
   )
   {
-    return ImmutableList.of();
+    return ImmutableSet.of();
   }
 
   @Override
@@ -134,6 +134,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
                         .iterator()
       );
     }
+  }
+
+  @Override
+  public Set<DataSegment> retrieveSegmentsById(String dataSource, Set<String> segmentIds)
+  {
+    return Collections.emptySet();
   }
 
   @Override
@@ -306,6 +312,24 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval)
   {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public Map<String, String> retrieveUpgradedFromSegmentIds(
+      final String dataSource,
+      final Set<String> segmentIds
+  )
+  {
+    return Collections.emptyMap();
+  }
+
+  @Override
+  public Map<String, Set<String>> retrieveUpgradedToSegmentIds(
+      final String dataSource,
+      final Set<String> segmentIds
+  )
+  {
+    return Collections.emptyMap();
   }
 
   public Set<DataSegment> getPublished()

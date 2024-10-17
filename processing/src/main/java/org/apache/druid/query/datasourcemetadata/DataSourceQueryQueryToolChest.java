@@ -20,6 +20,7 @@
 package org.apache.druid.query.datasourcemetadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.inject.Inject;
@@ -38,6 +39,7 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.timeline.LogicalSegment;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -116,6 +118,12 @@ public class DataSourceQueryQueryToolChest
 
   @Override
   public CacheStrategy getCacheStrategy(DataSourceMetadataQuery query)
+  {
+    return null;
+  }
+
+  @Override
+  public CacheStrategy getCacheStrategy(DataSourceMetadataQuery query, @Nullable ObjectMapper mapper)
   {
     return null;
   }

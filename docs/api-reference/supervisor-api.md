@@ -231,10 +231,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -429,10 +426,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -537,10 +531,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -735,10 +726,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -973,10 +961,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -1171,10 +1156,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,
@@ -1610,10 +1592,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                     "ioConfig": {
                         "topic": "social_media",
                         "inputFormat": {
-                            "type": "json",
-                            "keepNullColumns": false,
-                            "assumeNewlineDelimited": false,
-                            "useJsonNodeReader": false
+                            "type": "json"
                         },
                         "replicas": 1,
                         "taskCount": 1,
@@ -1808,10 +1787,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -1978,10 +1954,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -2176,10 +2149,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -2534,10 +2504,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -2732,10 +2699,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,
@@ -2958,10 +2922,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -3156,10 +3117,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,
@@ -3548,6 +3506,53 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "status": "success"
 }
   ```
+</details>
+
+### Handoff task groups for a supervisor early
+
+Trigger handoff for specified task groups of a supervisor early. This is a best effort API and makes no guarantees of handoff execution
+
+#### URL
+
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/taskGroups/handoff`
+
+#### Sample request
+
+The following example shows how to handoff task groups for a supervisor with the name `social_media` and has the task groups: `1,2,3`.
+
+<Tabs>
+
+<TabItem value="3" label="cURL">
+
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/taskGroups/handoff"
+--header 'Content-Type: application/json'
+--data-raw '{"taskGroupIds": [1, 2, 3]}'
+```
+
+</TabItem>
+<TabItem value="4" label="HTTP">
+
+
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/taskGroups/handoff HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+
+{
+  "taskGroupIds": [1, 2, 3],
+}
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+(empty response)
 </details>
 
 ### Shut down a supervisor

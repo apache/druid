@@ -51,10 +51,10 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
+import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -63,7 +63,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-@SqlTestFramework.SqlTestFrameWorkModule(QuantileComponentSupplier.class)
+@SqlTestFrameworkConfig.ComponentSupplier(QuantileComponentSupplier.class)
 public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
 {
   protected static class QuantileComponentSupplier extends StandardComponentSupplier

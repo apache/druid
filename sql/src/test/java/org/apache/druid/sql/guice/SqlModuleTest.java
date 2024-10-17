@@ -26,7 +26,6 @@ import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
@@ -54,7 +53,7 @@ import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.ResponseContextConfig;
@@ -118,7 +117,7 @@ public class SqlModuleTest
   private JoinableFactory joinableFactory;
 
   @Mock
-  private SegmentLoader segmentLoader;
+  private SegmentCacheManager segmentCacheManager;
 
   private Injector injector;
 
@@ -136,7 +135,7 @@ public class SqlModuleTest
         queryToolChestWarehouse,
         lookupExtractorFactoryContainerProvider,
         joinableFactory,
-        segmentLoader
+        segmentCacheManager
     );
   }
 
@@ -183,7 +182,7 @@ public class SqlModuleTest
             new ServerModule(),
             new JacksonModule(),
             new AuthenticatorMapperModule(),
-            (Module) binder -> {
+            binder -> {
               binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
               binder.bind(JsonConfigurator.class).in(LazySingleton.class);
               binder.bind(Properties.class).toInstance(props);
@@ -203,7 +202,7 @@ public class SqlModuleTest
               binder.bind(QueryToolChestWarehouse.class).toInstance(queryToolChestWarehouse);
               binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupExtractorFactoryContainerProvider);
               binder.bind(JoinableFactory.class).toInstance(joinableFactory);
-              binder.bind(SegmentLoader.class).toInstance(segmentLoader);
+              binder.bind(SegmentCacheManager.class).toInstance(segmentCacheManager);
               binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
               binder.bind(QueryScheduler.class)
                     .toProvider(QuerySchedulerProvider.class)

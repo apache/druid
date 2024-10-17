@@ -16,9 +16,15 @@
  * limitations under the License.
  */
 
-import { FormGroup, HTMLSelect, Radio, RadioGroup, ResizeSensor } from '@blueprintjs/core';
+import { Button, FormGroup, MenuItem, ResizeSensor, SegmentedControl } from '@blueprintjs/core';
+import type { DateRange, NonNullDateRange } from '@blueprintjs/datetime';
+import { DateRangeInput3 } from '@blueprintjs/datetime2';
+import { IconNames } from '@blueprintjs/icons';
+import type { ItemPredicate, ItemRenderer } from '@blueprintjs/select';
+import { Select } from '@blueprintjs/select';
 import type { AxisScale } from 'd3-axis';
 import { scaleLinear, scaleUtc } from 'd3-scale';
+import enUS from 'date-fns/locale/en-US';
 import React from 'react';
 
 import type { Capabilities } from '../../helpers';
@@ -27,11 +33,13 @@ import {
   ceilToUtcDay,
   formatBytes,
   formatInteger,
+  isNonNullRange,
+  localToUtcDateRange,
   queryDruidSql,
   QueryManager,
   uniq,
+  utcToLocalDateRange,
 } from '../../utils';
-import { DateRangeSelector } from '../date-range-selector/date-range-selector';
 import { Loader } from '../loader/loader';
 
 import type { BarUnitData } from './stacked-bar-chart';
@@ -41,12 +49,6 @@ import './segment-timeline.scss';
 
 interface SegmentTimelineProps {
   capabilities: Capabilities;
-
-  // For testing:
-  dataQueryManager?: QueryManager<
-    { capabilities: Capabilities; startDate: Date; endDate: Date },
-    any
-  >;
 }
 
 type ActiveDataType = 'sizeData' | 'countData';
@@ -65,8 +67,8 @@ interface SegmentTimelineState {
   error?: Error;
   xScale: AxisScale<Date> | null;
   yScale: AxisScale<number> | null;
-  startDate: Date;
-  endDate: Date;
+  dateRange: NonNullDateRange;
+  selectedDateRange?: DateRange;
 }
 
 interface BarChartScales {
@@ -83,6 +85,13 @@ interface IntervalRow {
 }
 
 const DEFAULT_TIME_SPAN_MONTHS = 3;
+
+function getDefaultDateRange(): NonNullDateRange {
+  const start = ceilToUtcDay(new Date());
+  const end = new Date(start.valueOf());
+  start.setUTCMonth(start.getUTCMonth() - DEFAULT_TIME_SPAN_MONTHS);
+  return [start, end];
+}
 
 export class SegmentTimeline extends React.PureComponent<
   SegmentTimelineProps,
@@ -111,15 +120,15 @@ export class SegmentTimeline extends React.PureComponent<
     return SegmentTimeline.COLORS[index % SegmentTimeline.COLORS.length];
   }
 
-  static getSqlQuery(startDate: Date, endDate: Date): string {
+  static getSqlQuery(dateRange: NonNullDateRange): string {
     return `SELECT
   "start", "end", "datasource",
   COUNT(*) AS "count",
   SUM("size") AS "size"
 FROM sys.segments
 WHERE
-  '${startDate.toISOString()}' <= "start" AND
-  "end" <= '${endDate.toISOString()}' AND
+  '${dateRange[0].toISOString()}' <= "start" AND
+  "end" <= '${dateRange[1].toISOString()}' AND
   is_published = 1 AND
   is_overshadowed = 0
 GROUP BY 1, 2, 3
@@ -233,7 +242,7 @@ ORDER BY "start" DESC`;
   }
 
   private readonly dataQueryManager: QueryManager<
-    { capabilities: Capabilities; startDate: Date; endDate: Date },
+    { capabilities: Capabilities; dateRange: NonNullDateRange },
     any
   >;
 
@@ -241,9 +250,7 @@ ORDER BY "start" DESC`;
 
   constructor(props: SegmentTimelineProps) {
     super(props);
-    const startDate = ceilToUtcDay(new Date());
-    const endDate = new Date(startDate.valueOf());
-    startDate.setUTCMonth(startDate.getUTCMonth() - DEFAULT_TIME_SPAN_MONTHS);
+    const dateRange = getDefaultDateRange();
 
     this.state = {
       chartWidth: 1, // Dummy init values to be replaced
@@ -258,84 +265,89 @@ ORDER BY "start" DESC`;
       loading: true,
       xScale: null,
       yScale: null,
-      startDate,
-      endDate,
+      dateRange,
     };
 
-    this.dataQueryManager =
-      props.dataQueryManager ||
-      new QueryManager({
-        processQuery: async ({ capabilities, startDate, endDate }) => {
-          let intervals: IntervalRow[];
-          let datasources: string[];
-          if (capabilities.hasSql()) {
-            intervals = await queryDruidSql({
-              query: SegmentTimeline.getSqlQuery(startDate, endDate),
-            });
-            datasources = uniq(intervals.map(r => r.datasource).sort());
-          } else if (capabilities.hasCoordinatorAccess()) {
-            const startIso = startDate.toISOString();
-
-            datasources = (await Api.instance.get(`/druid/coordinator/v1/datasources`)).data;
-            intervals = (
-              await Promise.all(
-                datasources.map(async datasource => {
-                  const intervalMap = (
-                    await Api.instance.get(
-                      `/druid/coordinator/v1/datasources/${Api.encodePath(
-                        datasource,
-                      )}/intervals?simple`,
-                    )
-                  ).data;
-
-                  return Object.keys(intervalMap)
-                    .map(interval => {
-                      const [start, end] = interval.split('/');
-                      const { count, size } = intervalMap[interval];
-                      return {
-                        start,
-                        end,
-                        datasource,
-                        count,
-                        size,
-                      };
-                    })
-                    .filter(a => startIso < a.start);
-                }),
-              )
-            )
-              .flat()
-              .sort((a, b) => b.start.localeCompare(a.start));
-          } else {
-            throw new Error(`must have SQL or coordinator access`);
-          }
-
-          const data = SegmentTimeline.processRawData(intervals);
-          const stackedData = SegmentTimeline.calculateStackedData(data, datasources);
-          const singleDatasourceData = SegmentTimeline.calculateSingleDatasourceData(
-            data,
-            datasources,
+    this.dataQueryManager = new QueryManager({
+      processQuery: async ({ capabilities, dateRange }, cancelToken) => {
+        let intervals: IntervalRow[];
+        let datasources: string[];
+        if (capabilities.hasSql()) {
+          intervals = await queryDruidSql(
+            {
+              query: SegmentTimeline.getSqlQuery(dateRange),
+            },
+            cancelToken,
           );
-          return { data, datasources, stackedData, singleDatasourceData };
-        },
-        onStateChange: ({ data, loading, error }) => {
-          this.setState({
-            data: data ? data.data : undefined,
-            datasources: data ? data.datasources : [],
-            stackedData: data ? data.stackedData : undefined,
-            singleDatasourceData: data ? data.singleDatasourceData : undefined,
-            loading,
-            error,
-          });
-        },
-      });
+          datasources = uniq(intervals.map(r => r.datasource).sort());
+        } else if (capabilities.hasCoordinatorAccess()) {
+          const startIso = dateRange[0].toISOString();
+
+          datasources = (
+            await Api.instance.get(`/druid/coordinator/v1/datasources`, { cancelToken })
+          ).data;
+          intervals = (
+            await Promise.all(
+              datasources.map(async datasource => {
+                const intervalMap = (
+                  await Api.instance.get(
+                    `/druid/coordinator/v1/datasources/${Api.encodePath(
+                      datasource,
+                    )}/intervals?simple`,
+                    { cancelToken },
+                  )
+                ).data;
+
+                return Object.keys(intervalMap)
+                  .map(interval => {
+                    const [start, end] = interval.split('/');
+                    const { count, size } = intervalMap[interval];
+                    return {
+                      start,
+                      end,
+                      datasource,
+                      count,
+                      size,
+                    };
+                  })
+                  .filter(a => startIso < a.start);
+              }),
+            )
+          )
+            .flat()
+            .sort((a, b) => b.start.localeCompare(a.start));
+        } else {
+          throw new Error(`must have SQL or coordinator access`);
+        }
+
+        const data = SegmentTimeline.processRawData(intervals);
+        const stackedData = SegmentTimeline.calculateStackedData(data, datasources);
+        const singleDatasourceData = SegmentTimeline.calculateSingleDatasourceData(
+          data,
+          datasources,
+        );
+        return { data, datasources, stackedData, singleDatasourceData };
+      },
+      onStateChange: ({ data, loading, error }) => {
+        this.setState({
+          data: data ? data.data : undefined,
+          datasources: data ? data.datasources : [],
+          stackedData: data ? data.stackedData : undefined,
+          singleDatasourceData: data ? data.singleDatasourceData : undefined,
+          loading,
+          error,
+        });
+      },
+    });
   }
 
   componentDidMount(): void {
     const { capabilities } = this.props;
-    const { startDate, endDate } = this.state;
+    const { dateRange } = this.state;
 
-    this.dataQueryManager.runQuery({ capabilities, startDate, endDate });
+    if (isNonNullRange(dateRange)) {
+      this.dataQueryManager.runQuery({ capabilities, dateRange });
+    }
   }
 
   componentWillUnmount(): void {
@@ -378,10 +390,9 @@ ORDER BY "start" DESC`;
       activeDataType,
       activeDatasource,
       singleDatasourceData,
-      startDate,
-      endDate,
+      dateRange,
     } = this.state;
-    if (!data || !Object.keys(data).length) return;
+    if (!data || !Object.keys(data).length || !isNonNullRange(dateRange)) return;
     const activeData = data[activeDataType];
 
     let yDomain: number[] = [
@@ -404,7 +415,7 @@ ORDER BY "start" DESC`;
     }
 
     const xScale: AxisScale<Date> = scaleUtc()
-      .domain([startDate, endDate])
+      .domain(dateRange)
       .range([0, chartWidth - this.chartMargin.left - this.chartMargin.right]);
 
     const yScale: AxisScale<number> = scaleLinear()
@@ -447,8 +458,7 @@ ORDER BY "start" DESC`;
       yScale,
       data,
       activeDatasource,
-      startDate,
-      endDate,
+      dateRange,
     } = this.state;
 
     if (loading) {
@@ -478,7 +488,7 @@ ORDER BY "start" DESC`;
     if (data![activeDataType].length === 0) {
       return (
         <div>
-          <span className="no-data-text">No data available for the time span selected</span>
+          <span className="no-data-text">There are no segments for the selected interval</span>
         </div>
       );
     }
@@ -497,7 +507,7 @@ ORDER BY "start" DESC`;
     }
 
     const millisecondsPerDay = 24 * 60 * 60 * 1000;
-    const barCounts = (endDate.getTime() - startDate.getTime()) / millisecondsPerDay;
+    const barCounts = (dateRange[1].getTime() - dateRange[0].getTime()) / millisecondsPerDay;
     const barWidth = Math.max(
       0,
       (chartWidth - this.chartMargin.left - this.chartMargin.right) / barCounts,
@@ -526,53 +536,105 @@ ORDER BY "start" DESC`;
 
   render() {
     const { capabilities } = this.props;
-    const { datasources, activeDataType, activeDatasource, startDate, endDate } = this.state;
+    const { datasources, activeDataType, activeDatasource, dateRange, selectedDateRange } =
+      this.state;
+
+    const filterDatasource: ItemPredicate<string> = (query, val, _index, exactMatch) => {
+      const normalizedTitle = val.toLowerCase();
+      const normalizedQuery = query.toLowerCase();
+
+      if (exactMatch) {
+        return normalizedTitle === normalizedQuery;
+      } else {
+        return ` ${normalizedTitle}`.includes(normalizedQuery);
+      }
+    };
+
+    const datasourceRenderer: ItemRenderer<string> = (
+      val,
+      { handleClick, handleFocus, modifiers },
+    ) => {
+      if (!modifiers.matchesPredicate) {
+        return null;
+      }
+      return (
+        <MenuItem
+          key={val}
+          disabled={modifiers.disabled}
+          active={modifiers.active}
+          onClick={handleClick}
+          onFocus={handleFocus}
+          roleStructure="listoption"
+          text={val}
+        />
+      );
+    };
+
+    const DatasourceSelect: React.FC = () => {
+      const showAll = 'Show all';
+      const handleItemSelected = (selectedItem: string) => {
+        this.setState({
+          activeDatasource: selectedItem === showAll ? null : selectedItem,
+        });
+      };
+      const datasourcesWzAll = [showAll].concat(datasources);
+      return (
+        <Select<string>
+          items={datasourcesWzAll}
+          onItemSelect={handleItemSelected}
+          itemRenderer={datasourceRenderer}
+          noResults={<MenuItem disabled text="No results." roleStructure="listoption" />}
+          itemPredicate={filterDatasource}
+          fill
+        >
+          <Button
+            text={activeDatasource === null ? showAll : activeDatasource}
+            fill
+            rightIcon={IconNames.CARET_DOWN}
+          />
+        </Select>
+      );
+    };
 
     return (
-      <div className="segment-timeline app-view">
+      <div className="segment-timeline">
         {this.renderStackedBarChart()}
         <div className="side-control">
-          <FormGroup>
-            <RadioGroup
-              onChange={(e: any) => this.setState({ activeDataType: e.target.value })}
-              selectedValue={activeDataType}
-            >
-              <Radio label="Total size" value="sizeData" />
-              <Radio label="Segment count" value="countData" />
-            </RadioGroup>
-          </FormGroup>
-
-          <FormGroup label="Datasource">
-            <HTMLSelect
-              onChange={(e: any) =>
-                this.setState({
-                  activeDatasource: e.target.value === 'all' ? null : e.target.value,
-                })
+          <FormGroup label="Show">
+            <SegmentedControl
+              value={activeDataType}
+              onValueChange={activeDataType =>
+                this.setState({ activeDataType: activeDataType as ActiveDataType })
               }
-              value={activeDatasource == null ? 'all' : activeDatasource}
+              options={[
+                {
+                  label: 'Total size',
+                  value: 'sizeData',
+                },
+                {
+                  label: 'Segment count',
+                  value: 'countData',
+                },
+              ]}
               fill
-            >
-              <option value="all">Show all</option>
-              {datasources.map(d => {
-                return (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                );
-              })}
-            </HTMLSelect>
+            />
           </FormGroup>
-
           <FormGroup label="Interval">
-            <DateRangeSelector
-              startDate={startDate}
-              endDate={endDate}
-              onChange={(startDate, endDate) => {
-                this.setState({ startDate, endDate }, () => {
-                  this.dataQueryManager.runQuery({ capabilities, startDate, endDate });
+            <DateRangeInput3
+              value={utcToLocalDateRange(selectedDateRange || dateRange)}
+              onChange={newDateRange => {
+                const newUtcDateRange = localToUtcDateRange(newDateRange);
+                if (!isNonNullRange(newUtcDateRange)) return;
+                this.setState({ dateRange: newUtcDateRange, selectedDateRange: undefined }, () => {
+                  this.dataQueryManager.runQuery({ capabilities, dateRange: newUtcDateRange });
                 });
               }}
+              fill
+              locale={enUS}
             />
+          </FormGroup>
+          <FormGroup label="Datasource">
+            <DatasourceSelect />
           </FormGroup>
         </div>
       </div>

@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
@@ -159,13 +160,11 @@ public class SegmentSchemaBackFillQueue
       return;
     }
 
-    Stopwatch stopwatch = Stopwatch.createStarted();
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    log.info("Backfilling segment schema. Queue size is [%s].", queue.size());
 
-    log.info("Backfilling segment schema. Queue size is [%s]", queue.size());
-
-    int itemsToProcess = Math.min(MAX_BATCH_SIZE, queue.size());
-
-    Map<String, List<SegmentSchemaMetadataPlus>> polled = new HashMap<>();
+    final int itemsToProcess = Math.min(MAX_BATCH_SIZE, queue.size());
+    final Map<String, List<SegmentSchemaMetadataPlus>> polled = new HashMap<>();
     for (int i = 0; i < itemsToProcess; i++) {
       SegmentSchemaMetadataPlus item = queue.poll();
       if (item != null) {
@@ -175,21 +174,28 @@ public class SegmentSchemaBackFillQueue
 
     for (Map.Entry<String, List<SegmentSchemaMetadataPlus>> entry : polled.entrySet()) {
       try {
-        segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(entry.getKey(), entry.getValue(), CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+        segmentSchemaManager.persistSchemaAndUpdateSegmentsTable(
+            entry.getKey(),
+            entry.getValue(),
+            CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+        );
         // Mark the segments as published in the cache.
         for (SegmentSchemaMetadataPlus plus : entry.getValue()) {
-          segmentSchemaCache.markInMetadataQueryResultPublished(plus.getSegmentId());
+          segmentSchemaCache.markMetadataQueryResultPublished(plus.getSegmentId());
         }
         emitter.emit(
             ServiceMetricEvent.builder()
-                                       .setDimension("dataSource", entry.getKey())
-                                       .setMetric("metadatacache/backfill/count", entry.getValue().size())
+                              .setDimension(DruidMetrics.DATASOURCE, entry.getKey())
+                              .setMetric("metadatacache/backfill/count", entry.getValue().size())
         );
       }
       catch (Exception e) {
-        log.error(e, "Exception persisting schema and updating segments table for datasource [%s].", entry.getKey());
+        log.error(e, "Exception persisting schema and updating segments table for datasource[%s].", entry.getKey());
       }
     }
-    emitter.emit(ServiceMetricEvent.builder().setMetric("metadatacache/backfill/time", stopwatch.millisElapsed()));
+    emitter.emit(
+        ServiceMetricEvent.builder()
+                          .setMetric("metadatacache/backfill/time", stopwatch.millisElapsed())
+    );
   }
 }

@@ -564,6 +564,10 @@ Returns the rank for a row within a window without gaps. For example, if two row
 
 Returns the result of integer division of `x` by `y`.
 
+:::info
+The `DIV` function is not implemented in Druid versions 30.0.0 or earlier. Consider using [`SAFE_DIVIDE`](./sql-functions.md#safe_divide) instead. 
+:::
+
 ## DS_CDF
 
 `DS_CDF(expr, splitPoint0, splitPoint1, ...)`
@@ -855,6 +859,13 @@ Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
 
 Returns an array of field names from `expr` at the specified `path`.
 
+## JSON_MERGE
+
+**Function type:** [JSON](sql-json-functions.md)
+
+`JSON_MERGE(expr1, expr2[, expr3 ...])`
+Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. Returning always a `COMPLEX<json>` type.
+
 ## JSON_OBJECT
 
 **Function type:** [JSON](sql-json-functions.md)
@@ -1142,6 +1153,14 @@ Adds the expression to the beginning of the array.
 **Function type:** [Multi-value string](sql-multivalue-string-functions.md)
 
 Returns a slice of the array from the zero-based start and end indexes.
+
+## MV_TO_ARRAY
+
+`MV_TO_ARRAY(str)`
+
+**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
+
+Converts a multi-value string from a `VARCHAR` to a `VARCHAR ARRAY`.
 
 ## MV_TO_STRING
 
@@ -1674,4 +1693,3 @@ Calculates the sample variance of a set of values.
 **Function type:** [Aggregation](sql-aggregations.md)
 
 Alias for [`VAR_SAMP`](#var_samp).
-

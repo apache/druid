@@ -28,12 +28,12 @@ import io.delta.kernel.Scan;
 import io.delta.kernel.ScanBuilder;
 import io.delta.kernel.Snapshot;
 import io.delta.kernel.Table;
-import io.delta.kernel.TableNotFoundException;
-import io.delta.kernel.client.TableClient;
 import io.delta.kernel.data.ColumnarBatch;
 import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
-import io.delta.kernel.defaults.client.DefaultTableClient;
+import io.delta.kernel.defaults.engine.DefaultEngine;
+import io.delta.kernel.engine.Engine;
+import io.delta.kernel.exceptions.TableNotFoundException;
 import io.delta.kernel.expressions.Predicate;
 import io.delta.kernel.internal.InternalScanFileUtils;
 import io.delta.kernel.internal.data.ScanStateRow;
@@ -66,9 +66,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Input source to ingest data from a Delta Lake. This input source reads the latest snapshot from a Delta table
- * specified by {@code tablePath} parameter. If {@code filter} is specified, it's used at the Kernel level
- * for data pruning. The filtering behavior is as follows:
+ * Input source to ingest data from a Delta Lake. This input source reads the given {@code snapshotVersion} from a Delta
+ * table specified by {@code tablePath} parameter, or the latest snapshot if it's not specified.
+ * If {@code filter} is specified, it's used at the Kernel level for data pruning. The filtering behavior is as follows:
  * <ul>
  * <li> When a filter is applied on a partitioned table using the partitioning columns, the filtering is guaranteed. </li>
  * <li> When a filter is applied on non-partitioned columns, the filtering is best-effort as the Delta
@@ -78,7 +78,6 @@ import java.util.stream.Stream;
  * <p>
  * We leverage the Delta Kernel APIs to interact with a Delta table. The Kernel API abstracts away the
  * complexities of the Delta protocol itself.
- * Note: currently, the Kernel table API only supports reading from the latest snapshot.
  * </p>
  */
 public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
@@ -96,11 +95,15 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   @Nullable
   private final DeltaFilter filter;
 
+  @JsonProperty
+  private final Long snapshotVersion;
+
   @JsonCreator
   public DeltaInputSource(
       @JsonProperty("tablePath") final String tablePath,
       @JsonProperty("deltaSplit") @Nullable final DeltaSplit deltaSplit,
-      @JsonProperty("filter") @Nullable final DeltaFilter filter
+      @JsonProperty("filter") @Nullable final DeltaFilter filter,
+      @JsonProperty("snapshotVersion") @Nullable final Long snapshotVersion
   )
   {
     if (tablePath == null) {
@@ -109,6 +112,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     this.tablePath = tablePath;
     this.deltaSplit = deltaSplit;
     this.filter = filter;
+    this.snapshotVersion = snapshotVersion;
   }
 
   @Override
@@ -120,7 +124,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
 
   /**
    * Instantiates a {@link DeltaInputSourceReader} to read the Delta table rows. If a {@link DeltaSplit} is supplied,
-   * the Delta files and schema are obtained from it to instantiate the reader. Otherwise, a Delta table client is
+   * the Delta files and schema are obtained from it to instantiate the reader. Otherwise, the Delta engine is
    * instantiated with the supplied configuration to read the table.
    *
    * @param inputRowSchema     schema for {@link org.apache.druid.data.input.InputRow}
@@ -134,40 +138,41 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       File temporaryDirectory
   )
   {
-    final TableClient tableClient = createTableClient();
+    final Engine engine = createDeltaEngine();
     try {
       final List<CloseableIterator<FilteredColumnarBatch>> scanFileDataIters = new ArrayList<>();
 
       if (deltaSplit != null) {
-        final Row scanState = deserialize(tableClient, deltaSplit.getStateRow());
+        final Row scanState = deserialize(engine, deltaSplit.getStateRow());
         final StructType physicalReadSchema =
-            ScanStateRow.getPhysicalDataReadSchema(tableClient, scanState);
+            ScanStateRow.getPhysicalDataReadSchema(engine, scanState);
 
         for (String file : deltaSplit.getFiles()) {
-          final Row scanFile = deserialize(tableClient, file);
+          final Row scanFile = deserialize(engine, file);
           scanFileDataIters.add(
-              getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema, Optional.empty())
+              getTransformedDataIterator(engine, scanState, scanFile, physicalReadSchema, Optional.empty())
           );
         }
       } else {
-        final Table table = Table.forPath(tableClient, tablePath);
-        final Snapshot latestSnapshot = table.getLatestSnapshot(tableClient);
-        final StructType fullSnapshotSchema = latestSnapshot.getSchema(tableClient);
+        final Table table = Table.forPath(engine, tablePath);
+        final Snapshot snapshot = getSnapshotForTable(table, engine);
+
+        final StructType fullSnapshotSchema = snapshot.getSchema(engine);
         final StructType prunedSchema = pruneSchema(
             fullSnapshotSchema,
             inputRowSchema.getColumnsFilter()
         );
 
-        final ScanBuilder scanBuilder = latestSnapshot.getScanBuilder(tableClient);
+        final ScanBuilder scanBuilder = snapshot.getScanBuilder(engine);
         if (filter != null) {
-          scanBuilder.withFilter(tableClient, filter.getFilterPredicate(fullSnapshotSchema));
+          scanBuilder.withFilter(engine, filter.getFilterPredicate(fullSnapshotSchema));
         }
-        final Scan scan = scanBuilder.withReadSchema(tableClient, prunedSchema).build();
-        final CloseableIterator<FilteredColumnarBatch> scanFilesIter = scan.getScanFiles(tableClient);
-        final Row scanState = scan.getScanState(tableClient);
+        final Scan scan = scanBuilder.withReadSchema(engine, prunedSchema).build();
+        final CloseableIterator<FilteredColumnarBatch> scanFilesIter = scan.getScanFiles(engine);
+        final Row scanState = scan.getScanState(engine);
 
         final StructType physicalReadSchema =
-            ScanStateRow.getPhysicalDataReadSchema(tableClient, scanState);
+            ScanStateRow.getPhysicalDataReadSchema(engine, scanState);
 
         while (scanFilesIter.hasNext()) {
           final FilteredColumnarBatch scanFileBatch = scanFilesIter.next();
@@ -176,7 +181,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
           while (scanFileRows.hasNext()) {
             final Row scanFile = scanFileRows.next();
             scanFileDataIters.add(
-                getTransformedDataIterator(tableClient, scanState, scanFile, physicalReadSchema, scan.getRemainingFilter())
+                getTransformedDataIterator(engine, scanState, scanFile, physicalReadSchema, scan.getRemainingFilter())
             );
           }
         }
@@ -203,26 +208,26 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
       return Stream.of(new InputSplit<>(deltaSplit));
     }
 
-    final TableClient tableClient = createTableClient();
-    final Snapshot latestSnapshot;
+    final Engine engine = createDeltaEngine();
+    final Snapshot snapshot;
+    final Table table = Table.forPath(engine, tablePath);
     try {
-      final Table table = Table.forPath(tableClient, tablePath);
-      latestSnapshot = table.getLatestSnapshot(tableClient);
+      snapshot = getSnapshotForTable(table, engine);
     }
     catch (TableNotFoundException e) {
       throw InvalidInput.exception(e, "tablePath[%s] not found.", tablePath);
     }
-    final StructType fullSnapshotSchema = latestSnapshot.getSchema(tableClient);
+    final StructType fullSnapshotSchema = snapshot.getSchema(engine);
 
-    final ScanBuilder scanBuilder = latestSnapshot.getScanBuilder(tableClient);
+    final ScanBuilder scanBuilder = snapshot.getScanBuilder(engine);
     if (filter != null) {
-      scanBuilder.withFilter(tableClient, filter.getFilterPredicate(fullSnapshotSchema));
+      scanBuilder.withFilter(engine, filter.getFilterPredicate(fullSnapshotSchema));
     }
-    final Scan scan = scanBuilder.withReadSchema(tableClient, fullSnapshotSchema).build();
+    final Scan scan = scanBuilder.withReadSchema(engine, fullSnapshotSchema).build();
     // scan files iterator for the current snapshot
-    final CloseableIterator<FilteredColumnarBatch> scanFilesIterator = scan.getScanFiles(tableClient);
+    final CloseableIterator<FilteredColumnarBatch> scanFilesIterator = scan.getScanFiles(engine);
 
-    final Row scanState = scan.getScanState(tableClient);
+    final Row scanState = scan.getScanState(engine);
     final String scanStateStr = RowSerde.serializeRowToJson(scanState);
 
     Iterator<DeltaSplit> deltaSplitIterator = Iterators.transform(
@@ -252,13 +257,14 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
     return new DeltaInputSource(
         tablePath,
         split.get(),
-        filter
+        filter,
+        snapshotVersion
     );
   }
 
-  private Row deserialize(TableClient tableClient, String row)
+  private Row deserialize(Engine engine, String row)
   {
-    return RowSerde.deserializeRowFromJson(tableClient, row);
+    return RowSerde.deserializeRowFromJson(engine, row);
   }
 
   /**
@@ -285,17 +291,17 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   }
 
   /**
-   * @return a table client where the client is initialized with {@link Configuration} class that uses the class's
+   * @return a Delta engine initialized with {@link Configuration} class that uses the class's
    * class loader instead of the context classloader. The latter by default doesn't know about the extension classes,
-   * so the table client cannot load runtime classes resulting in {@link ClassNotFoundException}.
+   * so the Delta engine cannot load runtime classes resulting in {@link ClassNotFoundException}.
    */
-  private TableClient createTableClient()
+  private Engine createDeltaEngine()
   {
     final ClassLoader currCtxClassloader = Thread.currentThread().getContextClassLoader();
     try {
       Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
       final Configuration conf = new Configuration();
-      return DefaultTableClient.create(conf);
+      return DefaultEngine.create(conf);
     }
     finally {
       Thread.currentThread().setContextClassLoader(currCtxClassloader);
@@ -308,7 +314,7 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
    * SingleThreadedTableReader.java</a>.
    */
   private CloseableIterator<FilteredColumnarBatch> getTransformedDataIterator(
-      final TableClient tableClient,
+      final Engine engine,
       final Row scanState,
       final Row scanFile,
       final StructType physicalReadSchema,
@@ -317,18 +323,27 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   {
     final FileStatus fileStatus = InternalScanFileUtils.getAddFileStatus(scanFile);
 
-    final CloseableIterator<ColumnarBatch> physicalDataIter = tableClient.getParquetHandler().readParquetFiles(
+    final CloseableIterator<ColumnarBatch> physicalDataIter = engine.getParquetHandler().readParquetFiles(
         Utils.singletonCloseableIterator(fileStatus),
         physicalReadSchema,
         optionalPredicate
     );
 
     return Scan.transformPhysicalData(
-        tableClient,
+        engine,
         scanState,
         scanFile,
         physicalDataIter
     );
+  }
+
+  private Snapshot getSnapshotForTable(final Table table, final Engine engine)
+  {
+    if (snapshotVersion != null) {
+      return table.getSnapshotAsOfVersion(engine, snapshotVersion);
+    } else {
+      return table.getLatestSnapshot(engine);
+    }
   }
 
   @VisibleForTesting
@@ -341,5 +356,11 @@ public class DeltaInputSource implements SplittableInputSource<DeltaSplit>
   DeltaFilter getFilter()
   {
     return filter;
+  }
+
+  @VisibleForTesting
+  Long getSnapshotVersion()
+  {
+    return snapshotVersion;
   }
 }
