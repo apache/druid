@@ -32,7 +32,10 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestTestHelper;
 import org.apache.druid.query.scan.ScanQuery;
@@ -44,11 +47,15 @@ import org.apache.druid.segment.column.RowSignature;
 import org.junit.Assert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 
 public class UnionQueryQueryToolChestTest
 {
@@ -140,6 +147,11 @@ public class UnionQueryQueryToolChestTest
       }
       return resultsRows;
     }
+
+    private boolean matchQuery(ScanQuery query)
+    {
+      return query != null && this.query.equals(query);
+    }
   }
 
   @Test
@@ -217,6 +229,52 @@ public class UnionQueryQueryToolChestTest
             .addAll(scan2.results)
             .build(),
         rows
+    );
+  }
+
+  @Test
+  void testQueryRunner()
+  {
+    RowSignature sig = RowSignature.builder()
+        .add("a", ColumnType.STRING)
+        .add("b", ColumnType.STRING)
+        .build();
+
+    TestScanQuery scan1 = new TestScanQuery("foo", sig)
+        .appendRow("a", "a")
+        .appendRow("a", "b");
+    TestScanQuery scan2 = new TestScanQuery("bar", sig)
+        .appendRow("x", "x")
+        .appendRow("x", "y");
+
+    UnionQuery query = new UnionQuery(
+        ImmutableList.of(
+            scan1.query,
+            scan2.query
+        )
+    );
+
+    QuerySegmentWalker walker = Mockito.mock(QuerySegmentWalker.class);
+    Mockito.when(walker.getQueryRunnerForIntervals(argThat(scan1::matchQuery), any()))
+        .thenReturn((q, ctx) -> (Sequence) scan1.makeResultSequence());
+    Mockito.when(walker.getQueryRunnerForIntervals(argThat(scan2::matchQuery), any()))
+        .thenReturn((q, ctx) -> (Sequence) scan2.makeResultSequence());
+
+    QueryRunner<UnionResult> unionRunner = toolChest.makeQueryRunner(query, walker);
+    Sequence<UnionResult> results = unionRunner.run(QueryPlus.wrap(query), null);
+
+    QueryToolChestTestHelper.assertArrayResultsEquals(
+        ImmutableList.<Object[]>builder()
+            .addAll(scan1.results)
+            .addAll(scan2.results)
+            .build(),
+        toolChest.resultsAsArrays(
+            query,
+            Sequences.of(
+                new UnionResult(scan1.makeResultSequence()),
+                new UnionResult(scan2.makeResultSequence())
+            )
+        )
     );
   }
 }
