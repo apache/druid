@@ -42,6 +42,7 @@ public class AzureOutputConfig
   @JsonProperty
   private final String prefix;
 
+  @Nullable
   @JsonProperty
   private final File tempDir;
 
@@ -64,7 +65,7 @@ public class AzureOutputConfig
   public AzureOutputConfig(
       @JsonProperty(value = "container", required = true) String container,
       @JsonProperty(value = "prefix", required = true) String prefix,
-      @JsonProperty(value = "tempDir", required = true) File tempDir,
+      @JsonProperty(value = "tempDir") @Nullable File tempDir,
       @JsonProperty(value = "chunkSize") @Nullable HumanReadableBytes chunkSize,
       @JsonProperty(value = "maxRetry") @Nullable Integer maxRetry
   )
@@ -77,7 +78,6 @@ public class AzureOutputConfig
     validateFields();
   }
 
-
   public String getContainer()
   {
     return container;
@@ -88,6 +88,7 @@ public class AzureOutputConfig
     return prefix;
   }
 
+  @Nullable
   public File getTempDir()
   {
     return tempDir;
@@ -103,6 +104,11 @@ public class AzureOutputConfig
     return maxRetry;
   }
 
+  public AzureOutputConfig withTempDir(File tempDir)
+  {
+    return new AzureOutputConfig(container, prefix, tempDir, chunkSize, maxRetry);
+  }
+
   private void validateFields()
   {
     if (chunkSize.getBytes() < AZURE_MIN_CHUNK_SIZE_BYTES || chunkSize.getBytes() > AZURE_MAX_CHUNK_SIZE_BYTES) {
@@ -112,6 +118,13 @@ public class AzureOutputConfig
           AZURE_MIN_CHUNK_SIZE_BYTES,
           AZURE_MAX_CHUNK_SIZE_BYTES
       );
+    }
+  }
+
+  public void validateTempDirectory()
+  {
+    if (tempDir == null) {
+      throw DruidException.defensive("The runtime property `druid.msq.intermediate.storage.tempDir` must be configured.");
     }
 
     try {
