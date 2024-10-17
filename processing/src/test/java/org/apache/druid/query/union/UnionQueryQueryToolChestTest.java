@@ -20,16 +20,20 @@
 package org.apache.druid.query.union;
 
 import com.google.common.collect.ImmutableList;
-
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.MapQueryToolChestWarehouse;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestTestHelper;
+import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQueryQueryToolChestTest;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.column.ColumnType;
@@ -42,15 +46,26 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class UnionQueryQueryToolChestTest2
+public class UnionQueryQueryToolChestTest
 {
-  private static final String TIMESTAMP_RESULT_FIELD_NAME = "d0";
-  private static final UnionQueryQueryToolChest TOOL_CHEST = new UnionQueryQueryToolChest();
 
   @BeforeAll
   public static void setUpClass()
   {
     NullHandling.initializeForTests();
+  }
+
+  final UnionQueryQueryToolChest toolChest;
+
+  public UnionQueryQueryToolChestTest()
+  {
+    toolChest = new UnionQueryQueryToolChest();
+    QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(
+        ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
+            .put(ScanQuery.class, ScanQueryQueryToolChestTest.makeTestScanQueryToolChest())
+            .build()
+    );
+    toolChest.setWarehouse(warehouse);
   }
 
   @Test
@@ -77,7 +92,7 @@ public class UnionQueryQueryToolChestTest2
 
     Assert.assertEquals(
         sig,
-        TOOL_CHEST.resultArraySignature(query)
+        toolChest.resultArraySignature(query)
     );
   }
 
@@ -91,6 +106,7 @@ public class UnionQueryQueryToolChestTest2
       this.query = Druids.newScanQueryBuilder()
           .dataSource("bar")
           .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000"))))
+          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
           .columns(signature.getColumnNames())
           .columnTypes(signature.getColumnTypes())
           .build();
@@ -148,7 +164,7 @@ public class UnionQueryQueryToolChestTest2
             .addAll(scan1.results)
             .addAll(scan2.results)
             .build(),
-        TOOL_CHEST.resultsAsArrays(
+        toolChest.resultsAsArrays(
             query,
             Sequences.of(
                 new RealUnionResult(scan1.makeResultSequence()),
