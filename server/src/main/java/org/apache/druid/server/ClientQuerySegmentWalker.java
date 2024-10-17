@@ -178,11 +178,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
-
-    if (toolChest instanceof QueryExecutor) {
-      return ((QueryExecutor<T>) toolChest).makeQueryRunner(query, this);
+    final QueryExecutor<T> queryExecutor = conglomerate.getQueryExecutor(query);
+    if (queryExecutor != null) {
+      return queryExecutor.makeQueryRunner(query, this);
     }
+
+    final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
 
     // transform TableDataSource to GlobalTableDataSource when eligible
     // before further transformation to potentially inline

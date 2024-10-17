@@ -28,7 +28,5 @@ public interface QueryRunnerFactoryConglomerate extends QueryToolChestWarehouse
   @Override
   <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query);
 
-
-  // FIXME: add method here
-
+  <T, QueryType extends Query<T>> QueryExecutor<T> getQueryExecutor(QueryType query);
 }

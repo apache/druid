@@ -60,7 +60,8 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
     return factory.getToolchest();
   }
 
-  public <T, QueryType extends Query<T>> QueryExecutor<QueryType> getQueryExecutor(QueryType query)
+  @Override
+  public <T, QueryType extends Query<T>> QueryExecutor<T> getQueryExecutor(QueryType query)
   {
     QueryRunnerFactory<T, QueryType> factory = findFactory(query);
     if (factory == null) {
@@ -69,9 +70,8 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
     }
     QueryToolChest<T, QueryType> toolchest = factory.getToolchest();
     if (toolchest instanceof QueryExecutor) {
-      return (QueryExecutor<QueryType>) toolchest;
+      return (QueryExecutor<T>) toolchest;
     }
     return null;
   }
-
 }
