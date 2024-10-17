@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.batch;
+package org.apache.druid.indexing.scheduledbatch;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.TaskState;

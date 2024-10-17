@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.batch;
+package org.apache.druid.indexing.scheduledbatch;
 
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;

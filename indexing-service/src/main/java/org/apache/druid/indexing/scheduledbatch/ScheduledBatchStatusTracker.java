@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.batch;
+package org.apache.druid.indexing.scheduledbatch;
 
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.sql.http.SqlTaskStatus;

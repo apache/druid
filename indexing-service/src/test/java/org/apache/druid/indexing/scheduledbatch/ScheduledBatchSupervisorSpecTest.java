@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.indexing.batch;
+package org.apache.druid.indexing.scheduledbatch;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
