@@ -22,7 +22,6 @@ package org.apache.druid.frame.allocation;
 import org.junit.Assert;
 import org.junit.Test;
 
-
 public class AppendableMemoryTest
 {
 
