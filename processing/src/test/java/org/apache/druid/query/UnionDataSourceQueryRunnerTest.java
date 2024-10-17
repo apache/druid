@@ -30,7 +30,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class UnionQueryRunnerTest
+public class UnionDataSourceQueryRunnerTest
 {
   @Test
   public void testUnionQueryRunner()
