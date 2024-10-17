@@ -39,6 +39,7 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.groupby.SupportRowSignature;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumn;
@@ -48,6 +49,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Builder;
+import org.apache.druid.segment.column.RowSignature.Finalization;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -57,7 +59,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-public class ScanQuery extends BaseQuery<ScanResultValue>
+public class ScanQuery extends BaseQuery<ScanResultValue> implements SupportRowSignature
 {
   public enum ResultFormat
   {
@@ -611,6 +613,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
   }
 
+  @Override
+  public RowSignature getResultRowSignature(Finalization finalization)
+  {
+    return getRowSignature();
+  }
 
   /**
    * Returns the RowSignature.
