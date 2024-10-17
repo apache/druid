@@ -52,9 +52,9 @@ import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryExecutor;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.ResultLevelCachingQueryRunner;
 import org.apache.druid.query.ResultSerializationMode;
@@ -104,7 +104,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private final ServiceEmitter emitter;
   private final QuerySegmentWalker clusterClient;
   private final QuerySegmentWalker localClient;
-  private final QueryToolChestWarehouse warehouse;
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final JoinableFactory joinableFactory;
   private final RetryQueryRunnerConfig retryConfig;
   private final ObjectMapper objectMapper;
@@ -118,7 +118,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       ServiceEmitter emitter,
       QuerySegmentWalker clusterClient,
       QuerySegmentWalker localClient,
-      QueryToolChestWarehouse warehouse,
+      QueryRunnerFactoryConglomerate conglomerate,
       JoinableFactory joinableFactory,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
@@ -132,7 +132,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     this.emitter = emitter;
     this.clusterClient = clusterClient;
     this.localClient = localClient;
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.joinableFactory = joinableFactory;
     this.retryConfig = retryConfig;
     this.objectMapper = objectMapper;
@@ -148,7 +148,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       ServiceEmitter emitter,
       CachingClusteredClient clusterClient,
       LocalQuerySegmentWalker localClient,
-      QueryToolChestWarehouse warehouse,
+      QueryRunnerFactoryConglomerate conglomerate,
       JoinableFactory joinableFactory,
       RetryQueryRunnerConfig retryConfig,
       ObjectMapper objectMapper,
@@ -163,7 +163,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         emitter,
         clusterClient,
         (QuerySegmentWalker) localClient,
-        warehouse,
+        conglomerate,
         joinableFactory,
         retryConfig,
         objectMapper,
@@ -178,7 +178,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
 
     if (toolChest instanceof QueryExecutor) {
       return ((QueryExecutor<T>) toolChest).makeQueryRunner(query, this);
@@ -296,7 +296,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T> boolean canRunQueryUsingLocalWalker(Query<T> query)
   {
     final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
-    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
 
     // 1) Must be based on a concrete datasource that is not a table.
     // 2) Must be based on globally available data (so we have a copy here on the Broker).
@@ -312,7 +312,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingClusterWalker(Query<T> query)
   {
-    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
     if (toolChest instanceof QueryExecutor) {
       // these type of queries should be able to run
       return true;
@@ -381,7 +381,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     if (dataSource instanceof QueryDataSource) {
       // This datasource is a subquery.
       final Query subQuery = ((QueryDataSource) dataSource).getQuery();
-      final QueryToolChest toolChest = warehouse.getToolChest(subQuery);
+      final QueryToolChest toolChest = conglomerate.getToolChest(subQuery);
 
       if (toolChestIfOutermost != null && toolChestIfOutermost.canPerformSubquery(subQuery)) {
         // Strip outer queries that are handleable by the toolchest, and inline subqueries that may be underneath
@@ -449,7 +449,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                                                .toString()
               )
           );
-          QueryToolChest subQueryToolChest = warehouse.getToolChest(subQuery);
+          QueryToolChest subQueryToolChest = conglomerate.getToolChest(subQuery);
 
           final QueryRunner subQueryRunner;
           if (subQueryToolChest instanceof QueryExecutor) {
@@ -466,7 +466,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         return toInlineDataSource(
             subQuery,
             queryResults,
-            warehouse.getToolChest(subQuery),
+            conglomerate.getToolChest(subQuery),
             subqueryRowLimitAccumulator,
             subqueryMemoryLimitAccumulator,
             cannotMaterializeToFrames,
@@ -541,7 +541,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> QueryRunner<T> decorateClusterRunner(Query<T> query, QueryRunner<T> baseClusterRunner)
   {
-    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
 
     final SetAndVerifyContextQueryRunner<T> baseRunner = new SetAndVerifyContextQueryRunner<>(
         serverConfig,
