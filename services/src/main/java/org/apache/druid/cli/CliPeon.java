@@ -25,10 +25,8 @@ import com.github.rvesse.airline.annotations.Command;
 import com.github.rvesse.airline.annotations.Option;
 import com.github.rvesse.airline.annotations.restrictions.Required;
 import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -141,6 +139,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -303,19 +302,20 @@ public class CliPeon extends GuiceRunnable
           @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
           public Supplier<Map<String, Object>> heartbeatDimensions(Task task)
           {
-            ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-            builder.put(DruidMetrics.TASK_ID, task.getId());
-            builder.put(DruidMetrics.DATASOURCE, task.getDataSource());
-            builder.put(DruidMetrics.TASK_TYPE, task.getType());
-            builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
+            Map<String, Object> map = new HashMap<>();
+            map.put(DruidMetrics.TASK_ID, task.getId());
+            map.put(DruidMetrics.DATASOURCE, task.getDataSource());
+            map.put(DruidMetrics.TASK_TYPE, task.getType());
+            map.put(DruidMetrics.GROUP_ID, task.getGroupId());
             Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
             if (tags != null && !tags.isEmpty()) {
-              builder.put(DruidMetrics.TAGS, tags);
+              map.put(DruidMetrics.TAGS, tags);
             }
 
-            return Suppliers.ofInstance(
-                builder.build()
-            );
+            return () -> {
+              map.put(DruidMetrics.STATUS, task.status());
+              return map;
+            };
           }
 
           @Provides
