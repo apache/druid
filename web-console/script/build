@@ -19,10 +19,10 @@
 set -e
 
 echo "Adding SQL docs..."
-./script/create-sql-docs.js
+./script/create-sql-docs.mjs
 
 # add BUNDLE_ANALYZER_PLUGIN='TRUE' here to enable webpack-bundle-analyzer as a plugin
 echo "Webpacking everything..."
-NODE_ENV=production ./node_modules/.bin/webpack -c webpack.config.js --mode=production
+NODE_ENV=production ./node_modules/.bin/webpack -c webpack.config.mjs --mode=production
 
 echo "Done! Have a good day."
