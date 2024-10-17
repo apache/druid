@@ -1380,7 +1380,7 @@
             <plugin>
                 <groupId>org.openrewrite.maven</groupId>
                 <artifactId>rewrite-maven-plugin</artifactId>
-                <version>5.31.0</version>
+                <version>5.42.0</version>
                 <configuration>
                     <activeRecipes>
                         <recipe>org.apache.druid.RewriteRules</recipe>
@@ -1399,12 +1399,17 @@
                     <dependency>
                         <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-testing-frameworks</artifactId>
-                        <version>2.6.0</version>
+                        <version>2.20.0</version>
                     </dependency>
                     <dependency>
                         <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-apache</artifactId>
-                        <version>1.2.2</version>
+                        <version>1.8.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-jackson</artifactId>
+                        <version>0.6.0</version>
                     </dependency>
                 </dependencies>
             </plugin>
