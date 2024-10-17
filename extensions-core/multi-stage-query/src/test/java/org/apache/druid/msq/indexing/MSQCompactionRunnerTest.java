@@ -282,7 +282,8 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap(),
         new ClientCompactionTaskGranularitySpec(null, null, false),
-        null, AGGREGATORS.toArray(new AggregatorFactory[0])
+        null,
+        AGGREGATORS.toArray(new AggregatorFactory[0])
     );
     Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
@@ -345,7 +346,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertTrue(CompactionTask.needMultiValuedDimensions(compactionTask));
+    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
   }
 
   @Test
@@ -359,7 +360,7 @@ public class MSQCompactionRunnerTest
         null,
         null
     );
-    Assert.assertTrue(CompactionTask.needMultiValuedDimensions(compactionTask));
+    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
   }
 
   @Test
@@ -373,7 +374,7 @@ public class MSQCompactionRunnerTest
         ImmutableList.of(STRING_DIMENSION),
         null
     );
-    Assert.assertTrue(CompactionTask.needMultiValuedDimensions(compactionTask));
+    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
   }
 
   @Test
@@ -387,7 +388,7 @@ public class MSQCompactionRunnerTest
         ImmutableList.of(STRING_DIMENSION),
         null
     );
-    Assert.assertTrue(CompactionTask.needMultiValuedDimensions(compactionTask));
+    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
   }
 
   @Test
@@ -400,7 +401,8 @@ public class MSQCompactionRunnerTest
         dimFilter,
         Collections.emptyMap(),
         null,
-        null, null
+        null,
+        null
     );
 
     DataSchema dataSchema =

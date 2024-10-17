@@ -455,62 +455,41 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   /**
-   * Returns true even when granularitySpec is not known since rollup is then decided based on segment analysis.
-   */
-  static boolean isPossiblyRollup(@Nullable ClientCompactionTaskGranularitySpec granularitySpec)
-  {
-    return !(granularitySpec != null && Boolean.FALSE.equals(granularitySpec.isRollup()));
-  }
-
-  static boolean isRangePartitioned(@Nullable TuningConfig tuningConfig)
-  {
-    return tuningConfig != null && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
-  }
-
-  static boolean isRollupOnStringDimension(
-      DimensionsSpec dimensionsSpec,
-      @Nullable ClientCompactionTaskGranularitySpec granularitySpec
-  )
-  {
-    if (!isPossiblyRollup(granularitySpec)) {
-      return false;
-    }
-    return dimensionsSpec.getDimensions()
-                         .stream()
-                         .anyMatch(dim -> ColumnType.STRING.equals(dim.getColumnType()));
-  }
-
-  static boolean isPartitionedOnStringDimension(DimensionsSpec dimensionsSpec, @Nullable TuningConfig tuningConfig)
-  {
-    if (!isRangePartitioned(tuningConfig)) {
-      return false;
-    }
-    DimensionRangePartitionsSpec partitionsSpec = (DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec();
-    return dimensionsSpec.getDimensions()
-                         .stream()
-                         .anyMatch(
-                             dim -> ColumnType.STRING.equals(dim.getColumnType())
-                                    && partitionsSpec.getPartitionDimensions().contains(dim.getName())
-                         );
-  }
-
-  /**
    * In MSQ, MVDs need conversion to array for rollup, and they aren't supported as partition columns. This check
    * therefore is particularly for MSQCompactionRunner; it returns true when dimension types aren't known
    * from CompactionTask spec, or if either rollup or partition dimensions contain any string-type column.
    */
-  public static boolean needMultiValuedDimensions(CompactionTask compactionTask)
+  public boolean needMultiValuedDimensions()
   {
-    if (compactionTask.getCompactionRunner() instanceof NativeCompactionRunner) {
+    if (compactionRunner instanceof NativeCompactionRunner) {
       return false;
     }
-    DimensionsSpec dimensionsSpec = compactionTask.getDimensionsSpec();
+    // Rollup can be true even when granularitySpec is not known since rollup is then decided based on segment analysis
+    boolean isPossiblyRollup = !(granularitySpec != null && Boolean.FALSE.equals(granularitySpec.isRollup()));
+    boolean isRangePartitioned = tuningConfig != null
+                                 && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
+
     if (dimensionsSpec == null || dimensionsSpec.getDimensions().isEmpty()) {
-      return (isPossiblyRollup(compactionTask.getGranularitySpec())
-              || isRangePartitioned(compactionTask.getTuningConfig()));
+      return (isPossiblyRollup || isRangePartitioned);
     } else {
-      return isRollupOnStringDimension(dimensionsSpec, compactionTask.getGranularitySpec())
-             || isPartitionedOnStringDimension(dimensionsSpec, compactionTask.getTuningConfig());
+      boolean isRollupOnStringDimension = isPossiblyRollup &&
+                                          dimensionsSpec.getDimensions()
+                                                        .stream()
+                                                        .anyMatch(dim -> ColumnType.STRING.equals(
+                                                            dim.getColumnType()));
+
+      boolean isPartitionedOnStringDimension =
+          isRangePartitioned &&
+          dimensionsSpec.getDimensions()
+                        .stream()
+                        .anyMatch(
+                            dim -> ColumnType.STRING.equals(
+                                dim.getColumnType())
+                                   && ((DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec())
+                                       .getPartitionDimensions()
+                                       .contains(dim.getName())
+                        );
+      return isRollupOnStringDimension || isPartitionedOnStringDimension;
     }
   }
 
@@ -528,7 +507,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         metricsSpec,
         granularitySpec,
         getMetricBuilder(),
-        needMultiValuedDimensions(this)
+        this.needMultiValuedDimensions()
     );
 
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
@@ -856,18 +835,20 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.needMultiValuedDimensions = needMultiValuedDimensions;
     }
 
-    private boolean shouldFetchSegments()
+    /**
+     * Segments are downloaded even when just needMultiValuedDimensions=true since MSQ switches to dynamic partitioning
+     * on finding any 'range' partition dimension to be multivalued at runtime, which ends up in a mismatch between
+     * the compaction config and the actual segments (lastCompactionState), leading to repeated compactions.
+     */
+    private boolean shouldDownloadSegments()
     {
-      // Segments are downloaded even when just needMultiValuedDimensions=true since MSQ switches to dynamic
-      // partitioning on finding any 'range' partition dimension to be multi-valued at runtime, which ends up in a
-      // mismatch between the compaction config and the actual segments (lastCompactionState), leading to
-      // repeated compactions.
+
       return needRollup || needQueryGranularity || needDimensionsSpec || needMetricsSpec || needMultiValuedDimensions;
     }
 
     public void fetchAndProcessIfNeeded()
     {
-      if (!shouldFetchSegments()) {
+      if (!shouldDownloadSegments()) {
         // Nothing to do; short-circuit and don't fetch segments.
         return;
       }
