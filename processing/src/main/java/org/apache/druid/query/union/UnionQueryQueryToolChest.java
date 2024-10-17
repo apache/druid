@@ -47,7 +47,6 @@ import java.util.Optional;
 public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, UnionQuery>
     implements QueryExecutor<RealUnionResult>
 {
-
   @Override
   public QueryRunner<RealUnionResult> makeQueryRunner(Query<RealUnionResult> query,
       QueryToolChestWarehouse warehouse, QuerySegmentWalker clientQuerySegmentWalker)
@@ -79,9 +78,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
   @Override
   public TypeReference<RealUnionResult> getResultTypeReference()
   {
-    return new TypeReference<RealUnionResult>()
-    {
-    };
+    return null;
   }
 
   @Override
@@ -93,30 +90,6 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
       }
     }
     throw DruidException.defensive("None of the subqueries support row signature");
-  }
-
-  abstract static class UnionSequenceMaker<T>
-  {
-    public Optional<Sequence<T>> transform(
-        UnionQuery query,
-        Sequence<RealUnionResult> resultSequence)
-    {
-      List<RealUnionResult> results = resultSequence.toList();
-      List<Sequence<T>> resultSeqs = new ArrayList<>();
-
-      for (int i = 0; i < results.size(); i++) {
-        Query<?> q = query.queries.get(i);
-        RealUnionResult realUnionResult = results.get(i);
-        Optional<Sequence<T>> queryResults = transformResults(q, realUnionResult.getResults());
-        if (!queryResults.isPresent()) {
-          return Optional.empty();
-        }
-        resultSeqs.add(queryResults.get());
-      }
-      return Optional.of(Sequences.concat(resultSeqs));
-    }
-
-    public abstract Optional<Sequence<T>> transformResults(Query<?> q, Sequence<Object> results);
   }
 
   @Override
@@ -153,5 +126,29 @@ public class UnionQueryQueryToolChest extends QueryToolChest<RealUnionResult, Un
         return toolChest.resultsAsFrames(query, results, memoryAllocatorFactory, useNestedForUnknownTypes);
       }
     }.transform(query, resultSequence);
+  }
+
+  abstract static class UnionSequenceMaker<T>
+  {
+    public Optional<Sequence<T>> transform(
+        UnionQuery query,
+        Sequence<RealUnionResult> resultSequence)
+    {
+      List<RealUnionResult> results = resultSequence.toList();
+      List<Sequence<T>> resultSeqs = new ArrayList<>();
+
+      for (int i = 0; i < results.size(); i++) {
+        Query<?> q = query.queries.get(i);
+        RealUnionResult realUnionResult = results.get(i);
+        Optional<Sequence<T>> queryResults = transformResults(q, realUnionResult.getResults());
+        if (!queryResults.isPresent()) {
+          return Optional.empty();
+        }
+        resultSeqs.add(queryResults.get());
+      }
+      return Optional.of(Sequences.concat(resultSeqs));
+    }
+
+    public abstract Optional<Sequence<T>> transformResults(Query<?> q, Sequence<Object> results);
   }
 }
