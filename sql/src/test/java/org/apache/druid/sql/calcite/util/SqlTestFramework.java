@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -46,12 +47,13 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.union.UnionQuery;
-import org.apache.druid.query.union.UnionQueryRunnerFactory;
+import org.apache.druid.query.union.UnionQueryQueryToolChest;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -89,7 +91,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -213,6 +215,8 @@ public class SqlTestFramework
     QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate, Closer resourceCloser);
 
     Map<? extends Class<? extends Query>, ? extends QueryRunnerFactory> makeRunnerFactories(Injector injector);
+
+    Map<? extends Class<? extends Query>, ? extends QueryToolChest> makeToolChests(Injector injector);
   }
 
   public abstract static class QueryComponentSupplierDelegate implements QueryComponentSupplier
@@ -301,6 +305,12 @@ public class SqlTestFramework
     public Map<? extends Class<? extends Query>, ? extends QueryRunnerFactory> makeRunnerFactories(Injector injector)
     {
       return delegate.makeRunnerFactories(injector);
+    }
+
+    @Override
+    public Map<? extends Class<? extends Query>, ? extends QueryToolChest> makeToolChests(Injector injector)
+    {
+      return delegate.makeToolChests(injector);
     }
   }
 
@@ -435,10 +445,15 @@ public class SqlTestFramework
     @Override
     public Map<? extends Class<? extends Query>, ? extends QueryRunnerFactory> makeRunnerFactories(Injector injector)
     {
-      Map map = new HashMap<>();
-      UnionQueryRunnerFactory factory = injector.getInstance(UnionQueryRunnerFactory.class);
-      map.put(UnionQuery.class, factory);
-      return map;
+      return Collections.emptyMap();
+    }
+
+    @Override
+    public Map<? extends Class<? extends Query>, ? extends QueryToolChest> makeToolChests(Injector injector)
+    {
+      return ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
+          .put(UnionQuery.class, injector.getInstance(UnionQueryQueryToolChest.class))
+          .build();
     }
   }
 
@@ -688,6 +703,7 @@ public class SqlTestFramework
 
 
     @Provides
+    @LazySingleton
     public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> makeRunnerFactories(
         ObjectMapper jsonMapper,
         final TestBufferPool testBufferPool,
@@ -707,7 +723,17 @@ public class SqlTestFramework
           )
           .putAll(componentSupplier.makeRunnerFactories(injector))
           .build();
+    }
 
+    @Provides
+    @LazySingleton
+    public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryToolChest> makeToolchests(
+        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> factories)
+    {
+      return ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
+          .putAll(Maps.transformValues(factories, f -> f.getToolchest()))
+          .putAll(componentSupplier.makeToolChests(injector))
+          .build();
     }
 
     /*
@@ -738,9 +764,10 @@ public class SqlTestFramework
     @Provides
     @LazySingleton
     public QueryRunnerFactoryConglomerate conglomerate(
-        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> factories)
+        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> factories,
+        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryToolChest> toolchests)
     {
-      QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(factories);
+      QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(factories, toolchests);
       return componentSupplier.wrapConglomerate(conglomerate, resourceCloser);
     }
 
