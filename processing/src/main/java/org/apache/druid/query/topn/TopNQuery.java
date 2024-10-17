@@ -35,6 +35,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.groupby.SupportRowSignature;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
@@ -49,7 +50,7 @@ import java.util.Set;
 
 /**
  */
-public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
+public class TopNQuery extends BaseQuery<Result<TopNResultValue>> implements SupportRowSignature
 {
   public static final String TOPN = "topN";
 
@@ -185,7 +186,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     topNMetricSpec.initTopNAlgorithmSelector(selector);
   }
 
-  public RowSignature getResultSignature(final RowSignature.Finalization finalization)
+  @Override
+  public RowSignature getResultRowSignature(final RowSignature.Finalization finalization)
   {
     return RowSignature.builder()
                        .addTimeColumn()
