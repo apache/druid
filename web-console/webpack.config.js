@@ -117,6 +117,9 @@ module.exports = env => {
               loader: 'ts-loader',
               options: {
                 errorFormatter: friendlyErrorFormatter,
+                compilerOptions: {
+                  jsx: mode === 'development' ? 'react-jsxdev' : 'react-jsx',
+                },
               },
             },
           ],

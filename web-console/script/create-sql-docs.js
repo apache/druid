@@ -86,7 +86,7 @@ const readDoc = async () => {
 
   const functionDocs = initialFunctionDocs;
   const dataTypeDocs = {};
-  for (let line of lines) {
+  for (const line of lines) {
     const functionMatch = line.match(/^\|\s*`(\w+)\(([^|]*)\)`\s*\|([^|]+)\|(?:([^|]+)\|)?$/);
     if (functionMatch) {
       const functionName = functionMatch[1];
@@ -107,7 +107,7 @@ const readDoc = async () => {
   const numFunction = Object.keys(functionDocs).length;
   if (!(MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS <= numFunction)) {
     throw new Error(
-      `Did not find enough function entries did the structure of '${readfile}' change? (found ${numFunction} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS})`,
+      `Did not find enough function entries did the file structure change? (found ${numFunction} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_FUNCTIONS})`,
     );
   }
 
@@ -115,7 +115,7 @@ const readDoc = async () => {
   const numDataTypes = Object.keys(dataTypeDocs).length;
   if (!(MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES <= numDataTypes)) {
     throw new Error(
-      `Did not find enough data type entries did the structure of '${readfile}' change? (found ${numDataTypes} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES})`,
+      `Did not find enough data type entries did the file structure change? (found ${numDataTypes} but expected at least ${MINIMUM_EXPECTED_NUMBER_OF_DATA_TYPES})`,
     );
   }
 

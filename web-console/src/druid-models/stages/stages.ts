@@ -34,6 +34,7 @@ export type InOut = 'in' | 'out';
 function simpleSum(xs: number[]) {
   return sum(xs);
 }
+
 function aggregateThings<T>(
   things: T[],
   aggregators: {

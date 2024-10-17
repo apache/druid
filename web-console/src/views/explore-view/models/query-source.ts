@@ -203,7 +203,7 @@ export class QuerySource {
     const sourceExpression = selectExpressionsArray.find(ex => ex.getOutputName() === outputName);
     if (sourceExpression) return sourceExpression;
 
-    const m = outputName.match(/^EXPR\$(\d+)$/);
+    const m = /^EXPR\$(\d+)$/.exec(outputName);
     if (m) {
       const index = parseInt(m[1], 10);
       if (selectExpressionsArray[index]) return selectExpressionsArray[index];

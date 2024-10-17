@@ -77,6 +77,7 @@ export function useHashAndLocalStorageHybridState<T>(
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return [state, setValue];

@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import './column-value.scss';
 
 export interface ColumnValueProps {
