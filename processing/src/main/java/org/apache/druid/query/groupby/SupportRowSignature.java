@@ -21,6 +21,9 @@ package org.apache.druid.query.groupby;
 
 import org.apache.druid.segment.column.RowSignature;
 
+/**
+ * Interface for queries that support a row signature.
+ */
 public interface SupportRowSignature
 {
   RowSignature getResultRowSignature(RowSignature.Finalization finalization);
