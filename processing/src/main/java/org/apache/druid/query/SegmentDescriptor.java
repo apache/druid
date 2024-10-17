@@ -21,16 +21,25 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.Interval;
 
 /**
- * The difference between this class and {@link org.apache.druid.timeline.SegmentId} is that this class is a "light"
- * version of {@link org.apache.druid.timeline.SegmentId}, that only contains the interval, version, and partition
- * number. It's used where the data source, another essential part of {@link org.apache.druid.timeline.SegmentId}
- * is determined by the context (e. g. in org.apache.druid.client.CachingClusteredClient, where SegmentDescriptor is
- * used when Brokers tell data servers which segments to include for a particular query) and where having lean JSON
- * representations is important, because it's actively transferred between Druid nodes. It's also for this reason that
- * the JSON field names of SegmentDescriptor are abbreviated.
+ * This class is a pointer to a time range of a segment to be queried. The three pieces of this class (interval,
+ * version, and partition number) are typically passed to {@link VersionedIntervalTimeline#findChunk} to retrieve an
+ * actual queryable object.
+ *
+ * Like {@link SegmentId}, instances of this class reference a segment. However, there are two major differences:
+ *
+ * 1) The {@link #getInterval()} of this class may be narrower than the {@link SegmentId#getInterval()} of the segment
+ * being referenced. This happens when this class is being used to reference a specific time range of a segment, rather
+ * than the entire segment.
+ *
+ * 2) The {@link SegmentId#getDataSource()} field is absent from this class. Whenever this class is used, the datasource
+ * is known from some out-of-band information, such as the {@link DataSource} object of a query.
+ *
+ * Omitting the datasource, and abbreviating JSON field names, helps limit the serialized size of this class.
  */
 public class SegmentDescriptor
 {

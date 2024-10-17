@@ -21,6 +21,7 @@ package org.apache.druid.segment.incremental;
 
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.column.ColumnFormat;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -30,6 +31,22 @@ import java.util.List;
  */
 public interface IncrementalIndexRowSelector extends ColumnInspector
 {
+  /**
+   * Returns list of {@link IncrementalIndex.DimensionDesc} for the row selector
+   */
+  List<IncrementalIndex.DimensionDesc> getDimensions();
+
+  /**
+   * Returns list of dimension names for the row selector, optionally including the time column. If time is included,
+   * the order columns appear in this list will match {@link #getOrdering()}
+   */
+  List<String> getDimensionNames(boolean includeTime);
+
+  /**
+   * Returns list of all metric column names for the row selector
+   */
+  List<String> getMetricNames();
+
   /**
    * get {@link IncrementalIndex.DimensionDesc} for the specified column, if available, which provides access to things
    * like {@link org.apache.druid.segment.DimensionIndexer} and {@link org.apache.druid.segment.DimensionHandler} as
@@ -46,14 +63,30 @@ public interface IncrementalIndexRowSelector extends ColumnInspector
   IncrementalIndex.MetricDesc getMetric(String s);
 
   /**
+   * Get {@link ColumnFormat} for a dimension, metrics, or time column, or null if the column does not exist
+   */
+  @Nullable
+  ColumnFormat getColumnFormat(String columnName);
+
+  /**
    * Ordering for the data in the facts table
    */
   List<OrderBy> getOrdering();
 
   /**
+   * Position of the time column in {@link #getOrdering()}
+   */
+  int getTimePosition();
+
+  /**
    * Are there any {@link IncrementalIndexRow} stored in the {@link FactsHolder}?
    */
   boolean isEmpty();
+
+  /**
+   * Number of rows in {@link FactsHolder}
+   */
+  int numRows();
 
   /**
    * Get the {@link FactsHolder} containing all of the {@link IncrementalIndexRow} backing this selector

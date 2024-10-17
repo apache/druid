@@ -59,6 +59,7 @@ public class ControllerHolder
   private final ControllerContext controllerContext;
   private final String sqlQueryId;
   private final String sql;
+  private final String controllerHost;
   private final AuthenticationResult authenticationResult;
   private final DateTime startTime;
   private final AtomicReference<State> state = new AtomicReference<>(State.ACCEPTED);
@@ -68,6 +69,7 @@ public class ControllerHolder
       final ControllerContext controllerContext,
       final String sqlQueryId,
       final String sql,
+      final String controllerHost,
       final AuthenticationResult authenticationResult,
       final DateTime startTime
   )
@@ -76,6 +78,7 @@ public class ControllerHolder
     this.controllerContext = controllerContext;
     this.sqlQueryId = Preconditions.checkNotNull(sqlQueryId, "sqlQueryId");
     this.sql = sql;
+    this.controllerHost = controllerHost;
     this.authenticationResult = authenticationResult;
     this.startTime = Preconditions.checkNotNull(startTime, "startTime");
   }
@@ -93,6 +96,11 @@ public class ControllerHolder
   public String getSql()
   {
     return sql;
+  }
+
+  public String getControllerHost()
+  {
+    return controllerHost;
   }
 
   public AuthenticationResult getAuthenticationResult()

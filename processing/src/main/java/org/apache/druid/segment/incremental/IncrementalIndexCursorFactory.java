@@ -20,6 +20,8 @@
 package org.apache.druid.segment.incremental;
 
 import com.google.common.collect.Iterables;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
@@ -28,8 +30,10 @@ import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.projections.QueryableProjection;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public class IncrementalIndexCursorFactory implements CursorFactory
 {
@@ -77,7 +81,35 @@ public class IncrementalIndexCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return new IncrementalIndexCursorHolder(index, spec);
+    final QueryableProjection<IncrementalIndexRowSelector> projection = index.getProjection(spec);
+    if (projection == null) {
+      return new IncrementalIndexCursorHolder(index, spec);
+    } else {
+      // currently we only have aggregated projections, so isPreAggregated is always true
+      return new IncrementalIndexCursorHolder(
+          projection.getRowSelector(),
+          projection.getCursorBuildSpec()
+      )
+      {
+        @Override
+        public ColumnSelectorFactory makeSelectorFactory(CursorBuildSpec buildSpec, IncrementalIndexRowHolder currEntry)
+        {
+          return projection.wrapColumnSelectorFactory(super.makeSelectorFactory(buildSpec, currEntry));
+        }
+
+        @Override
+        public boolean isPreAggregated()
+        {
+          return true;
+        }
+
+        @Override
+        public List<AggregatorFactory> getAggregatorsForPreAggregated()
+        {
+          return projection.getCursorBuildSpec().getAggregators();
+        }
+      };
+    }
   }
 
   @Override

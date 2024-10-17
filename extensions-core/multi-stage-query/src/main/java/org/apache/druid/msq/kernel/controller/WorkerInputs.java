@@ -24,7 +24,9 @@ import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
@@ -45,9 +47,9 @@ import java.util.stream.IntStream;
 public class WorkerInputs
 {
   // Worker number -> input number -> input slice.
-  private final Int2ObjectMap<List<InputSlice>> assignmentsMap;
+  private final Int2ObjectSortedMap<List<InputSlice>> assignmentsMap;
 
-  private WorkerInputs(final Int2ObjectMap<List<InputSlice>> assignmentsMap)
+  private WorkerInputs(final Int2ObjectSortedMap<List<InputSlice>> assignmentsMap)
   {
     this.assignmentsMap = assignmentsMap;
   }
@@ -64,7 +66,7 @@ public class WorkerInputs
   )
   {
     // Split each inputSpec and assign to workers. This list maps worker number -> input number -> input slice.
-    final Int2ObjectMap<List<InputSlice>> assignmentsMap = new Int2ObjectAVLTreeMap<>();
+    final Int2ObjectSortedMap<List<InputSlice>> assignmentsMap = new Int2ObjectAVLTreeMap<>();
     final int numInputs = stageDef.getInputSpecs().size();
 
     if (numInputs == 0) {
@@ -117,8 +119,8 @@ public class WorkerInputs
 
     final ObjectIterator<Int2ObjectMap.Entry<List<InputSlice>>> assignmentsIterator =
         assignmentsMap.int2ObjectEntrySet().iterator();
+    final IntSortedSet nilWorkers = new IntAVLTreeSet();
 
-    boolean first = true;
     while (assignmentsIterator.hasNext()) {
       final Int2ObjectMap.Entry<List<InputSlice>> entry = assignmentsIterator.next();
       final List<InputSlice> slices = entry.getValue();
@@ -130,20 +132,29 @@ public class WorkerInputs
         }
       }
 
-      // Eliminate workers that have no non-nil, non-broadcast inputs. (Except the first one, because if all input
-      // is nil, *some* worker has to do *something*.)
-      final boolean hasNonNilNonBroadcastInput =
+      // Identify nil workers (workers with no non-broadcast inputs).
+      final boolean isNilWorker =
           IntStream.range(0, numInputs)
-                   .anyMatch(i ->
-                                 !slices.get(i).equals(NilInputSlice.INSTANCE)  // Non-nil
-                                 && !stageDef.getBroadcastInputNumbers().contains(i) // Non-broadcast
+                   .allMatch(i ->
+                                 slices.get(i).equals(NilInputSlice.INSTANCE)  // Nil regular input
+                                 || stageDef.getBroadcastInputNumbers().contains(i) // Broadcast
                    );
 
-      if (!first && !hasNonNilNonBroadcastInput) {
-        assignmentsIterator.remove();
+      if (isNilWorker) {
+        nilWorkers.add(entry.getIntKey());
       }
+    }
 
-      first = false;
+    if (nilWorkers.size() == assignmentsMap.size()) {
+      // All workers have nil regular inputs. Remove all workers exept the first (*some* worker has to do *something*).
+      final List<InputSlice> firstSlices = assignmentsMap.get(nilWorkers.firstInt());
+      assignmentsMap.clear();
+      assignmentsMap.put(nilWorkers.firstInt(), firstSlices);
+    } else {
+      // Remove all nil workers.
+      for (final int nilWorker : nilWorkers) {
+        assignmentsMap.remove(nilWorker);
+      }
     }
 
     return new WorkerInputs(assignmentsMap);
@@ -154,7 +165,7 @@ public class WorkerInputs
     return Preconditions.checkNotNull(assignmentsMap.get(workerNumber), "worker [%s]", workerNumber);
   }
 
-  public IntSet workers()
+  public IntSortedSet workers()
   {
     return assignmentsMap.keySet();
   }

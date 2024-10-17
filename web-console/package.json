@@ -49,11 +49,11 @@
     "start": "webpack serve"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=20"
   },
   "volta": {
-    "node": "16.17.0",
-    "npm": "8.15.0"
+    "node": "20.9.0",
+    "npm": "10.9.0"
   },
   "browserslist": [
     "> 1% and supports es6",
@@ -148,7 +148,6 @@
     "eslint-plugin-simple-import-sort": "^7.0.0",
     "eslint-plugin-unicorn": "^38.0.0",
     "eslint-plugin-unused-imports": "^2.0.0",
-    "file-loader": "^6.2.0",
     "fs-extra": "^8.1.0",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^29.7.0",

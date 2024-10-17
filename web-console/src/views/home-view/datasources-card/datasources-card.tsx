@@ -31,14 +31,20 @@ export interface DatasourcesCardProps {
 
 export const DatasourcesCard = React.memo(function DatasourcesCard(props: DatasourcesCardProps) {
   const [datasourceCountState] = useQueryManager<Capabilities, number>({
-    processQuery: async capabilities => {
+    initQuery: props.capabilities,
+    processQuery: async (capabilities, cancelToken) => {
       let datasources: any[];
       if (capabilities.hasSql()) {
-        datasources = await queryDruidSql({
-          query: `SELECT datasource FROM sys.segments GROUP BY 1`,
-        });
+        datasources = await queryDruidSql(
+          {
+            query: `SELECT datasource FROM sys.segments GROUP BY 1`,
+          },
+          cancelToken,
+        );
       } else if (capabilities.hasCoordinatorAccess()) {
-        const datasourcesResp = await Api.instance.get('/druid/coordinator/v1/datasources');
+        const datasourcesResp = await Api.instance.get('/druid/coordinator/v1/datasources', {
+          cancelToken,
+        });
         datasources = datasourcesResp.data;
       } else {
         throw new Error(`must have SQL or coordinator access`);
@@ -46,7 +52,6 @@ export const DatasourcesCard = React.memo(function DatasourcesCard(props: Dataso
 
       return datasources.length;
     },
-    initQuery: props.capabilities,
   });
 
   return (

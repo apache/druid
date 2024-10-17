@@ -141,6 +141,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMinTimeQueryWithTimeAndExpressionFilters()
   {
+    cannotVectorizeUnlessFallback();
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     testQuery(

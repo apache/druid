@@ -31,7 +31,9 @@ import org.apache.druid.query.operator.window.WindowOperatorFactory;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "naivePartition", value = NaivePartitioningOperatorFactory.class),
+    @JsonSubTypes.Type(name = "glueingPartition", value = GlueingPartitioningOperatorFactory.class),
     @JsonSubTypes.Type(name = "naiveSort", value = NaiveSortOperatorFactory.class),
+    @JsonSubTypes.Type(name = "partitionSort", value = PartitionSortOperatorFactory.class),
     @JsonSubTypes.Type(name = "window", value = WindowOperatorFactory.class),
     @JsonSubTypes.Type(name = "scan", value = ScanOperatorFactory.class),
 })

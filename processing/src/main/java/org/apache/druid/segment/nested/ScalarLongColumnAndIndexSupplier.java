@@ -90,7 +90,8 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
-      ColumnConfig columnConfig
+      ColumnConfig columnConfig,
+      @Nullable ScalarLongColumnAndIndexSupplier parent
   )
   {
     final byte version = bb.get();
@@ -102,11 +103,6 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
 
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
 
-        final ByteBuffer longDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME
-        );
         final ByteBuffer longsValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
@@ -123,12 +119,23 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             columnBuilder.getFileMapper()
         );
 
-        final Supplier<FixedIndexed<Long>> longDictionarySupplier = FixedIndexed.read(
-            longDictionaryBuffer,
-            ColumnType.LONG.getStrategy(),
-            byteOrder,
-            Long.BYTES
-        );
+
+        final Supplier<FixedIndexed<Long>> longDictionarySupplier;
+        if (parent != null) {
+          longDictionarySupplier = parent.longDictionarySupplier;
+        } else {
+          final ByteBuffer longDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME
+          );
+          longDictionarySupplier = FixedIndexed.read(
+              longDictionaryBuffer,
+              ColumnType.LONG.getStrategy(),
+              byteOrder,
+              Long.BYTES
+          );
+        }
 
         final Supplier<ColumnarLongs> longs = CompressedColumnarLongsSupplier.fromByteBuffer(
             longsValueColumn,

@@ -27,12 +27,12 @@ import { AutoForm, ExternalLink } from '../../components';
 import { IndexSpecDialog } from '../../dialogs/index-spec-dialog/index-spec-dialog';
 import { getLink } from '../../links';
 import {
-  allowKeys,
   deepDelete,
   deepGet,
   deepMove,
   deepSet,
   deepSetIfUnset,
+  deleteKeys,
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
@@ -79,6 +79,11 @@ export interface IngestionSpec {
   readonly spec: IngestionSpecInner;
   readonly context?: { useConcurrentLocks?: boolean };
   readonly suspended?: boolean;
+
+  // Added by the server
+  readonly id?: string;
+  readonly groupId?: string;
+  readonly resource?: any;
 }
 
 export interface IngestionSpecInner {
@@ -490,11 +495,37 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
 }
 
 /**
- * Make sure that any extra junk in the spec other than 'type', 'spec', and 'context' is removed
+ * This function cleans a spec that was returned by the server so that it can be re-opened in the data loader to  be
+ * submitted again.
  * @param spec - the spec to clean
  */
 export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
-  return allowKeys(spec, ['type', 'spec', 'context', 'suspended']) as IngestionSpec;
+  const specSpec = spec.spec;
+
+  // For backwards compatible reasons the contents of `spec` (`dataSchema`, `ioConfig`, and `tuningConfig`)
+  // can be duplicated at the top level. This function removes these duplicates (if needed) so that there is no confusion
+  // which is the authoritative copy.
+  if (
+    specSpec &&
+    specSpec.dataSchema &&
+    specSpec.ioConfig &&
+    specSpec.tuningConfig &&
+    (spec as any).dataSchema &&
+    (spec as any).ioConfig &&
+    (spec as any).tuningConfig
+  ) {
+    spec = deleteKeys(spec, ['dataSchema', 'ioConfig', 'tuningConfig'] as any[]);
+  }
+
+  // Sometimes the dataSource can (redundantly) make it to the top level for some reason - delete it
+  if (
+    typeof specSpec?.dataSchema?.dataSource === 'string' &&
+    typeof (spec as any).dataSource === 'string'
+  ) {
+    spec = deleteKeys(spec, ['dataSource'] as any[]);
+  }
+
+  return deleteKeys(spec, ['id', 'groupId', 'resource']);
 }
 
 export function upgradeSpec(spec: any, yolo = false): Partial<IngestionSpec> {

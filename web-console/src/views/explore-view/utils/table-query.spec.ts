@@ -73,7 +73,7 @@ describe('table-query', () => {
         FROM (
           SELECT *
           FROM "kttm"
-        )
+        ) AS "t"
         WHERE (TIME_SHIFT(TIMESTAMP '2019-08-26 00:00:00', 'PT1H', -12) <= "__time" AND "__time" < TIMESTAMP '2019-08-26 00:00:00') AND "country" = 'United States'
         ORDER BY "Count" DESC
         LIMIT 200
@@ -111,7 +111,7 @@ describe('table-query', () => {
         FROM (
           SELECT *
           FROM "kttm"
-        )
+        ) AS "t"
         WHERE (TIME_SHIFT(TIMESTAMP '2019-08-26 00:00:00', 'PT1H', -12) <= "__time" AND "__time" < TIMESTAMP '2019-08-26 00:00:00') AND "country" = 'United States'
         GROUP BY 1
         ORDER BY "Count" DESC

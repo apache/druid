@@ -322,6 +322,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testApproxCountDistinctHllSketch()
   {
+    cannotVectorizeUnlessFallback();
     final String sql = "SELECT\n"
                        + "  SUM(cnt),\n"
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(dim2),\n" // uppercase
@@ -1138,6 +1139,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testHllEstimateAsVirtualColumnWithGroupByOrderBy()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT"
         + " HLL_SKETCH_ESTIMATE(hllsketch_dim1), count(*)"
