@@ -147,7 +147,7 @@ public class Sequences
     }
   }
 
-  public static <T> Sequence<T> of(T ...values)
+  public static <T> Sequence<T> of(T... values)
   {
     return simple(Arrays.asList(values));
   }
