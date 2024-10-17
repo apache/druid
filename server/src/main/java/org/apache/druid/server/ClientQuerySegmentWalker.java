@@ -313,11 +313,11 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingClusterWalker(Query<T> query)
   {
-    final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
-    if (toolChest instanceof QueryExecutor) {
+    if (conglomerate.getQueryExecutor(query) != null) {
       // these type of queries should be able to run
       return true;
     }
+    final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
     final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
 
     // 1) Must be based on a concrete table (the only shape the Druid cluster can handle).
@@ -450,12 +450,11 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                                                .toString()
               )
           );
-          QueryToolChest subQueryToolChest = conglomerate.getToolChest(subQuery);
 
+          QueryExecutor<Object> subQueryExecutor = conglomerate.getQueryExecutor(subQuery);
           final QueryRunner subQueryRunner;
-          if (subQueryToolChest instanceof QueryExecutor) {
-            subQueryRunner = ((QueryExecutor) subQueryToolChest)
-                .makeQueryRunner(subQueryWithSerialization, this);
+          if (subQueryExecutor != null) {
+            subQueryRunner = subQueryExecutor.makeQueryRunner(subQueryWithSerialization, this);
           } else {
             subQueryRunner = subQueryWithSerialization.getRunner(this);
           }

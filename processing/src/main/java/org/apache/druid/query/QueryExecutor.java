@@ -21,8 +21,6 @@ package org.apache.druid.query;
 
 /**
  * Executes the query by utilizing the given walker.
- *
- * {@link QueryToolChest}-s implementing this interface will get control over the execution of the query.
  */
 public interface QueryExecutor<T>
 {
