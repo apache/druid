@@ -158,11 +158,16 @@ public class AppendableMemory implements Closeable
 
     releaseLastBlockIfEmpty();
 
-    if (bytes > allocator.available()) {
-      return false;
-    }
-
     final int idx = currentBlockNumber();
+
+    // The request cannot be satisfied by the available bytes in the allocator
+    if (bytes > allocator.available()) {
+      // Check if the last allocated block has enough memory to satisfy the request
+      if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {
+        // The request cannot be satisfied by the allocator and the last allocated block. Return false
+        return false;
+      }
+    }
 
     if (idx < 0 || bytes + limits.getInt(idx) > blockHolders.get(idx).get().getCapacity()) {
       // Allocation needed.
