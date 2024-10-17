@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
@@ -109,11 +110,15 @@ public class MSQCompactionRunnerTest
   );
   private static final Map<Interval, DataSchema> INTERVAL_DATASCHEMAS = ImmutableMap.of(
       COMPACTION_INTERVAL,
-      new DataSchema.Builder()
-          .withDataSource(DATA_SOURCE)
-          .withTimestamp(new TimestampSpec(TIMESTAMP_COLUMN, null, null))
-          .withDimensions(new DimensionsSpec(DIMENSIONS))
-          .build()
+      new CombinedDataSchema(
+          DATA_SOURCE,
+          new TimestampSpec(TIMESTAMP_COLUMN, null, null),
+          new DimensionsSpec(DIMENSIONS),
+          null,
+          null,
+          null,
+          ImmutableSet.of(MV_STRING_DIMENSION.getName())
+      )
   );
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
   private static final AggregatorFactory AGG1 = new CountAggregatorFactory("agg_0");
@@ -139,6 +144,7 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap(),
         null,
+        null,
         null
     );
     CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(
@@ -160,6 +166,7 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap(),
         null,
+        null,
         null
     );
     Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
@@ -172,6 +179,7 @@ public class MSQCompactionRunnerTest
         new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
         null,
         Collections.emptyMap(),
+        null,
         null,
         null
     );
@@ -187,6 +195,7 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap(),
         null,
+        null,
         null
     );
 
@@ -201,12 +210,36 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
+  public void testMultiValuedDimensionInRangePartitionsSpecIsInvalid()
+  {
+    List<String> mvStringPartitionDimension = Collections.singletonList(MV_STRING_DIMENSION.getName());
+    CompactionTask compactionTask = createCompactionTask(
+        new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, mvStringPartitionDimension, false),
+        null,
+        Collections.emptyMap(),
+        null,
+        null,
+        null
+    );
+
+    CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask,
+                                                                                                     INTERVAL_DATASCHEMAS
+    );
+    Assert.assertFalse(validationResult.isValid());
+    Assert.assertEquals(
+        "MSQ: Multi-valued string partition dimension[mv_string_dim] not supported with 'range' partition spec",
+        validationResult.getReason()
+    );
+  }
+
+  @Test
   public void testMaxTotalRowsIsInvalid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new DynamicPartitionsSpec(3, 3L),
         null,
         Collections.emptyMap(),
+        null,
         null,
         null
     );
@@ -221,6 +254,7 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap(),
         null,
+        null,
         null
     );
     Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
@@ -234,6 +268,7 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap(),
         new ClientCompactionTaskGranularitySpec(null, Granularities.ALL, null),
+        null,
         null
     );
     Assert.assertTrue(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
@@ -247,26 +282,28 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap(),
         new ClientCompactionTaskGranularitySpec(null, null, false),
+        null,
         AGGREGATORS.toArray(new AggregatorFactory[0])
     );
     Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
-  public void testRollupTrueWithoutMetricsSpecIsInValid()
+  public void testRollupTrueWithoutMetricsSpecIsInvalid()
   {
     CompactionTask compactionTask = createCompactionTask(
         new DynamicPartitionsSpec(3, null),
         null,
         Collections.emptyMap(),
         new ClientCompactionTaskGranularitySpec(null, null, true),
+        null,
         null
     );
     Assert.assertFalse(MSQ_COMPACTION_RUNNER.validateCompactionTask(compactionTask, INTERVAL_DATASCHEMAS).isValid());
   }
 
   @Test
-  public void testMSQEngineWithUnsupportedMetricsSpecIsInValid()
+  public void testMSQEngineWithUnsupportedMetricsSpecIsInvalid()
   {
     // Aggregators having different input and ouput column names are unsupported.
     final String inputColName = "added";
@@ -276,6 +313,7 @@ public class MSQCompactionRunnerTest
         null,
         Collections.emptyMap(),
         new ClientCompactionTaskGranularitySpec(null, null, true),
+        null,
         new AggregatorFactory[]{new LongSumAggregatorFactory(outputColName, inputColName)}
     );
     CompactionConfigValidationResult validationResult = MSQ_COMPACTION_RUNNER.validateCompactionTask(
@@ -292,7 +330,7 @@ public class MSQCompactionRunnerTest
   @Test
   public void testRunCompactionTasksWithEmptyTaskListFails() throws Exception
   {
-    CompactionTask compactionTask = createCompactionTask(null, null, Collections.emptyMap(), null, null);
+    CompactionTask compactionTask = createCompactionTask(null, null, Collections.emptyMap(), null, null, null);
     TaskStatus taskStatus = MSQ_COMPACTION_RUNNER.runCompactionTasks(compactionTask, Collections.emptyMap(), null);
     Assert.assertTrue(taskStatus.isFailure());
   }
@@ -306,6 +344,7 @@ public class MSQCompactionRunnerTest
         new DimensionRangePartitionsSpec(TARGET_ROWS_PER_SEGMENT, null, PARTITION_DIMENSIONS, false),
         dimFilter,
         Collections.emptyMap(),
+        null,
         null,
         null
     );
@@ -383,6 +422,7 @@ public class MSQCompactionRunnerTest
         new DimensionRangePartitionsSpec(null, MAX_ROWS_PER_SEGMENT, PARTITION_DIMENSIONS, false),
         dimFilter,
         Collections.emptyMap(),
+        null,
         null,
         null
     );
@@ -481,6 +521,7 @@ public class MSQCompactionRunnerTest
       @Nullable DimFilter dimFilter,
       Map<String, Object> contextParams,
       @Nullable ClientCompactionTaskGranularitySpec granularitySpec,
+      @Nullable List<DimensionSchema> dimensionSchemas,
       @Nullable AggregatorFactory[] metricsSpec
   )
   {
@@ -504,6 +545,7 @@ public class MSQCompactionRunnerTest
         ))
         .transformSpec(transformSpec)
         .granularitySpec(granularitySpec)
+        .dimensionsSpec(new DimensionsSpec(dimensionSchemas))
         .metricsSpec(metricsSpec)
         .compactionRunner(MSQ_COMPACTION_RUNNER)
         .context(context);
