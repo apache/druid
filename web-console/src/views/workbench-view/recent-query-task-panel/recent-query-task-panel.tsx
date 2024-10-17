@@ -90,9 +90,10 @@ export const RecentQueryTaskPanel = React.memo(function RecentQueryTaskPanel(
 
   const [queryTaskHistoryState, queryManager] = useQueryManager<number, RecentQueryEntry[]>({
     query: workStateVersion,
-    processQuery: async _ => {
-      return await queryDruidSql<RecentQueryEntry>({
-        query: `SELECT
+    processQuery: async (_, cancelToken) => {
+      return await queryDruidSql<RecentQueryEntry>(
+        {
+          query: `SELECT
   CASE WHEN ${TASK_CANCELED_PREDICATE} THEN 'CANCELED' ELSE "status" END AS "taskStatus",
   "task_id" AS "taskId",
   "datasource",
@@ -103,7 +104,9 @@ FROM sys.tasks
 WHERE "type" = 'query_controller'
 ORDER BY "created_time" DESC
 LIMIT 100`,
-      });
+        },
+        cancelToken,
+      );
     },
   });
 
@@ -217,7 +220,9 @@ LIMIT 100`,
             return (
               <Popover className="work-entry" key={w.taskId} position="left" content={menu}>
                 <div
-                  data-tooltip={w.errorMessage}
+                  data-tooltip={
+                    `ID: ${w.taskId}` + (w.errorMessage ? `\n\nError:\n${w.errorMessage}` : '')
+                  }
                   onDoubleClick={() => onExecutionDetails(w.taskId)}
                 >
                   <div className="line1">

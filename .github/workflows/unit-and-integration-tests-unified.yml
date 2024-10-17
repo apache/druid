@@ -19,6 +19,7 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'dev/**'
+      - 'distribution/bin/**'
       - 'docs/**'
       - 'examples/**/jupyter-notebooks/**'
       - 'web-console/**'
@@ -31,6 +32,7 @@ on:
     paths-ignore:
       - '**/*.md'
       - 'dev/**'
+      - 'distribution/bin/**'
       - 'docs/**'
       - 'examples/**/jupyter-notebooks/**'
       - 'web-console/**'

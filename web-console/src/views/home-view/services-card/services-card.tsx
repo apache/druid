@@ -43,24 +43,29 @@ export interface ServicesCardProps {
 
 export const ServicesCard = React.memo(function ServicesCard(props: ServicesCardProps) {
   const [serviceCountState] = useQueryManager<Capabilities, ServiceCounts>({
-    processQuery: async capabilities => {
+    processQuery: async (capabilities, cancelToken) => {
       if (capabilities.hasSql()) {
         const serviceCountsFromQuery: {
           service_type: string;
           count: number;
-        }[] = await queryDruidSql({
-          query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
-        });
+        }[] = await queryDruidSql(
+          {
+            query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
+          },
+          cancelToken,
+        );
         return lookupBy(
           serviceCountsFromQuery,
           x => x.service_type,
           x => x.count,
         );
       } else if (capabilities.hasCoordinatorAccess()) {
-        const services = (await Api.instance.get('/druid/coordinator/v1/servers?simple')).data;
+        const services = (
+          await Api.instance.get('/druid/coordinator/v1/servers?simple', { cancelToken })
+        ).data;
 
         const middleManager = capabilities.hasOverlordAccess()
-          ? (await Api.instance.get('/druid/indexer/v1/workers')).data
+          ? (await Api.instance.get('/druid/indexer/v1/workers', { cancelToken })).data
           : [];
 
         return {

@@ -41,6 +41,7 @@ public class GetQueriesResponseTest
                 "xyz",
                 "abc",
                 "SELECT 1",
+                "localhost:1001",
                 "auth",
                 "anon",
                 DateTimes.of("2000"),

@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
@@ -282,6 +283,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   final boolean useDefault = NullHandling.replaceWithDefault();
 
   public boolean cannotVectorize = false;
+  public boolean cannotVectorizeUnlessFallback = false;
   public boolean skipVectorize = false;
 
   static {
@@ -888,7 +890,9 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(new CalciteTestConfig())
-        .cannotVectorize(cannotVectorize)
+        .cannotVectorize(
+            cannotVectorize || (!ExpressionProcessing.allowVectorizeFallback() && cannotVectorizeUnlessFallback)
+        )
         .skipVectorize(skipVectorize);
   }
 
@@ -1305,6 +1309,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected void cannotVectorize()
   {
     cannotVectorize = true;
+  }
+
+  protected void cannotVectorizeUnlessFallback()
+  {
+    cannotVectorizeUnlessFallback = true;
   }
 
   protected void skipVectorize()

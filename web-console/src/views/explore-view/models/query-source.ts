@@ -44,31 +44,6 @@ export class QuerySource {
     );
   }
 
-  static materializeStarIfNeeded(query: SqlQuery, columns: readonly Column[]): SqlQuery {
-    let columnsToExpand = columns.map(c => c.name);
-    const selectExpressions = query.getSelectExpressionsArray();
-    let starCount = 0;
-    for (const selectExpression of selectExpressions) {
-      if (selectExpression instanceof SqlStar) {
-        starCount++;
-        continue;
-      }
-      const outputName = selectExpression.getOutputName();
-      if (!outputName) continue;
-      columnsToExpand = columnsToExpand.filter(c => c !== outputName);
-    }
-    if (starCount === 0) return query;
-    if (starCount > 1) throw new Error('can not handle multiple stars');
-
-    return query
-      .changeSelectExpressions(
-        selectExpressions.flatMap(selectExpression =>
-          selectExpression instanceof SqlStar ? columnsToExpand.map(c => C(c)) : selectExpression,
-        ),
-      )
-      .prettify();
-  }
-
   static isSingleStarQuery(query: SqlQuery): boolean {
     const selectExpressions = query.getSelectExpressionsArray();
     return selectExpressions.length === 1 && selectExpressions[0] instanceof SqlStar;
@@ -95,7 +70,9 @@ export class QuerySource {
     let effectiveColumns = columns;
     if (query.getSelectExpressionsArray().some(ex => ex instanceof SqlStar)) {
       // The query has a star so carefully pick the columns that make sense
-      effectiveColumns = columns.filter(c => c.sqlType !== 'OTHER');
+      effectiveColumns = columns.filter(
+        c => c.sqlType !== 'OTHER' || c.nativeType === 'COMPLEX<json>',
+      );
     }
 
     let measures = Measure.extractQueryMeasures(query);
@@ -149,6 +126,43 @@ export class QuerySource {
     };
   }
 
+  public getInitQuery(where?: SqlExpression): SqlQuery {
+    return SqlQuery.from(this.query.as('t')).changeWhereExpression(where);
+  }
+
+  public getInitBaseQuery(): SqlQuery {
+    return SqlQuery.from(QuerySource.stripToBaseSource(this.query).as('t'));
+  }
+
+  private materializeStarIfNeeded(): SqlQuery {
+    const { query, columns, measures } = this;
+    let columnsToExpand = columns.map(c => c.name);
+    const selectExpressions = query.getSelectExpressionsArray();
+    let starCount = 0;
+    for (const selectExpression of selectExpressions) {
+      if (selectExpression instanceof SqlStar) {
+        starCount++;
+        continue;
+      }
+      const outputName = selectExpression.getOutputName();
+      if (!outputName) continue;
+      columnsToExpand = columnsToExpand.filter(c => c !== outputName);
+    }
+    if (starCount === 0) return query;
+    if (starCount > 1) throw new Error('can not handle multiple stars');
+
+    return Measure.addMeasuresToQuery(
+      query
+        .changeSelectExpressions(
+          selectExpressions.flatMap(selectExpression =>
+            selectExpression instanceof SqlStar ? columnsToExpand.map(c => C(c)) : selectExpression,
+          ),
+        )
+        .prettify(),
+      measures,
+    );
+  }
+
   public getFirstAggregateMeasure(): Measure | undefined {
     return this.measures[0]?.toAggregateBasedMeasure();
   }
@@ -177,6 +191,10 @@ export class QuerySource {
 
   public hasMeasureByName(name: string): boolean {
     return this.measures.some(m => m.name === name);
+  }
+
+  public hasBaseTimeColumn(): boolean {
+    return this.baseColumns.some(column => column.isTimeColumn());
   }
 
   public getSourceExpressionForColumn(outputName: string): SqlExpression {
@@ -220,21 +238,21 @@ export class QuerySource {
   }
 
   public addColumn(newExpression: SqlExpression): SqlQuery {
-    const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
+    const noStarQuery = this.materializeStarIfNeeded();
     return noStarQuery.addSelect(newExpression);
   }
 
-  public addColumnAfter(neighborName: string, newExpression: SqlExpression): SqlQuery {
-    const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
+  public addColumnAfter(neighborName: string, ...newExpressions: SqlExpression[]): SqlQuery {
+    const noStarQuery = this.materializeStarIfNeeded();
     return noStarQuery.changeSelectExpressions(
       noStarQuery
         .getSelectExpressionsArray()
-        .flatMap(ex => (ex.getOutputName() === neighborName ? [ex, newExpression] : ex)),
+        .flatMap(ex => (ex.getOutputName() === neighborName ? [ex, ...newExpressions] : ex)),
     );
   }
 
   public changeColumn(oldName: string, newExpression: SqlExpression): SqlQuery {
-    const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
+    const noStarQuery = this.materializeStarIfNeeded();
     return noStarQuery.changeSelectExpressions(
       noStarQuery
         .getSelectExpressionsArray()
@@ -243,7 +261,7 @@ export class QuerySource {
   }
 
   public deleteColumn(outputName: string): SqlQuery {
-    const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
+    const noStarQuery = this.materializeStarIfNeeded();
     return noStarQuery.changeSelectExpressions(
       noStarQuery.getSelectExpressionsArray().filter(ex => ex.getOutputName() !== outputName),
     );
@@ -254,7 +272,7 @@ export class QuerySource {
   }
 
   public applyColumnNameMap(columnNameMap: Map<string, string>): SqlQuery {
-    const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
+    const noStarQuery = this.materializeStarIfNeeded();
     return noStarQuery.changeSelectExpressions(
       noStarQuery.getSelectExpressionsArray().map(ex => {
         const outputName = ex.getOutputName();
@@ -269,12 +287,12 @@ export class QuerySource {
   // ------------------------------------
 
   public addMeasure(measure: Measure): SqlQuery {
-    const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
+    const noStarQuery = this.materializeStarIfNeeded();
     return Measure.addMeasuresToQuery(noStarQuery, this.measures.concat(measure));
   }
 
   public addMeasureAfter(neighborName: string, newMeasure: Measure): SqlQuery {
-    const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
+    const noStarQuery = this.materializeStarIfNeeded();
     return Measure.addMeasuresToQuery(
       noStarQuery,
       this.measures.flatMap(m => (m.name === neighborName ? [m, newMeasure] : m)),
@@ -282,7 +300,7 @@ export class QuerySource {
   }
 
   public changeMeasure(oldName: string, newMeasure: Measure): SqlQuery {
-    const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
+    const noStarQuery = this.materializeStarIfNeeded();
     return Measure.addMeasuresToQuery(
       noStarQuery,
       this.measures.map(m => (m.name === oldName ? newMeasure : m)),
@@ -290,7 +308,7 @@ export class QuerySource {
   }
 
   public deleteMeasure(measureName: string): SqlQuery {
-    const noStarQuery = QuerySource.materializeStarIfNeeded(this.query, this.columns);
+    const noStarQuery = this.materializeStarIfNeeded();
     return Measure.addMeasuresToQuery(
       noStarQuery,
       this.measures.filter(m => m.name !== measureName),

@@ -113,7 +113,7 @@ public class DartWorkerModule implements DruidModule
         final AuthorizerMapper authorizerMapper
     )
     {
-      final ExecutorService exec = Execs.multiThreaded(memoryIntrospector.numTasksInJvm(), "dart–worker-%s");
+      final ExecutorService exec = Execs.multiThreaded(memoryIntrospector.numTasksInJvm(), "dart-worker-%s");
       final File baseTempDir =
           new File(processingConfig.getTmpDir(), StringUtils.format("dart_%s", selfNode.getPortToUse()));
       return new DartWorkerRunner(

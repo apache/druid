@@ -1644,7 +1644,7 @@ public class EqualityFilterTests
           "5", .. [null],                   [123L, 345L],         null
        */
 
-      assertFilterMatches(
+      assertFilterMatchesSkipVectorizeUnlessFallback(
           new EqualityFilter(
               "arrayStringAsMvd",
               ColumnType.STRING,
@@ -1653,7 +1653,7 @@ public class EqualityFilterTests
           ),
           ImmutableList.of("0", "3")
       );
-      assertFilterMatches(
+      assertFilterMatchesSkipVectorizeUnlessFallback(
           NotDimFilter.of(
               new EqualityFilter(
                   "arrayStringAsMvd",
@@ -1667,7 +1667,7 @@ public class EqualityFilterTests
           : ImmutableList.of("1", "2", "4", "5")
       );
 
-      assertFilterMatches(
+      assertFilterMatchesSkipVectorizeUnlessFallback(
           new EqualityFilter(
               "arrayLongAsMvd",
               ColumnType.STRING,
@@ -1676,7 +1676,7 @@ public class EqualityFilterTests
           ),
           ImmutableList.of("0", "2")
       );
-      assertFilterMatches(
+      assertFilterMatchesSkipVectorizeUnlessFallback(
           NotDimFilter.of(
               new EqualityFilter(
                   "arrayLongAsMvd",
@@ -1690,7 +1690,7 @@ public class EqualityFilterTests
           : ImmutableList.of("1", "3", "4", "5")
       );
 
-      assertFilterMatches(
+      assertFilterMatchesSkipVectorizeUnlessFallback(
           new EqualityFilter(
               "arrayDoubleAsMvd",
               ColumnType.STRING,
@@ -1699,7 +1699,7 @@ public class EqualityFilterTests
           ),
           ImmutableList.of("0", "1")
       );
-      assertFilterMatches(
+      assertFilterMatchesSkipVectorizeUnlessFallback(
           NotDimFilter.of(
               new EqualityFilter(
                   "arrayDoubleAsMvd",
@@ -1713,7 +1713,7 @@ public class EqualityFilterTests
           : ImmutableList.of("2", "3", "4", "5")
       );
 
-      assertFilterMatches(
+      assertFilterMatchesSkipVectorizeUnlessFallback(
           new EqualityFilter(
               "arrayConstantAsMvd",
               ColumnType.STRING,

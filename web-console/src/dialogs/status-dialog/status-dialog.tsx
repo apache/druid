@@ -49,8 +49,8 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
 
   const [responseState] = useQueryManager<null, StatusResponse>({
     initQuery: null,
-    processQuery: async () => {
-      const resp = await Api.instance.get(`/status`);
+    processQuery: async (_, cancelToken) => {
+      const resp = await Api.instance.get(`/status`, { cancelToken });
       return resp.data;
     },
   });

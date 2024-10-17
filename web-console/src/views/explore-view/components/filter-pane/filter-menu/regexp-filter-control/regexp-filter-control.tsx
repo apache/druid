@@ -18,8 +18,8 @@
 
 import { FormGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult, RegexpFilterPattern } from '@druid-toolkit/query';
-import { C, F, filterPatternToExpression, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import type { QueryResult, RegexpFilterPattern, SqlQuery } from '@druid-toolkit/query';
+import { C, F, filterPatternToExpression, SqlExpression } from '@druid-toolkit/query';
 import React, { useMemo } from 'react';
 
 import { useQueryManager } from '../../../../../../hooks';
@@ -52,12 +52,13 @@ export const RegexpFilterControl = React.memo(function RegexpFilterControl(
 
   const previewQuery = useMemo(
     () =>
-      SqlQuery.from(querySource.query)
-        .addSelect(F.cast(C(column), 'VARCHAR').as('c'), { addToGroupBy: 'end' })
-        .changeWhereExpression(
+      querySource
+        .getInitQuery(
           SqlExpression.and(filter, regexp ? filterPatternToExpression(filterPattern) : undefined),
         )
+        .addSelect(F.cast(C(column), 'VARCHAR').as('c'), { addToGroupBy: 'end' })
         .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
+        .changeLimitValue(101)
         .toString(),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- exclude 'makePattern' from deps
     [querySource.query, filter, column, regexp, negated],
