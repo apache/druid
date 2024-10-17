@@ -19,9 +19,22 @@
 
 package org.apache.druid.query;
 
+import org.apache.druid.error.DruidException;
+
 /**
  */
-public interface QueryRunnerFactoryConglomerate
+public interface QueryRunnerFactoryConglomerate extends QueryToolChestWarehouse
 {
   <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query);
+
+  @Override
+  default <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
+  {
+    QueryRunnerFactory<T, QueryType> factory = findFactory(query);
+    if (factory == null) {
+      throw DruidException
+          .defensive("QueryRunnerFactory for QueryType [%s] is not registered!", query.getClass().getName());
+    }
+    return factory.getToolchest();
+  }
 }
