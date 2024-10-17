@@ -19,22 +19,18 @@
 
 package org.apache.druid.query;
 
-import org.apache.druid.error.DruidException;
-
-/**
- */
-public interface QueryRunnerFactoryConglomerate extends QueryToolChestWarehouse
+public class ConglomerateBackedQueryToolChestWarehouse implements QueryToolChestWarehouse
 {
-  <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query);
+  private QueryRunnerFactoryConglomerate conglomerate;
+
+  public ConglomerateBackedQueryToolChestWarehouse(QueryRunnerFactoryConglomerate conglomerate)
+  {
+    this.conglomerate = conglomerate;
+  }
 
   @Override
-  default <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
+  public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
   {
-    QueryRunnerFactory<T, QueryType> factory = findFactory(query);
-    if (factory == null) {
-      throw DruidException
-          .defensive("QueryRunnerFactory for QueryType [%s] is not registered!", query.getClass().getName());
-    }
-    return factory.getToolchest();
+    return conglomerate.findFactory(query).getToolchest();
   }
 }
