@@ -1,0 +1,147 @@
+# testUnionAllTwoQueriesBothQueriesAreJoin case-crc:0924562a
+# quidem testcase reason: UNION_ALL_QUERY
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+(SELECT COUNT(*) FROM foo LEFT JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k                                UNION ALL                                       SELECT COUNT(*) FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k) ;
++--------+
+| EXPR$0 |
++--------+
+|      1 |
+|      6 |
++--------+
+(2 rows)
+
+!ok
+LogicalUnion(all=[true])
+  LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+    LogicalJoin(condition=[=($0, $1)], joinType=[left])
+      LogicalProject(dim1=[$1])
+        LogicalTableScan(table=[[druid, foo]])
+      LogicalProject(k=[$0])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+  LogicalAggregate(group=[{}], EXPR$0=[COUNT()])
+    LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+      LogicalProject(dim1=[$1])
+        LogicalTableScan(table=[[druid, foo]])
+      LogicalProject(k=[$0])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+
+!logicalPlan
+DruidUnion(all=[true])
+  DruidAggregate(group=[{}], EXPR$0=[COUNT()], druid=[logical])
+    DruidJoin(condition=[=($0, $1)], joinType=[left])
+      DruidProject(dim1=[$1], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidProject(k=[$0], druid=[logical])
+        DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+  DruidAggregate(group=[{}], EXPR$0=[COUNT()], druid=[logical])
+    DruidJoin(condition=[=($0, $1)], joinType=[inner])
+      DruidProject(dim1=[$1], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidProject(k=[$0], druid=[logical])
+        DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "union",
+      "queries" : [ {
+        "queryType" : "timeseries",
+        "dataSource" : {
+          "type" : "join",
+          "left" : {
+            "type" : "table",
+            "name" : "foo"
+          },
+          "right" : {
+            "type" : "lookup",
+            "lookup" : "lookyloo"
+          },
+          "rightPrefix" : "j0.",
+          "condition" : "(\"dim1\" == \"j0.k\")",
+          "joinType" : "LEFT"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "count",
+          "name" : "a0"
+        } ],
+        "context" : {
+          "debug" : "true",
+          "defaultTimeout" : "300000",
+          "maxScatterGatherBytes" : "9223372036854775807",
+          "outputformat" : "MYSQL",
+          "plannerStrategy" : "DECOUPLED",
+          "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+          "sqlQueryId" : "dummy",
+          "sqlStringifyArrays" : false
+        }
+      }, {
+        "queryType" : "timeseries",
+        "dataSource" : {
+          "type" : "join",
+          "left" : {
+            "type" : "table",
+            "name" : "foo"
+          },
+          "right" : {
+            "type" : "lookup",
+            "lookup" : "lookyloo"
+          },
+          "rightPrefix" : "j0.",
+          "condition" : "(\"dim1\" == \"j0.k\")",
+          "joinType" : "INNER"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "aggregations" : [ {
+          "type" : "count",
+          "name" : "a0"
+        } ],
+        "context" : {
+          "debug" : "true",
+          "defaultTimeout" : "300000",
+          "maxScatterGatherBytes" : "9223372036854775807",
+          "outputformat" : "MYSQL",
+          "plannerStrategy" : "DECOUPLED",
+          "sqlCurrentTimestamp" : "2000-01-01T00:00:00Z",
+          "sqlQueryId" : "dummy",
+          "sqlStringifyArrays" : false
+        }
+      } ],
+      "context" : null
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "a0" ],
+  "columnTypes" : [ "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

@@ -19,29 +19,53 @@
 
 package org.apache.druid.query;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-
 import java.util.IdentityHashMap;
 import java.util.Map;
 
-/**
-*/
 public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactoryConglomerate
 {
   private final Map<Class<? extends Query>, QueryRunnerFactory> factories;
+  private final Map<Class<? extends Query>, QueryToolChest> toolchests;
 
-  @Inject
+  @VisibleForTesting
   public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories)
   {
-    // Accesses to IdentityHashMap should be faster than to HashMap or ImmutableMap.
-    // Class doesn't override Object.equals().
+    this(factories, Maps.transformValues(factories, f -> f.getToolchest()));
+  }
+
+  @Inject
+  public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories,
+      Map<Class<? extends Query>, QueryToolChest> toolchests)
+  {
     this.factories = new IdentityHashMap<>(factories);
+    this.toolchests = new IdentityHashMap<>(toolchests);
   }
 
   @Override
   @SuppressWarnings("unchecked")
   public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
   {
-    return (QueryRunnerFactory<T, QueryType>) factories.get(query.getClass());
+    return factories.get(query.getClass());
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
+  {
+    return toolchests.get(query.getClass());
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public <T, QueryType extends Query<T>> QueryExecutor<T> getQueryExecutor(QueryType query)
+  {
+    QueryToolChest<T, QueryType> toolchest = getToolChest(query);
+    if (toolchest instanceof QueryExecutor) {
+      return (QueryExecutor<T>) toolchest;
+    }
+    return null;
   }
 }
