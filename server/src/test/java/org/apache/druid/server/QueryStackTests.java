@@ -33,7 +33,6 @@ import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BrokerParallelMergeConfig;
-import org.apache.druid.query.ConglomerateBackedQueryToolChestWarehouse;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
@@ -96,6 +95,7 @@ import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -135,7 +135,7 @@ public class QueryStackTests
         emitter,
         clusterWalker,
         localWalker,
-        new ConglomerateBackedQueryToolChestWarehouse(conglomerate),
+        conglomerate,
         joinableFactory,
         new RetryQueryRunnerConfig(),
         injector.getInstance(ObjectMapper.class),

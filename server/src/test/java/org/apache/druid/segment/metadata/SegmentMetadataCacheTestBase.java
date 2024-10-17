@@ -29,7 +29,6 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.ConglomerateBackedQueryToolChestWarehouse;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -111,7 +110,7 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-    queryToolChestWarehouse = new ConglomerateBackedQueryToolChestWarehouse(conglomerate);
+    queryToolChestWarehouse = conglomerate;
   }
 
   public void setUpData() throws Exception
