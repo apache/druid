@@ -5271,6 +5271,16 @@ license_file_path: licenses/bin/@types-prop-types.MIT
 
 ---
 
+name: "@types/react-table"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Microsoft Corporation.
+version: 6.8.5
+license_file_path: licenses/bin/@types-react-table.MIT
+
+---
+
 name: "@types/react"
 license_category: binary
 module: web-console
@@ -6361,7 +6371,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Tanner Linsley
-version: 6.10.3
+version: 6.11.5
 license_file_path: licenses/bin/react-table.MIT
 
 ---

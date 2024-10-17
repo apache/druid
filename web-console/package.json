@@ -99,7 +99,7 @@
     "react-router": "^5.3.4",
     "react-router-dom": "^5.3.4",
     "react-splitter-layout": "^4.0.0",
-    "react-table": "~6.10.3",
+    "react-table": "~6.11.5",
     "regenerator-runtime": "^0.13.7",
     "tslib": "^2.3.1",
     "uuid": "^7.0.2",
