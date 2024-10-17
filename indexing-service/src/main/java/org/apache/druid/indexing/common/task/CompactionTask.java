@@ -459,7 +459,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
    * therefore is particularly for MSQCompactionRunner; it returns true when dimension types aren't known
    * from CompactionTask spec, or if either rollup or partition dimensions contain any string-type column.
    */
-  public boolean needMultiValuedDimensions()
+  boolean needMultiValuedDimensions()
   {
     if (compactionRunner instanceof NativeCompactionRunner) {
       return false;

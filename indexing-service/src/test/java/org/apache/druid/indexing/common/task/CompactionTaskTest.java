@@ -2101,13 +2101,14 @@ public class CompactionTaskTest
   /**
    * A dummy class to test MSQCompactionRunner behaviour in druid-multi-stage-query extension
    */
-  private static class TestMSQCompactionRunner implements CompactionRunner{
+  private static class TestMSQCompactionRunner implements CompactionRunner
+  {
     @Override
     public TaskStatus runCompactionTasks(
         CompactionTask compactionTask,
         Map<Interval, DataSchema> intervalDataSchemaMap,
         TaskToolbox taskToolbox
-    ) throws Exception
+    )
     {
       return null;
     }

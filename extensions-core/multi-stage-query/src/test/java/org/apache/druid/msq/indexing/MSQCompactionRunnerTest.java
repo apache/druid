@@ -336,62 +336,6 @@ public class MSQCompactionRunnerTest
   }
 
   @Test
-  public void testRollupWithNoDimensionsSpecNeedsMVDInfo()
-  {
-    CompactionTask compactionTask = createCompactionTask(
-        new DynamicPartitionsSpec(3, null),
-        null,
-        Collections.emptyMap(),
-        new ClientCompactionTaskGranularitySpec(null, null, true),
-        null,
-        null
-    );
-    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
-  }
-
-  @Test
-  public void testRangePartitionWithNoDimensionsSpecNeedsMVDInfo()
-  {
-    CompactionTask compactionTask = createCompactionTask(
-        new DimensionRangePartitionsSpec(3, null, ImmutableList.of(STRING_DIMENSION.getName()), false),
-        null,
-        Collections.emptyMap(),
-        new ClientCompactionTaskGranularitySpec(null, null, false),
-        null,
-        null
-    );
-    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
-  }
-
-  @Test
-  public void testRollupOnStringNeedsMVDInfo()
-  {
-    CompactionTask compactionTask = createCompactionTask(
-        new DynamicPartitionsSpec(3, null),
-        null,
-        Collections.emptyMap(),
-        new ClientCompactionTaskGranularitySpec(null, null, true),
-        ImmutableList.of(STRING_DIMENSION),
-        null
-    );
-    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
-  }
-
-  @Test
-  public void testRangePartitionOnStringNeedsMVDInfo()
-  {
-    CompactionTask compactionTask = createCompactionTask(
-        new DimensionRangePartitionsSpec(3, null, ImmutableList.of(STRING_DIMENSION.getName()), false),
-        null,
-        Collections.emptyMap(),
-        new ClientCompactionTaskGranularitySpec(null, null, false),
-        ImmutableList.of(STRING_DIMENSION),
-        null
-    );
-    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
-  }
-
-  @Test
   public void testMSQControllerTaskSpecWithScanIsValid() throws JsonProcessingException
   {
     DimFilter dimFilter = new SelectorDimFilter("dim1", "foo", null);
