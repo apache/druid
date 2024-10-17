@@ -66,7 +66,7 @@ public class AppendableMemoryTest
     // since that is a larger number
     Assert.assertEquals(76, appendableMemory.availableToReserve());
 
-    // This call must always be true irrespective of the internal implementation
+    // This assertion must always be true irrespective of the internal implementation
     Assert.assertTrue(appendableMemory.reserveAdditional(appendableMemory.availableToReserve()));
   }
 
