@@ -151,7 +151,7 @@ public class GroupByResourcesReservationPool
     // allocated resources from it
     reference.compareAndSet(null, resources);
 
-    groupByStatsProvider.groupByResourceAcquisitionTimeNs(System.nanoTime() - startNs);
+    groupByStatsProvider.mergeBufferAcquisitionTimeNs(System.nanoTime() - startNs);
   }
 
   /**

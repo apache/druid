@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.groupby;
 
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.groupby.epinephelinae.LimitedTemporaryStorage;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -37,10 +38,10 @@ public class GroupByStatsProviderTest
   {
     GroupByStatsProvider statsProvider = new GroupByStatsProvider();
 
-    statsProvider.groupByResourceAcquisitionTimeNs(100);
-    statsProvider.groupByResourceAcquisitionTimeNs(300);
+    statsProvider.mergeBufferAcquisitionTimeNs(100);
+    statsProvider.mergeBufferAcquisitionTimeNs(300);
 
-    Assert.assertEquals(200, statsProvider.getAndResetGroupByResourceAcquisitionStats());
+    Assert.assertEquals(Pair.of(2L, 400L), statsProvider.getAndResetMergeBufferAcquisitionStats());
   }
 
   @Test

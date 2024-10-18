@@ -139,7 +139,7 @@ public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool
   }
 
   @Override
-  public long getUsedBufferCount()
+  public long getUsedResourcesCount()
   {
     return takenFromMap.size();
   }

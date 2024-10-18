@@ -20,12 +20,11 @@
 package org.apache.druid.query.groupby;
 
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.groupby.epinephelinae.LimitedTemporaryStorage;
 
-import javax.inject.Inject;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Collects stats for group by queries like used merged buffer count, spilled bytes and group by resource acquisition time.
@@ -33,32 +32,30 @@ import java.util.concurrent.atomic.AtomicLong;
 @LazySingleton
 public class GroupByStatsProvider
 {
-  private final AtomicLong resourceAcquisitionTimeNs = new AtomicLong(0);
-  private final AtomicLong resourceAcquisitionCount = new AtomicLong(0);
+  private long mergeBufferAcquisitionTimeNs = 0;
+  private long mergeBufferAcquisitionCount = 0;
 
   private final ConcurrentLinkedQueue<LimitedTemporaryStorage> temporaryStorages;
 
-  @Inject
   public GroupByStatsProvider()
   {
     this.temporaryStorages = new ConcurrentLinkedQueue<>();
   }
 
-  public synchronized void groupByResourceAcquisitionTimeNs(long delayNs)
+  public synchronized void mergeBufferAcquisitionTimeNs(long delayNs)
   {
-    resourceAcquisitionTimeNs.addAndGet(delayNs);
-    resourceAcquisitionCount.incrementAndGet();
+    mergeBufferAcquisitionTimeNs += delayNs;
+    mergeBufferAcquisitionCount++;
   }
 
-  public synchronized long getAndResetGroupByResourceAcquisitionStats()
+  public synchronized Pair<Long, Long> getAndResetMergeBufferAcquisitionStats()
   {
-    long average = resourceAcquisitionCount.get() != 0 ?
-                   (resourceAcquisitionTimeNs.get() / resourceAcquisitionCount.get()) : 0;
+    Pair<Long, Long> pair = Pair.of(mergeBufferAcquisitionCount, mergeBufferAcquisitionTimeNs);
 
-    resourceAcquisitionTimeNs.set(0);
-    resourceAcquisitionCount.set(0);
+    mergeBufferAcquisitionTimeNs = 0;
+    mergeBufferAcquisitionCount = 0;
 
-    return average;
+    return pair;
   }
 
   public void registerTemporaryStorage(LimitedTemporaryStorage temporaryStorage)

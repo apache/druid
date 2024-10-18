@@ -130,7 +130,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   }
 
   @Override
-  public long getUsedBufferCount()
+  public long getUsedResourcesCount()
   {
     return maxSize - objects.size();
   }

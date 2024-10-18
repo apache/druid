@@ -63,7 +63,7 @@ public final class DummyBlockingPool<T> implements BlockingPool<T>
   }
 
   @Override
-  public long getUsedBufferCount()
+  public long getUsedResourcesCount()
   {
     return 0;
   }

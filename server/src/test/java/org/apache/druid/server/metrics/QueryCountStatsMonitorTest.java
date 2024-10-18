@@ -21,6 +21,7 @@ package org.apache.druid.server.metrics;
 
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.junit.After;
@@ -88,9 +89,9 @@ public class QueryCountStatsMonitorTest
     groupByStatsProvider = new GroupByStatsProvider()
     {
       @Override
-      public synchronized long getAndResetGroupByResourceAcquisitionStats()
+      public synchronized Pair<Long, Long> getAndResetMergeBufferAcquisitionStats()
       {
-        return 1L;
+        return Pair.of(1L, 1L);
       }
 
       @Override
@@ -127,15 +128,16 @@ public class QueryCountStatsMonitorTest
                                              event -> (String) event.toMap().get("metric"),
                                              event -> (Long) event.toMap().get("value")
                                          ));
-    Assert.assertEquals(9, resultMap.size());
+    Assert.assertEquals(10, resultMap.size());
     Assert.assertEquals(1L, (long) resultMap.get("query/success/count"));
     Assert.assertEquals(2L, (long) resultMap.get("query/failed/count"));
     Assert.assertEquals(3L, (long) resultMap.get("query/interrupted/count"));
     Assert.assertEquals(4L, (long) resultMap.get("query/timeout/count"));
     Assert.assertEquals(10L, (long) resultMap.get("query/count"));
     Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/pendingRequests"));
-    Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/acquiredCount"));
-    Assert.assertEquals(1, (long) resultMap.get("groupBy/acquisitionTimeNs"));
+    Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/usedCount"));
+    Assert.assertEquals(1, (long) resultMap.get("mergeBuffer/acquisitionCount"));
+    Assert.assertEquals(1, (long) resultMap.get("mergeBuffer/acquisitionTimeNs"));
     Assert.assertEquals(3, (long) resultMap.get("groupBy/spilledBytes"));
   }
 
@@ -153,7 +155,7 @@ public class QueryCountStatsMonitorTest
     boolean ret = monitor.doMonitor(emitter);
     Assert.assertTrue(ret);
 
-    List<Number> numbers = emitter.getMetricValues("mergeBuffer/acquiredCount", Collections.emptyMap());
+    List<Number> numbers = emitter.getMetricValues("mergeBuffer/usedCount", Collections.emptyMap());
     Assert.assertEquals(1, numbers.size());
     Assert.assertEquals(4, numbers.get(0).intValue());
   }

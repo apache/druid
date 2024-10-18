@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.guice.annotations.Merging;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
@@ -81,16 +82,16 @@ public class QueryCountStatsMonitor extends AbstractMonitor
 
     emitter.emit(
         builder.setMetric(
-            "mergeBuffer/acquiredCount",
-            this.mergeBufferPool.getUsedBufferCount()
+            "mergeBuffer/usedCount",
+            this.mergeBufferPool.getUsedResourcesCount()
         )
     );
-    emitter.emit(
-        builder.setMetric(
-            "groupBy/acquisitionTimeNs",
-            groupByStatsProvider.getAndResetGroupByResourceAcquisitionStats()
-        )
-    );
+
+    Pair<Long, Long> groupByResourceAcquisitionStats =
+        groupByStatsProvider.getAndResetMergeBufferAcquisitionStats();
+
+    emitter.emit(builder.setMetric("mergeBuffer/acquisitionCount", groupByResourceAcquisitionStats.lhs));
+    emitter.emit(builder.setMetric("mergeBuffer/acquisitionTimeNs", groupByResourceAcquisitionStats.rhs));
 
     emitter.emit(builder.setMetric("groupBy/spilledBytes", groupByStatsProvider.getSpilledBytes()));
 
