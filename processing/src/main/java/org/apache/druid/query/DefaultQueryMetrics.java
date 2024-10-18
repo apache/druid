@@ -195,6 +195,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public void projection(String projection)
+  {
+    setDimension("projection", projection);
+  }
+
+  @Override
   public void identity(String identity)
   {
     // Emit nothing by default.

@@ -245,7 +245,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
             Header: 'Worker',
             id: 'worker',
             accessor: d => d.index,
-            width: 100,
+            width: 95,
             Cell({ value }) {
               const taskId = `${execution.id}-worker${value}_0`;
               return (
@@ -263,14 +263,15 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
             Header: twoLines(
               'CPU utilization',
               <i>
-                <span className="cpu-label">counter</span>
-                <span className="cpu-counter">wall time</span>
+                <span className="cpu-label">Counter</span>
+                <span className="cpu-counter">Wall time</span>
               </i>,
             ),
             id: 'cpu',
             accessor: d => d.cpu?.main?.cpu || 0,
             className: 'padded',
-            width: 220,
+            width: 240,
+            show: stages.hasCounterForStage(stage, 'cpu'),
             Cell({ original }) {
               const cpuTotals = original.cpu || {};
               return (
@@ -310,7 +311,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
               id: counterName,
               accessor: d => d[counterName]!.rows,
               className: 'padded',
-              width: 160,
+              width: 200,
               Cell({ value, original }) {
                 const c = (original as SimpleWideCounter)[counterName]!;
                 return (
@@ -397,12 +398,27 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
           {
             Header: `Counts`,
             accessor: 'counts',
-            className: 'padded',
-            width: 180,
+            className: 'padded wrapped',
+            width: 300,
             Cell({ value }) {
-              return Object.entries(value)
-                .map(([n, v]) => (Number(v) > 1 ? `${n} (${v})` : n))
-                .join(', ');
+              const entries = Object.entries(value);
+              if (!entries.length) return '-';
+              return (
+                <>
+                  {entries.map(([n, v], i) => (
+                    <>
+                      <span
+                        key={n}
+                        data-tooltip={`${pluralIfNeeded(Number(v), 'worker')} reporting: ${n}`}
+                      >
+                        {n}
+                        {Number(v) > 1 && <span className="count">{` (${v})`}</span>}
+                      </span>
+                      {i < entries.length - 1 && <span key={`${n}_sep`}>, </span>}
+                    </>
+                  ))}
+                </>
+              );
             },
           },
         ]}
@@ -686,7 +702,7 @@ ${title} uncompressed size: ${formatBytesCompact(
           id: 'stage',
           accessor: 'stageNumber',
           className: 'padded',
-          width: 140,
+          width: 160,
           Cell(props) {
             const stage = props.original as StageDefinition;
             const myError = error && error.stageNumber === stage.stageNumber;
@@ -770,7 +786,7 @@ ${title} uncompressed size: ${formatBytesCompact(
           id: 'rows_processed',
           accessor: () => null,
           className: 'padded',
-          width: 160,
+          width: 200,
           Cell({ original }) {
             const stage = original as StageDefinition;
             const { input, broadcast } = stage.definition;
@@ -841,7 +857,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                   duration ? `Duration: ${formatDurationWithMs(duration)}` : undefined,
                 ).join('\n')}
               >
-                {executionDuration && executionDuration > 0 && (
+                {!!executionDuration && executionDuration > 0 && (
                   <div
                     className="timing-bar"
                     style={{
@@ -863,14 +879,14 @@ ${title} uncompressed size: ${formatBytesCompact(
           Header: twoLines(
             'CPU utilization',
             <i>
-              <span className="cpu-label">counter</span>
-              <span className="cpu-counter">wall time</span>
+              <span className="cpu-label">Counter</span>
+              <span className="cpu-counter">Wall time</span>
             </i>,
           ),
           id: 'cpu',
           accessor: () => null,
           className: 'padded',
-          width: 220,
+          width: 240,
           show: stages.hasCounter('cpu'),
           Cell({ original }) {
             const cpuTotals = stages.getCpuTotalsForStage(original);

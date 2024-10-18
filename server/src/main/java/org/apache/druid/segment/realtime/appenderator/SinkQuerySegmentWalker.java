@@ -67,8 +67,10 @@ import org.apache.druid.segment.realtime.FireHydrant;
 import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.segment.realtime.sink.SinkSegmentReference;
 import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
+import org.apache.druid.timeline.Overshadowable;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.IntegerPartitionChunk;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
@@ -85,7 +87,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.function.ObjLongConsumer;
@@ -101,7 +102,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
   private final String dataSource;
 
-  private final VersionedIntervalTimeline<String, Sink> sinkTimeline;
+  // Maintain a timeline of ids and Sinks for all the segments including the base and upgraded versions
+  private final VersionedIntervalTimeline<String, SinkHolder> upgradedSegmentsTimeline;
   private final ObjectMapper objectMapper;
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
@@ -109,12 +111,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private final Cache cache;
   private final CacheConfig cacheConfig;
   private final CachePopulatorStats cachePopulatorStats;
-  private final ConcurrentMap<SegmentDescriptor, SegmentDescriptor> newIdToBasePendingSegment
-      = new ConcurrentHashMap<>();
 
   public SinkQuerySegmentWalker(
       String dataSource,
-      VersionedIntervalTimeline<String, Sink> sinkTimeline,
+      VersionedIntervalTimeline<String, SinkHolder> upgradedSegmentsTimeline,
       ObjectMapper objectMapper,
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
@@ -125,7 +125,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.sinkTimeline = Preconditions.checkNotNull(sinkTimeline, "sinkTimeline");
+    this.upgradedSegmentsTimeline = upgradedSegmentsTimeline;
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.conglomerate = Preconditions.checkNotNull(conglomerate, "conglomerate");
@@ -144,7 +144,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   {
     final Iterable<SegmentDescriptor> specs = FunctionalIterable
         .create(intervals)
-        .transformCat(sinkTimeline::lookup)
+        .transformCat(upgradedSegmentsTimeline::lookup)
         .transformCat(
             holder -> FunctionalIterable
                 .create(holder.getObject())
@@ -213,9 +213,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     metricsToReport.put(DefaultQueryMetrics.QUERY_WAIT_TIME, QueryMetrics::reportWaitTime);
 
     try {
-      for (final SegmentDescriptor newDescriptor : specs) {
-        final SegmentDescriptor descriptor = newIdToBasePendingSegment.getOrDefault(newDescriptor, newDescriptor);
-        final PartitionChunk<Sink> chunk = sinkTimeline.findChunk(
+      for (final SegmentDescriptor descriptor : specs) {
+        final PartitionChunk<SinkHolder> chunk = upgradedSegmentsTimeline.findChunk(
             descriptor.getInterval(),
             descriptor.getVersion(),
             descriptor.getPartitionNumber()
@@ -229,7 +228,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
           continue;
         }
 
-        final Sink theSink = chunk.getObject();
+        final Sink theSink = chunk.getObject().sink;
         final SegmentId sinkSegmentId = theSink.getSegment().getId();
         segmentIdMap.put(descriptor, sinkSegmentId);
         final List<SinkSegmentReference> sinkSegmentReferences =
@@ -398,14 +397,41 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
   }
 
-  public void registerUpgradedPendingSegment(
-      SegmentIdWithShardSpec basePendingSegment,
-      SegmentIdWithShardSpec upgradedPendingSegment
-  )
+  /**
+   * Must be called when a segment is announced by a task.
+   * Either the base segment upon allocation or any upgraded version due to a concurrent replace
+   */
+  public void registerUpgradedPendingSegment(SegmentIdWithShardSpec id, Sink sink)
   {
-    newIdToBasePendingSegment.put(
-        upgradedPendingSegment.asSegmentId().toDescriptor(),
-        basePendingSegment.asSegmentId().toDescriptor()
+    final SegmentDescriptor upgradedDescriptor = id.asSegmentId().toDescriptor();
+    upgradedSegmentsTimeline.add(
+        upgradedDescriptor.getInterval(),
+        upgradedDescriptor.getVersion(),
+        IntegerPartitionChunk.make(
+            null,
+            null,
+            upgradedDescriptor.getPartitionNumber(),
+            new SinkHolder(upgradedDescriptor, sink)
+        )
+    );
+  }
+
+  /**
+   * Must be called when dropping sink from the sinkTimeline
+   * It is the responsibility of the caller to unregister all associated ids including the base id
+   */
+  public void unregisterUpgradedPendingSegment(SegmentIdWithShardSpec id, Sink sink)
+  {
+    final SegmentDescriptor upgradedDescriptor = id.asSegmentId().toDescriptor();
+    upgradedSegmentsTimeline.remove(
+        upgradedDescriptor.getInterval(),
+        upgradedDescriptor.getVersion(),
+        IntegerPartitionChunk.make(
+            null,
+            null,
+            upgradedDescriptor.getPartitionNumber(),
+            new SinkHolder(upgradedDescriptor, sink)
+        )
     );
   }
 
@@ -413,11 +439,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   String getDataSource()
   {
     return dataSource;
-  }
-
-  public VersionedIntervalTimeline<String, Sink> getSinkTimeline()
-  {
-    return sinkTimeline;
   }
 
   public static String makeHydrantCacheIdentifier(final FireHydrant hydrant)
@@ -432,7 +453,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     // with subsegments (hydrants).
     return segmentId + "_H" + hydrantNumber;
   }
-
+  
   /**
    * Emit query/segment/time, query/wait/time and query/segmentAndCache/Time metrics for a Sink.
    * It accumulates query/segment/time and query/segmentAndCache/time metric for each FireHydrant at the level of Sink.
@@ -533,6 +554,48 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
             }
           }
       );
+    }
+  }
+  
+  private static class SinkHolder implements Overshadowable<SinkHolder>
+  {
+    private final Sink sink;
+    private final SegmentDescriptor segmentDescriptor;
+
+    private SinkHolder(SegmentDescriptor segmentDescriptor, Sink sink)
+    {
+      this.segmentDescriptor = segmentDescriptor;
+      this.sink = sink;
+    }
+
+    @Override
+    public int getStartRootPartitionId()
+    {
+      return segmentDescriptor.getPartitionNumber();
+    }
+
+    @Override
+    public int getEndRootPartitionId()
+    {
+      return segmentDescriptor.getPartitionNumber() + 1;
+    }
+
+    @Override
+    public String getVersion()
+    {
+      return segmentDescriptor.getVersion();
+    }
+
+    @Override
+    public short getMinorVersion()
+    {
+      return 0;
+    }
+
+    @Override
+    public short getAtomicUpdateGroupSize()
+    {
+      return 1;
     }
   }
 }

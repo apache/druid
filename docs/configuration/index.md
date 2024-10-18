@@ -1050,7 +1050,7 @@ The following table shows the supported configurations for auto-compaction.
 
 |Property|Description|Required|
 |--------|-----------|--------|
-|type|The task type, this should always be `index_parallel`.|yes|
+|type|The task type. If you're using Coordinator duties for auto-compaction, set it to `index_parallel`. If you're using compaction supervisors, set it to `autocompact`. |yes|
 |`maxRowsInMemory`|Used in determining when intermediate persists to disk should occur. Normally user does not need to set this, but depending on the nature of data, if rows are short in terms of bytes, user may not want to store a million rows in memory and this value should be set.|no (default = 1000000)|
 |`maxBytesInMemory`|Used in determining when intermediate persists to disk should occur. Normally this is computed internally and user does not need to set it. This value represents number of bytes to aggregate in heap memory before persisting. This is based on a rough estimate of memory usage and not actual usage. The maximum heap memory usage for indexing is `maxBytesInMemory` * (2 + `maxPendingPersists`)|no (default = 1/6 of max JVM memory)|
 |`splitHintSpec`|Used to give a hint to control the amount of data that each first phase task reads. This hint could be ignored depending on the implementation of the input source. See [Split hint spec](../ingestion/native-batch.md#split-hint-spec) for more details.|no (default = size-based split hint spec)|
@@ -1067,6 +1067,7 @@ The following table shows the supported configurations for auto-compaction.
 |`taskStatusCheckPeriodMs`|Polling period in milliseconds to check running task statuses.|no (default = 1000)|
 |`chatHandlerTimeout`|Timeout for reporting the pushed segments in worker tasks.|no (default = PT10S)|
 |`chatHandlerNumRetries`|Retries for reporting the pushed segments in worker tasks.|no (default = 5)|
+|`engine` | Engine for compaction. Can be either `native` or `msq`. `msq`  uses the MSQ task engine and is only supported with [compaction supervisors](../data-management/automatic-compaction.md#auto-compaction-using-compaction-supervisors). | no (default = native)|
 
 ###### Automatic compaction granularitySpec
 
@@ -2218,7 +2219,6 @@ Supported query contexts:
 |Key|Description|Default|
 |---|-----------|-------|
 |`druid.expressions.useStrictBooleans`|Controls the behavior of Druid boolean operators and functions, if set to `true` all boolean values are either `1` or `0`. This configuration has been deprecated and will be removed in a future release, taking on the `true` behavior. See [expression documentation](../querying/math-expr.md#logical-operator-modes) for more information.|true|
-|`druid.expressions.allowNestedArrays`|If enabled, Druid array expressions can create nested arrays. This configuration has been deprecated and will be removed in a future release, taking on the `true` behavior.|true|
 
 ### Router
 

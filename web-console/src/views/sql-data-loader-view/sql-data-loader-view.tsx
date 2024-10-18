@@ -256,7 +256,6 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
         <TitleFrame title="Load data" subtitle="Select input type">
           <InputSourceStep
             initInputSource={inputSource}
-            mode="sampler"
             onSet={(inputSource, inputFormat) => {
               setExternalConfigStep({ inputSource, inputFormat });
             }}

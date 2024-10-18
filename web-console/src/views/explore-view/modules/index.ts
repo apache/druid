@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-export * from './bar-chart-echarts-module';
-export * from './multi-axis-chart-echarts-module';
-export * from './pie-chart-echarts-module';
-export * from './table-react-module';
-export * from './time-chart-echarts-module';
+import './grouping-table-module';
+import './record-table-module';
+import './time-chart-module';
+import './bar-chart-module';
+import './pie-chart-module';
+import './multi-axis-chart-module';

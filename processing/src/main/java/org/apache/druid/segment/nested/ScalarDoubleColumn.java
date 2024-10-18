@@ -21,6 +21,7 @@ package org.apache.druid.segment.nested;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
@@ -37,12 +38,17 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
  * {@link NestedCommonFormatColumn} for {@link ColumnType#DOUBLE}
  */
 public class ScalarDoubleColumn implements NestedCommonFormatColumn
 {
+  private static final Map<Class<?>, Function<ScalarDoubleColumn, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(ScalarDoubleColumn.class);
+
   private final FixedIndexed<Double> doubleDictionary;
   private final ColumnarDoubles valueColumn;
   private final ImmutableBitmap nullValueIndex;
@@ -180,5 +186,14 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
   public void close()
   {
     valueColumn.close();
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(Class<? extends T> clazz)
+  {
+    //noinspection ReturnOfNull
+    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
   }
 }

@@ -21,7 +21,7 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Preconditions;
 import com.google.errorprone.annotations.Immutable;
-import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -427,7 +427,7 @@ class StringExpr extends ConstantExpr<String>
   public String stringify()
   {
     // escape as javascript string since string literals are wrapped in single quotes
-    return value == null ? NULL_LITERAL : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript(value));
+    return value == null ? NULL_LITERAL : StringUtils.format("'%s'", StringEscapeUtils.escapeEcmaScript(value));
   }
 
   @Override
@@ -482,7 +482,7 @@ class ArrayExpr extends ConstantExpr<Object[]>
                     .map(s -> s == null
                               ? NULL_LITERAL
                               // escape as javascript string since string literals are wrapped in single quotes
-                              : StringUtils.format("'%s'", StringEscapeUtils.escapeJavaScript((String) s))
+                              : StringUtils.format("'%s'", StringEscapeUtils.escapeEcmaScript((String) s))
                     )
                     .iterator()
           )

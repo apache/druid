@@ -21,6 +21,7 @@ package org.apache.druid.segment.nested;
 
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.LongColumnSelector;
@@ -37,12 +38,17 @@ import org.apache.druid.segment.vector.VectorValueSelector;
 import org.roaringbitmap.PeekableIntIterator;
 
 import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
  * {@link NestedCommonFormatColumn} for {@link ColumnType#LONG}
  */
 public class ScalarLongColumn implements NestedCommonFormatColumn
 {
+  private static final Map<Class<?>, Function<ScalarLongColumn, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(ScalarLongColumn.class);
+
   private final FixedIndexed<Long> longDictionary;
   private final ColumnarLongs valueColumn;
   private final ImmutableBitmap nullValueIndex;
@@ -181,5 +187,14 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
   public void close()
   {
     valueColumn.close();
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(Class<? extends T> clazz)
+  {
+    //noinspection ReturnOfNull
+    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
   }
 }

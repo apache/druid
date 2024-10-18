@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+export * from './base64-url';
 export * from './column-metadata';
 export * from './date';
 export * from './download';

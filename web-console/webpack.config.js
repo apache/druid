@@ -32,8 +32,12 @@ function friendlyErrorFormatter(e) {
 
 module.exports = env => {
   let druidUrl = (env || {}).druid_host || process.env.druid_host || 'localhost';
-  if (!druidUrl.startsWith('http')) druidUrl = 'http://' + druidUrl;
-  if (!/:\d+$/.test(druidUrl)) druidUrl += ':8888';
+  if (!druidUrl.startsWith('http')) {
+    druidUrl = (druidUrl.endsWith(':9088') ? 'https://' : 'http://') + druidUrl;
+  }
+  if (!/:\d+$/.test(druidUrl)) {
+    druidUrl += druidUrl.startsWith('https://') ? ':9088' : ':8888';
+  }
 
   const proxyTarget = {
     target: druidUrl,
@@ -113,6 +117,9 @@ module.exports = env => {
               loader: 'ts-loader',
               options: {
                 errorFormatter: friendlyErrorFormatter,
+                compilerOptions: {
+                  jsx: mode === 'development' ? 'react-jsxdev' : 'react-jsx',
+                },
               },
             },
           ],
@@ -156,11 +163,9 @@ module.exports = env => {
         },
         {
           test: /\.(woff|woff2|ttf|eot)$/,
-          use: {
-            loader: 'file-loader',
-            options: {
-              name: '[name].[ext]',
-            },
+          type: 'asset/resource',
+          generator: {
+            filename: 'fonts/[name].[ext]',
           },
         },
       ],

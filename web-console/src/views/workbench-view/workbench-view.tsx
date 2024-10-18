@@ -32,6 +32,7 @@ import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import React from 'react';
 
+import { MenuCheckbox } from '../../components';
 import { SpecDialog, StringInputDialog } from '../../dialogs';
 import type {
   CapacityInfo,
@@ -69,6 +70,7 @@ import {
 
 import { ColumnTree } from './column-tree/column-tree';
 import { ConnectExternalDataDialog } from './connect-external-data-dialog/connect-external-data-dialog';
+import { CurrentDartPanel } from './current-dart-panel/current-dart-panel';
 import { getDemoQueries } from './demo-queries';
 import { ExecutionDetailsDialog } from './execution-details-dialog/execution-details-dialog';
 import type { ExecutionDetailsTab } from './execution-details-pane/execution-details-pane';
@@ -148,6 +150,7 @@ export interface WorkbenchViewState {
   renamingTab?: TabEntry;
 
   showRecentQueryTaskPanel: boolean;
+  showCurrentDartPanel: boolean;
 }
 
 export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, WorkbenchViewState> {
@@ -164,6 +167,11 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     const hasSqlTask = queryEngines.includes('sql-msq-task');
     const showRecentQueryTaskPanel = Boolean(
       hasSqlTask && localStorageGetJson(LocalStorageKeys.WORKBENCH_TASK_PANEL),
+    );
+
+    const showCurrentDartPanel = Boolean(
+      queryEngines.includes('sql-msq-dart') &&
+        localStorageGetJson(LocalStorageKeys.WORKBENCH_DART_PANEL),
     );
 
     const tabEntries =
@@ -198,15 +206,19 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       taskIdSubmitDialogOpen: false,
 
       showRecentQueryTaskPanel,
+      showCurrentDartPanel,
     };
   }
 
   componentDidMount(): void {
     this.metadataQueryManager = new QueryManager({
-      processQuery: async () => {
-        return await queryDruidSql<ColumnMetadata>({
-          query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
-        });
+      processQuery: async (_, cancelToken) => {
+        return await queryDruidSql<ColumnMetadata>(
+          {
+            query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
+          },
+          cancelToken,
+        );
       },
       onStateChange: columnMetadataState => {
         if (columnMetadataState.error) {
@@ -262,6 +274,11 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   private readonly handleRecentQueryTaskPanelClose = () => {
     this.setState({ showRecentQueryTaskPanel: false });
     localStorageSetJson(LocalStorageKeys.WORKBENCH_TASK_PANEL, false);
+  };
+
+  private readonly handleCurrentDartPanelClose = () => {
+    this.setState({ showCurrentDartPanel: false });
+    localStorageSetJson(LocalStorageKeys.WORKBENCH_DART_PANEL, false);
   };
 
   private readonly handleDetailsWithId = (id: string, initTab?: ExecutionDetailsTab) => {
@@ -656,7 +673,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     if (!queryEngines.includes('sql-msq-task')) return;
     if (hideToolbar) return;
 
-    const { showRecentQueryTaskPanel } = this.state;
+    const { showRecentQueryTaskPanel, showCurrentDartPanel } = this.state;
     return (
       <ButtonGroup className="toolbar">
         <Button
@@ -669,16 +686,35 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           }}
           minimal
         />
-        <Button
-          icon={IconNames.DRAWER_RIGHT}
-          minimal
-          data-tooltip="Open recent query task panel"
-          onClick={() => {
-            const n = !showRecentQueryTaskPanel;
-            this.setState({ showRecentQueryTaskPanel: n });
-            localStorageSetJson(LocalStorageKeys.WORKBENCH_TASK_PANEL, n);
-          }}
-        />
+        <Popover
+          position="bottom-right"
+          content={
+            <Menu>
+              <MenuCheckbox
+                text="Recent query task panel"
+                checked={showRecentQueryTaskPanel}
+                shouldDismissPopover
+                onChange={() => {
+                  const n = !showRecentQueryTaskPanel;
+                  this.setState({ showRecentQueryTaskPanel: n });
+                  localStorageSetJson(LocalStorageKeys.WORKBENCH_TASK_PANEL, n);
+                }}
+              />
+              <MenuCheckbox
+                text="Current Dart query panel"
+                checked={showCurrentDartPanel}
+                shouldDismissPopover
+                onChange={() => {
+                  const n = !showCurrentDartPanel;
+                  this.setState({ showCurrentDartPanel: n });
+                  localStorageSetJson(LocalStorageKeys.WORKBENCH_DART_PANEL, n);
+                }}
+              />
+            </Menu>
+          }
+        >
+          <Button icon={IconNames.DRAWER_RIGHT} minimal data-tooltip="Open helper panels" />
+        </Popover>
       </ButtonGroup>
     );
   }
@@ -744,7 +780,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           runMoreMenu={
             <Menu>
               {!hiddenMoreMenuItems.includes('explain') &&
-                (effectiveEngine === 'sql-native' || effectiveEngine === 'sql-msq-task') && (
+                (effectiveEngine === 'sql-native' ||
+                  effectiveEngine === 'sql-msq-task' ||
+                  effectiveEngine === 'sql-msq-dart') && (
                   <MenuItem
                     icon={IconNames.CLEAN}
                     text="Explain SQL query"
@@ -861,7 +899,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   };
 
   render() {
-    const { columnMetadataState, showRecentQueryTaskPanel } = this.state;
+    const { columnMetadataState, showRecentQueryTaskPanel, showCurrentDartPanel } = this.state;
     const query = this.getCurrentQuery();
 
     let defaultSchema: string | undefined;
@@ -872,7 +910,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       defaultTables = parsedQuery.getUsedTableNames();
     }
 
-    const showRightPanel = showRecentQueryTaskPanel;
+    const showRightPanel = showRecentQueryTaskPanel || showCurrentDartPanel;
     return (
       <div
         className={classNames('workbench-view app-view', {
@@ -883,8 +921,8 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
         {!columnMetadataState.isError() && (
           <ColumnTree
             getParsedQuery={this.getParsedQuery}
+            columnMetadata={columnMetadataState.getSomeData()}
             columnMetadataLoading={columnMetadataState.loading}
-            columnMetadata={columnMetadataState.data}
             onQueryChange={this.handleSqlQueryChange}
             defaultSchema={defaultSchema ? defaultSchema : 'druid'}
             defaultTables={defaultTables}
@@ -902,6 +940,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                 onChangeQuery={this.handleQueryStringChange}
                 onNewTab={this.handleNewTab}
               />
+            )}
+            {showCurrentDartPanel && (
+              <CurrentDartPanel onClose={this.handleCurrentDartPanelClose} />
             )}
           </div>
         )}

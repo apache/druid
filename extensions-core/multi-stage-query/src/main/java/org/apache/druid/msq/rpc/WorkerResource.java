@@ -56,6 +56,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class WorkerResource
 {
@@ -104,6 +105,8 @@ public class WorkerResource
         worker.readStageOutput(new StageId(queryId, stageNumber), partitionNumber, offset);
 
     final AsyncContext asyncContext = req.startAsync();
+    final AtomicBoolean responseResolved = new AtomicBoolean();
+
     asyncContext.setTimeout(GET_CHANNEL_DATA_TIMEOUT);
     asyncContext.addListener(
         new AsyncListener()
@@ -116,9 +119,11 @@ public class WorkerResource
           @Override
           public void onTimeout(AsyncEvent event)
           {
-            HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-            response.setStatus(HttpServletResponse.SC_OK);
-            event.getAsyncContext().complete();
+            if (responseResolved.compareAndSet(false, true)) {
+              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
+              response.setStatus(HttpServletResponse.SC_OK);
+              event.getAsyncContext().complete();
+            }
           }
 
           @Override
@@ -144,7 +149,11 @@ public class WorkerResource
           @Override
           public void onSuccess(final InputStream inputStream)
           {
-            HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
+            if (!responseResolved.compareAndSet(false, true)) {
+              return;
+            }
+
+            final HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
 
             try (final OutputStream outputStream = response.getOutputStream()) {
               if (inputStream == null) {
@@ -188,7 +197,7 @@ public class WorkerResource
           @Override
           public void onFailure(Throwable e)
           {
-            if (!dataFuture.isCancelled()) {
+            if (responseResolved.compareAndSet(false, true)) {
               try {
                 HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
                 response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);

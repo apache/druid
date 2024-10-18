@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
 import { deepGet, EMPTY_ARRAY, EMPTY_OBJECT } from '../../utils';

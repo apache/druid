@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.IAE;
@@ -641,6 +642,20 @@ public class ControllerQueryKernel
   public void failStage(final StageId stageId)
   {
     doWithStageTracker(stageId, ControllerStageTracker::fail);
+  }
+
+  /**
+   * Returns the set of all worker numbers that have participated in work done so far by this query.
+   */
+  public IntSet getAllParticipatingWorkers()
+  {
+    final IntSet retVal = new IntAVLTreeSet();
+
+    for (final ControllerStageTracker tracker : stageTrackers.values()) {
+      retVal.addAll(tracker.getWorkerInputs().workers());
+    }
+
+    return retVal;
   }
 
   /**

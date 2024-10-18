@@ -45,6 +45,7 @@ import {
   getDruidErrorMessage,
   nonEmptyArray,
   queryDruidSql,
+  queryDruidSqlDart,
 } from '../../../utils';
 
 import './explain-dialog.scss';
@@ -74,7 +75,8 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
   const { queryWithContext, onClose, openQueryLabel, onOpenQuery, mandatoryQueryContext } = props;
 
   const [explainState] = useQueryManager<QueryContextEngine, QueryExplanation[] | string>({
-    processQuery: async queryWithContext => {
+    initQuery: queryWithContext,
+    processQuery: async (queryWithContext, cancelToken) => {
       const { engine, queryString, queryContext, wrapQueryLimit } = queryWithContext;
 
       let context: QueryContext | undefined;
@@ -97,15 +99,19 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
       let result: any[];
       switch (engine) {
         case 'sql-native':
-          result = await queryDruidSql(payload);
+          result = await queryDruidSql(payload, cancelToken);
           break;
 
         case 'sql-msq-task':
           try {
-            result = (await Api.instance.post(`/druid/v2/sql/task`, payload)).data;
+            result = (await Api.instance.post(`/druid/v2/sql/task`, payload, { cancelToken })).data;
           } catch (e) {
             throw new Error(getDruidErrorMessage(e));
           }
+          break;
+
+        case 'sql-msq-dart':
+          result = await queryDruidSqlDart(payload, cancelToken);
           break;
 
         default:
@@ -123,7 +129,6 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
         return plan;
       }
     },
-    initQuery: queryWithContext,
   });
 
   let content: JSX.Element;

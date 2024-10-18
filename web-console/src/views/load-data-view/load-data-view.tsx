@@ -117,6 +117,7 @@ import {
   invalidPartitionConfig,
   isDruidSource,
   isEmptyIngestionSpec,
+  isFixedFormatSource,
   isKafkaOrKinesis,
   isStreamingSpec,
   issueWithIoConfig,
@@ -267,26 +268,27 @@ function showBlankLine(line: SampleEntry): string {
 
 function formatSampleEntries(
   sampleEntries: SampleEntry[],
-  specialSource: undefined | 'druid' | 'kafka' | 'kinesis',
-): string {
-  if (!sampleEntries.length) return 'No data returned from sampler';
+  specialSource: undefined | 'fixedFormat' | 'druid' | 'kafka' | 'kinesis',
+): string[] {
+  if (!sampleEntries.length) return ['No data returned from sampler'];
 
   switch (specialSource) {
+    case 'fixedFormat':
+      return sampleEntries.map(l => JSONBig.stringify(l.parsed));
+
     case 'druid':
-      return sampleEntries.map(showDruidLine).join('\n');
+      return sampleEntries.map(showDruidLine);
 
     case 'kafka':
-      return sampleEntries.map(showKafkaLine).join('\n');
+      return sampleEntries.map(showKafkaLine);
 
     case 'kinesis':
-      return sampleEntries.map(showKinesisLine).join('\n');
+      return sampleEntries.map(showKinesisLine);
 
     default:
-      return (
-        sampleEntries.every(l => !l.parsed)
-          ? sampleEntries.map(showBlankLine)
-          : sampleEntries.map(showRawLine)
-      ).join('\n');
+      return sampleEntries.every(l => !l.parsed)
+        ? sampleEntries.map(showBlankLine)
+        : sampleEntries.map(showRawLine);
   }
 }
 
@@ -553,7 +555,6 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
   isStepEnabled(step: Step): boolean {
     const { spec, cacheRows } = this.state;
-    const druidSource = isDruidSource(spec);
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
 
     switch (step) {
@@ -561,10 +562,12 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         return Boolean(spec.type);
 
       case 'parser':
-        return Boolean(!druidSource && spec.type && !issueWithIoConfig(ioConfig));
+        return Boolean(!isFixedFormatSource(spec) && spec.type && !issueWithIoConfig(ioConfig));
 
       case 'timestamp':
-        return Boolean(!druidSource && cacheRows && deepGet(spec, 'spec.dataSchema.timestampSpec'));
+        return Boolean(
+          !isDruidSource(spec) && cacheRows && deepGet(spec, 'spec.dataSchema.timestampSpec'),
+        );
 
       case 'transform':
       case 'filter':
@@ -989,11 +992,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         );
 
       case 'index_parallel:inline':
-        return (
-          <>
-            <p>Ingest a small amount of data directly from the clipboard.</p>
-          </>
-        );
+        return <p>Ingest a small amount of data directly from the clipboard.</p>;
 
       case 'index_parallel:s3':
         return <p>Load text based, orc, or parquet data from Amazon S3.</p>;
@@ -1258,7 +1257,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const deltaState: Partial<LoadDataViewState> = {
       inputQueryState: new QueryState({ data: sampleResponse }),
     };
-    if (isDruidSource(spec)) {
+    if (isFixedFormatSource(spec)) {
       deltaState.cacheRows = getCacheRowsFromSampleResponse(sampleResponse);
     }
     this.setState(deltaState as LoadDataViewState);
@@ -1270,8 +1269,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
     const specType = getSpecType(spec);
     const ioConfig: IoConfig = deepGet(spec, 'spec.ioConfig') || EMPTY_OBJECT;
     const inlineMode = deepGet(spec, 'spec.ioConfig.inputSource.type') === 'inline';
+    const fixedFormatSource = isFixedFormatSource(spec);
     const druidSource = isDruidSource(spec);
-    const specialSource = druidSource ? 'druid' : isKafkaOrKinesis(specType) ? specType : undefined;
+    const specialSource = druidSource
+      ? 'druid'
+      : fixedFormatSource
+      ? 'fixedFormat'
+      : isKafkaOrKinesis(specType)
+      ? specType
+      : undefined;
 
     let mainFill: JSX.Element | string;
     if (inlineMode) {
@@ -1303,7 +1309,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             <TextArea
               className="raw-lines"
               readOnly
-              value={formatSampleEntries(inputData, specialSource)}
+              value={formatSampleEntries(inputData, specialSource).join('\n')}
             />
           )}
           {inputQueryState.isLoading() && <Loader />}
@@ -1375,7 +1381,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         </div>
         {this.renderNextBar({
           disabled: !inputQueryState.data,
-          nextStep: druidSource ? 'transform' : 'parser',
+          nextStep: druidSource ? 'transform' : fixedFormatSource ? 'timestamp' : 'parser',
           onNextStep: () => {
             if (!inputQueryState.data) return false;
             const inputData = inputQueryState.data;
@@ -1422,6 +1428,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
                   );
                 }
               }
+
+              this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
+            }
+            if (fixedFormatSource) {
+              const newSpec = deepSet(
+                spec,
+                'spec.dataSchema.timestampSpec',
+                getTimestampSpec(inputQueryState.data),
+              );
 
               this.updateSpec(fillDataSourceNameIfNeeded(newSpec));
             } else {
@@ -1675,21 +1690,15 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           disabled: !parserQueryState.data,
           onNextStep: () => {
             if (!parserQueryState.data) return false;
-            let possibleTimestampSpec: TimestampSpec;
-            if (isDruidSource(spec)) {
-              possibleTimestampSpec = {
-                column: TIME_COLUMN,
-                format: 'auto',
-              };
-            } else {
-              possibleTimestampSpec = getTimestampSpec(parserQueryState.data);
-            }
+            const possibleTimestampSpec = isDruidSource(spec)
+              ? {
+                  column: TIME_COLUMN,
+                  format: 'auto',
+                }
+              : getTimestampSpec(parserQueryState.data);
 
-            if (possibleTimestampSpec) {
-              const newSpec = deepSet(spec, 'spec.dataSchema.timestampSpec', possibleTimestampSpec);
-              this.updateSpec(newSpec);
-            }
-
+            const newSpec = deepSet(spec, 'spec.dataSchema.timestampSpec', possibleTimestampSpec);
+            this.updateSpec(newSpec);
             return true;
           },
         })}

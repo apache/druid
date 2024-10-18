@@ -1035,6 +1035,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   private void doPollSegments()
   {
+    final DateTime startTime = DateTimes.nowUtc();
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
     // Some databases such as PostgreSQL require auto-commit turned off
@@ -1071,11 +1072,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         segments.size(), stopwatch.millisElapsed()
     );
 
-    createDatasourcesSnapshot(segments);
+    createDatasourcesSnapshot(startTime, segments);
   }
 
   private void doPollSegmentAndSchema()
   {
+    final DateTime startTime = DateTimes.nowUtc();
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataBuilder = new ImmutableMap.Builder<>();
@@ -1174,7 +1176,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         segments.size(), schemaMap.size(), stopwatch.millisElapsed()
     );
 
-    createDatasourcesSnapshot(segments);
+    createDatasourcesSnapshot(startTime, segments);
   }
 
   private void emitMetric(String metricName, long value)
@@ -1182,7 +1184,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     serviceEmitter.emit(new ServiceMetricEvent.Builder().setMetric(metricName, value));
   }
 
-  private void createDatasourcesSnapshot(List<DataSegment> segments)
+  private void createDatasourcesSnapshot(DateTime snapshotTime, List<DataSegment> segments)
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
     // dataSourcesSnapshot is updated only here and the DataSourcesSnapshot object is immutable. If data sources or
@@ -1193,22 +1195,16 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     // segment mark calls in rapid succession. So the snapshot update is not done outside of database poll at this time.
     // Updates outside of database polls were primarily for the user experience, so users would immediately see the
     // effect of a segment mark call reflected in MetadataResource API calls.
-    ImmutableMap<String, String> dataSourceProperties = createDefaultDataSourceProperties();
 
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
-        dataSourceProperties
+        snapshotTime
     );
     emitMetric("segment/buildSnapshot/time", stopwatch.millisElapsed());
     log.debug(
         "Created snapshot from polled segments in [%d]ms. Found [%d] overshadowed segments.",
         stopwatch.millisElapsed(), dataSourcesSnapshot.getOvershadowedSegments().size()
     );
-  }
-
-  private static ImmutableMap<String, String> createDefaultDataSourceProperties()
-  {
-    return ImmutableMap.of("created", DateTimes.nowUtc().toString());
   }
 
   /**

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.FrameWithPartition;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
@@ -64,7 +65,6 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanResultValue;
-import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CompleteSegment;
@@ -312,13 +312,14 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
           );
         }
 
+        if (!Intervals.ONLY_ETERNITY.equals(query.getIntervals())) {
+          // runWithInputChannel is for running on subquery results, where we don't expect to see "intervals" set.
+          // The SQL planner avoid it for subqueries; see DruidQuery#canUseIntervalFiltering.
+          throw DruidException.defensive("Expected eternity intervals, but got[%s]", query.getIntervals());
+        }
+
         final CursorHolder nextCursorHolder =
-            cursorFactory.makeCursorHolder(
-                ScanQueryEngine.makeCursorBuildSpec(
-                    query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
-                    null
-                )
-            );
+            cursorFactory.makeCursorHolder(ScanQueryEngine.makeCursorBuildSpec(query, null));
         final Cursor nextCursor = nextCursorHolder.asCursor();
 
         if (nextCursor == null) {

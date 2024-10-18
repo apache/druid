@@ -23,7 +23,6 @@ import copy from 'copy-to-clipboard';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
 import type { JSX } from 'react';
-import React from 'react';
 
 import { AppToaster } from '../singletons';
 
@@ -184,9 +183,28 @@ export function mapRecord<T, Q>(
   const newRecord: Record<string, Q> = {};
   const keys = Object.keys(record);
   for (const key of keys) {
-    newRecord[key] = fn(record[key], key);
+    const mapped = fn(record[key], key);
+    if (typeof mapped === 'undefined') continue;
+    newRecord[key] = mapped;
   }
   return newRecord;
+}
+
+export function mapRecordIfChanged<T>(
+  record: Record<string, T>,
+  fn: (value: T, key: string) => T,
+): Record<string, T> {
+  const newRecord: Record<string, T> = {};
+  let changed = false;
+  const keys = Object.keys(record);
+  for (const key of keys) {
+    const v = record[key];
+    const mapped = fn(v, key);
+    if (v !== mapped) changed = true;
+    if (typeof mapped === 'undefined') continue;
+    newRecord[key] = mapped;
+  }
+  return changed ? newRecord : record;
 }
 
 export function groupBy<T, Q>(
@@ -231,6 +249,12 @@ export function uniq(array: readonly string[]): string[] {
       return true;
     }
   });
+}
+
+// ----------------------------
+
+export function formatEmpty(str: string): string {
+  return str === '' ? 'empty' : str;
 }
 
 // ----------------------------
@@ -293,6 +317,10 @@ export function forceSignInNumberFormatter(
   };
 }
 
+function sign(n: NumberLike): string {
+  return n < 0 ? '-' : '';
+}
+
 function pad2(str: string | number): string {
   return ('00' + str).slice(-2);
 }
@@ -302,20 +330,27 @@ function pad3(str: string | number): string {
 }
 
 export function formatDuration(ms: NumberLike): string {
-  const n = Number(ms);
+  const n = Math.abs(Number(ms));
   const timeInHours = Math.floor(n / 3600000);
   const timeInMin = Math.floor(n / 60000) % 60;
   const timeInSec = Math.floor(n / 1000) % 60;
-  return timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec);
+  return sign(ms) + timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec);
 }
 
 export function formatDurationWithMs(ms: NumberLike): string {
-  const n = Number(ms);
+  const n = Math.abs(Number(ms));
   const timeInHours = Math.floor(n / 3600000);
   const timeInMin = Math.floor(n / 60000) % 60;
   const timeInSec = Math.floor(n / 1000) % 60;
   return (
-    timeInHours + ':' + pad2(timeInMin) + ':' + pad2(timeInSec) + '.' + pad3(Math.floor(n) % 1000)
+    sign(ms) +
+    timeInHours +
+    ':' +
+    pad2(timeInMin) +
+    ':' +
+    pad2(timeInSec) +
+    '.' +
+    pad3(Math.floor(n) % 1000)
   );
 }
 
@@ -324,17 +359,17 @@ export function formatDurationWithMsIfNeeded(ms: NumberLike): string {
 }
 
 export function formatDurationHybrid(ms: NumberLike): string {
-  const n = Number(ms);
+  const n = Math.abs(Number(ms));
   if (n < 600000) {
     // anything that looks like 1:23.45 (max 9:59.99)
     const timeInMin = Math.floor(n / 60000);
     const timeInSec = Math.floor(n / 1000) % 60;
     const timeInMs = Math.floor(n) % 1000;
-    return `${timeInMin ? `${timeInMin}:` : ''}${timeInMin ? pad2(timeInSec) : timeInSec}.${pad3(
-      timeInMs,
-    ).slice(0, 2)}s`;
+    return `${sign(ms)}${timeInMin ? `${timeInMin}:` : ''}${
+      timeInMin ? pad2(timeInSec) : timeInSec
+    }.${pad3(timeInMs).slice(0, 2)}s`;
   } else {
-    return formatDuration(n);
+    return formatDuration(ms);
   }
 }
 
@@ -376,6 +411,16 @@ export function partition<T>(xs: T[], predicate: (x: T, i: number) => boolean): 
 
 export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | undefined): Q[] {
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
+}
+
+export function filterMapIfChanged<T>(xs: T[], f: (x: T, i: number) => T | undefined): T[] {
+  let changed = false;
+  const newXs = filterMap(xs, (x, i) => {
+    const newX = f(x, i);
+    if (typeof newX === 'undefined' || x !== newX) changed = true;
+    return newX;
+  });
+  return changed ? newXs : xs;
 }
 
 export function findMap<T, Q>(

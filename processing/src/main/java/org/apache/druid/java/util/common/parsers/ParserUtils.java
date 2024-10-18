@@ -24,7 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Splitter;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
-import org.apache.commons.lang.math.NumberUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.joda.time.DateTimeZone;
 
@@ -95,7 +95,7 @@ public class ParserUtils
   @Nullable
   private static Object tryParseStringAsNumber(@Nullable final String input)
   {
-    if (!NumberUtils.isNumber(input)) {
+    if (!NumberUtils.isCreatable(input)) {
       return NullHandling.emptyToNullIfNeeded(input);
     }
 

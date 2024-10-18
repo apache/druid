@@ -80,7 +80,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "accessor": "stageNumber",
         "className": "padded",
         "id": "stage",
-        "width": 140,
+        "width": 160,
       },
       {
         "Cell": [Function],
@@ -102,7 +102,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "accessor": [Function],
         "className": "padded",
         "id": "rows_processed",
-        "width": 160,
+        "width": 200,
       },
       {
         "Cell": [Function],
@@ -134,12 +134,12 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
             <span
               className="cpu-label"
             >
-              counter
+              Counter
             </span>
             <span
               className="cpu-counter"
             >
-              wall time
+              Wall time
             </span>
           </i>
         </React.Fragment>,
@@ -147,7 +147,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "className": "padded",
         "id": "cpu",
         "show": false,
-        "width": 220,
+        "width": 240,
       },
       {
         "Header": <React.Fragment>

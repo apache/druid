@@ -18,6 +18,7 @@
 
 import { max, sum } from 'd3-array';
 
+import { AutoForm } from '../../components';
 import { countBy, deleteKeys, filterMap, groupByAsMap, oneOf, zeroDivide } from '../../utils';
 import type { InputFormat } from '../input-format/input-format';
 import type { InputSource } from '../input-source/input-source';
@@ -33,6 +34,7 @@ export type InOut = 'in' | 'out';
 function simpleSum(xs: number[]) {
   return sum(xs);
 }
+
 function aggregateThings<T>(
   things: T[],
   aggregators: {
@@ -199,7 +201,10 @@ export function aggregateSortProgressCounters(
   sortProgressCounters: SortProgressCounter[],
 ): AggregatedSortProgress {
   return {
-    totalMergingLevels: countBy(sortProgressCounters, c => c.totalMergingLevels),
+    totalMergingLevels: countBy(
+      sortProgressCounters.filter(c => c.totalMergingLevels >= 0),
+      c => c.totalMergingLevels,
+    ),
     levelToBatches: groupByAsMap(
       sortProgressCounters.flatMap(c =>
         Object.entries(c.levelToMergedBatches).map(([level, merged]) => [
@@ -252,26 +257,16 @@ export const CPUS_COUNTER_FIELDS: CpusCounterFields[] = [
 
 export function cpusCounterFieldTitle(k: CpusCounterFields) {
   switch (k) {
-    case 'main':
-      return 'Main';
-
     case 'collectKeyStatistics':
       return 'Collect key stats';
 
-    case 'mergeInput':
-      return 'Merge input';
-
-    case 'hashPartitionOutput':
-      return 'Hash partition out';
-
-    case 'mixOutput':
-      return 'Mix output';
-
-    case 'sortOutput':
-      return 'Sort output';
-
     default:
-      return k;
+      // main
+      // mergeInput
+      // hashPartitionOutput
+      // mixOutput
+      // sortOutput
+      return AutoForm.makeLabelName(k);
   }
 }
 
@@ -439,9 +434,8 @@ export class Stages {
     if (inputFileCount) {
       // If we know how many files there are base the progress on how many files were read
       return (
-        sum(input, (input, i) =>
-          input.type === 'external' ? this.getTotalCounterForStage(stage, `input${i}`, 'files') : 0,
-        ) / inputFileCount
+        sum(input, (_, i) => this.getTotalCounterForStage(stage, `input${i}`, 'files')) /
+        inputFileCount
       );
     } else {
       // Otherwise, base it on the stage input divided by the output of all non-broadcast input stages,

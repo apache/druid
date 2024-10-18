@@ -17,7 +17,6 @@
  */
 
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import { DEFAULT_SERVER_QUERY_CONTEXT, DRUID_ENGINES, WorkbenchQuery } from '../../../druid-models';
 

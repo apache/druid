@@ -27,4 +27,11 @@ import java.io.IOException;
 public abstract class SingleValueColumnarIntsSerializer implements ColumnarIntsSerializer
 {
   public abstract void addValue(int val) throws IOException;
+
+  public void addValues(int[] vals, int start, int stop) throws IOException
+  {
+    for (int i = start; i < stop; ++i) {
+      addValue(vals[i]);
+    }
+  }
 }
