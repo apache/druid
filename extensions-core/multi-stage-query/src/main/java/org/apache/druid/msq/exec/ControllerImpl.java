@@ -573,7 +573,7 @@ public class ControllerImpl implements Controller
     final QueryDefinition queryDef = makeQueryDefinition(
         context.makeQueryKitSpec(makeQueryControllerToolKit(), queryId, querySpec, queryKernelConfig),
         querySpec,
-        context.jsonMapper(),
+        context,
         resultsContext
     );
 
@@ -1566,26 +1566,7 @@ public class ControllerImpl implements Controller
     } else if (MSQControllerTask.isExport(querySpec)) {
       // Write manifest file.
       ExportMSQDestination destination = (ExportMSQDestination) querySpec.getDestination();
-      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider());
-
-      final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
-      //noinspection unchecked
-
-
-      Object resultObjectForStage = queryKernel.getResultObjectForStage(finalStageId);
-      if (!(resultObjectForStage instanceof List)) {
-        // This might occur if all workers are running on an older version. We are not able to write a manifest file in this case.
-        log.warn("Was unable to create manifest file due to ");
-        return;
-      }
-      @SuppressWarnings("unchecked")
-      List<String> exportedFiles = (List<String>) queryKernel.getResultObjectForStage(finalStageId);
-      log.info("Query [%s] exported %d files.", queryDef.getQueryId(), exportedFiles.size());
-      exportMetadataManager.writeMetadata(exportedFiles);
-    } else if (MSQControllerTask.isExport(querySpec)) {
-      // Write manifest file.
-      ExportMSQDestination destination = (ExportMSQDestination) querySpec.getDestination();
-      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider());
+      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider(), context.taskTempDir());
 
       final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
       //noinspection unchecked
@@ -1734,10 +1715,11 @@ public class ControllerImpl implements Controller
   private static QueryDefinition makeQueryDefinition(
       final QueryKitSpec queryKitSpec,
       final MSQSpec querySpec,
-      final ObjectMapper jsonMapper,
+      final ControllerContext controllerContext,
       final ResultsContext resultsContext
   )
   {
+    final ObjectMapper jsonMapper = controllerContext.jsonMapper();
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
     final Query<?> queryToPlan;
@@ -1855,7 +1837,7 @@ public class ControllerImpl implements Controller
 
       try {
         // Check that the export destination is empty as a sanity check. We want to avoid modifying any other files with export.
-        Iterator<String> filesIterator = exportStorageProvider.get().listDir("");
+        Iterator<String> filesIterator = exportStorageProvider.createStorageConnector(controllerContext.taskTempDir()).listDir("");
         if (filesIterator.hasNext()) {
           throw DruidException.forPersona(DruidException.Persona.USER)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)

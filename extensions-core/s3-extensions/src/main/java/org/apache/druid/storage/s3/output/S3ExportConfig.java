@@ -39,7 +39,7 @@ public class S3ExportConfig
 
   @JsonCreator
   public S3ExportConfig(
-      @JsonProperty("tempLocalDir") final String tempLocalDir,
+      @JsonProperty("tempLocalDir") @Nullable final String tempLocalDir,
       @JsonProperty("chunkSize") @Nullable final HumanReadableBytes chunkSize,
       @JsonProperty("maxRetry") @Nullable final Integer maxRetry,
       @JsonProperty("allowedExportPaths") final List<String> allowedExportPaths)
@@ -50,6 +50,7 @@ public class S3ExportConfig
     this.allowedExportPaths = allowedExportPaths;
   }
 
+  @Nullable
   public String getTempLocalDir()
   {
     return tempLocalDir;

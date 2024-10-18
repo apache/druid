@@ -155,8 +155,8 @@ The following runtime parameters must be configured to export into an S3 destina
 
 | Runtime Parameter                            | Required | Description                                                                                                                                                                                                                          | Default |
 |----------------------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----|
-| `druid.export.storage.s3.tempLocalDir`       | Yes      | Directory used on the local storage of the worker to store temporary files required while uploading the data.                                                                                                                        | n/a |
 | `druid.export.storage.s3.allowedExportPaths` | Yes      | An array of S3 prefixes that are whitelisted as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. Example: `[\"s3://bucket1/export/\", \"s3://bucket2/export/\"]`    | n/a |
+| `druid.export.storage.s3.tempLocalDir`       | No       | Directory used on the local storage of the worker to store temporary files required while uploading the data. Uses the task temporary directory by default.                                                                          | n/a |
 | `druid.export.storage.s3.maxRetry`           | No       | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                      | 10  |
 | `druid.export.storage.s3.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
 
@@ -186,12 +186,12 @@ Supported arguments for the function:
 
 The following runtime parameters must be configured to export into a GCS destination:
 
-| Runtime Parameter                                | Required | Description                                                                                                                                                                                                                       | Default |
-|--------------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| `druid.export.storage.google.tempLocalDir`       | Yes      | Directory used on the local storage of the worker to store temporary files required while uploading the data.                                                                                                                     | n/a     |
+| Runtime Parameter                                | Required | Description                                                                                                                                                                                                                   | Default |
+|--------------------------------------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
 | `druid.export.storage.google.allowedExportPaths` | Yes      | An array of GS prefixes that are allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. Example: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
-| `druid.export.storage.google.maxRetry`           | No       | Defines the max number times to attempt GS API calls to avoid failures due to transient errors.                                                                                                                                   | 10      |
-| `druid.export.storage.google.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. A large chunk size reduces the API calls to GS; however, it requires more disk space to store the temporary chunks.                                              | 4MiB    |
+| `druid.export.storage.google.tempLocalDir`       | No       | Directory used on the local storage of the worker to store temporary files required while uploading the data. Uses the task temporary directory by default.                                                                   | n/a     |
+| `druid.export.storage.google.maxRetry`           | No       | Defines the max number times to attempt GS API calls to avoid failures due to transient errors.                                                                                                                               | 10      |
+| `druid.export.storage.google.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. A large chunk size reduces the API calls to GS; however, it requires more disk space to store the temporary chunks.                                         | 4MiB    |
 
 ##### LOCAL
 
@@ -531,7 +531,7 @@ Common properties to configure the behavior of durable storage
 |--|--|--|
 |`druid.msq.intermediate.storage.enable`  | Yes |  Whether to enable durable storage for the cluster. Set it to true to enable durable storage. For more information about enabling durable storage, see [Durable storage](../operations/durable-storage.md). | false | 
 |`druid.msq.intermediate.storage.type` |  Yes | The type of storage to use. Set it to `s3` for S3, `azure` for Azure and `google` for Google | n/a |
-|`druid.msq.intermediate.storage.tempDir`| Yes |  Directory path on the local disk to store temporary files required while uploading and downloading the data  | n/a |
+|`druid.msq.intermediate.storage.tempDir`| Yes |  Directory path on the local disk to store temporary files required while uploading and downloading the data. If the property is not configured on the indexer or middle manager, it defaults to using the task temporary directory. | n/a |
 |`druid.msq.intermediate.storage.maxRetry` |  No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 10 |
 |`druid.msq.intermediate.storage.chunkSize` | No | Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls made to the durable storage, however it requires more disk space to store the temporary chunks. Druid uses a default of 100MiB if the value is not provided.| 100MiB | 
 

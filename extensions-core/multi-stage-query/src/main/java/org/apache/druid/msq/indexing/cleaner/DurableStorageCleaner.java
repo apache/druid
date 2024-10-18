@@ -32,6 +32,7 @@ import org.apache.druid.indexing.overlord.duty.OverlordDuty;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.util.HashSet;
 import java.util.Iterator;
@@ -55,12 +56,12 @@ public class DurableStorageCleaner implements OverlordDuty
   @Inject
   public DurableStorageCleaner(
       final DurableStorageCleanerConfig config,
-      final @MultiStageQuery StorageConnector storageConnector,
+      final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
       @JacksonInject final Provider<TaskMaster> taskMasterProvider
   )
   {
     this.config = config;
-    this.storageConnector = storageConnector;
+    this.storageConnector = storageConnectorProvider.createStorageConnector(null);
     this.taskMasterProvider = taskMasterProvider;
   }
 
