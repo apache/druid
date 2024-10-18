@@ -22,7 +22,6 @@ import './bootstrap/ace';
 
 import { OverlaysProvider } from '@blueprintjs/core';
 import { QueryRunner } from '@druid-toolkit/query';
-import React from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { bootstrapJsonParse } from './bootstrap/json-parser';

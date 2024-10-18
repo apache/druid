@@ -117,6 +117,9 @@ module.exports = env => {
               loader: 'ts-loader',
               options: {
                 errorFormatter: friendlyErrorFormatter,
+                compilerOptions: {
+                  jsx: mode === 'development' ? 'react-jsxdev' : 'react-jsx',
+                },
               },
             },
           ],
@@ -160,11 +163,9 @@ module.exports = env => {
         },
         {
           test: /\.(woff|woff2|ttf|eot)$/,
-          use: {
-            loader: 'file-loader',
-            options: {
-              name: '[name].[ext]',
-            },
+          type: 'asset/resource',
+          generator: {
+            filename: 'fonts/[name].[ext]',
           },
         },
       ],

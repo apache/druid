@@ -86,10 +86,6 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       int desiredTaskCount = -1;
       try {
         desiredTaskCount = computeDesiredTaskCount(new ArrayList<>(lagMetricsQueue));
-
-        if (desiredTaskCount != -1) {
-          lagMetricsQueue.clear();
-        }
       }
       catch (Exception ex) {
         log.warn(ex, "Exception while computing desired task count for [%s]", dataSource);
@@ -100,6 +96,19 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
       return desiredTaskCount;
     };
 
+    Runnable onSuccessfulScale = () -> {
+      LOCK.lock();
+      try {
+        lagMetricsQueue.clear();
+      }
+      catch (Exception ex) {
+        log.warn(ex, "Exception while clearing lags for [%s]", dataSource);
+      }
+      finally {
+        LOCK.unlock();
+      }
+    };
+
     lagComputationExec.scheduleAtFixedRate(
         computeAndCollectLag(),
         lagBasedAutoScalerConfig.getScaleActionStartDelayMillis(), // wait for tasks to start up
@@ -107,7 +116,7 @@ public class LagBasedAutoScaler implements SupervisorTaskAutoScaler
         TimeUnit.MILLISECONDS
     );
     allocationExec.scheduleAtFixedRate(
-        supervisor.buildDynamicAllocationTask(scaleAction, emitter),
+        supervisor.buildDynamicAllocationTask(scaleAction, onSuccessfulScale, emitter),
         lagBasedAutoScalerConfig.getScaleActionStartDelayMillis() + lagBasedAutoScalerConfig
             .getLagCollectionRangeMillis(),
         lagBasedAutoScalerConfig.getScaleActionPeriodMillis(),

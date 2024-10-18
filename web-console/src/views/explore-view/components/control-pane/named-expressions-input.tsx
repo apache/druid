@@ -20,7 +20,8 @@ import { Classes, Popover, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { JSX } from 'react';
-import React, { useCallback, useState } from 'react';
+import type React from 'react';
+import { useCallback, useState } from 'react';
 
 import type { ExpressionMeta, Measure } from '../../models';
 
@@ -72,6 +73,7 @@ export const NamedExpressionsInput = function NamedExpressionsInput<
 
       setDropIndex(i);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [dropIndex],
   );
 

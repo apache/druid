@@ -18,7 +18,6 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import { MoreButton } from './more-button';
 

@@ -26,7 +26,6 @@ import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.HashShuffleSpec;
 import org.apache.druid.msq.kernel.MixShuffleSpec;
@@ -36,10 +35,12 @@ import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.operator.AbstractPartitioningOperatorFactory;
+import org.apache.druid.query.operator.AbstractSortOperatorFactory;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
-import org.apache.druid.query.operator.NaiveSortOperatorFactory;
+import org.apache.druid.query.operator.GlueingPartitioningOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
+import org.apache.druid.query.operator.PartitionSortOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.segment.column.ColumnType;
@@ -92,42 +93,13 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
     final ShuffleSpec nextShuffleSpec = windowStages.getStages().get(0).findShuffleSpec(queryKitSpec.getNumPartitionsForShuffle());
     final QueryDefinitionBuilder queryDefBuilder = makeQueryDefinitionBuilder(queryKitSpec.getQueryId(), dataSourcePlan, nextShuffleSpec);
-
     final int firstWindowStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
-    final WindowOperatorQuery queryToRun = (WindowOperatorQuery) originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
 
-    if (windowStages.hasEmptyOverClause()) {
-      // Move everything to a single partition since we have to load all the data on a single worker anyway to compute empty over() clause.
-      log.info(
-          "Empty over clause is present in the query. Creating a single stage with all operator factories [%s].",
-          queryToRun.getOperators()
-      );
-      final RowSignature finalWindowStageRowSignature = windowStages.getSignatureForFinalWindowStage();
-      queryDefBuilder.add(
-          StageDefinition.builder(firstWindowStageNumber)
-                         .inputs(new StageInputSpec(firstWindowStageNumber - 1))
-                         .signature(finalWindowStageRowSignature)
-                         .maxWorkerCount(queryKitSpec.getMaxNonLeafWorkerCount())
-                         .shuffleSpec(windowStages.getShuffleSpecForFinalWindowStage())
-                         .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
-                             queryToRun,
-                             queryToRun.getOperators(),
-                             finalWindowStageRowSignature,
-                             windowStages.getMaxRowsMaterialized(),
-                             Collections.emptyList()
-                         ))
-      );
-    } else {
-      // There are multiple windows present in the query.
-      // Create stages for each window in the query.
-      // These stages will be serialized.
-      // The partition by clause of the next window will be the shuffle key for the previous window.
-      log.info("Row signature received from last stage is [%s].", signatureFromInput);
+    log.info("Row signature received from last stage is [%s].", signatureFromInput);
 
-      // Iterate over the list of window stages, and add the definition for each window stage to QueryDefinitionBuilder.
-      for (int i = 0; i < windowStages.getStages().size(); i++) {
-        queryDefBuilder.add(windowStages.getStageDefinitionBuilder(firstWindowStageNumber + i, i));
-      }
+    // Iterate over the list of window stages, and add the definition for each window stage to QueryDefinitionBuilder.
+    for (int i = 0; i < windowStages.getStages().size(); i++) {
+      queryDefBuilder.add(windowStages.getStageDefinitionBuilder(firstWindowStageNumber + i, i));
     }
     return queryDefBuilder.build();
   }
@@ -196,11 +168,11 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
     private void populateStages()
     {
-      WindowStage currentStage = new WindowStage();
+      WindowStage currentStage = new WindowStage(getMaxRowsMaterialized());
       for (OperatorFactory of : query.getOperators()) {
         if (!currentStage.canAccept(of)) {
           stages.add(currentStage);
-          currentStage = new WindowStage();
+          currentStage = new WindowStage(getMaxRowsMaterialized());
         }
         currentStage.addOperatorFactory(of);
       }
@@ -266,9 +238,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                             .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
                                 query,
                                 stage.getOperatorFactories(),
-                                stageRowSignature,
-                                getMaxRowsMaterialized(),
-                                stage.getPartitionColumns()
+                                stageRowSignature
                             ));
     }
 
@@ -302,29 +272,9 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       return resultShuffleSpecFactory.build(finalWindowClusterBy, false);
     }
 
-    private RowSignature getSignatureForFinalWindowStage()
-    {
-      return this.finalWindowStageRowSignature;
-    }
-
-    private ShuffleSpec getShuffleSpecForFinalWindowStage()
-    {
-      return this.finalWindowStageShuffleSpec;
-    }
-
     private int getMaxRowsMaterialized()
     {
-      return query.context().containsKey(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW) ?
-             (int) query.context().get(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW) :
-             Limits.MAX_ROWS_MATERIALIZED_IN_WINDOW;
-    }
-
-    private boolean hasEmptyOverClause()
-    {
-      return query.getOperators().stream()
-                   .filter(of -> of instanceof NaivePartitioningOperatorFactory)
-                   .map(of -> (NaivePartitioningOperatorFactory) of)
-                   .anyMatch(of -> of.getPartitionColumns().isEmpty());
+      return MultiStageQueryContext.getMaxRowsMaterializedInWindow(query.context());
     }
   }
   
@@ -334,21 +284,23 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
    */
   private static class WindowStage
   {
-    private NaiveSortOperatorFactory sortOperatorFactory;
-    private NaivePartitioningOperatorFactory partitioningOperatorFactory;
+    private AbstractSortOperatorFactory sortOperatorFactory;
+    private AbstractPartitioningOperatorFactory partitioningOperatorFactory;
     private final List<WindowOperatorFactory> windowOperatorFactories;
+    private final int maxRowsMaterialized;
 
-    private WindowStage()
+    private WindowStage(int maxRowsMaterialized)
     {
       this.windowOperatorFactories = new ArrayList<>();
+      this.maxRowsMaterialized = maxRowsMaterialized;
     }
 
     private void addOperatorFactory(OperatorFactory op)
     {
-      if (op instanceof NaiveSortOperatorFactory) {
-        this.sortOperatorFactory = (NaiveSortOperatorFactory) op;
-      } else if (op instanceof NaivePartitioningOperatorFactory) {
-        this.partitioningOperatorFactory = (NaivePartitioningOperatorFactory) op;
+      if (op instanceof AbstractSortOperatorFactory) {
+        this.sortOperatorFactory = (AbstractSortOperatorFactory) op;
+      } else if (op instanceof AbstractPartitioningOperatorFactory) {
+        this.partitioningOperatorFactory = (AbstractPartitioningOperatorFactory) op;
       } else {
         this.windowOperatorFactories.add((WindowOperatorFactory) op);
       }
@@ -357,19 +309,14 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     private List<OperatorFactory> getOperatorFactories()
     {
       List<OperatorFactory> operatorFactories = new ArrayList<>();
-      if (sortOperatorFactory != null) {
-        operatorFactories.add(sortOperatorFactory);
-      }
       if (partitioningOperatorFactory != null) {
-        operatorFactories.add(partitioningOperatorFactory);
+        operatorFactories.add(new GlueingPartitioningOperatorFactory(partitioningOperatorFactory.getPartitionColumns(), maxRowsMaterialized));
+      }
+      if (sortOperatorFactory != null) {
+        operatorFactories.add(new PartitionSortOperatorFactory(sortOperatorFactory.getSortColumns()));
       }
       operatorFactories.addAll(windowOperatorFactories);
       return operatorFactories;
-    }
-
-    private List<String> getPartitionColumns()
-    {
-      return partitioningOperatorFactory != null ? partitioningOperatorFactory.getPartitionColumns() : new ArrayList<>();
     }
 
     private List<WindowOperatorFactory> getWindowOperatorFactories()
@@ -413,13 +360,13 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       if (getOperatorFactories().isEmpty()) {
         return true;
       }
-      if (operatorFactory instanceof NaiveSortOperatorFactory) {
+      if (operatorFactory instanceof AbstractSortOperatorFactory) {
         return false;
       }
       if (operatorFactory instanceof WindowOperatorFactory) {
         return true;
       }
-      if (operatorFactory instanceof NaivePartitioningOperatorFactory) {
+      if (operatorFactory instanceof AbstractPartitioningOperatorFactory) {
         return sortOperatorFactory != null;
       }
       throw new ISE("Encountered unexpected operatorFactory type: [%s]", operatorFactory.getClass().getName());

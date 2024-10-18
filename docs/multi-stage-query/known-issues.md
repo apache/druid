@@ -68,3 +68,16 @@ properties, and the `indexSpec` [`tuningConfig`](../ingestion/ingestion-spec.md#
 - The maximum number of elements in a window cannot exceed a value of 100,000. 
 - To avoid `leafOperators` in MSQ engine, window functions have an extra scan stage after the window stage for cases 
 where native engine has a non-empty `leafOperator`.
+
+## Automatic compaction
+
+<!-- If you update this list, also update data-management/automatic-compaction.md -->
+
+The following known issues and limitations affect automatic compaction with the MSQ task engine:
+
+- The `metricSpec` field is only supported for certain aggregators. For more information, see [Supported aggregators](../data-management/automatic-compaction.md#supported-aggregators).
+- Only dynamic and range-based partitioning are supported.
+- Set `rollup`  to `true` if and only if `metricSpec` is not empty or null.
+- You can only partition on string dimensions. However, multi-valued string dimensions are not supported.
+- The `maxTotalRows` config is not supported in `DynamicPartitionsSpec`. Use `maxRowsPerSegment` instead.
+- Segments can only be sorted on `__time` as the first column.

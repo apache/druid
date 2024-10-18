@@ -123,16 +123,19 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     };
 
     this.lookupsQueryManager = new QueryManager({
-      processQuery: async () => {
+      processQuery: async (_, cancelToken) => {
         const tiersResp = await Api.instance.get(
           '/druid/coordinator/v1/lookups/config?discover=true',
+          { cancelToken },
         );
         const tiers =
           tiersResp.data && tiersResp.data.length > 0
             ? tiersResp.data.sort(tierNameCompare)
             : [DEFAULT_LOOKUP_TIER];
 
-        const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all');
+        const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all', {
+          cancelToken,
+        });
         const lookupData = lookupResp.data;
 
         const lookupEntries: LookupEntry[] = [];
@@ -330,6 +333,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   private renderFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
+    // eslint-disable-next-line react/display-name
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
