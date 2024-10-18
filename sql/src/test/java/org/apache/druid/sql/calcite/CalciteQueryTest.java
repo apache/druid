@@ -5168,45 +5168,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testFilteredAggregations2()
-  {
-    cannotVectorizeUnlessFallback();
-    testQuery(
-        "SELECT "
-        + "SUM(case dim1 when 'abc' then cnt else 0 end) "
-        + "FROM druid.foo",
-        ImmutableList.of(Druids.newTimeseriesQueryBuilder()
-            .dataSource(CalciteTests.DATASOURCE1)
-            .intervals(querySegmentSpec(Filtration.eternity()))
-            .granularity(Granularities.ALL)
-            .context(QUERY_CONTEXT_DEFAULT)
-            .virtualColumns(
-                expressionVirtualColumn(
-                    "v0",
-                    "case_searched((\"dim1\" == 'abc'),\"cnt\",0)",
-                    ColumnType.LONG
-                )
-            )
-            .aggregators(
-                aggregators(
-//                    new FilteredAggregatorFactory(
-//                        new LongSumAggregatorFactory("a0", "cnt"),
-//                        equality("dim1", "abc", ColumnType.STRING)
-//                    ),
-                    new LongSumAggregatorFactory("a0", "v0")
-                )
-            ).build()),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{1L}
-        ) :
-        ImmutableList.of(
-            new Object[]{1L}
-        )
-    );
-  }
-
-  @Test
   public void testFilteredAggregations()
   {
     cannotVectorizeUnlessFallback();

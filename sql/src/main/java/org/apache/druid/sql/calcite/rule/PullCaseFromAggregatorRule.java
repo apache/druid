@@ -28,6 +28,8 @@ import org.apache.calcite.rel.core.Aggregate;
 import org.apache.calcite.rel.core.AggregateCall;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.rules.SubstitutionRule;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
@@ -42,11 +44,13 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.tools.RelBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -90,8 +94,10 @@ public class PullCaseFromAggregatorRule extends RelOptRule implements Substituti
     final RelBuilder.GroupKey groupKey =
         relBuilder.groupKey(aggregate.getGroupSet(), aggregate.getGroupSets());
 
-    relBuilder.aggregate(groupKey, newCalls)
-        .convert(aggregate.getRowType(), false);
+    relBuilder.aggregate(groupKey, newCalls);
+
+
+    relBuilder        .convert(aggregate.getRowType(), false);
 
     call.transformTo(relBuilder.build());
     call.getPlanner().prune(aggregate);
@@ -143,10 +149,31 @@ public class PullCaseFromAggregatorRule extends RelOptRule implements Substituti
       return null;
     }
 
-    // new part
-    if ((RexLiteral.isNullLiteral(arg2) // Case A1
-        && call.getAggregation().allowsFilter())
-        || (kind == SqlKind.SUM // Case A2
+
+    if (kind == SqlKind.COUNT // Case C
+        && arg1.isA(SqlKind.LITERAL)
+        && !RexLiteral.isNullLiteral(arg1)
+        && RexLiteral.isNullLiteral(arg2)) {
+      newProjects.add(filter);
+      return AggregateCall.create(SqlStdOperatorTable.COUNT, false, false,
+          false, call.rexList, ImmutableList.of(), newProjects.size() - 1, null,
+          RelCollations.EMPTY, call.getType(),
+          call.getName());
+    } else if (kind == SqlKind.SUM0 // Case B
+        && isIntLiteral(arg1, BigDecimal.ONE)
+        && isIntLiteral(arg2, BigDecimal.ZERO)) {
+
+      newProjects.add(filter);
+      final RelDataTypeFactory typeFactory = cluster.getTypeFactory();
+      final RelDataType dataType =
+          typeFactory.createTypeWithNullability(
+              typeFactory.createSqlType(SqlTypeName.BIGINT), false);
+      return AggregateCall.create(SqlStdOperatorTable.COUNT, false, false,
+          false, call.rexList, ImmutableList.of(), newProjects.size() - 1, null,
+          RelCollations.EMPTY, dataType, call.getName());
+    } else if ((RexLiteral.isNullLiteral(arg2) // Case A1
+            && call.getAggregation().allowsFilter())
+        || (kind == SqlKind.SUM0 // Case A2
             && isIntLiteral(arg2, BigDecimal.ZERO))) {
       newProjects.add(arg1);
       newProjects.add(filter);
@@ -154,9 +181,24 @@ public class PullCaseFromAggregatorRule extends RelOptRule implements Substituti
           false, false, call.rexList, ImmutableList.of(newProjects.size() - 2),
           newProjects.size() - 1, null, RelCollations.EMPTY,
           call.getType(), call.getName());
-    } else {
-      return null;
+
+    } else if (kind == SqlKind.SUM && isIntLiteral(arg2, BigDecimal.ZERO)) {
+      newProjects.add(arg1);
+      newProjects.add(filter);
+
+      RelDataType oldType = arg1.getType();
+      RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
+      RelDataType newType = SqlTypeUtil
+          .makeNullableIfOperandsAre(typeFactory, Collections.singletonList(oldType), call.getType());
+      newType=typeFactory.createTypeWithNullability(call.getType(), true);
+      if(true) {
+        return AggregateCall.create(call.getAggregation(), false,
+            false, true, call.rexList, ImmutableList.of(newProjects.size() - 2),
+            newProjects.size() - 1, null, RelCollations.EMPTY,
+            newType, call.getName());
+      }
     }
+    return null;
   }
 
   /** Returns the argument, if an aggregate call has a single argument,

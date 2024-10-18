@@ -359,6 +359,7 @@ public class CalciteRulesManager
       builder.addRuleInstance(new CaseToCoalesceRule());
       builder.addRuleInstance(new CoalesceLookupRule());
       builder.addRuleInstance(new RewriteFirstValueLastValueRule());
+      builder.addRuleInstance(CoreRules.AGGREGATE_REMOVE);
       builder.addRuleInstance(new PullCaseFromAggregatorRule());
     }
 
