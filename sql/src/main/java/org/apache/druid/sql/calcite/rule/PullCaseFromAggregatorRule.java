@@ -44,13 +44,11 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.type.SqlTypeUtil;
 import org.apache.calcite.tools.RelBuilder;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -186,16 +184,15 @@ public class PullCaseFromAggregatorRule extends RelOptRule implements Substituti
       newProjects.add(arg1);
       newProjects.add(filter);
 
-      RelDataType oldType = arg1.getType();
-      RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
-      RelDataType newType = SqlTypeUtil
-          .makeNullableIfOperandsAre(typeFactory, Collections.singletonList(oldType), call.getType());
-      newType=typeFactory.createTypeWithNullability(call.getType(), true);
-      return AggregateCall.create(call.getAggregation(), false,
+      RelDataType newType = rexBuilder.getTypeFactory().createTypeWithNullability(call.getType(), true);
+      return AggregateCall.create(
+          call.getAggregation(), false,
           false, true, call.rexList, ImmutableList.of(newProjects.size() - 2),
           newProjects.size() - 1, null, RelCollations.EMPTY,
-          newType, call.getName());
+          newType, call.getName()
+      );
     }
+
     return null;
   }
 
