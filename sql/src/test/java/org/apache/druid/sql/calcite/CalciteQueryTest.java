@@ -5355,7 +5355,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCaseFilteredAggregationWithGroupBy()
   {
-    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT\n"
         + "  cnt,\n"
@@ -5369,14 +5368,13 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG)))
                         .setVirtualColumns(
-                            expressionVirtualColumn(
-                                "v0",
-                                "case_searched((\"dim1\" != '1'),1,0)",
-                                ColumnType.LONG
-                            )
+                            expressionVirtualColumn("v0", "1", ColumnType.LONG)
                         )
                         .setAggregatorSpecs(aggregators(
-                            new LongSumAggregatorFactory("a0", "v0"),
+                            new FilteredAggregatorFactory(
+                                new LongSumAggregatorFactory("a0", "v0"),
+                                not(equality("dim1", "1", ColumnType.STRING))
+                            ),
                             new LongSumAggregatorFactory("a1", "cnt")
                         ))
                         .setPostAggregatorSpecs(

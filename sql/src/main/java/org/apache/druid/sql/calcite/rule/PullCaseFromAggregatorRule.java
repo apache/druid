@@ -191,12 +191,10 @@ public class PullCaseFromAggregatorRule extends RelOptRule implements Substituti
       RelDataType newType = SqlTypeUtil
           .makeNullableIfOperandsAre(typeFactory, Collections.singletonList(oldType), call.getType());
       newType=typeFactory.createTypeWithNullability(call.getType(), true);
-      if(true) {
-        return AggregateCall.create(call.getAggregation(), false,
-            false, true, call.rexList, ImmutableList.of(newProjects.size() - 2),
-            newProjects.size() - 1, null, RelCollations.EMPTY,
-            newType, call.getName());
-      }
+      return AggregateCall.create(call.getAggregation(), false,
+          false, true, call.rexList, ImmutableList.of(newProjects.size() - 2),
+          newProjects.size() - 1, null, RelCollations.EMPTY,
+          newType, call.getName());
     }
     return null;
   }
