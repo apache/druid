@@ -101,7 +101,7 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
   }
 
   @Benchmark
-  public void windowWithoutGroupBy(Blackhole blackhole) throws NoSuchMethodException
+  public void windowWithoutGroupBy(Blackhole blackhole)
   {
     String sql = "SELECT ROW_NUMBER() "
                  + "OVER (PARTITION BY dimUniform ORDER BY dimSequential) "
@@ -110,7 +110,7 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
   }
 
   @Benchmark
-  public void windowWithoutSorting(Blackhole blackhole) throws NoSuchMethodException
+  public void windowWithoutSorting(Blackhole blackhole)
   {
     String sql = "SELECT dimZipf, dimSequential,"
                  + "ROW_NUMBER() "
@@ -121,7 +121,7 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
   }
 
   @Benchmark
-  public void windowWithSorting(Blackhole blackhole) throws NoSuchMethodException
+  public void windowWithSorting(Blackhole blackhole)
   {
     String sql = "SELECT dimZipf, dimSequential,"
                  + "ROW_NUMBER() "
@@ -132,7 +132,7 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
   }
 
   @Benchmark
-  public void windowWithHighCardinalityPartitionBy(Blackhole blackhole) throws NoSuchMethodException
+  public void windowWithHighCardinalityPartitionBy(Blackhole blackhole)
   {
     String sql = "select\n"
                  + "__time,\n"
@@ -143,7 +143,7 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
   }
 
   @Benchmark
-  public void windowWithLowCardinalityPartitionBy(Blackhole blackhole) throws NoSuchMethodException
+  public void windowWithLowCardinalityPartitionBy(Blackhole blackhole)
   {
     String sql = "select\n"
                  + "dimZipf,\n"
@@ -154,7 +154,7 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
   }
 
   @Benchmark
-  public void multipleWindows(Blackhole blackhole) throws NoSuchMethodException
+  public void multipleWindows(Blackhole blackhole)
   {
     String sql = "select\n"
                  + "dimZipf, dimSequential, minFloatZipf,\n"
@@ -171,7 +171,7 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
     querySql(sql, blackhole);
   }
 
-  public void querySql(String sql, Blackhole blackhole) throws NoSuchMethodException
+  public void querySql(String sql, Blackhole blackhole)
   {
     final Map<String, Object> context = ImmutableMap.of(
         MultiStageQueryContext.CTX_MAX_NUM_TASKS, maxNumTasks
