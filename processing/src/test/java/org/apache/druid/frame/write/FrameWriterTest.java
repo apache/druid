@@ -344,7 +344,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     for (final FrameWriterTestData.Dataset<?> dataset1 : FrameWriterTestData.DATASETS) {
       for (final FrameWriterTestData.Dataset<?> dataset2 : FrameWriterTestData.DATASETS) {
         final RowSignature signature = makeSignature(Arrays.asList(dataset1, dataset2));
-        final Sequence<List<Object>> rowSequence = unsortAndMakeRows(Arrays.asList(dataset1, dataset2));
+        final Sequence<List<Object>> rowSequence = unsortAndMakeRows(Arrays.asList(dataset1, dataset2), 1);
 
         final List<String> sortColumns = new ArrayList<>();
         sortColumns.add(signature.getColumnName(0));
@@ -378,7 +378,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     // Test every possible capacity, up to the amount required to write all items from every list.
     Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
     final RowSignature signature = makeSignature(FrameWriterTestData.DATASETS);
-    final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS);
+    final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS, 3);
     final int totalRows = rowSequence.toList().size();
 
     final List<String> sortColumns = new ArrayList<>();
@@ -648,7 +648,10 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   /**
    * Create rows out of shuffled (unsorted) datasets.
    */
-  private static Sequence<List<Object>> unsortAndMakeRows(final List<FrameWriterTestData.Dataset<?>> datasets)
+  private static Sequence<List<Object>> unsortAndMakeRows(
+      final List<FrameWriterTestData.Dataset<?>> datasets,
+      final int multiplicationFactor
+  )
   {
     final List<List<Object>> retVal = new ArrayList<>();
 
@@ -672,7 +675,12 @@ public class FrameWriterTest extends InitializedNullHandlingTest
       retVal.add(row);
     }
 
-    return Sequences.simple(retVal);
+    List<List<Object>> multipliedRetVal = new ArrayList<>();
+    for (int i = 0; i < multiplicationFactor; ++i) {
+      multipliedRetVal.addAll(retVal);
+    }
+
+    return Sequences.simple(multipliedRetVal);
   }
 
   /**

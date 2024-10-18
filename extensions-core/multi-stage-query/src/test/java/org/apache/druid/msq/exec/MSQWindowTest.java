@@ -1805,7 +1805,7 @@ public class MSQWindowTest extends MSQTestBase
         .setSql(
             "select cityName, added, SUM(added) OVER () cc from wikipedia")
         .setQueryContext(customContext)
-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))
+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15930, 200))
         .verifyResults();
   }
 
