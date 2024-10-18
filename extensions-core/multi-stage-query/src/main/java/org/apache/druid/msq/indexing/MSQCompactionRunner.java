@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -84,6 +85,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -158,12 +160,18 @@ public class MSQCompactionRunner implements CompactionRunner
       validationResults.add(
           ClientCompactionRunnerInfo.validatePartitionsSpecForMSQ(
               compactionTask.getTuningConfig().getPartitionsSpec(),
-              dataSchema.getDimensionsSpec().getDimensions(),
+              dataSchema.getDimensionsSpec().getDimensions()
+          )
+      );
+      validationResults.add(
+          validatePartitionDimensionsNotMultivalued(
+              compactionTask.getTuningConfig().getPartitionsSpec(),
+              dataSchema.getDimensionsSpec(),
               dataSchema instanceof CombinedDataSchema
               ? ((CombinedDataSchema) dataSchema).getMultiValuedDimensions()
               : null
-          )
-      );
+          ));
+
     }
     if (compactionTask.getGranularitySpec() != null) {
       validationResults.add(ClientCompactionRunnerInfo.validateRollupForMSQ(
@@ -177,6 +185,31 @@ public class MSQCompactionRunner implements CompactionRunner
                             .filter(result -> !result.isValid())
                             .findFirst()
                             .orElse(CompactionConfigValidationResult.success());
+  }
+
+  private CompactionConfigValidationResult validatePartitionDimensionsNotMultivalued(
+      PartitionsSpec partitionsSpec,
+      DimensionsSpec dimensionsSpec,
+      Set<String> multiValuedDimensions
+  )
+  {
+    List<String> dimensionSchemas = dimensionsSpec.getDimensionNames();
+    if (partitionsSpec instanceof DimensionRangePartitionsSpec
+        && dimensionSchemas != null
+        && multiValuedDimensions != null) {
+      Optional<String> multiValuedDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
+          .getPartitionDimensions()
+          .stream()
+          .filter(multiValuedDimensions::contains)
+          .findAny();
+      if (multiValuedDimension.isPresent()) {
+        return CompactionConfigValidationResult.failure(
+            "MSQ: Multi-valued string partition dimension[%s] not supported with 'range' partition spec",
+            multiValuedDimension.get()
+        );
+      }
+    }
+    return CompactionConfigValidationResult.success();
   }
 
   @Override

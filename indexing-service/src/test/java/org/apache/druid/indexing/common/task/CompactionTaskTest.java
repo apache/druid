@@ -1536,7 +1536,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testRollupWithNoDimensionsSpecNeedsMVDInfo()
+  public void testMSQRollupWithNoDimensionsSpecNeedsMVDInfo()
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1550,7 +1550,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testRangePartitionWithNoDimensionsSpecNeedsMVDInfo()
+  public void testMSQRangePartitionWithNoDimensionsSpecNeedsMVDInfo()
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1574,7 +1574,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testRollupOnStringNeedsMVDInfo()
+  public void testMSQRollupOnStringNeedsMVDInfo()
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1583,6 +1583,7 @@ public class CompactionTaskTest
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder.compactionRunner(new TestMSQCompactionRunner());
     builder.granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, true));
+
     DimensionSchema stringDim = new StringDimensionSchema("string_dim_1", null, null);
     builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
     final CompactionTask compactionTask = builder.build();
@@ -1591,7 +1592,7 @@ public class CompactionTaskTest
   }
 
   @Test
-  public void testRangePartitionOnStringNeedsMVDInfo()
+  public void testMSQRangePartitionOnStringNeedsMVDInfo()
   {
     final Builder builder = new Builder(
         DATA_SOURCE,
@@ -1599,6 +1600,7 @@ public class CompactionTaskTest
     );
     builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
     builder.compactionRunner(new TestMSQCompactionRunner());
+
     DimensionSchema stringDim = new StringDimensionSchema("string_dim_1", null, null);
     builder.tuningConfig(TuningConfigBuilder.forCompactionTask()
                                             .withForceGuaranteedRollup(true)
@@ -2099,7 +2101,7 @@ public class CompactionTaskTest
   }
 
   /**
-   * A dummy class to test MSQCompactionRunner behaviour in druid-multi-stage-query extension
+   * A class to mimic MSQCompactionRunner behaviour, since the actual class resides in the MSQ extn
    */
   private static class TestMSQCompactionRunner implements CompactionRunner
   {

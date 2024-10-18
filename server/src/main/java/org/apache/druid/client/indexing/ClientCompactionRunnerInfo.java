@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -120,9 +119,7 @@ public class ClientCompactionRunnerInfo
     if (newConfig.getTuningConfig() != null) {
       validationResults.add(validatePartitionsSpecForMSQ(
           newConfig.getTuningConfig().getPartitionsSpec(),
-          newConfig.getDimensionsSpec() == null ? null : newConfig.getDimensionsSpec().getDimensions(),
-          // multi-valued dimensions info is not available inside the compaction config
-          null
+          newConfig.getDimensionsSpec() == null ? null : newConfig.getDimensionsSpec().getDimensions()
       ));
     }
     if (newConfig.getGranularitySpec() != null) {
@@ -141,12 +138,11 @@ public class ClientCompactionRunnerInfo
 
   /**
    * Validate that partitionSpec is either 'dynamic` or 'range'. If 'dynamic', ensure 'maxTotalRows' is null. If range
-   * ensure all partition columns are single-valued and have type string.
+   * ensure all partition columns are of type string.
    */
   public static CompactionConfigValidationResult validatePartitionsSpecForMSQ(
       @Nullable PartitionsSpec partitionsSpec,
-      @Nullable List<DimensionSchema> dimensionSchemas,
-      @Nullable Set<String> multiValuedDimensions
+      @Nullable List<DimensionSchema> dimensionSchemas
   )
   {
     if (partitionsSpec == null) {
@@ -183,19 +179,6 @@ public class ClientCompactionRunnerInfo
             nonStringDimension.get(),
             dimensionSchemaMap.get(nonStringDimension.get()).getTypeName()
         );
-      }
-      if (multiValuedDimensions != null) {
-        Optional<String> multiValuedDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
-            .getPartitionDimensions()
-            .stream()
-            .filter(multiValuedDimensions::contains)
-            .findAny();
-        if (multiValuedDimension.isPresent()) {
-          return CompactionConfigValidationResult.failure(
-              "MSQ: Multi-valued string partition dimension[%s] not supported with 'range' partition spec",
-              multiValuedDimension.get()
-          );
-        }
       }
     }
     return CompactionConfigValidationResult.success();
