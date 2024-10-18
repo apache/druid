@@ -22,43 +22,44 @@ package org.apache.druid.sql.calcite.planner;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.JoinAlgorithm;
 
 import java.util.Arrays;
 
-public enum JoinAlgorithm
+public enum JoinHint
 {
-  BROADCAST("broadcast") {
+  USE_MERGE_JOIN("use_merge_join") {
     @Override
-    public boolean requiresSubquery()
+    public JoinAlgorithm getJoinAlgorithm()
     {
-      return false;
+      return JoinAlgorithm.SORT_MERGE;
     }
   },
-  SORT_MERGE("sortMerge") {
+  USE_HASH_JOIN("use_hash_join") {
     @Override
-    public boolean requiresSubquery()
+    public JoinAlgorithm getJoinAlgorithm()
     {
-      return true;
+      return JoinAlgorithm.BROADCAST;
     }
   };
 
   private final String id;
 
-  JoinAlgorithm(String id)
+  JoinHint(String id)
   {
     this.id = id;
   }
 
   @JsonCreator
-  public static JoinAlgorithm fromString(final String id)
+  public static JoinHint fromString(final String id)
   {
-    for (final JoinAlgorithm value : values()) {
+    for (final JoinHint value : values()) {
       if (value.id.equals(id)) {
         return value;
       }
     }
 
-    throw new IAE("No such join algorithm [%s]. Supported values are: %s", id, Arrays.toString(values()));
+    throw new IAE("No such join hint [%s]. Supported values are: %s", id, Arrays.toString(values()));
   }
 
   @JsonValue
@@ -70,7 +71,7 @@ public enum JoinAlgorithm
   /**
    * Whether this join algorithm requires subqueries for all inputs.
    */
-  public abstract boolean requiresSubquery();
+  public abstract JoinAlgorithm getJoinAlgorithm();
 
   @Override
   public String toString()

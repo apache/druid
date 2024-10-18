@@ -42,7 +42,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 import java.io.IOException;

@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
+import org.apache.druid.query.JoinAlgorithm;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

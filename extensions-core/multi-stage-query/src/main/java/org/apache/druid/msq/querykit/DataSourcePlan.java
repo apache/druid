@@ -64,7 +64,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
-import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Interval;
 
@@ -212,10 +212,13 @@ public class DataSourcePlan
           broadcast
       );
     } else if (dataSource instanceof JoinDataSource) {
-      final JoinAlgorithm preferredJoinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+      JoinDataSource joinDataSource = (JoinDataSource) dataSource;
+      final JoinAlgorithm preferredJoinAlgorithm = joinDataSource.getPreferredJoinAlgorithm() != null
+                                                   ? joinDataSource.getPreferredJoinAlgorithm()
+                                                   : PlannerContext.getJoinAlgorithm(queryContext);
       final JoinAlgorithm deducedJoinAlgorithm = deduceJoinAlgorithm(
           preferredJoinAlgorithm,
-          ((JoinDataSource) dataSource)
+          joinDataSource
       );
 
       switch (deducedJoinAlgorithm) {
@@ -223,7 +226,7 @@ public class DataSourcePlan
           return forBroadcastHashJoin(
               queryKitSpec,
               queryContext,
-              (JoinDataSource) dataSource,
+              joinDataSource,
               querySegmentSpec,
               filter,
               filterFields,
@@ -234,7 +237,7 @@ public class DataSourcePlan
         case SORT_MERGE:
           return forSortMergeJoin(
               queryKitSpec,
-              (JoinDataSource) dataSource,
+              joinDataSource,
               querySegmentSpec,
               minStageNumber,
               broadcast
