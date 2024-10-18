@@ -9453,7 +9453,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
-    cannotVectorizeUnlessFallback();
     msqIncompatible();
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
@@ -9483,22 +9482,32 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                 ),
                                                 expressionVirtualColumn(
                                                     "v1",
-                                                    "case_searched(((\"__time\" >= 947005200000) && (\"__time\" < 1641402000000)),1,0)",
+                                                    "1",
                                                     ColumnType.LONG
                                                 )
                                             )
                                             .setDimensions(
                                                 dimensions(
-                                                    new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING),
-                                                    new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                                    new DefaultDimensionSpec("v0", "d0", ColumnType.LONG),
+                                                    new DefaultDimensionSpec("dim1", "d1", ColumnType.STRING)
                                                 )
                                             )
                                             .setAggregatorSpecs(
                                                 aggregators(
-                                                    new LongSumAggregatorFactory("a0", "v1"),
+                                                    new FilteredAggregatorFactory(
+                                                        new LongSumAggregatorFactory("a0", "v1"),
+                                                        range(
+                                                            "__time",
+                                                            ColumnType.LONG,
+                                                            timestamp("2000-01-04T17:00:00"),
+                                                            timestamp("2022-01-05T17:00:00"),
+                                                            false,
+                                                            true
+                                                        )
+                                                    ),
                                                     new GroupingAggregatorFactory(
                                                         "a1",
-                                                        ImmutableList.of("dim1", "v0")
+                                                        ImmutableList.of("v0", "dim1")
                                                     )
                                                 )
                                             )
@@ -9523,9 +9532,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a1"),
                                     and(
-                                        notNull("d0"),
+                                        notNull("d1"),
                                         equality("a1", 0L, ColumnType.LONG),
-                                        expressionFilter("\"d1\"")
+                                        expressionFilter("\"d0\"")
                                     )
                                 )
                             )
