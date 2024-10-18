@@ -55,6 +55,7 @@ import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -129,6 +130,7 @@ import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -1534,6 +1536,89 @@ public class CompactionTaskTest
   }
 
   @Test
+  public void testMSQRollupWithNoDimensionsSpecNeedsMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.compactionRunner(new TestMSQCompactionRunner());
+    final CompactionTask compactionTask = builder.build();
+    // granularitySpec=null should assume a possible rollup
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
+  public void testMSQRangePartitionWithNoDimensionsSpecNeedsMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.compactionRunner(new TestMSQCompactionRunner());
+    builder.tuningConfig(TuningConfigBuilder.forCompactionTask()
+                                            .withForceGuaranteedRollup(true)
+                                            .withPartitionsSpec(
+                                                new DimensionRangePartitionsSpec(
+                                                    3,
+                                                    null,
+                                                    ImmutableList.of(
+                                                        "string_dim_1"),
+                                                    false
+                                                ))
+                                            .build());
+    final CompactionTask compactionTask = builder.build();
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
+  public void testMSQRollupOnStringNeedsMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.compactionRunner(new TestMSQCompactionRunner());
+    builder.granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, true));
+
+    DimensionSchema stringDim = new StringDimensionSchema("string_dim_1", null, null);
+    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    final CompactionTask compactionTask = builder.build();
+    // A string dimension with rollup=true should need MVD info
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
+  public void testMSQRangePartitionOnStringNeedsMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.compactionRunner(new TestMSQCompactionRunner());
+
+    DimensionSchema stringDim = new StringDimensionSchema("string_dim_1", null, null);
+    builder.tuningConfig(TuningConfigBuilder.forCompactionTask()
+                                            .withForceGuaranteedRollup(true)
+                                            .withPartitionsSpec(
+                                                new DimensionRangePartitionsSpec(
+                                                    3,
+                                                    null,
+                                                    ImmutableList.of(
+                                                        stringDim.getName()),
+                                                    false
+                                                ))
+                                            .build());
+    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    CompactionTask compactionTask = builder.build();
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
   public void testChooseFinestGranularityWithNulls()
   {
     List<Granularity> input = Arrays.asList(
@@ -2013,6 +2098,38 @@ public class CompactionTaskTest
       return null;
     }
 
+  }
+
+  /**
+   * A class to mimic validations with MSQCompactionRunner behaviour, since the actual class resides in the MSQ extn.
+   * Since validations just depend on the type of runner, all overrideen functions just return null.
+   */
+  private static class TestMSQCompactionRunner implements CompactionRunner
+  {
+    @Override
+    public TaskStatus runCompactionTasks(
+        CompactionTask compactionTask,
+        Map<Interval, DataSchema> intervalDataSchemaMap,
+        TaskToolbox taskToolbox
+    )
+    {
+      return null;
+    }
+
+    @Override
+    public CurrentSubTaskHolder getCurrentSubTaskHolder()
+    {
+      return null;
+    }
+
+    @Override
+    public CompactionConfigValidationResult validateCompactionTask(
+        CompactionTask compactionTask,
+        Map<Interval, DataSchema> intervalToDataSchemaMap
+    )
+    {
+      return null;
+    }
   }
 
   /**
