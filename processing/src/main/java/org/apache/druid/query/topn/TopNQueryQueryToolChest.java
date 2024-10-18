@@ -517,7 +517,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public RowSignature resultArraySignature(TopNQuery query)
   {
-    return query.getResultSignature(RowSignature.Finalization.UNKNOWN);
+    return query.getResultRowSignature(RowSignature.Finalization.UNKNOWN);
   }
 
   @Override
@@ -563,9 +563,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       boolean useNestedForUnknownTypes
   )
   {
-    final RowSignature rowSignature = query.getResultSignature(
-        query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
-    );
+    final RowSignature rowSignature = query.getResultRowSignature(query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO);
 
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),

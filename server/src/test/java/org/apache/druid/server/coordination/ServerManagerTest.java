@@ -48,6 +48,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.ConcatQueryRunner;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.DefaultQueryMetrics;
+import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.NoopQueryRunner;
@@ -187,19 +188,14 @@ public class ServerManagerTest
     queryNotifyLatch = new CountDownLatch(1);
     factory = new MyQueryRunnerFactory(queryWaitLatch, queryWaitYieldLatch, queryNotifyLatch);
     serverManagerExec = Execs.multiThreaded(2, "ServerManagerTest-%d");
+    QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
+        ImmutableMap
+            .<Class<? extends Query>, QueryRunnerFactory>builder()
+            .put(SearchQuery.class, factory)
+            .build()
+    );
     serverManager = new ServerManager(
-        new QueryRunnerFactoryConglomerate()
-        {
-          @Override
-          public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
-          {
-            if (query instanceof SearchQuery) {
-              return (QueryRunnerFactory) factory;
-            } else {
-              return null;
-            }
-          }
-        },
+        conglomerate,
         new NoopServiceEmitter(),
         new ForwardingQueryProcessingPool(serverManagerExec),
         new ForegroundCachePopulator(new DefaultObjectMapper(), new CachePopulatorStats(), -1),

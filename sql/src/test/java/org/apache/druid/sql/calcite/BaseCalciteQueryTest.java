@@ -1347,7 +1347,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static <T> Query<?> recursivelyClearContext(final Query<T> query, ObjectMapper queryJsonMapper)
   {
     try {
-      Query<T> newQuery = query.withDataSource(recursivelyClearContext(query.getDataSource(), queryJsonMapper));
+      Query<T> newQuery = query.withDataSources(recursivelyClearDatasource(query.getDataSources(), queryJsonMapper));
       final JsonNode newQueryNode = queryJsonMapper.valueToTree(newQuery);
       ((ObjectNode) newQueryNode).remove("context");
       return queryJsonMapper.treeToValue(newQueryNode, Query.class);
@@ -1355,6 +1355,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private static List<DataSource> recursivelyClearDatasource(final List<DataSource> dataSources,
+      ObjectMapper queryJsonMapper)
+  {
+    List<DataSource> ret = new ArrayList<DataSource>();
+    for (DataSource dataSource : dataSources) {
+      ret.add(recursivelyClearContext(dataSource, queryJsonMapper));
+    }
+    return ret;
   }
 
   /**

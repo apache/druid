@@ -30,7 +30,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class UnionQueryRunnerTest
+public class UnionDataSourceQueryRunnerTest
 {
   @Test
   public void testUnionQueryRunner()
@@ -56,7 +56,7 @@ public class UnionQueryRunnerTest
         }
       }
     };
-    UnionQueryRunner runner = new UnionQueryRunner(baseRunner);
+    UnionDataSourceQueryRunner runner = new UnionDataSourceQueryRunner(baseRunner);
     // Make a dummy query with Union datasource
     Query q = Druids.newTimeseriesQueryBuilder()
                     .dataSource(
