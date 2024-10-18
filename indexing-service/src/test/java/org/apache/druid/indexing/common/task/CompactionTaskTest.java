@@ -1546,7 +1546,7 @@ public class CompactionTaskTest
     builder.compactionRunner(new TestMSQCompactionRunner());
     final CompactionTask compactionTask = builder.build();
     // granularitySpec=null should assume a possible rollup
-    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test
@@ -1570,7 +1570,7 @@ public class CompactionTaskTest
                                                 ))
                                             .build());
     final CompactionTask compactionTask = builder.build();
-    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test
@@ -1588,7 +1588,7 @@ public class CompactionTaskTest
     builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
     final CompactionTask compactionTask = builder.build();
     // A string dimension with rollup=true should need MVD info
-    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test
@@ -1615,7 +1615,7 @@ public class CompactionTaskTest
                                             .build());
     builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
     CompactionTask compactionTask = builder.build();
-    Assert.assertTrue(compactionTask.needMultiValuedDimensions());
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test
@@ -2101,7 +2101,8 @@ public class CompactionTaskTest
   }
 
   /**
-   * A class to mimic MSQCompactionRunner behaviour, since the actual class resides in the MSQ extn
+   * A class to mimic validations with MSQCompactionRunner behaviour, since the actual class resides in the MSQ extn.
+   * Since validations just depend on the type of runner, all overrideen functions just return null.
    */
   private static class TestMSQCompactionRunner implements CompactionRunner
   {

@@ -455,36 +455,41 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   }
 
   /**
-   * In MSQ, MVDs need conversion to array for rollup, and they aren't supported as partition columns. This check
-   * therefore is particularly for MSQCompactionRunner; it returns true when dimension types aren't known
-   * from CompactionTask spec, or if either rollup or partition dimensions contain any string-type column.
+   * Checks if multi-valued string dimensions need to be analyzed by downloading the segments.
+   * This method returns true only for MSQ engine when either of the following holds true:
+   * <ul>
+   * <li> Range partitioning is done on a string dimension or an unknown dimension
+   * (since MSQ does not support partitioning on a multi-valued string dimension) </li>
+   * <li> Rollup is done on a string dimension or an unknown dimension
+   * (since MSQ requires multi-valued string dimensions to be converted to arrays for rollup) </li>
+   * </ul>
+   * @return false for native engine, true for MSQ engine only when partitioning or rollup is done on a string
+   * or unknown dimension.
    */
-  boolean needMultiValuedDimensions()
+  boolean identifyMultiValuedDimensions()
   {
     if (compactionRunner instanceof NativeCompactionRunner) {
       return false;
     }
     // Rollup can be true even when granularitySpec is not known since rollup is then decided based on segment analysis
-    boolean isPossiblyRollup = !(granularitySpec != null && Boolean.FALSE.equals(granularitySpec.isRollup()));
+    final boolean isPossiblyRollup = granularitySpec == null || !Boolean.FALSE.equals(granularitySpec.isRollup());
     boolean isRangePartitioned = tuningConfig != null
                                  && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
 
     if (dimensionsSpec == null || dimensionsSpec.getDimensions().isEmpty()) {
-      return (isPossiblyRollup || isRangePartitioned);
+      return isPossiblyRollup || isRangePartitioned;
     } else {
       boolean isRollupOnStringDimension = isPossiblyRollup &&
                                           dimensionsSpec.getDimensions()
                                                         .stream()
-                                                        .anyMatch(dim -> ColumnType.STRING.equals(
-                                                            dim.getColumnType()));
+                                                        .anyMatch(dim -> ColumnType.STRING.equals(dim.getColumnType()));
 
       boolean isPartitionedOnStringDimension =
           isRangePartitioned &&
           dimensionsSpec.getDimensions()
                         .stream()
                         .anyMatch(
-                            dim -> ColumnType.STRING.equals(
-                                dim.getColumnType())
+                            dim -> ColumnType.STRING.equals(dim.getColumnType())
                                    && ((DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec())
                                        .getPartitionDimensions()
                                        .contains(dim.getName())
@@ -507,7 +512,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         metricsSpec,
         granularitySpec,
         getMetricBuilder(),
-        this.needMultiValuedDimensions()
+        this.identifyMultiValuedDimensions()
     );
 
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());

@@ -164,13 +164,14 @@ public class MSQCompactionRunner implements CompactionRunner
           )
       );
       validationResults.add(
-          validatePartitionDimensionsNotMultivalued(
+          validatePartitionDimensionsAreNotMultiValued(
               compactionTask.getTuningConfig().getPartitionsSpec(),
               dataSchema.getDimensionsSpec(),
               dataSchema instanceof CombinedDataSchema
               ? ((CombinedDataSchema) dataSchema).getMultiValuedDimensions()
               : null
-          ));
+          )
+      );
 
     }
     if (compactionTask.getGranularitySpec() != null) {
@@ -187,7 +188,7 @@ public class MSQCompactionRunner implements CompactionRunner
                             .orElse(CompactionConfigValidationResult.success());
   }
 
-  private CompactionConfigValidationResult validatePartitionDimensionsNotMultivalued(
+  private CompactionConfigValidationResult validatePartitionDimensionsAreNotMultiValued(
       PartitionsSpec partitionsSpec,
       DimensionsSpec dimensionsSpec,
       Set<String> multiValuedDimensions
@@ -196,7 +197,8 @@ public class MSQCompactionRunner implements CompactionRunner
     List<String> dimensionSchemas = dimensionsSpec.getDimensionNames();
     if (partitionsSpec instanceof DimensionRangePartitionsSpec
         && dimensionSchemas != null
-        && multiValuedDimensions != null) {
+        && multiValuedDimensions != null
+        && !multiValuedDimensions.isEmpty()) {
       Optional<String> multiValuedDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
           .getPartitionDimensions()
           .stream()
