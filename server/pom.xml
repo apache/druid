@@ -471,6 +471,12 @@
             <artifactId>commons-text</artifactId>
             <scope>test</scope>
         </dependency>
+      <dependency>
+        <groupId>org.scala-lang</groupId>
+        <artifactId>scala-reflect</artifactId>
+        <version>2.13.11</version>
+        <scope>compile</scope>
+      </dependency>
     </dependencies>
 
     <build>
