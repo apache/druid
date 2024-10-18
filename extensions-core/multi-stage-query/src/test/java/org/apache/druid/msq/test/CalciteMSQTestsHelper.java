@@ -416,6 +416,9 @@ public class CalciteMSQTestsHelper
       case CalciteTests.T_ALL_TYPE_PARQUET:
         index = TestDataBuilder.getQueryableIndexForDrillDatasource(segmentId.getDataSource(), tempFolderProducer.apply("tmpDir"));
         break;
+      case CalciteTests.BENCHMARK_DATASOURCE:
+        index = TestDataBuilder.getQueryableIndexForBenchmarkDatasource();
+        break;
       default:
         throw new ISE("Cannot query segment %s in test runner", segmentId);
 

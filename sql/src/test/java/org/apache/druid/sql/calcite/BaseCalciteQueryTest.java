@@ -645,7 +645,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   @RegisterExtension
-  static SqlTestFrameworkConfig.Rule queryFrameworkRule = new SqlTestFrameworkConfig.Rule();
+  protected static SqlTestFrameworkConfig.Rule queryFrameworkRule = new SqlTestFrameworkConfig.Rule();
 
   public SqlTestFramework queryFramework()
   {
@@ -894,6 +894,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
             cannotVectorize || (!ExpressionProcessing.allowVectorizeFallback() && cannotVectorizeUnlessFallback)
         )
         .skipVectorize(skipVectorize);
+  }
+
+  public CalciteTestConfig createCalciteTestConfig()
+  {
+    return new CalciteTestConfig();
   }
 
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
