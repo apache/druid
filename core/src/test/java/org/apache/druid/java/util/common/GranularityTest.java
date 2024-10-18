@@ -978,6 +978,9 @@ public class GranularityTest
             Granularities.FIFTEEN_MINUTE,
             Granularities.TEN_MINUTE,
             Granularities.FIVE_MINUTE,
+            Granularities.FOUR_MINUTE,
+            Granularities.THREE_MINUTE,
+            Granularities.TWO_MINUTE,
             Granularities.MINUTE,
             Granularities.SECOND
         ),
@@ -995,6 +998,9 @@ public class GranularityTest
             Granularities.FIFTEEN_MINUTE,
             Granularities.TEN_MINUTE,
             Granularities.FIVE_MINUTE,
+            Granularities.FOUR_MINUTE,
+            Granularities.THREE_MINUTE,
+            Granularities.TWO_MINUTE,
             Granularities.MINUTE,
             Granularities.SECOND
         ),
@@ -1020,6 +1026,9 @@ public class GranularityTest
             Granularities.FIFTEEN_MINUTE,
             Granularities.TEN_MINUTE,
             Granularities.FIVE_MINUTE,
+            Granularities.FOUR_MINUTE,
+            Granularities.THREE_MINUTE,
+            Granularities.TWO_MINUTE,
             Granularities.MINUTE,
             Granularities.SECOND
         ),

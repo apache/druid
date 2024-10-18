@@ -27,6 +27,9 @@ public class Granularities
 {
   public static final Granularity SECOND = GranularityType.SECOND.getDefaultGranularity();
   public static final Granularity MINUTE = GranularityType.MINUTE.getDefaultGranularity();
+  public static final Granularity TWO_MINUTE = GranularityType.TWO_MINUTE.getDefaultGranularity();
+  public static final Granularity THREE_MINUTE = GranularityType.THREE_MINUTE.getDefaultGranularity();
+  public static final Granularity FOUR_MINUTE = GranularityType.FOUR_MINUTE.getDefaultGranularity();
   public static final Granularity FIVE_MINUTE = GranularityType.FIVE_MINUTE.getDefaultGranularity();
   public static final Granularity TEN_MINUTE = GranularityType.TEN_MINUTE.getDefaultGranularity();
   public static final Granularity FIFTEEN_MINUTE = GranularityType.FIFTEEN_MINUTE.getDefaultGranularity();

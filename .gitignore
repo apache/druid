@@ -7,7 +7,7 @@ target
 *.swp
 *.swo
 .classpath
-.idea
+.idea/
 .project
 .PVS-Studio
 .settings/

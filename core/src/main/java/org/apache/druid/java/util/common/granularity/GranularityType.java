@@ -48,6 +48,9 @@ public enum GranularityType
       5,
       "PT1M"
   ),
+  TWO_MINUTE(MINUTE, "PT2M"),
+  THREE_MINUTE(MINUTE, "PT3M"),
+  FOUR_MINUTE(MINUTE, "PT4M"),
   FIVE_MINUTE(MINUTE, "PT5M"),
   TEN_MINUTE(MINUTE, "PT10M"),
   FIFTEEN_MINUTE(MINUTE, "PT15M"),
@@ -235,6 +238,12 @@ public enum GranularityType
           return GranularityType.TEN_MINUTE;
         } else if (vals[index] == 5) {
           return GranularityType.FIVE_MINUTE;
+        } else if (vals[index] == 4) {
+          return GranularityType.FOUR_MINUTE;
+        } else if (vals[index] == 3) {
+          return GranularityType.THREE_MINUTE;
+        } else if (vals[index] == 2) {
+          return GranularityType.TWO_MINUTE;
         } else if (vals[index] == 1) {
           return GranularityType.MINUTE;
         }
