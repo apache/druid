@@ -58,9 +58,9 @@ import java.util.List;
  *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
  * without introducing an inner case this should be removed.
  */
-public class PullCaseFromAggregatorRule extends RelOptRule implements SubstitutionRule
+public class DruidAggregateCaseToFilterRule extends RelOptRule implements SubstitutionRule
 {
-  public PullCaseFromAggregatorRule()
+  public DruidAggregateCaseToFilterRule()
   {
     super(operand(Aggregate.class, operand(Project.class, any())));
   }
