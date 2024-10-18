@@ -5180,16 +5180,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     if (NullHandling.sqlCompatible()) {
       builder = builder.virtualColumns(
                           expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
-                          expressionVirtualColumn(
-                              "v1",
-                              "case_searched((\"dim1\" != '1'),1,0)",
-                              ColumnType.LONG
-                          ),
-                          expressionVirtualColumn(
-                              "v2",
-                              "case_searched((\"dim1\" != '1'),\"cnt\",0)",
-                              ColumnType.LONG
-                          )
+                          expressionVirtualColumn("v1", "1", ColumnType.LONG)
                         )
                        .aggregators(
                            aggregators(
@@ -5216,7 +5207,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                    new CountAggregatorFactory("a4"),
                                    not(equality("dim1", "1", ColumnType.STRING))
                                ),
-                               new LongSumAggregatorFactory("a5", "v1"),
+                               new FilteredAggregatorFactory(
+                                   new LongSumAggregatorFactory("a5", "v1"),
+                                   not(equality("dim1", "1", ColumnType.STRING))
+                               ),
                                new FilteredAggregatorFactory(
                                    new LongSumAggregatorFactory("a6", "cnt"),
                                    equality("dim2", "a", ColumnType.STRING)
@@ -5228,7 +5222,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                        not(equality("dim1", "1", ColumnType.STRING))
                                    )
                                ),
-                               new LongSumAggregatorFactory("a8", "v2"),
+                               new FilteredAggregatorFactory(
+                                   new LongSumAggregatorFactory("a8", "cnt"),
+                                   not(equality("dim1", "1", ColumnType.STRING))
+                               ),
                                new FilteredAggregatorFactory(
                                    new LongMaxAggregatorFactory("a9", "cnt"),
                                    not(equality("dim1", "1", ColumnType.STRING))
