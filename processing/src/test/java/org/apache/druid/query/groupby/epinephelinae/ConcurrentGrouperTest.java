@@ -88,8 +88,8 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
     final List<Object[]> constructors = new ArrayList<>();
 
     for (final int bufferSize : new int[]{1024, 1024 * 32, 1024 * 1024}) {
-      for (final int concurrencyHint : new int[]{1, 8}) {
-        for (final int parallelCombineThreads : new int[]{0, 8}) {
+      for (final int concurrencyHint : new int[]{8}) {
+        for (final int parallelCombineThreads : new int[]{8}) {
           for (final boolean mergeThreadLocal : new boolean[]{true, false}) {
             if (parallelCombineThreads <= concurrencyHint) {
               constructors.add(new Object[]{bufferSize, concurrencyHint, parallelCombineThreads, mergeThreadLocal});

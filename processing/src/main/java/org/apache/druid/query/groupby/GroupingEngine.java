@@ -121,6 +121,7 @@ public class GroupingEngine
   private final ObjectMapper jsonMapper;
   private final ObjectMapper spillMapper;
   private final QueryWatcher queryWatcher;
+  private final GroupByStatsProvider groupByStatsProvider;
 
   @Inject
   public GroupingEngine(
@@ -129,7 +130,8 @@ public class GroupingEngine
       @Merging GroupByResourcesReservationPool groupByResourcesReservationPool,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper spillMapper,
-      QueryWatcher queryWatcher
+      QueryWatcher queryWatcher,
+      GroupByStatsProvider groupByStatsProvider
   )
   {
     this.processingConfig = processingConfig;
@@ -138,6 +140,7 @@ public class GroupingEngine
     this.jsonMapper = jsonMapper;
     this.spillMapper = spillMapper;
     this.queryWatcher = queryWatcher;
+    this.groupByStatsProvider = groupByStatsProvider;
   }
 
   /**
@@ -452,7 +455,8 @@ public class GroupingEngine
         processingConfig.getNumThreads(),
         processingConfig.intermediateComputeSizeBytes(),
         spillMapper,
-        processingConfig.getTmpDir()
+        processingConfig.getTmpDir(),
+        groupByStatsProvider
     );
   }
 
@@ -575,7 +579,7 @@ public class GroupingEngine
    *
    * @param subquery           inner query
    * @param query              outer query
-   * @param resource           resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig)}
+   * @param resource           resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig, GroupByStatsProvider)}
    * @param subqueryResult     result rows from the subquery
    * @param wasQueryPushedDown true if the outer query was pushed down (so we only need to merge the outer query's
    *                           results, not run it from scratch like a normal outer query)
@@ -614,7 +618,8 @@ public class GroupingEngine
           resource,
           spillMapper,
           processingConfig.getTmpDir(),
-          processingConfig.intermediateComputeSizeBytes()
+          processingConfig.intermediateComputeSizeBytes(),
+          groupByStatsProvider
       );
 
       final GroupByRowProcessor.ResultSupplier finalResultSupplier = resultSupplier;
@@ -636,7 +641,7 @@ public class GroupingEngine
    * Called by {@link GroupByQueryQueryToolChest#mergeResults(QueryRunner)} when it needs to generate subtotals.
    *
    * @param query       query that has a "subtotalsSpec"
-   * @param resource    resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig)}
+   * @param resource    resources returned by {@link #prepareResource(GroupByQuery, BlockingPool, boolean, GroupByQueryConfig, GroupByStatsProvider)}
    * @param queryResult result rows from the main query
    *
    * @return results for each list of subtotals in the query, concatenated together
@@ -695,7 +700,8 @@ public class GroupingEngine
           resource,
           spillMapper,
           processingConfig.getTmpDir(),
-          processingConfig.intermediateComputeSizeBytes()
+          processingConfig.intermediateComputeSizeBytes(),
+          groupByStatsProvider
       );
 
       List<String> queryDimNamesInOrder = baseSubtotalQuery.getDimensionNamesInOrder();
@@ -757,7 +763,8 @@ public class GroupingEngine
               resource,
               spillMapper,
               processingConfig.getTmpDir(),
-              processingConfig.intermediateComputeSizeBytes()
+              processingConfig.intermediateComputeSizeBytes(),
+              groupByStatsProvider
           );
 
           subtotalsResults.add(

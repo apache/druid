@@ -22,6 +22,7 @@ package org.apache.druid.server.metrics;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -31,13 +32,17 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class QueryCountStatsMonitorTest
 {
   private QueryCountStatsProvider queryCountStatsProvider;
+  private GroupByStatsProvider groupByStatsProvider;
   private BlockingPool<ByteBuffer> mergeBufferPool;
   private ExecutorService executorService;
 
@@ -80,7 +85,23 @@ public class QueryCountStatsMonitorTest
       }
     };
 
-    mergeBufferPool = new DefaultBlockingPool(() -> ByteBuffer.allocate(1024), 1);
+    groupByStatsProvider = new GroupByStatsProvider()
+    {
+      @Override
+      public synchronized long getAndResetGroupByResourceAcquisitionStats()
+      {
+        return 1L;
+      }
+
+      @Override
+      public long getSpilledBytes()
+      {
+        return 3L;
+      }
+    };
+
+
+    mergeBufferPool = new DefaultBlockingPool(() -> ByteBuffer.allocate(1024), 5);
     executorService = Executors.newSingleThreadExecutor();
   }
 
@@ -93,7 +114,8 @@ public class QueryCountStatsMonitorTest
   @Test
   public void testMonitor()
   {
-    final QueryCountStatsMonitor monitor = new QueryCountStatsMonitor(queryCountStatsProvider, mergeBufferPool);
+    final QueryCountStatsMonitor monitor =
+        new QueryCountStatsMonitor(queryCountStatsProvider, groupByStatsProvider, mergeBufferPool);
     final StubServiceEmitter emitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(emitter);
     emitter.flush();
@@ -105,18 +127,39 @@ public class QueryCountStatsMonitorTest
                                              event -> (String) event.toMap().get("metric"),
                                              event -> (Long) event.toMap().get("value")
                                          ));
-    Assert.assertEquals(6, resultMap.size());
+    Assert.assertEquals(9, resultMap.size());
     Assert.assertEquals(1L, (long) resultMap.get("query/success/count"));
     Assert.assertEquals(2L, (long) resultMap.get("query/failed/count"));
     Assert.assertEquals(3L, (long) resultMap.get("query/interrupted/count"));
     Assert.assertEquals(4L, (long) resultMap.get("query/timeout/count"));
     Assert.assertEquals(10L, (long) resultMap.get("query/count"));
     Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/pendingRequests"));
-
+    Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/acquiredCount"));
+    Assert.assertEquals(1, (long) resultMap.get("groupBy/acquisitionTimeNs"));
+    Assert.assertEquals(3, (long) resultMap.get("groupBy/spilledBytes"));
   }
 
-  @Test(timeout = 2_000L)
-  public void testMonitoringMergeBuffer()
+  @Test
+  public void testMonitoringMergeBuffer_acquiredCount()
+      throws ExecutionException, InterruptedException, TimeoutException
+  {
+    executorService.submit(() -> {
+      mergeBufferPool.takeBatch(4);
+    }).get(1, TimeUnit.SECONDS);
+
+    final QueryCountStatsMonitor monitor =
+        new QueryCountStatsMonitor(queryCountStatsProvider, groupByStatsProvider, mergeBufferPool);
+    final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
+    boolean ret = monitor.doMonitor(emitter);
+    Assert.assertTrue(ret);
+
+    List<Number> numbers = emitter.getMetricValues("mergeBuffer/acquiredCount", Collections.emptyMap());
+    Assert.assertEquals(1, numbers.size());
+    Assert.assertEquals(4, numbers.get(0).intValue());
+  }
+
+  @Test
+  public void testMonitoringMergeBuffer_pendingRequests()
   {
     executorService.submit(() -> {
       mergeBufferPool.takeBatch(10);
@@ -133,7 +176,8 @@ public class QueryCountStatsMonitorTest
         }
       }
 
-      final QueryCountStatsMonitor monitor = new QueryCountStatsMonitor(queryCountStatsProvider, mergeBufferPool);
+      final QueryCountStatsMonitor monitor =
+          new QueryCountStatsMonitor(queryCountStatsProvider, groupByStatsProvider, mergeBufferPool);
       final StubServiceEmitter emitter = new StubServiceEmitter("DummyService", "DummyHost");
       boolean ret = monitor.doMonitor(emitter);
       Assert.assertTrue(ret);
