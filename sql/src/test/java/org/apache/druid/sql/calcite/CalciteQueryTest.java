@@ -5170,7 +5170,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilteredAggregations()
   {
-    cannotVectorizeUnlessFallback();
     Druids.TimeseriesQueryBuilder builder =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE1)
@@ -5178,6 +5177,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .granularity(Granularities.ALL)
               .context(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
+      cannotVectorizeUnlessFallback();
       builder = builder.virtualColumns(
                           expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
                           expressionVirtualColumn("v1", "1", ColumnType.LONG)
@@ -5251,16 +5251,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                        );
     } else {
       builder = builder.virtualColumns(
-              expressionVirtualColumn(
-              "v0",
-              "case_searched((\"dim1\" != '1'),1,0)",
-              ColumnType.LONG
-          ),
-          expressionVirtualColumn(
-              "v1",
-              "case_searched((\"dim1\" != '1'),\"cnt\",0)",
-              ColumnType.LONG
-          ))
+          expressionVirtualColumn("v0", "1", ColumnType.LONG)
+          )
           .aggregators(
               aggregators(
               new FilteredAggregatorFactory(
@@ -5286,7 +5278,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   new CountAggregatorFactory("a4"),
                   not(equality("dim1", "1", ColumnType.STRING))
               ),
-              new LongSumAggregatorFactory("a5", "v0"),
+              new FilteredAggregatorFactory(
+                  new LongSumAggregatorFactory("a5", "v0"),
+                  not(equality("dim1", "1", ColumnType.STRING))
+              ),
               new FilteredAggregatorFactory(
                   new LongSumAggregatorFactory("a6", "cnt"),
                   equality("dim2", "a", ColumnType.STRING)
@@ -5298,7 +5293,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       not(equality("dim1", "1", ColumnType.STRING))
                   )
               ),
-              new LongSumAggregatorFactory("a8", "v1"),
+              new FilteredAggregatorFactory(
+                  new LongSumAggregatorFactory("a8", "cnt"),
+                  not(equality("dim1", "1", ColumnType.STRING))
+              ),
               new FilteredAggregatorFactory(
                   new LongMaxAggregatorFactory("a9", "cnt"),
                   not(equality("dim1", "1", ColumnType.STRING))
