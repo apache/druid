@@ -44,7 +44,7 @@ import {
 import classNames from 'classnames';
 import { select, selectAll } from 'd3-selection';
 import type { JSX } from 'react';
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import {
   ClearableInput,

@@ -53,6 +53,7 @@ interface PartitionEntry {
   partition: string;
   currentOffset?: number;
 }
+
 function getPartitionEntries(
   supervisorStatus: SupervisorStatus,
   partitionOffsetMap: SupervisorOffsetMap,

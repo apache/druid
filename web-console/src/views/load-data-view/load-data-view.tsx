@@ -992,11 +992,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
         );
 
       case 'index_parallel:inline':
-        return (
-          <>
-            <p>Ingest a small amount of data directly from the clipboard.</p>
-          </>
-        );
+        return <p>Ingest a small amount of data directly from the clipboard.</p>;
 
       case 'index_parallel:s3':
         return <p>Load text based, orc, or parquet data from Amazon S3.</p>;

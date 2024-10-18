@@ -17,7 +17,6 @@
  */
 
 import { SqlQuery } from '@druid-toolkit/query';
-import React from 'react';
 
 import type { ColumnMetadata } from '../../../utils';
 import { shallow } from '../../../utils/shallow-renderer';

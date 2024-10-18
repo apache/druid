@@ -26,7 +26,6 @@ import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
-  type TableColumnSelectorColumn,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
@@ -37,6 +36,7 @@ import {
   SegmentTimeline,
   TableClickableCell,
   TableColumnSelector,
+  type TableColumnSelectorColumn,
   ViewControlBar,
 } from '../../components';
 import {

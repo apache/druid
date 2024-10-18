@@ -26,7 +26,6 @@ import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
-  type TableColumnSelectorColumn,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
@@ -37,6 +36,7 @@ import {
   SegmentTimeline,
   TableClickableCell,
   TableColumnSelector,
+  type TableColumnSelectorColumn,
   TableFilterableCell,
   ViewControlBar,
 } from '../../components';
@@ -483,6 +483,7 @@ END AS "time_span"`,
   private renderFilterableCell(field: string, enableComparisons = false) {
     const { filters, onFiltersChange } = this.props;
 
+    // eslint-disable-next-line react/display-name
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}

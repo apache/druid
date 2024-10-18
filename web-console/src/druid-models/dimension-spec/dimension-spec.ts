@@ -42,6 +42,7 @@ export interface DimensionSpec {
 
 // This is a web console internal made up column type that represents a multi value dimension
 const MADE_UP_MV_COLUMN_TYPE = 'mv-string';
+
 function makeMadeUpMvDimensionSpec(name: string): DimensionSpec {
   return {
     type: 'string',

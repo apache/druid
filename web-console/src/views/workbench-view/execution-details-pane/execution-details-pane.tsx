@@ -78,7 +78,7 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
                 </>
               )}
             </p>
-            {execution.startTime && execution.duration && (
+            {execution.startTime && !!execution.duration && (
               <p>
                 Query took <Tag minimal>{formatDurationWithMsIfNeeded(execution.duration)}</Tag>{' '}
                 (starting at <Tag minimal>{prettyFormatIsoDate(execution.startTime)}</Tag>)

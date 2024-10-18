@@ -857,7 +857,7 @@ ${title} uncompressed size: ${formatBytesCompact(
                   duration ? `Duration: ${formatDurationWithMs(duration)}` : undefined,
                 ).join('\n')}
               >
-                {executionDuration && executionDuration > 0 && (
+                {!!executionDuration && executionDuration > 0 && (
                   <div
                     className="timing-bar"
                     style={{
