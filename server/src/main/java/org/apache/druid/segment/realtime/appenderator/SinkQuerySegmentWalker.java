@@ -30,18 +30,23 @@ import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
+import org.apache.druid.java.util.common.guava.LazySequence;
+import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.java.util.common.guava.SequenceWrapper;
+import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.CPUTimeMetricQueryRunner;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
-import org.apache.druid.query.MetricsEmittingQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryMetrics;
+import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryProcessingPool;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
@@ -52,6 +57,7 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.SinkQueryRunners;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -69,15 +75,21 @@ import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.function.ObjLongConsumer;
 import java.util.stream.Collectors;
 
 /**
@@ -193,6 +205,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final List<SinkSegmentReference> allSegmentReferences = new ArrayList<>();
     final Map<SegmentDescriptor, SegmentId> segmentIdMap = new HashMap<>();
     final LinkedHashMap<SegmentDescriptor, List<QueryRunner<T>>> allRunners = new LinkedHashMap<>();
+    final ConcurrentHashMap<String, ConcurrentHashMap<String, AtomicLong>> segmentMetricsAccumulator = new ConcurrentHashMap<>();
+
+    final Map<String, ObjLongConsumer<? super QueryMetrics<?>>> metricsToReport = new HashMap<>();
+    metricsToReport.put(DefaultQueryMetrics.QUERY_SEGMENT_TIME, QueryMetrics::reportSegmentTime);
+    metricsToReport.put(DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME, QueryMetrics::reportSegmentAndCacheTime);
+    metricsToReport.put(DefaultQueryMetrics.QUERY_WAIT_TIME, QueryMetrics::reportWaitTime);
 
     try {
       for (final SegmentDescriptor descriptor : specs) {
@@ -231,12 +249,14 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
               descriptor,
               sinkSegmentReferences.stream().map(
                   segmentReference -> {
-                    QueryRunner<T> runner = new MetricsEmittingQueryRunner<>(
+                    QueryRunner<T> runner = new SinkMetricsEmittingQueryRunner<>(
                         emitter,
                         factory.getToolchest(),
                         factory.createRunner(segmentReference.getSegment()),
-                        QueryMetrics::reportSegmentTime,
-                        queryMetrics -> queryMetrics.segment(sinkSegmentId.toString())
+                        metricsToReport,
+                        segmentMetricsAccumulator,
+                        Collections.singleton(DefaultQueryMetrics.QUERY_SEGMENT_TIME),
+                        sinkSegmentId.toString()
                     );
 
                     // 1) Only use caching if data is immutable
@@ -273,13 +293,20 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
 
                     // Regardless of whether caching is enabled, do reportSegmentAndCacheTime outside the
                     // *possible* caching.
-                    runner = new MetricsEmittingQueryRunner<>(
+                    runner = new SinkMetricsEmittingQueryRunner<>(
                         emitter,
                         factory.getToolchest(),
                         runner,
-                        QueryMetrics::reportSegmentAndCacheTime,
-                        queryMetrics -> queryMetrics.segment(sinkSegmentId.toString())
-                    ).withWaitMeasuredFromNow();
+                        metricsToReport,
+                        segmentMetricsAccumulator,
+                        new HashSet<>(
+                            Arrays.asList(
+                                DefaultQueryMetrics.QUERY_WAIT_TIME,
+                                DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME
+                            )
+                        ),
+                        sinkSegmentId.toString()
+                    );
 
                     // Emit CPU time metrics.
                     runner = CPUTimeMetricQueryRunner.safeBuild(
@@ -344,7 +371,18 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       return new ResourceIdPopulatingQueryRunner<>(
           QueryRunnerHelper.makeClosingQueryRunner(
               CPUTimeMetricQueryRunner.safeBuild(
-                  new FinalizeResultsQueryRunner<>(toolChest.mergeResults(mergedRunner, true), toolChest),
+                  new SinkMetricsEmittingQueryRunner<>(
+                      emitter,
+                      toolChest,
+                      new FinalizeResultsQueryRunner<>(
+                          toolChest.mergeResults(mergedRunner, true),
+                          toolChest
+                      ),
+                      metricsToReport,
+                      segmentMetricsAccumulator,
+                      Collections.emptySet(),
+                      null
+                  ),
                   toolChest,
                   emitter,
                   cpuTimeAccumulator,
@@ -415,7 +453,110 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     // with subsegments (hydrants).
     return segmentId + "_H" + hydrantNumber;
   }
+  
+  /**
+   * Emit query/segment/time, query/wait/time and query/segmentAndCache/Time metrics for a Sink.
+   * It accumulates query/segment/time and query/segmentAndCache/time metric for each FireHydrant at the level of Sink.
+   * query/wait/time metric is the time taken to process the first FireHydrant for the Sink.
+   */
+  private static class SinkMetricsEmittingQueryRunner<T> implements QueryRunner<T>
+  {
+    private final ServiceEmitter emitter;
+    private final QueryToolChest<T, ? extends Query<T>> queryToolChest;
+    private final QueryRunner<T> queryRunner;
+    private final Map<String, ObjLongConsumer<? super QueryMetrics<?>>> metricsToReport;
+    private final ConcurrentHashMap<String, ConcurrentHashMap<String, AtomicLong>> segmentMetricsAccumulator;
+    private final Set<String> metricsToCompute;
+    @Nullable
+    private final String segmentId;
+    private final long creationTimeNs;
 
+    private SinkMetricsEmittingQueryRunner(
+        ServiceEmitter emitter,
+        QueryToolChest<T, ? extends Query<T>> queryToolChest,
+        QueryRunner<T> queryRunner,
+        Map<String, ObjLongConsumer<? super QueryMetrics<?>>> metricsToReport,
+        ConcurrentHashMap<String, ConcurrentHashMap<String, AtomicLong>> segmentMetricsAccumulator,
+        Set<String> metricsToCompute,
+        @Nullable String segmentId
+    )
+    {
+      this.emitter = emitter;
+      this.queryToolChest = queryToolChest;
+      this.queryRunner = queryRunner;
+      this.metricsToReport = metricsToReport;
+      this.segmentMetricsAccumulator = segmentMetricsAccumulator;
+      this.metricsToCompute = metricsToCompute;
+      this.segmentId = segmentId;
+      this.creationTimeNs = System.nanoTime();
+    }
+
+    @Override
+    public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
+    {
+      QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics(queryToolChest);
+      final QueryMetrics<?> queryMetrics = queryWithMetrics.getQueryMetrics();
+
+      return Sequences.wrap(
+          // Use LazySequence because we want to account execution time of queryRunner.run() (it prepares the underlying
+          // Sequence) as part of the reported query time, i.e. we want to execute queryRunner.run() after
+          // `startTimeNs = System.nanoTime();`
+          new LazySequence<>(() -> queryRunner.run(queryWithMetrics, responseContext)),
+          new SequenceWrapper()
+          {
+            private long startTimeNs;
+
+            @Override
+            public void before()
+            {
+              startTimeNs = System.nanoTime();
+            }
+
+            @Override
+            public void after(boolean isDone, Throwable thrown)
+            {
+              if (segmentId != null) {
+                // accumulate metrics
+                for (String metric : metricsToCompute) {
+                  if (DefaultQueryMetrics.QUERY_WAIT_TIME.equals(metric)) {
+                    long waitTimeNs = startTimeNs - creationTimeNs;
+                    // segment wait time is the time taken to start processing the first FireHydrant for the Sink
+                    segmentMetricsAccumulator.computeIfAbsent(segmentId, metrics -> new ConcurrentHashMap<>())
+                                             .putIfAbsent(metric, new AtomicLong(waitTimeNs));
+                  } else {
+                    long timeTakenNs = System.nanoTime() - startTimeNs;
+                    segmentMetricsAccumulator.computeIfAbsent(segmentId, metrics -> new ConcurrentHashMap<>())
+                                             .computeIfAbsent(metric, value -> new AtomicLong(0))
+                                             .addAndGet(timeTakenNs);
+                  }
+                }
+              } else {
+                // report accumulated metrics
+                for (Map.Entry<String, ConcurrentHashMap<String, AtomicLong>> segmentAndMetrics : segmentMetricsAccumulator.entrySet()) {
+                  queryMetrics.segment(segmentAndMetrics.getKey());
+
+                  for (Map.Entry<String, ObjLongConsumer<? super QueryMetrics<?>>> reportMetric : metricsToReport.entrySet()) {
+                    String metricName = reportMetric.getKey();
+                    if (segmentAndMetrics.getValue().containsKey(metricName)) {
+                      reportMetric.getValue().accept(queryMetrics, segmentAndMetrics.getValue().get(metricName).get());
+                    }
+                  }
+
+                  try {
+                    queryMetrics.emit(emitter);
+                  }
+                  catch (Exception e) {
+                    // Query should not fail, because of emitter failure. Swallowing the exception.
+                    log.error("Failure while trying to emit [%s] with stacktrace [%s]", emitter.toString(), e);
+                  }
+                }
+              }
+            }
+          }
+      );
+    }
+  }
+  
   private static class SinkHolder implements Overshadowable<SinkHolder>
   {
     private final Sink sink;
