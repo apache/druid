@@ -48,7 +48,7 @@ import java.util.concurrent.ScheduledExecutorService;
 public class ServiceClientModule implements DruidModule
 {
   private static final int CONNECT_EXEC_THREADS = 4;
-  private static final int CLIENT_MAX_ATTEMPTS = 6;
+  protected static final int CLIENT_MAX_ATTEMPTS = 6;
 
   @Override
   public void configure(Binder binder)

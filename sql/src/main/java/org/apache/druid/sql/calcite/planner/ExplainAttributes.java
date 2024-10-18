@@ -19,12 +19,14 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.java.util.common.granularity.Granularity;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * ExplainAttributes holds the attributes of a SQL statement that is used in the EXPLAIN PLAN result.
@@ -45,6 +47,7 @@ public final class ExplainAttributes
   @Nullable
   private final String replaceTimeChunks;
 
+  @JsonCreator
   public ExplainAttributes(
       @JsonProperty("statementType") final String statementType,
       @JsonProperty("targetDataSource") @Nullable final String targetDataSource,
@@ -115,6 +118,31 @@ public final class ExplainAttributes
   public String getReplaceTimeChunks()
   {
     return replaceTimeChunks;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ExplainAttributes that = (ExplainAttributes) o;
+    return Objects.equals(statementType, that.statementType) && Objects.equals(
+        targetDataSource,
+        that.targetDataSource
+    ) && Objects.equals(partitionedBy, that.partitionedBy) && Objects.equals(
+        clusteredBy,
+        that.clusteredBy
+    ) && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(statementType, targetDataSource, partitionedBy, clusteredBy, replaceTimeChunks);
   }
 
   @Override
