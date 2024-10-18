@@ -1,4 +1,4 @@
-!set plannerStrategy DECOUPLED
+# !set plannerStrategy DECOUPLED
 !set debug true
 !use druidtest://?numMergeBuffers=3
 !set outputformat mysql
@@ -14,7 +14,7 @@ UNION ALL
 +--------+---------+
 | EXPR$0 | channel |
 +--------+---------+
-|      1 |         |
+|        |         |
 +--------+---------+
 (1 row)
 
@@ -28,8 +28,8 @@ LogicalUnion(all=[true])
   LogicalValues(tuples=[[{ null, null }]])
 
 !convertedPlan
-DruidProject(EXPR$0=[CAST(1:BIGINT):BIGINT], channel=[CAST($1):VARCHAR], druid=[logical])
-  DruidValues(tuples=[[{ null, null }]])
+LogicalProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR])
+  LogicalValues(tuples=[[{ null, null }]])
 
 !druidPlan
 {
@@ -46,7 +46,7 @@ DruidProject(EXPR$0=[CAST(1:BIGINT):BIGINT], channel=[CAST($1):VARCHAR], druid=[
   "virtualColumns" : [ {
     "type" : "expression",
     "name" : "v0",
-    "expression" : "1",
+    "expression" : "null",
     "outputType" : "LONG"
   }, {
     "type" : "expression",
