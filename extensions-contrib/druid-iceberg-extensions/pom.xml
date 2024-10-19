@@ -273,11 +273,6 @@
     </dependency>
     <dependency>
       <groupId>org.apache.iceberg</groupId>
-      <artifactId>iceberg-aws-bundle</artifactId>
-      <version>${iceberg.core.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-aws</artifactId>
       <version>${iceberg.core.version}</version>
     </dependency>
