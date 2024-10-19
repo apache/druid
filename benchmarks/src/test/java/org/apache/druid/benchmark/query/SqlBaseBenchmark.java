@@ -368,6 +368,17 @@ public class SqlBaseBenchmark
       System.exit(0);
     }
   }
+  
+  private StringEncodingStrategy getStringEncodingStrategy()
+  {
+    if (stringEncoding == BenchmarkStringEncodingStrategy.FRONT_CODED_DEFAULT_V1) {
+      return new StringEncodingStrategy.FrontCoded(null, FrontCodedIndexed.V1);
+    } else if (stringEncoding == BenchmarkStringEncodingStrategy.FRONT_CODED_16_V1) {
+      return new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1);
+    } else {
+      return new StringEncodingStrategy.Utf8();
+    }
+  }
 
   public static Pair<PlannerFactory, SqlEngine> createSqlSystem(
       final Map<DataSegment, QueryableIndex> segmentMap,
@@ -537,17 +548,6 @@ public class SqlBaseBenchmark
     }
     catch (Exception e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  private StringEncodingStrategy getStringEncodingStrategy()
-  {
-    if (stringEncoding == BenchmarkStringEncodingStrategy.FRONT_CODED_DEFAULT_V1) {
-      return new StringEncodingStrategy.FrontCoded(null, FrontCodedIndexed.V1);
-    } else if (stringEncoding == BenchmarkStringEncodingStrategy.FRONT_CODED_16_V1) {
-      return new StringEncodingStrategy.FrontCoded(16, FrontCodedIndexed.V1);
-    } else {
-      return new StringEncodingStrategy.Utf8();
     }
   }
 
