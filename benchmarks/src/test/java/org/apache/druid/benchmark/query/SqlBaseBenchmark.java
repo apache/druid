@@ -360,7 +360,7 @@ public class SqlBaseBenchmark
       System.exit(0);
     }
     // complex compression only applies to mmap segments, dont bother otherwise
-    if (!complexCompression.equals("none") && storageType != BenchmarkStorage.MMAP) {
+    if (!"none".equals(complexCompression) && storageType != BenchmarkStorage.MMAP) {
       System.exit(0);
     }
     // vectorize only works for mmap and frame column segments, bail out if
@@ -368,7 +368,7 @@ public class SqlBaseBenchmark
       System.exit(0);
     }
   }
-  
+
   private StringEncodingStrategy getStringEncodingStrategy()
   {
     if (stringEncoding == BenchmarkStringEncodingStrategy.FRONT_CODED_DEFAULT_V1) {

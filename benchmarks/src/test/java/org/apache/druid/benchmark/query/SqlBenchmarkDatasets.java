@@ -152,7 +152,6 @@ public class SqlBenchmarkDatasets
         )
     );
 
-
     // expressions schema with projections
     DATASET_SCHEMAS.put(
         PROJECTIONS,
@@ -348,7 +347,7 @@ public class SqlBenchmarkDatasets
         AggregatorFactory[] aggregators,
         List<AggregateProjectionSpec> projections,
         Granularity queryGranularity
-        )
+    )
     {
       this.dataSegments = dataSegments;
       this.generatorSchemaInfo = generatorSchemaInfo;
