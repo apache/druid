@@ -38,7 +38,7 @@ import java.util.Objects;
  * at least for the native query explain, but there's currently no use case for it.
  * </p>
  */
-public class ExplainPlanInformation
+public class ExplainPlan
 {
   @JsonProperty("PLAN")
   private final String plan;
@@ -51,7 +51,7 @@ public class ExplainPlanInformation
   private final ExplainAttributes attributes;
 
   @JsonCreator
-  public ExplainPlanInformation(
+  public ExplainPlan(
       @JsonProperty("PLAN") final String plan,
       @JsonProperty("RESOURCES") final String resources,
       @JsonProperty("ATTRIBUTES") final ExplainAttributes attributes
@@ -96,7 +96,7 @@ public class ExplainPlanInformation
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    ExplainPlanInformation that = (ExplainPlanInformation) o;
+    ExplainPlan that = (ExplainPlan) o;
     return Objects.equals(plan, that.plan)
            && Objects.equals(resources, that.resources)
            && Objects.equals(attributes, that.attributes);

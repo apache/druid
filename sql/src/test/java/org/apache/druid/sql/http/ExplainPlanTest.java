@@ -35,7 +35,7 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
-public class ExplainPlanInformationTest
+public class ExplainPlanTest
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
@@ -57,7 +57,7 @@ public class ExplainPlanInformationTest
         )
     );
 
-    testSerde(givenPlans, ImmutableList.of(new ExplainPlanInformation(plan, resources, attributes)));
+    testSerde(givenPlans, ImmutableList.of(new ExplainPlan(plan, resources, attributes)));
   }
 
   @Test
@@ -78,7 +78,7 @@ public class ExplainPlanInformationTest
         )
     );
 
-    testSerde(givenPlans, ImmutableList.of(new ExplainPlanInformation(plan, resources, attributes)));
+    testSerde(givenPlans, ImmutableList.of(new ExplainPlan(plan, resources, attributes)));
   }
 
   @Test
@@ -99,24 +99,24 @@ public class ExplainPlanInformationTest
         )
     );
 
-    testSerde(givenPlans, ImmutableList.of(new ExplainPlanInformation(plan, resources, attributes)));
+    testSerde(givenPlans, ImmutableList.of(new ExplainPlan(plan, resources, attributes)));
   }
 
   private void testSerde(
       final List<Map<String, Object>> givenPlans,
-      final List<ExplainPlanInformation> expectedExplainPlanInfos
+      final List<ExplainPlan> expectedExplainPlans
   )
   {
-    final List<ExplainPlanInformation> observedExplainPlanInfos;
+    final List<ExplainPlan> observedExplainPlans;
     try {
-      observedExplainPlanInfos = MAPPER.readValue(
+      observedExplainPlans = MAPPER.readValue(
           MAPPER.writeValueAsString(givenPlans),
-          new TypeReference<List<ExplainPlanInformation>>() {}
+          new TypeReference<List<ExplainPlan>>() {}
       );
     }
     catch (Exception e) {
-      throw DruidException.defensive(e, "Error deserializing given plans[%s] into explain plan infos.", givenPlans);
+      throw DruidException.defensive(e, "Error deserializing given plans[%s] into explain plans.", givenPlans);
     }
-    assertEquals(expectedExplainPlanInfos, observedExplainPlanInfos);
+    assertEquals(expectedExplainPlans, observedExplainPlans);
   }
 }

@@ -30,7 +30,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.sql.calcite.planner.ExplainAttributes;
-import org.apache.druid.sql.http.ExplainPlanInformation;
+import org.apache.druid.sql.http.ExplainPlan;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
@@ -140,8 +140,8 @@ public class BrokerClientImplTest
     );
 
     assertEquals(
-        ImmutableList.of(new ExplainPlanInformation(plan, resources, attributes)),
-        brokerClient.fetchExplainPlanInformation(query).get()
+        ImmutableList.of(new ExplainPlan(plan, resources, attributes)),
+        brokerClient.fetchExplainPlan(query).get()
     );
   }
 

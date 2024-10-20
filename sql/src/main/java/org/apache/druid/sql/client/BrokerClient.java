@@ -20,7 +20,7 @@
 package org.apache.druid.sql.client;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.sql.http.ExplainPlanInformation;
+import org.apache.druid.sql.http.ExplainPlan;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
 
@@ -43,9 +43,9 @@ public interface BrokerClient
   ListenableFuture<SqlTaskStatus> submitSqlTask(SqlQuery sqlQuery);
 
   /**
-   * Fetches the explain plan information for the given {@code sqlQuery}.
+   * Fetches the explain plan for the given {@code sqlQuery}.
    *
    * @param sqlQuery the SQL query for which the {@code EXPLAIN PLAN FOR} information is to be fetched
    */
-  ListenableFuture<List<ExplainPlanInformation>> fetchExplainPlanInformation(SqlQuery sqlQuery);
+  ListenableFuture<List<ExplainPlan>> fetchExplainPlan(SqlQuery sqlQuery);
 }
