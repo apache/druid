@@ -43,7 +43,7 @@ public interface BrokerClient
   ListenableFuture<SqlTaskStatus> submitSqlTask(SqlQuery sqlQuery);
 
   /**
-   * Fetches the explain plan for the given {@code sqlQuery}.
+   * Fetches the explain plan for the given {@code sqlQuery} from the Broker's SQL task endpoint.
    *
    * @param sqlQuery the SQL query for which the {@code EXPLAIN PLAN FOR} information is to be fetched
    */

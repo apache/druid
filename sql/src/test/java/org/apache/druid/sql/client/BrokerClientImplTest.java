@@ -95,7 +95,7 @@ public class BrokerClientImplTest
   }
 
   @Test
-  public void testFetchExplainPlanInformation() throws Exception
+  public void testFetchExplainPlan() throws Exception
   {
     final SqlQuery query = new SqlQuery(
         "REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY ALL",

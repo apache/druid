@@ -77,16 +77,6 @@ public class ExplainPlan
     return attributes;
   }
 
-  private static class ExplainAttributesDeserializer extends JsonDeserializer<ExplainAttributes>
-  {
-    @Override
-    public ExplainAttributes deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException
-    {
-      final ObjectMapper objectMapper = (ObjectMapper) jsonParser.getCodec();
-      return objectMapper.readValue(jsonParser.getText(), ExplainAttributes.class);
-    }
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -106,6 +96,21 @@ public class ExplainPlan
   public int hashCode()
   {
     return Objects.hash(plan, resources, attributes);
+  }
+
+  /**
+   * Custom deserializer for {@link ExplainAttributes} because the value for {@link #attributes} in the plan
+   * is encoded as a JSON string. This deserializer tells Jackson on how to parse the JSON string
+   * and map it to the fields in the {@link ExplainAttributes} class.
+   */
+  private static class ExplainAttributesDeserializer extends JsonDeserializer<ExplainAttributes>
+  {
+    @Override
+    public ExplainAttributes deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException
+    {
+      final ObjectMapper objectMapper = (ObjectMapper) jsonParser.getCodec();
+      return objectMapper.readValue(jsonParser.getText(), ExplainAttributes.class);
+    }
   }
 }
 

@@ -19,8 +19,8 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.junit.Assert;
@@ -28,14 +28,22 @@ import org.junit.Test;
 
 import java.util.Arrays;
 
+import static org.junit.Assert.assertEquals;
+
 public class ExplainAttributesTest
 {
-  private static final ObjectMapper DEFAULT_OBJECT_MAPPER = new DefaultObjectMapper();
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   @Test
-  public void testSimpleGetters()
+  public void testGetters()
   {
-    ExplainAttributes selectAttributes = new ExplainAttributes("SELECT", null, null, null, null);
+    final ExplainAttributes selectAttributes = new ExplainAttributes(
+        "SELECT",
+        null,
+        null,
+        null,
+        null
+    );
     Assert.assertEquals("SELECT", selectAttributes.getStatementType());
     Assert.assertNull(selectAttributes.getTargetDataSource());
     Assert.assertNull(selectAttributes.getPartitionedBy());
@@ -44,9 +52,9 @@ public class ExplainAttributesTest
   }
 
   @Test
-  public void testSerializeSelectAttributes() throws JsonProcessingException
+  public void testSerdeOfSelectAttributes()
   {
-    ExplainAttributes selectAttributes = new ExplainAttributes(
+    final ExplainAttributes selectAttributes = new ExplainAttributes(
         "SELECT",
         null,
         null,
@@ -56,13 +64,14 @@ public class ExplainAttributesTest
     final String expectedAttributes = "{"
                                       + "\"statementType\":\"SELECT\""
                                       + "}";
-    Assert.assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(selectAttributes));
+
+    testSerde(selectAttributes, expectedAttributes);
   }
 
   @Test
-  public void testSerializeInsertAttributes() throws JsonProcessingException
+  public void testSerdeOfInsertAttributes()
   {
-    ExplainAttributes insertAttributes = new ExplainAttributes(
+    final ExplainAttributes insertAttributes = new ExplainAttributes(
         "INSERT",
         "foo",
         Granularities.DAY,
@@ -74,13 +83,13 @@ public class ExplainAttributesTest
                                       + "\"targetDataSource\":\"foo\","
                                       + "\"partitionedBy\":\"DAY\""
                                       + "}";
-    Assert.assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(insertAttributes));
+    testSerde(insertAttributes, expectedAttributes);
   }
 
   @Test
-  public void testSerializeInsertAllAttributes() throws JsonProcessingException
+  public void testSerdeOfInsertAllAttributes()
   {
-    ExplainAttributes insertAttributes = new ExplainAttributes(
+    final ExplainAttributes insertAttributes = new ExplainAttributes(
         "INSERT",
         "foo",
         Granularities.ALL,
@@ -92,78 +101,100 @@ public class ExplainAttributesTest
                                       + "\"targetDataSource\":\"foo\","
                                       + "\"partitionedBy\":{\"type\":\"all\"}"
                                       + "}";
-    Assert.assertEquals(expectedAttributes, DEFAULT_OBJECT_MAPPER.writeValueAsString(insertAttributes));
+    testSerde(insertAttributes, expectedAttributes);
   }
 
   @Test
-  public void testSerializeReplaceAttributes() throws JsonProcessingException
+  public void testSerdeOfReplaceAttributes()
   {
-    ExplainAttributes replaceAttributes1 = new ExplainAttributes(
+    final ExplainAttributes replaceAttributes = new ExplainAttributes(
         "REPLACE",
         "foo",
         Granularities.HOUR,
         null,
         "ALL"
     );
-    final String expectedAttributes1 = "{"
+    final String expectedAttributes = "{"
                                        + "\"statementType\":\"REPLACE\","
                                        + "\"targetDataSource\":\"foo\","
                                        + "\"partitionedBy\":\"HOUR\","
                                        + "\"replaceTimeChunks\":\"ALL\""
                                        + "}";
-    Assert.assertEquals(expectedAttributes1, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes1));
+    testSerde(replaceAttributes, expectedAttributes);
 
+  }
 
-    ExplainAttributes replaceAttributes2 = new ExplainAttributes(
+  @Test
+  public void testSerdeOfReplaceAttributesWithTimeChunks()
+  {
+    final ExplainAttributes replaceAttributes = new ExplainAttributes(
         "REPLACE",
         "foo",
         Granularities.HOUR,
         null,
         "2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z"
     );
-    final String expectedAttributes2 = "{"
+    final String expectedAttributes = "{"
                                        + "\"statementType\":\"REPLACE\","
                                        + "\"targetDataSource\":\"foo\","
                                        + "\"partitionedBy\":\"HOUR\","
                                        + "\"replaceTimeChunks\":\"2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z\""
                                        + "}";
-    Assert.assertEquals(expectedAttributes2, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes2));
+    testSerde(replaceAttributes, expectedAttributes);
   }
 
   @Test
-  public void testSerializeReplaceWithClusteredByAttributes() throws JsonProcessingException
+  public void testReplaceAttributesWithClusteredBy()
   {
-    ExplainAttributes replaceAttributes1 = new ExplainAttributes(
+    final ExplainAttributes replaceAttributes = new ExplainAttributes(
         "REPLACE",
         "foo",
         Granularities.HOUR,
         Arrays.asList("foo", "CEIL(`f2`)"),
         "ALL"
     );
-    final String expectedAttributes1 = "{"
+    final String expectedAttributes = "{"
                                        + "\"statementType\":\"REPLACE\","
                                        + "\"targetDataSource\":\"foo\","
                                        + "\"partitionedBy\":\"HOUR\","
                                        + "\"clusteredBy\":[\"foo\",\"CEIL(`f2`)\"],"
                                        + "\"replaceTimeChunks\":\"ALL\""
                                        + "}";
-    Assert.assertEquals(expectedAttributes1, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes1));
+    testSerde(replaceAttributes, expectedAttributes);
+  }
 
-
-    ExplainAttributes replaceAttributes2 = new ExplainAttributes(
+  @Test
+  public void testReplaceAttributesWithClusteredByAndTimeChunks()
+  {
+    final ExplainAttributes replaceAttributes = new ExplainAttributes(
         "REPLACE",
         "foo",
         Granularities.HOUR,
         Arrays.asList("foo", "boo"),
         "2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z"
     );
-    final String expectedAttributes2 = "{"
+    final String expectedAttributes = "{"
                                        + "\"statementType\":\"REPLACE\","
                                        + "\"targetDataSource\":\"foo\","
                                        + "\"partitionedBy\":\"HOUR\","
                                        + "\"clusteredBy\":[\"foo\",\"boo\"],"
                                        + "\"replaceTimeChunks\":\"2019-08-25T02:00:00.000Z/2019-08-25T03:00:00.000Z\""
                                        + "}";
-    Assert.assertEquals(expectedAttributes2, DEFAULT_OBJECT_MAPPER.writeValueAsString(replaceAttributes2));
+    testSerde(replaceAttributes, expectedAttributes);
   }
+
+  private void testSerde(final ExplainAttributes explainAttributes, final String expectedSerializedAttributes)
+  {
+    final ExplainAttributes observedAttributes;
+    try {
+      final String observedSerializedAttributes = MAPPER.writeValueAsString(explainAttributes);
+      assertEquals(expectedSerializedAttributes, observedSerializedAttributes);
+      observedAttributes = MAPPER.readValue(observedSerializedAttributes, ExplainAttributes.class);
+    }
+    catch (Exception e) {
+      throw DruidException.defensive(e, "Error serializing/deserializing explain plan[%s].", explainAttributes);
+    }
+    assertEquals(explainAttributes, observedAttributes);
+  }
+
 }
