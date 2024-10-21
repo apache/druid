@@ -37,13 +37,7 @@ public class ExplainAttributesTest
   @Test
   public void testGetters()
   {
-    final ExplainAttributes selectAttributes = new ExplainAttributes(
-        "SELECT",
-        null,
-        null,
-        null,
-        null
-    );
+    final ExplainAttributes selectAttributes = new ExplainAttributes("SELECT", null, null, null, null);
     Assert.assertEquals("SELECT", selectAttributes.getStatementType());
     Assert.assertNull(selectAttributes.getTargetDataSource());
     Assert.assertNull(selectAttributes.getPartitionedBy());

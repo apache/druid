@@ -27,6 +27,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.DiscoveryServiceLocator;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
@@ -37,14 +38,22 @@ import org.apache.druid.sql.client.BrokerClient;
 import org.apache.druid.sql.client.BrokerClientImpl;
 
 /**
- * Module that processes can bind to if they require a {@link BrokerClient}.
+ * Module that processes can install if they require a {@link BrokerClient}.
  * <p>
- * This extend {@link ServiceClientModule} because the {@link BrokerClient} requires
- * classes present in the sql module.
+ * Similar to {@link ServiceClientModule}, but since {@link BrokerClient} depends
+ * on classes from the sql module, this is a separate module within the sql package.
  * </p>
  */
-public class BrokerServiceModule extends ServiceClientModule
+public class BrokerServiceModule
 {
+  @Provides
+  @LazySingleton
+  @EscalatedGlobal
+  public ServiceClientFactory makeServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
+  {
+    return ServiceClientModule.getServiceClientFactory(httpClient);
+  }
+
   @Provides
   @ManageLifecycle
   @Broker
@@ -65,7 +74,7 @@ public class BrokerServiceModule extends ServiceClientModule
         clientFactory.makeClient(
             NodeRole.BROKER.getJsonName(),
             serviceLocator,
-            StandardRetryPolicy.builder().maxAttempts(CLIENT_MAX_ATTEMPTS).build()
+            StandardRetryPolicy.builder().maxAttempts(ServiceClientModule.CLIENT_MAX_ATTEMPTS).build()
         ),
         jsonMapper
     );
