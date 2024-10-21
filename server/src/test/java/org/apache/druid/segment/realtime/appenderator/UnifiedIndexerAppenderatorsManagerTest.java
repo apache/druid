@@ -93,6 +93,8 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     appenderatorConfig = EasyMock.createMock(AppenderatorConfig.class);
     EasyMock.expect(appenderatorConfig.getMaxPendingPersists()).andReturn(0);
     EasyMock.expect(appenderatorConfig.isSkipBytesInMemoryOverheadCheck()).andReturn(false);
+    EasyMock.expect(appenderatorConfig.getMaxBytesInMemory()).andReturn(0L);
+    EasyMock.expect(appenderatorConfig.getMaxRowsInMemory()).andReturn(-1);
     EasyMock.replay(appenderatorConfig);
     appenderator = manager.createClosedSegmentsOfflineAppenderatorForTask(
         "taskId",

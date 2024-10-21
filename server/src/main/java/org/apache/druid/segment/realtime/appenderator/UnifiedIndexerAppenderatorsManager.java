@@ -485,13 +485,13 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     @Override
     public int getMaxRowsInMemory()
     {
-      return Integer.MAX_VALUE; // unlimited, rely on maxBytesInMemory instead
+      return baseConfig.getMaxRowsInMemory() == -1 ? Integer.MAX_VALUE : baseConfig.getMaxRowsInMemory(); // unlimited when -1 (disable), rely on maxBytesInMemory instead
     }
 
     @Override
     public long getMaxBytesInMemory()
     {
-      return newMaxBytesInMemory;
+      return baseConfig.getMaxBytesInMemory() == 0 ? newMaxBytesInMemory : baseConfig.getMaxBytesInMemory();
     }
 
     @Override
