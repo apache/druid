@@ -18,7 +18,7 @@
 
 // Hand picked from https://druid.apache.org/docs/latest/querying/sql.html
 
-exports.SQL_KEYWORDS = [
+export const SQL_KEYWORDS = [
   'EXPLAIN PLAN FOR',
   'WITH',
   'AS',
@@ -75,7 +75,7 @@ exports.SQL_KEYWORDS = [
   'UNPIVOT',
 ];
 
-exports.SQL_EXPRESSION_PARTS = [
+export const SQL_EXPRESSION_PARTS = [
   'FILTER',
   'END',
   'ELSE',
@@ -114,9 +114,9 @@ exports.SQL_EXPRESSION_PARTS = [
   'CSV',
 ];
 
-exports.SQL_CONSTANTS = ['NULL', 'FALSE', 'TRUE'];
+export const SQL_CONSTANTS = ['NULL', 'FALSE', 'TRUE'];
 
-exports.SQL_DYNAMICS = [
+export const SQL_DYNAMICS = [
   'CURRENT_TIMESTAMP',
   'CURRENT_DATE',
   'LOCALTIME',

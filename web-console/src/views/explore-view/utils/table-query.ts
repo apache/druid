@@ -668,7 +668,7 @@ function makeJoinCompareTableQueryAndHints(
           : q
               .applyIf(orderByCompareDuration, q =>
                 q.changeOrderByExpression(
-                  decodedOrderBy!.orderedMeasure!.expression.toOrderByExpression('DESC'),
+                  decodedOrderBy.orderedMeasure!.expression.toOrderByExpression('DESC'),
                 ),
               )
               .changeLimitValue(safeSubQueryLimit),
@@ -701,7 +701,7 @@ function makeJoinCompareTableQueryAndHints(
               q =>
                 q
                   .changeOrderByExpression(
-                    effectiveOrderBy.changeExpression(C(decodedOrderBy!.orderedMeasure!.name)),
+                    effectiveOrderBy.changeExpression(C(decodedOrderBy.orderedMeasure!.name)),
                   )
                   .changeLimitValue(maxRows),
               q =>
@@ -716,7 +716,7 @@ function makeJoinCompareTableQueryAndHints(
                     )
                   : q
                       .changeOrderByExpression(
-                        C(decodedOrderBy!.orderedThing.name).toOrderByExpression('DESC'),
+                        C(decodedOrderBy.orderedThing.name).toOrderByExpression('DESC'),
                       )
                       .changeLimitValue(safeSubQueryLimit),
             ),
