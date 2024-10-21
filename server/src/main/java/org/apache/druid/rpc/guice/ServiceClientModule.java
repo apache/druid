@@ -47,8 +47,8 @@ import java.util.concurrent.ScheduledExecutorService;
 
 public class ServiceClientModule implements DruidModule
 {
+  public static final int CLIENT_MAX_ATTEMPTS = 6;
   private static final int CONNECT_EXEC_THREADS = 4;
-  private static final int CLIENT_MAX_ATTEMPTS = 6;
 
   @Override
   public void configure(Binder binder)
@@ -59,11 +59,9 @@ public class ServiceClientModule implements DruidModule
   @Provides
   @LazySingleton
   @EscalatedGlobal
-  public ServiceClientFactory makeServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
+  public ServiceClientFactory getServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
   {
-    final ScheduledExecutorService connectExec =
-        ScheduledExecutors.fixed(CONNECT_EXEC_THREADS, "ServiceClientFactory-%d");
-    return new ServiceClientFactoryImpl(httpClient, connectExec);
+    return makeServiceClientFactory(httpClient);
   }
 
   @Provides
@@ -116,5 +114,12 @@ public class ServiceClientModule implements DruidModule
         ),
         jsonMapper
     );
+  }
+
+  public static ServiceClientFactory makeServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
+  {
+    final ScheduledExecutorService connectExec =
+        ScheduledExecutors.fixed(CONNECT_EXEC_THREADS, "ServiceClientFactory-%d");
+    return new ServiceClientFactoryImpl(httpClient, connectExec);
   }
 }
