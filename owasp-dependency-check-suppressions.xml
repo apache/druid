@@ -650,7 +650,7 @@
   <suppress>
     <notes><![CDATA[
         FP per issue #6100 - CVE-2023-36052 since it is related to azure-cli not to the azure-core libraries
-        CVE-2024-43591 is also a FP as it affect azure-cli which is not used.
+        CVE-2024-43591 is also related to azure-cli
         ]]></notes>
     <packageUrl regex="true">^pkg:maven/com\.azure/azure*@*.*$</packageUrl>
     <cve>CVE-2023-36052</cve>
