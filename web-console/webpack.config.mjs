@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-const process = require('process');
-const path = require('path');
-const { SassString } = require('sass');
-const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
-const webpack = require('webpack');
+import fs from 'fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'path';
+import process from 'process';
+import sass from 'sass';
+import webpack from 'webpack';
+import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 
-const { version } = require('./package.json');
+const version = JSON.parse(fs.readFileSync('./package.json', 'utf-8')).version;
 
 const supportedLocales = ['en-US'];
 
@@ -30,7 +32,13 @@ function friendlyErrorFormatter(e) {
   return `${e.severity}: ${e.content} [TS${e.code}]\n    at (${e.file}:${e.line}:${e.character})`;
 }
 
-module.exports = env => {
+// Get the file path of the current module
+const __filename = fileURLToPath(import.meta.url);
+
+// Get the directory name of the current module
+const __dirname = dirname(__filename);
+
+export default env => {
   let druidUrl = (env || {}).druid_host || process.env.druid_host || 'localhost';
   if (!druidUrl.startsWith('http')) {
     druidUrl = (druidUrl.endsWith(':9088') ? 'https://' : 'http://') + druidUrl;
@@ -45,6 +53,8 @@ module.exports = env => {
   };
 
   const mode = process.env.NODE_ENV === 'production' ? 'production' : 'development';
+
+  // eslint-disable-next-line no-undef
   console.log(`Webpack running in ${mode} mode.`);
 
   const plugins = [
@@ -69,7 +79,7 @@ module.exports = env => {
       'web-console': './src/entry.tsx',
     },
     output: {
-      path: path.resolve(__dirname, './public'),
+      path: resolve(__dirname, './public'),
       filename: `[name]-${version}.js`,
       chunkFilename: `[name]-${version}.js`,
       publicPath: 'public/',
@@ -154,7 +164,7 @@ module.exports = env => {
                     // via CSS are themselves being used by the web console, so we can safely omit the icons.
                     //
                     // TODO: Re-evaluate after upgrading to Blueprint v6
-                    'svg-icon($_icon, $_path)': () => new SassString('transparent'),
+                    'svg-icon($_icon, $_path)': () => new sass.SassString('transparent'),
                   },
                 },
               },
