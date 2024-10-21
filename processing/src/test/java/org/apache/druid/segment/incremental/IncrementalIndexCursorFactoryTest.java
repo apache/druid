@@ -232,10 +232,10 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     Assert.assertEquals(2, results.size());
 
     ResultRow row = results.get(0);
-    Assert.assertArrayEquals(new Object[]{NullHandling.defaultStringValue(), "bo", 1L}, row.getArray());
+    Assert.assertArrayEquals(new Object[]{null, "bo", 1L}, row.getArray());
 
     row = results.get(1);
-    Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
+    Assert.assertArrayEquals(new Object[]{"hi", null, 1L}, row.getArray());
   }
 
   @Test
@@ -295,7 +295,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     Assert.assertEquals(2, results.size());
 
     ResultRow row = results.get(0);
-    Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L, 2.0}, row.getArray());
+    Assert.assertArrayEquals(new Object[]{"hi", null, 1L, 2.0}, row.getArray());
 
     row = results.get(1);
     Assert.assertArrayEquals(
@@ -444,7 +444,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     Assert.assertEquals(1, results.size());
 
     ResultRow row = results.get(0);
-    Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
+    Assert.assertArrayEquals(new Object[]{"hi", null, 1L}, row.getArray());
   }
 
   @Test
