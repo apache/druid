@@ -20,6 +20,7 @@
 package org.apache.druid.sql.guice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
@@ -27,6 +28,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.DiscoveryServiceLocator;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -44,8 +46,14 @@ import org.apache.druid.sql.client.BrokerClientImpl;
  * on classes from the sql module, this is a separate module within the sql package.
  * </p>
  */
-public class BrokerServiceModule
+public class BrokerServiceModule implements DruidModule
 {
+  @Override
+  public void configure(Binder binder)
+  {
+    // Nothing to do.
+  }
+
   @Provides
   @LazySingleton
   @EscalatedGlobal
