@@ -2832,7 +2832,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertDruidLiteral(
-        new DruidLiteral(null, null),
+        new DruidLiteral(ExpressionType.STRING, null),
         Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.NULL))
