@@ -28,22 +28,26 @@ $visible-splitter-size: 3px;
     background: $dark-gray2;
   }
 
-  .splitter-layout.splitter-layout-vertical > .layout-splitter {
-    height: 3px + $vertical-gap * 2;
-    position: relative;
+  .splitter-layout.splitter-layout-vertical {
+    height: 100%;
 
-    &::after {
-      content: '';
-      background-color: $gray1;
-      position: absolute;
-      top: $vertical-gap;
-      width: 100%;
-      height: $visible-splitter-size;
-      border-radius: 2px;
-    }
+    & > .layout-splitter {
+      height: 3px + $vertical-gap * 2;
+      position: relative;
 
-    &:hover::after {
-      background-color: $gray2;
+      &::after {
+        content: '';
+        background-color: $gray1;
+        position: absolute;
+        top: $vertical-gap;
+        width: 100%;
+        height: $visible-splitter-size;
+        border-radius: 2px;
+      }
+
+      &:hover::after {
+        background-color: $gray2;
+      }
     }
   }
 
