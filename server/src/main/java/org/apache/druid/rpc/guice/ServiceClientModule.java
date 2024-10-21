@@ -59,9 +59,9 @@ public class ServiceClientModule implements DruidModule
   @Provides
   @LazySingleton
   @EscalatedGlobal
-  public ServiceClientFactory makeServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
+  public ServiceClientFactory getServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
   {
-    return getServiceClientFactory(httpClient);
+    return makeServiceClientFactory(httpClient);
   }
 
   @Provides
@@ -116,7 +116,7 @@ public class ServiceClientModule implements DruidModule
     );
   }
 
-  public static ServiceClientFactory getServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
+  public static ServiceClientFactory makeServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
   {
     final ScheduledExecutorService connectExec =
         ScheduledExecutors.fixed(CONNECT_EXEC_THREADS, "ServiceClientFactory-%d");

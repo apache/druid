@@ -57,9 +57,9 @@ public class BrokerServiceModule implements DruidModule
   @Provides
   @LazySingleton
   @EscalatedGlobal
-  public ServiceClientFactory makeServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
+  public ServiceClientFactory getServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
   {
-    return ServiceClientModule.getServiceClientFactory(httpClient);
+    return ServiceClientModule.makeServiceClientFactory(httpClient);
   }
 
   @Provides
