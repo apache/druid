@@ -263,15 +263,6 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
   }
 
   @Override
-  public void setSparseIndexed()
-  {
-    if (!isSparse) {
-      dimLookup.add(NullHandling.defaultStringValue());
-      isSparse = true;
-    }
-  }
-
-  @Override
   public DimensionSelector makeDimensionSelector(
       final DimensionSpec spec,
       final IncrementalIndexRowHolder currEntry,
