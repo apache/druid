@@ -24,14 +24,10 @@ $column-tree-width: 250px;
   height: 100%;
   width: 100%;
 
-  .splitter-layout.workbench-splitter > .layout-splitter {
-    width: $thin-padding;
-
-    &:hover {
-      background: black;
-      opacity: 0.1;
-      border-radius: 2px;
-    }
+  .workbench-splitter > .layout-splitter:hover {
+    background: black;
+    opacity: 0.1;
+    border-radius: 2px;
   }
 
   .column-tree {

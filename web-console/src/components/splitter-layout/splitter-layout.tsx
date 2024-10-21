@@ -50,6 +50,7 @@ export interface SplitterLayoutProps {
   secondaryInitialSize: number;
   secondaryMinSize?: number;
   secondaryMaxSize?: number;
+  splitterSize?: number;
   onSecondaryPaneSizeChange?: (size: number) => void;
   children: ReactNode | ReactNode[];
 }
@@ -195,7 +196,7 @@ export class SplitterLayout extends Component<SplitterLayoutProps, SplitterLayou
   }
 
   render() {
-    const { className, vertical, percentage, primaryIndex, children } = this.props;
+    const { className, vertical, percentage, primaryIndex, splitterSize, children } = this.props;
     const { resizing } = this.state;
 
     const childrenArray = Children.toArray(children).slice(0, 2);
@@ -239,6 +240,7 @@ export class SplitterLayout extends Component<SplitterLayoutProps, SplitterLayou
             }}
             onMouseDown={this.handleSplitterMouseDown}
             onTouchStart={this.handleSplitterMouseDown}
+            style={splitterSize ? { [vertical ? 'height' : 'width']: splitterSize } : undefined}
           />
         )}
         {wrappedChildren[1]}
