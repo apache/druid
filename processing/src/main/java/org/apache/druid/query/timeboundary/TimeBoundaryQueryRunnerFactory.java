@@ -206,6 +206,7 @@ public class TimeBoundaryQueryRunnerFactory
                           .setInterval(query.getSingleInterval())
                           .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
                           .setVirtualColumns(query.getVirtualColumns())
+                          .setPhyiscalColumns(query.getRequiredColumns())
                           .setQueryContext(query.context())
                           .build();
   }

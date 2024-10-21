@@ -242,6 +242,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     ColumnCapabilitiesImpl capabilites = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                                                      .setHasBitmapIndexes(hasBitmapIndexes)
                                                                      .setHasSpatialIndexes(hasSpatialIndexes)
+                                                                     .setDictionaryEncoded(true)
                                                                      .setDictionaryValuesUnique(true)
                                                                      .setDictionaryValuesSorted(false);
 
@@ -254,21 +255,20 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     if (hasMultipleValues) {
       capabilites.setHasMultipleValues(true);
     }
-    // Likewise, only set dictionaryEncoded if explicitly if true for a similar reason as multi-valued handling. The
-    // dictionary is populated as rows are processed, but there might be implicit default values not accounted for in
-    // the dictionary yet. We can be certain that the dictionary has an entry for every value if either of
-    //    a) we have already processed an explitic default (null) valued row for this column
-    //    b) the processing was not 'sparse', meaning that this indexer has processed an explict value for every row
-    // is true.
-    final boolean allValuesEncoded = dictionaryEncodesAllValues();
-    if (allValuesEncoded) {
-      capabilites.setDictionaryEncoded(true);
-    }
 
-    if (isSparse || dimLookup.getIdForNull() != DimensionDictionary.ABSENT_VALUE_ID) {
+    if (dimLookup.getIdForNull() != DimensionDictionary.ABSENT_VALUE_ID) {
       capabilites.setHasNulls(true);
     }
     return capabilites;
+  }
+
+  @Override
+  public void setSparseIndexed()
+  {
+    if (!isSparse) {
+      dimLookup.add(NullHandling.defaultStringValue());
+      isSparse = true;
+    }
   }
 
   @Override
@@ -486,7 +486,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       @Override
       public boolean nameLookupPossibleInAdvance()
       {
-        return dictionaryEncodesAllValues();
+        return true;
       }
 
       @Nullable
