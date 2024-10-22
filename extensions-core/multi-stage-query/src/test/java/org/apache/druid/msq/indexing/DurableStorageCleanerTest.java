@@ -29,6 +29,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.duty.DutySchedule;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleaner;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleanerConfig;
+import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -126,7 +127,7 @@ public class DurableStorageCleanerTest
     DurableStorageCleanerConfig cleanerConfig = new DurableStorageCleanerConfig();
     cleanerConfig.delaySeconds = 10L;
     cleanerConfig.enabled = true;
-    DurableStorageCleaner durableStorageCleaner = new DurableStorageCleaner(cleanerConfig, null, null);
+    DurableStorageCleaner durableStorageCleaner = new DurableStorageCleaner(cleanerConfig, (temp) -> NilStorageConnector.getInstance(), null);
 
     DutySchedule schedule = durableStorageCleaner.getSchedule();
     Assert.assertEquals(cleanerConfig.delaySeconds * 1000, schedule.getPeriodMillis());
