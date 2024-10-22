@@ -58,11 +58,11 @@ public class SqlQuery
   @JsonCreator
   public SqlQuery(
       @JsonProperty("query") final String query,
-      @JsonProperty("resultFormat")  @Nullable final ResultFormat resultFormat,
+      @JsonProperty("resultFormat") @Nullable final ResultFormat resultFormat,
       @JsonProperty("header") final boolean header,
       @JsonProperty("typesHeader") final boolean typesHeader,
       @JsonProperty("sqlTypesHeader") final boolean sqlTypesHeader,
-      @JsonProperty("context")  @Nullable final Map<String, Object> context,
+      @JsonProperty("context") @Nullable final Map<String, Object> context,
       @JsonProperty("parameters") @Nullable final List<SqlParameter> parameters
   )
   {
