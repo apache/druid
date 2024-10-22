@@ -26,6 +26,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 
 @LazySingleton
@@ -33,7 +34,7 @@ public class KafkaIndexTaskClientFactory extends SeekableStreamIndexTaskClientFa
 {
   @Inject
   public KafkaIndexTaskClientFactory(
-      @EscalatedGlobal ServiceClientFactory serviceClientFactory,
+      @EscalatedGlobal HttpClient httpClient,
       @Json ObjectMapper mapper
   )
   {
