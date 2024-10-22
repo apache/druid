@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.guice.HiveConf;
-import org.apache.druid.iceberg.input.*;
+import org.apache.druid.iceberg.input.GlueIcebergCatalog;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
