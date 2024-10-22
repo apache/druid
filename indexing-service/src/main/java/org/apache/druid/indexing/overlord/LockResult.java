@@ -27,7 +27,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import javax.annotation.Nullable;
 
 /**
- * This class represents the result of {@link TaskLockbox#tryLock}. If the lock
+ * This class represents the result of {@link GlobalTaskLockbox#tryLock}. If the lock
  * acquisition fails, the callers can tell that it was failed because it was preempted by other locks of higher
  * priorities or not by checking the {@link #revoked} flag.
  *

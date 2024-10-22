@@ -52,7 +52,7 @@ import org.apache.druid.indexing.overlord.DruidOverlord;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageAdapter;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskRunner;
@@ -110,7 +110,7 @@ public class OverlordTest
   private CuratorFramework curator;
   private DruidOverlord overlord;
   private TaskMaster taskMaster;
-  private TaskLockbox taskLockbox;
+  private GlobalTaskLockbox taskLockbox;
   private TaskStorage taskStorage;
   private TaskActionClientFactory taskActionClientFactory;
   private CountDownLatch announcementLatch;
@@ -179,7 +179,7 @@ public class OverlordTest
 
     IndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
 
-    taskLockbox = new TaskLockbox(taskStorage, mdc);
+    taskLockbox = new GlobalTaskLockbox(taskStorage, mdc);
 
     task0 = NoopTask.create();
     taskId0 = task0.getId();

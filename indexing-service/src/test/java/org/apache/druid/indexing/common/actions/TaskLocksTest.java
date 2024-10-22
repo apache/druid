@@ -34,7 +34,7 @@ import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.SpecificSegmentLockRequest;
-import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
@@ -58,14 +58,14 @@ import java.util.stream.IntStream;
 
 public class TaskLocksTest
 {
-  private TaskLockbox lockbox;
+  private GlobalTaskLockbox lockbox;
   private Task task;
 
   @Before
   public void setup()
   {
     final TaskStorage taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    lockbox = new TaskLockbox(
+    lockbox = new GlobalTaskLockbox(
         taskStorage,
         new TestIndexerMetadataStorageCoordinator()
     );

@@ -29,7 +29,7 @@ import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
-import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskQueue;
@@ -129,7 +129,7 @@ public class OverlordCompactionSchedulerTest
 
   private void initScheduler()
   {
-    TaskLockbox taskLockbox = new TaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator());
+    GlobalTaskLockbox taskLockbox = new GlobalTaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator());
     WorkerBehaviorConfig defaultWorkerConfig
         = new DefaultWorkerBehaviorConfig(WorkerBehaviorConfig.DEFAULT_STRATEGY, null);
     scheduler = new OverlordCompactionScheduler(

@@ -29,10 +29,12 @@ import java.util.Set;
  */
 class TaskLockboxSyncResult
 {
+  private final int taskLockCount;
   private final Set<Task> tasksToFail;
 
-  TaskLockboxSyncResult(Set<Task> tasksToFail)
+  TaskLockboxSyncResult(Set<Task> tasksToFail, int taskLockCount)
   {
+    this.taskLockCount = taskLockCount;
     this.tasksToFail = tasksToFail;
   }
 
@@ -42,5 +44,10 @@ class TaskLockboxSyncResult
   Set<Task> getTasksToFail()
   {
     return tasksToFail;
+  }
+
+  int getTaskLockCount()
+  {
+    return taskLockCount;
   }
 }

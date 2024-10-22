@@ -57,7 +57,7 @@ import java.util.stream.Stream;
 /**
  * Provides read-only methods to fetch information related to tasks.
  * This class may serve information that is cached in memory in {@link TaskQueue}
- * or {@link TaskLockbox}. If not present in memory, then the underlying
+ * or {@link GlobalTaskLockbox}. If not present in memory, then the underlying
  * {@link TaskStorage} is queried.
  */
 public class TaskQueryTool
@@ -65,7 +65,7 @@ public class TaskQueryTool
   private static final Logger log = new Logger(TaskQueryTool.class);
 
   private final TaskStorage storage;
-  private final TaskLockbox taskLockbox;
+  private final GlobalTaskLockbox taskLockbox;
   private final TaskMaster taskMaster;
   private final Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier;
   private final ProvisioningStrategy provisioningStrategy;
@@ -73,7 +73,7 @@ public class TaskQueryTool
   @Inject
   public TaskQueryTool(
       TaskStorage storage,
-      TaskLockbox taskLockbox,
+      GlobalTaskLockbox taskLockbox,
       TaskMaster taskMaster,
       ProvisioningStrategy provisioningStrategy,
       Supplier<WorkerBehaviorConfig> workerBehaviorConfigSupplier

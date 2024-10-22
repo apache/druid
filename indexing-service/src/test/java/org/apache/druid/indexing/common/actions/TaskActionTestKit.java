@@ -25,7 +25,7 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.overlord.HeapMemoryTaskStorage;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.TaskLockbox;
+import org.apache.druid.indexing.overlord.GlobalTaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
@@ -50,7 +50,7 @@ public class TaskActionTestKit extends ExternalResource
   private final MetadataStorageTablesConfig metadataStorageTablesConfig = MetadataStorageTablesConfig.fromBase("druid");
 
   private TaskStorage taskStorage;
-  private TaskLockbox taskLockbox;
+  private GlobalTaskLockbox taskLockbox;
   private TestDerbyConnector testDerbyConnector;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
@@ -58,7 +58,7 @@ public class TaskActionTestKit extends ExternalResource
   private SegmentSchemaManager segmentSchemaManager;
   private SegmentSchemaCache segmentSchemaCache;
 
-  public TaskLockbox getTaskLockbox()
+  public GlobalTaskLockbox getTaskLockbox()
   {
     return taskLockbox;
   }
@@ -102,7 +102,7 @@ public class TaskActionTestKit extends ExternalResource
         return 2;
       }
     };
-    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    taskLockbox = new GlobalTaskLockbox(taskStorage, metadataStorageCoordinator);
     segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
