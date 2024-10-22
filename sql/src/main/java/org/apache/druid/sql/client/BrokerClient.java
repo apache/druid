@@ -20,15 +20,32 @@
 package org.apache.druid.sql.client;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.sql.http.ExplainPlanInformation;
+import org.apache.druid.sql.http.ExplainPlan;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
 
 import java.util.List;
 
+/**
+ * High-level Broker client.
+ * <p>
+ * All methods return futures, enabling asynchronous logic. If you want a synchronous response, use
+ * {@code FutureUtils.get} or {@code FutureUtils.getUnchecked}.
+ * Futures resolve to exceptions in the manner described by {@link org.apache.druid.rpc.ServiceClient#asyncRequest}.
+ * </p>
+ * Typically acquired via Guice, where it is registered using {@link org.apache.druid.rpc.guice.ServiceClientModule}.
+ */
 public interface BrokerClient
 {
-  ListenableFuture<SqlTaskStatus> submitTask(SqlQuery sqlQuery);
+  /**
+   * Submit the given {@code sqlQuery} to the Broker's SQL task endpoint.
+   */
+  ListenableFuture<SqlTaskStatus> submitSqlTask(SqlQuery sqlQuery);
 
-  ListenableFuture<List<ExplainPlanInformation>> explainPlanFor(SqlQuery sqlQuery);
+  /**
+   * Fetches the explain plan for the given {@code sqlQuery} from the Broker's SQL task endpoint.
+   *
+   * @param sqlQuery the SQL query for which the {@code EXPLAIN PLAN FOR} information is to be fetched
+   */
+  ListenableFuture<List<ExplainPlan>> fetchExplainPlan(SqlQuery sqlQuery);
 }

@@ -25,7 +25,7 @@ const SPANS = ['year', 'month', 'day', 'hour', 'minute', 'second'];
 export function formatDuration(duration: string, preferCompact = false): string {
   // Regular expressions to match ISO 8601 duration parts
   const regex = /P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?/;
-  const matches = duration.match(regex);
+  const matches = regex.exec(duration);
   if (!matches) return duration;
 
   // Extract the relevant parts

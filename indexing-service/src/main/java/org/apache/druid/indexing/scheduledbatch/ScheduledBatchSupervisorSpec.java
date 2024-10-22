@@ -31,7 +31,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.sql.calcite.planner.ExplainAttributes;
 import org.apache.druid.sql.client.BrokerClient;
-import org.apache.druid.sql.http.ExplainPlanInformation;
+import org.apache.druid.sql.http.ExplainPlan;
 import org.apache.druid.sql.http.SqlQuery;
 
 import javax.annotation.Nullable;
@@ -94,8 +94,8 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
 
   private String getDatasourceFromQuery()
   {
-    final List<ExplainPlanInformation> explainPlanInfos;
-    final ListenableFuture<List<ExplainPlanInformation>> explainPlanFuture = brokerClient.explainPlanFor(spec);
+    final List<ExplainPlan> explainPlanInfos;
+    final ListenableFuture<List<ExplainPlan>> explainPlanFuture = brokerClient.fetchExplainPlan(spec);
     try {
       explainPlanInfos = explainPlanFuture.get();
     }

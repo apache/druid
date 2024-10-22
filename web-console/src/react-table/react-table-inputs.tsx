@@ -19,7 +19,7 @@
 import { Button, HTMLSelect, Icon, InputGroup, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Column, ReactTableFunction } from 'react-table';
 
 import {

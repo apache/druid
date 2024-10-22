@@ -27,7 +27,7 @@ import type {
 } from '@druid-toolkit/query';
 import { filterPatternsToExpression, fitFilterPatterns } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import React, { forwardRef, useImperativeHandle, useState } from 'react';
+import { forwardRef, useImperativeHandle, useState } from 'react';
 
 import type { QuerySource } from '../../models';
 import { formatPatternWithoutNegation, initPatternForColumn } from '../../utils';
@@ -76,6 +76,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
     () => ({
       filterOn,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [patterns],
   );
 

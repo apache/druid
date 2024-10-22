@@ -107,7 +107,7 @@ public class ClientCompactionRunnerInfo
    * Checks if the provided compaction config is supported by MSQ. The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
-   * <li>'range' partitionsSpec with non-string partition dimensions.</li>
+   * <li>'range' partitionsSpec with multi-valued or non-string partition dimensions.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
    * <li>Rollup without metricsSpec being specified or vice-versa.</li>
    * <li>Any aggregatorFactory {@code A} s.t. {@code A != A.combiningFactory()}.</li>
@@ -138,13 +138,18 @@ public class ClientCompactionRunnerInfo
 
   /**
    * Validate that partitionSpec is either 'dynamic` or 'range'. If 'dynamic', ensure 'maxTotalRows' is null. If range
-   * ensure all partition columns are of string type.
+   * ensure all partition columns are of type string.
    */
   public static CompactionConfigValidationResult validatePartitionsSpecForMSQ(
       @Nullable PartitionsSpec partitionsSpec,
       @Nullable List<DimensionSchema> dimensionSchemas
   )
   {
+    if (partitionsSpec == null) {
+      return CompactionConfigValidationResult.failure(
+          "MSQ: tuningConfig.partitionsSpec must be specified"
+      );
+    }
     if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
           || partitionsSpec instanceof DynamicPartitionsSpec)) {
       return CompactionConfigValidationResult.failure(

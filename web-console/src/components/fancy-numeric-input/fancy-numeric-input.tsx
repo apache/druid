@@ -128,6 +128,7 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
     if (effectiveValue !== shownNumberClamped) {
       setShownValue(numberToShown(effectiveValue));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveValue]);
 
   const containerClasses = classNames(

@@ -192,7 +192,7 @@ public class ScheduledBatchScheduler
       throws ExecutionException, InterruptedException
   {
     log.info("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
-    final ListenableFuture<SqlTaskStatus> sqlTaskStatusListenableFuture = brokerClient.submitTask(spec);
+    final ListenableFuture<SqlTaskStatus> sqlTaskStatusListenableFuture = brokerClient.submitSqlTask(spec);
     final SqlTaskStatus sqlTaskStatus;
     sqlTaskStatus = sqlTaskStatusListenableFuture.get();
     statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus);

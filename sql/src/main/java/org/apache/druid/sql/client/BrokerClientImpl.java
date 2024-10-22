@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
-import org.apache.druid.sql.http.ExplainPlanInformation;
+import org.apache.druid.sql.http.ExplainPlan;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -47,7 +47,7 @@ public class BrokerClientImpl implements BrokerClient
   }
 
   @Override
-  public ListenableFuture<SqlTaskStatus> submitTask(final SqlQuery sqlQuery)
+  public ListenableFuture<SqlTaskStatus> submitSqlTask(final SqlQuery sqlQuery)
   {
     return FutureUtils.transform(
         client.asyncRequest(
@@ -60,7 +60,7 @@ public class BrokerClientImpl implements BrokerClient
   }
 
   @Override
-  public ListenableFuture<List<ExplainPlanInformation>> explainPlanFor(SqlQuery sqlQuery)
+  public ListenableFuture<List<ExplainPlan>> fetchExplainPlan(final SqlQuery sqlQuery)
   {
     final SqlQuery explainSqlQuery = new SqlQuery(
         StringUtils.format("EXPLAIN PLAN FOR %s", sqlQuery.getQuery()),
@@ -77,8 +77,7 @@ public class BrokerClientImpl implements BrokerClient
                 .jsonContent(jsonMapper, explainSqlQuery),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<ExplainPlanInformation>>() {})
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<ExplainPlan>>() {})
     );
   }
 }
-

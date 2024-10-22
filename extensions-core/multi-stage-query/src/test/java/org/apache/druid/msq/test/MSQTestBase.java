@@ -76,6 +76,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.msq.counters.CounterNames;
@@ -159,6 +160,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.DirectStatement;
@@ -587,6 +589,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
 
     authorizerMapper = CalciteTests.TEST_EXTERNAL_AUTHORIZER_MAPPER;
+
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
 
   protected CatalogResolver createMockCatalogResolver()

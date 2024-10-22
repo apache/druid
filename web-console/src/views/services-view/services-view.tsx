@@ -24,7 +24,6 @@ import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
-  type TableColumnSelectorColumn,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
@@ -32,6 +31,7 @@ import {
   MoreButton,
   RefreshButton,
   TableColumnSelector,
+  type TableColumnSelectorColumn,
   TableFilterableCell,
   ViewControlBar,
 } from '../../components';
@@ -360,6 +360,7 @@ ORDER BY
   private renderFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
+    // eslint-disable-next-line react/display-name
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}

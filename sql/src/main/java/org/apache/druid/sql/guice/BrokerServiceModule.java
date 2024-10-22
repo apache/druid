@@ -20,6 +20,7 @@
 package org.apache.druid.sql.guice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
@@ -27,6 +28,8 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.DiscoveryServiceLocator;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
@@ -37,11 +40,28 @@ import org.apache.druid.sql.client.BrokerClient;
 import org.apache.druid.sql.client.BrokerClientImpl;
 
 /**
- * This is an extension of {@link ServiceClientModule} because of module dependencies.
- * The {@link BrokerClientImpl} requires classes present in the sql module.
+ * Module that processes can install if they require a {@link BrokerClient}.
+ * <p>
+ * Similar to {@link ServiceClientModule}, but since {@link BrokerClient} depends
+ * on classes from the sql module, this is a separate module within the sql package.
+ * </p>
  */
-public class BrokerServiceModule extends ServiceClientModule
+public class BrokerServiceModule implements DruidModule
 {
+  @Override
+  public void configure(Binder binder)
+  {
+    // Nothing to do.
+  }
+
+  @Provides
+  @LazySingleton
+  @EscalatedGlobal
+  public ServiceClientFactory getServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)
+  {
+    return ServiceClientModule.makeServiceClientFactory(httpClient);
+  }
+
   @Provides
   @ManageLifecycle
   @Broker
@@ -62,10 +82,9 @@ public class BrokerServiceModule extends ServiceClientModule
         clientFactory.makeClient(
             NodeRole.BROKER.getJsonName(),
             serviceLocator,
-            StandardRetryPolicy.builder().maxAttempts(CLIENT_MAX_ATTEMPTS).build()
+            StandardRetryPolicy.builder().maxAttempts(ServiceClientModule.CLIENT_MAX_ATTEMPTS).build()
         ),
         jsonMapper
     );
   }
 }
-

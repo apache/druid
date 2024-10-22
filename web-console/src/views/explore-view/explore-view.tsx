@@ -173,6 +173,7 @@ export const ExploreView = React.memo(function ExploreView() {
     if (exploreState !== newExploreState) {
       setExploreState(newExploreState);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [querySourceState.data]);
 
   // -------------------------------------------------------
@@ -184,6 +185,7 @@ export const ExploreView = React.memo(function ExploreView() {
     if (exploreState !== newExploreState) {
       setExploreState(newExploreState);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [module, parameterValues, querySourceState.data]);
 
   function setModuleId(moduleId: string, parameterValues: ParameterValues) {

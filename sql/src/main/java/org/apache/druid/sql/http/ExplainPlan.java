@@ -29,8 +29,16 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import org.apache.druid.sql.calcite.planner.ExplainAttributes;
 
 import java.io.IOException;
+import java.util.Objects;
 
-public class ExplainPlanInformation
+/**
+ * Class that encapsulates the information of a single plan for an {@code EXPLAIN PLAN FOR} query.
+ * <p>
+ * Similar to {@link #getAttributes()}, it's possible to provide more structure to {@link #getPlan()},
+ * at least for the native query explain, but there's currently no use case for it.
+ * </p>
+ */
+public class ExplainPlan
 {
   @JsonProperty("PLAN")
   private final String plan;
@@ -43,7 +51,7 @@ public class ExplainPlanInformation
   private final ExplainAttributes attributes;
 
   @JsonCreator
-  public ExplainPlanInformation(
+  public ExplainPlan(
       @JsonProperty("PLAN") final String plan,
       @JsonProperty("RESOURCES") final String resources,
       @JsonProperty("ATTRIBUTES") final ExplainAttributes attributes
@@ -69,6 +77,32 @@ public class ExplainPlanInformation
     return attributes;
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    ExplainPlan that = (ExplainPlan) o;
+    return Objects.equals(plan, that.plan)
+           && Objects.equals(resources, that.resources)
+           && Objects.equals(attributes, that.attributes);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(plan, resources, attributes);
+  }
+
+  /**
+   * Custom deserializer for {@link ExplainAttributes} because the value for {@link #attributes} in the plan
+   * is encoded as a JSON string. This deserializer tells Jackson on how to parse the JSON string
+   * and map it to the fields in the {@link ExplainAttributes} class.
+   */
   private static class ExplainAttributesDeserializer extends JsonDeserializer<ExplainAttributes>
   {
     @Override

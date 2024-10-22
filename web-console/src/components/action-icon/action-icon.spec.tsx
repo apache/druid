@@ -18,7 +18,6 @@
 
 import { IconNames } from '@blueprintjs/icons';
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import { ActionIcon } from './action-icon';
 

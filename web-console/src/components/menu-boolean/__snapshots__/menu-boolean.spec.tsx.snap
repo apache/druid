@@ -11,7 +11,6 @@ exports[`MenuBoolean matches snapshot false 1`] = `
     tabindex="0"
   >
     <a
-      aria-expanded="false"
       aria-haspopup="menu"
       class="bp5-menu-item menu-tristate"
       label="false"
@@ -65,7 +64,6 @@ exports[`MenuBoolean matches snapshot no undefined 1`] = `
     tabindex="0"
   >
     <a
-      aria-expanded="false"
       aria-haspopup="menu"
       class="bp5-menu-item menu-tristate"
       label="false"
@@ -119,7 +117,6 @@ exports[`MenuBoolean matches snapshot undefined 1`] = `
     tabindex="0"
   >
     <a
-      aria-expanded="false"
       aria-haspopup="menu"
       class="bp5-menu-item menu-tristate"
       label="Auto (true)"

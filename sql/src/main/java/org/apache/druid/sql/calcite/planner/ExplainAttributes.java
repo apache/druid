@@ -130,13 +130,11 @@ public final class ExplainAttributes
       return false;
     }
     ExplainAttributes that = (ExplainAttributes) o;
-    return Objects.equals(statementType, that.statementType) && Objects.equals(
-        targetDataSource,
-        that.targetDataSource
-    ) && Objects.equals(partitionedBy, that.partitionedBy) && Objects.equals(
-        clusteredBy,
-        that.clusteredBy
-    ) && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
+    return Objects.equals(statementType, that.statementType)
+           && Objects.equals(targetDataSource, that.targetDataSource)
+           && Objects.equals(partitionedBy, that.partitionedBy)
+           && Objects.equals(clusteredBy, that.clusteredBy)
+           && Objects.equals(replaceTimeChunks, that.replaceTimeChunks);
   }
 
   @Override

@@ -22,9 +22,7 @@ package org.apache.druid.indexing.scheduledbatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
-import io.vavr.control.Validation;
 import org.apache.calcite.avatica.SqlType;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskState;
@@ -47,7 +45,6 @@ import org.mockito.Mockito;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 
 public class ScheduledBatchSchedulerTest
 {
@@ -136,7 +133,7 @@ public class ScheduledBatchSchedulerTest
   @Test
   public void testStartStopSchedulingSupervisorWhenResponseIsNull() throws Exception
   {
-    Mockito.when(brokerClient.submitTask(query))
+    Mockito.when(brokerClient.submitSqlTask(query))
            .thenReturn(Futures.immediateFuture(new SqlTaskStatus("taskId1", TaskState.SUCCESS, null)));
 
     scheduler.start();
@@ -168,7 +165,7 @@ public class ScheduledBatchSchedulerTest
   public void testStartStopSchedulingSupervisorWhenResponseIsValid() throws Exception
   {
     final SqlTaskStatus expectedTaskStatus = new SqlTaskStatus("taskId1", TaskState.SUCCESS, null);
-    Mockito.when(brokerClient.submitTask(query))
+    Mockito.when(brokerClient.submitSqlTask(query))
            .thenReturn(Futures.immediateFuture(expectedTaskStatus));
 
     scheduler.start();
@@ -210,14 +207,14 @@ public class ScheduledBatchSchedulerTest
   {
     final SqlTaskStatus expectedTask1 = new SqlTaskStatus("fooTaskId1", TaskState.SUCCESS, null);
     final SqlTaskStatus expectedTask2 = new SqlTaskStatus("fooTaskId2", TaskState.RUNNING, null);
-    Mockito.when(brokerClient.submitTask(query))
+    Mockito.when(brokerClient.submitSqlTask(query))
            .thenReturn(Futures.immediateFuture(expectedTask1))
            .thenReturn(Futures.immediateFuture(expectedTask2));
 
     final SqlTaskStatus expectedBarTask1 = new SqlTaskStatus("barTaskId1", TaskState.FAILED, new ErrorResponse(
         InvalidInput.exception("some exception")));
     final SqlTaskStatus expectedBarTask2 = new SqlTaskStatus("barTaskId2", TaskState.SUCCESS, null);
-    Mockito.when(brokerClient.submitTask(query2))
+    Mockito.when(brokerClient.submitSqlTask(query2))
            .thenReturn(Futures.immediateFuture(expectedBarTask1))
            .thenReturn(Futures.immediateFuture(expectedBarTask2));
 
@@ -269,15 +266,14 @@ public class ScheduledBatchSchedulerTest
     assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
     assertEquals(
         ImmutableMap.of(
-            expectedBarTask1.getTaskId(), TaskStatus.failure(expectedBarTask1.getTaskId(), null),
-            expectedBarTask2.getTaskId(), TaskStatus.success(expectedTask2.getTaskId())
+            expectedBarTask2.getTaskId(), TaskStatus.success(expectedBarTask2.getTaskId()),
+            expectedBarTask1.getTaskId(), TaskStatus.failure(expectedBarTask1.getTaskId(), null)
         ),
         snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN, snapshot.getStatus());
-
+    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
 
     scheduler.stop();
     assertNull(scheduler.getSchedulerSnapshot("foo"));
-    serviceEmitter.verifyEmitted("batchSupervisor/tasks/submit/success", 2);
+    serviceEmitter.verifyEmitted("batchSupervisor/tasks/submit/success", 4);
   }
 }

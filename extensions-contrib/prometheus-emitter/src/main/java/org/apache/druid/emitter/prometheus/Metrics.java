@@ -64,7 +64,7 @@ public class Metrics
 
   public Metrics(String namespace, String path, boolean isAddHostAsLabel, boolean isAddServiceAsLabel, Map<String, String> extraLabels)
   {
-    Map<String, DimensionsAndCollector> registeredMetrics = new HashMap<>();
+    Map<String, DimensionsAndCollector> parsedRegisteredMetrics = new HashMap<>();
     Map<String, Metric> metrics = readConfig(path);
 
     if (extraLabels == null) {
@@ -116,10 +116,10 @@ public class Metrics
       }
 
       if (collector != null) {
-        registeredMetrics.put(name, new DimensionsAndCollector(dimensions, collector, metric.conversionFactor));
+        parsedRegisteredMetrics.put(name, new DimensionsAndCollector(dimensions, collector, metric.conversionFactor));
       }
     }
-    this.registeredMetrics = Collections.unmodifiableMap(registeredMetrics);
+    this.registeredMetrics = Collections.unmodifiableMap(parsedRegisteredMetrics);
   }
 
   private Map<String, Metric> readConfig(String path)

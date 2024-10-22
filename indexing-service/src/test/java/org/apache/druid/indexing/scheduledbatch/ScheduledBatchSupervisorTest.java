@@ -29,7 +29,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.sql.calcite.planner.ExplainAttributes;
 import org.apache.druid.sql.client.BrokerClient;
-import org.apache.druid.sql.http.ExplainPlanInformation;
+import org.apache.druid.sql.http.ExplainPlan;
 import org.apache.druid.sql.http.SqlQuery;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,12 +70,12 @@ public class ScheduledBatchSupervisorTest
         null
     );
 
-    final ExplainPlanInformation explainPlanResponse = new ExplainPlanInformation(
+    final ExplainPlan explainPlanResponse = new ExplainPlan(
         "",
         "",
         new ExplainAttributes("REPLACE", "foo", Granularities.MONTH, null, null)
     );
-    Mockito.when(brokerClient.explainPlanFor(query))
+    Mockito.when(brokerClient.fetchExplainPlan(query))
            .thenReturn(Futures.immediateFuture(ImmutableList.of(explainPlanResponse)));
   }
 

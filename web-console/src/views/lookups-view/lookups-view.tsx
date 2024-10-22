@@ -333,6 +333,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   private renderFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
+    // eslint-disable-next-line react/display-name
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
