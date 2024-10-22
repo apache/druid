@@ -951,8 +951,6 @@ The following table shows the dynamic configuration properties for the Coordinat
 |Property|Description|Default|
 |--------|-----------|-------|
 |`millisToWaitBeforeDeleting`|How long does the Coordinator need to be a leader before it can start marking overshadowed segments as unused in metadata storage.| 900000 (15 mins)|
-|`mergeBytesLimit`|The maximum total uncompressed size in bytes of segments to merge.|524288000L|
-|`mergeSegmentsLimit`|The maximum number of segments that can be in a single [append task](../ingestion/tasks.md).|100|
 |`smartSegmentLoading`|Enables ["smart" segment loading mode](#smart-segment-loading) which dynamically computes the optimal values of several properties that maximize Coordinator performance.|true|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved in a Historical tier at any given time.|100|
 |`replicantLifetime`|The maximum number of Coordinator runs for which a segment can wait in the load queue of a Historical before Druid raises an alert.|15|
