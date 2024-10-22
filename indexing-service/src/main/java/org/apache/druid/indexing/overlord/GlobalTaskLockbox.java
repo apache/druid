@@ -86,10 +86,15 @@ public class GlobalTaskLockbox
 
   private TaskLockbox getDatasourceLockbox(String datasource)
   {
-    return datasourceLocks.computeIfAbsent(
-        datasource,
-        ds -> new TaskLockbox(ds, new DatasourceLock(), taskStorage, metadataStorageCoordinator)
-    );
+    globalLock.readLock().lock();
+    try {
+      return datasourceLocks.computeIfAbsent(
+          datasource,
+          ds -> new TaskLockbox(ds, new DatasourceLock(), taskStorage, metadataStorageCoordinator)
+      );
+    } finally {
+      globalLock.readLock().unlock();
+    }
   }
 
   private class DatasourceLock extends ReentrantLock
