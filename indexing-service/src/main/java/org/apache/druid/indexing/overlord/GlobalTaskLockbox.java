@@ -92,7 +92,8 @@ public class GlobalTaskLockbox
           datasource,
           ds -> new TaskLockbox(ds, new DatasourceLock(), taskStorage, metadataStorageCoordinator)
       );
-    } finally {
+    }
+    finally {
       globalLock.readLock().unlock();
     }
   }

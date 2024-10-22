@@ -239,7 +239,8 @@ public class TaskLockbox
       }
 
       return new TaskLockboxSyncResult(tasksToFail, taskLockCount);
-    } catch (Throwable t) {
+    }
+    catch (Throwable t) {
       log.noStackTrace().error(t, "Error while resetting state of datasource[%s]", dataSource);
       throw t;
     }
@@ -675,9 +676,9 @@ public class TaskLockbox
     try {
       final TaskLockPosse posseToUse = new TaskLockPosse(request.toLock());
       running.computeIfAbsent(
-                 request.getInterval().getStart(),
-                 k -> new TreeMap<>(Comparators.intervalsByStartThenEnd())
-             )
+          request.getInterval().getStart(),
+          k -> new TreeMap<>(Comparators.intervalsByStartThenEnd())
+      )
              .computeIfAbsent(request.getInterval(), k -> new ArrayList<>())
              .add(posseToUse);
 
