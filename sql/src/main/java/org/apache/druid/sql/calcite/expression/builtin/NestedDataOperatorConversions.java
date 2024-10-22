@@ -826,6 +826,53 @@ public class NestedDataOperatorConversions
     }
   }
 
+  public static class JsonMergeAggrOperatorConversion implements SqlOperatorConversion
+  {
+    private static final String FUNCTION_NAME = "json_merge_aggr";
+    private static final SqlFunction SQL_FUNCTION = OperatorConversions
+        .operatorBuilder(FUNCTION_NAME)
+        .operandTypeChecker(OperandTypes.variadic(SqlOperandCountRanges.from(2)))
+        .operandTypeInference((callBinding, returnType, operandTypes) -> {
+          RelDataTypeFactory typeFactory = callBinding.getTypeFactory();
+          operandTypes[0] = typeFactory.createSqlType(SqlTypeName.VARCHAR);
+          for (int i = 1; i < operandTypes.length; i++) {
+            operandTypes[i] = typeFactory.createTypeWithNullability(
+                typeFactory.createSqlType(SqlTypeName.ANY),
+                true
+            );
+          }
+        })
+        .returnTypeInference(NestedDataOperatorConversions.NESTED_RETURN_TYPE_INFERENCE)
+        .functionCategory(SqlFunctionCategory.SYSTEM)
+        .build();
+
+    @Override
+    public SqlOperator calciteOperator()
+    {
+      return SQL_FUNCTION;
+    }
+
+    @Nullable
+    @Override
+    public DruidExpression toDruidExpression(
+        PlannerContext plannerContext,
+        RowSignature rowSignature,
+        RexNode rexNode
+    )
+    {
+      return OperatorConversions.convertCall(
+          plannerContext,
+          rowSignature,
+          rexNode,
+          druidExpressions -> DruidExpression.ofExpression(
+              ColumnType.NESTED_DATA,
+              DruidExpression.functionCall("json_merge_aggr"),
+              druidExpressions
+          )
+      );
+    }
+  }
+
   public static class ToJsonStringOperatorConversion implements SqlOperatorConversion
   {
     private static final String FUNCTION_NAME = "to_json_string";
