@@ -132,9 +132,6 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   @Override
   public void writeMergedValueDictionary(List<IndexableAdapter> adapters) throws IOException
   {
-    boolean dimHasValues = false;
-    boolean dimAbsentFromSomeIndex = false;
-
     long dimStartTime = System.currentTimeMillis();
 
     this.adapters = adapters;
@@ -144,7 +141,49 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       dimConversions.add(null);
     }
 
+    InitializedDictionaryMergerLookups<T> dictionaryLookups = initializeDictionaryMergerLookups(adapters);
+
+    String dictFilename = StringUtils.format("%s.dim_values", outputName);
+    dictionaryWriter = makeDictionaryWriter(dictFilename);
+
+    firstDictionaryValue = null;
+    dictionarySize = 0;
+    dictionaryWriter.open();
+
+    cardinality = 0;
+    if (dictionaryLookups.numMergeIndex > 1) {
+      dictionaryMergeIterator = new DictionaryMergingIterator<>(
+          dictionaryLookups.dimValueLookups,
+          getDictionaryMergingComparator(),
+          true
+      );
+      writeDictionary(() -> dictionaryMergeIterator);
+      for (int i = 0; i < adapters.size(); i++) {
+        if (dictionaryLookups.dimValueLookups[i] != null && dictionaryMergeIterator.needConversion(i)) {
+          dimConversions.set(i, dictionaryMergeIterator.conversions[i]);
+        }
+      }
+      cardinality = dictionaryMergeIterator.getCardinality();
+    } else if (dictionaryLookups.numMergeIndex == 1) {
+      writeDictionary(dictionaryLookups.dimValueLookup);
+      cardinality = dictionaryLookups.dimValueLookup.size();
+    }
+
+    log.debug(
+        "Completed dim[%s] conversions with cardinality[%,d] in %,d millis.",
+        dimensionName,
+        cardinality,
+        System.currentTimeMillis() - dimStartTime
+    );
+
+    setupEncodedValueWriter();
+  }
+
+  protected InitializedDictionaryMergerLookups<T> initializeDictionaryMergerLookups(List<IndexableAdapter> adapters)
+  {
     int numMergeIndex = 0;
+    boolean dimHasValues = false;
+    boolean dimAbsentFromSomeIndex = false;
     Indexed<T> dimValueLookup = null;
     Indexed<T>[] dimValueLookups = new Indexed[adapters.size() + 1];
     for (int i = 0; i < adapters.size(); i++) {
@@ -174,43 +213,8 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       dimValueLookups[adapters.size()] = dimValueLookup = getNullDimValue();
       numMergeIndex++;
     }
-
-    String dictFilename = StringUtils.format("%s.dim_values", outputName);
-    dictionaryWriter = makeDictionaryWriter(dictFilename);
-
-    firstDictionaryValue = null;
-    dictionarySize = 0;
-    dictionaryWriter.open();
-
-    cardinality = 0;
-    if (numMergeIndex > 1) {
-      dictionaryMergeIterator = new DictionaryMergingIterator<>(
-          dimValueLookups,
-          getDictionaryMergingComparator(),
-          true
-      );
-      writeDictionary(() -> dictionaryMergeIterator);
-      for (int i = 0; i < adapters.size(); i++) {
-        if (dimValueLookups[i] != null && dictionaryMergeIterator.needConversion(i)) {
-          dimConversions.set(i, dictionaryMergeIterator.conversions[i]);
-        }
-      }
-      cardinality = dictionaryMergeIterator.getCardinality();
-    } else if (numMergeIndex == 1) {
-      writeDictionary(dimValueLookup);
-      cardinality = dimValueLookup.size();
-    }
-
-    log.debug(
-        "Completed dim[%s] conversions with cardinality[%,d] in %,d millis.",
-        dimensionName,
-        cardinality,
-        System.currentTimeMillis() - dimStartTime
-    );
-
-    setupEncodedValueWriter();
+    return new InitializedDictionaryMergerLookups<>(numMergeIndex, dimValueLookup, dimValueLookups);
   }
-
 
   @Override
   public ColumnValueSelector convertSortedSegmentRowValuesToMergedRowValues(
@@ -532,7 +536,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     return seekers;
   }
 
-  private boolean allNull(Indexed<T> dimValues)
+  protected boolean allNull(Indexed<T> dimValues)
   {
     for (int i = 0, size = dimValues.size(); i < size; i++) {
       if (dimValues.get(i) != null) {
@@ -702,4 +706,20 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     void mergeIndexes(int dictId, MutableBitmap mergedIndexes) throws IOException;
     void write() throws IOException;
   }
+
+
+  protected static class InitializedDictionaryMergerLookups<T>
+  {
+    public final int numMergeIndex;
+    public final Indexed<T> dimValueLookup;
+    public final Indexed<T>[] dimValueLookups;
+
+    public InitializedDictionaryMergerLookups(int numMergeIndex, Indexed<T> dimValueLookup, Indexed<T>[] dimValueLookups)
+    {
+      this.numMergeIndex = numMergeIndex;
+      this.dimValueLookup = dimValueLookup;
+      this.dimValueLookups = dimValueLookups;
+    }
+  }
+
 }

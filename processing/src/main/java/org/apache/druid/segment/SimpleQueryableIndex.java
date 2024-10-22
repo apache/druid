@@ -44,6 +44,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedSet;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -239,21 +240,22 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   public QueryableIndex getProjectionQueryableIndex(String name)
   {
     final AggregateProjectionMetadata projectionSpec = projectionsMap.get(name);
+    final Metadata projectionMetadata = new Metadata(null, projectionSpec.getSchema().getAggregators(), null, null, true, projectionSpec.getSchema().getOrderingWithTimeColumnSubstitution(), null);
     return new SimpleQueryableIndex(
         dataInterval,
-        new ListIndexed<>(projectionSpec.getSchema().getGroupingColumns()),
+        new ListIndexed<>(projectionSpec.getSchema().getGroupingColumns().stream().filter(x -> !x.equals(projectionSpec.getSchema().getTimeColumnName())).collect(Collectors.toList())),
         bitmapFactory,
         projectionColumns.get(name),
         fileMapper,
         true,
-        null,
+        projectionMetadata,
         null
     )
     {
       @Override
       public Metadata getMetadata()
       {
-        return null;
+        return projectionMetadata;
       }
 
       @Override

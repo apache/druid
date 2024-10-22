@@ -176,10 +176,34 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
     );
     StringDimensionMergerV9 stringParent = (StringDimensionMergerV9) parent;
     dictionarySize = stringParent.dictionarySize;
-    dimConversions = stringParent.dimConversions;
+    adapters = projectionAdapters;
+    if (projectionAdapters.size() > 1) {
+      dimConversions = Lists.newArrayListWithCapacity(projectionAdapters.size());
+      for (int i = 0; i < projectionAdapters.size(); ++i) {
+        dimConversions.add(null);
+      }
+      InitializedDictionaryMergerLookups<String> lookups = initializeDictionaryMergerLookups(projectionAdapters);
+      dictionaryMergeIterator = new DictionaryMergingIterator<>(
+          lookups.dimValueLookups,
+          getDictionaryMergingComparator(),
+          true
+      );
+      // iterate through merger to build dim conversions.. this is gross, but the alternative is holding open dim
+      // conversion buffers until the segment is completely written instead of just during the lifetime of the column
+      // being merged
+      while (dictionaryMergeIterator.hasNext()) {
+        dictionaryMergeIterator.next();
+      }
+      for (int i = 0; i < adapters.size(); i++) {
+        if (lookups.dimValueLookups[i] != null && dictionaryMergeIterator.needConversion(i)) {
+          dimConversions.set(i, dictionaryMergeIterator.conversions[i]);
+        }
+      }
+    } else {
+      dimConversions = stringParent.dimConversions;
+    }
     dictionaryWriter = stringParent.dictionaryWriter;
     cardinality = dictionaryWriter.getCardinality();
-    adapters = projectionAdapters;
     setupEncodedValueWriter();
     writeDictionary = false;
   }
