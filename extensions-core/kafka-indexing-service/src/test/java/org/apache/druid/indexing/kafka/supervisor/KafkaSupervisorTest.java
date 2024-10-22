@@ -5669,8 +5669,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   private static ImmutableMap<KafkaTopicPartition, Long> singlePartitionMap(
-      String topic, int partition1, long offset1,
-      int partition2, long offset2, int partition3, long offset3
+      String topic,
+      int partition1,
+      long offset1,
+      int partition2,
+      long offset2,
+      int partition3,
+      long offset3
   )
   {
     return ImmutableMap.of(new KafkaTopicPartition(false, topic, partition1),
@@ -5683,8 +5688,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   private static ImmutableMap<KafkaTopicPartition, Long> multiTopicPartitionMap(
-      String topic, int partition1, long offset1,
-      int partition2, long offset2, int partition3, long offset3
+      String topic,
+      int partition1,
+      long offset1,
+      int partition2,
+      long offset2,
+      int partition3,
+      long offset3
   )
   {
     return ImmutableMap.of(new KafkaTopicPartition(true, topic, partition1),
