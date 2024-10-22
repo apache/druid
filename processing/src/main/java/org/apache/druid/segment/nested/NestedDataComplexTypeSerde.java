@@ -43,6 +43,7 @@ import org.apache.druid.segment.serde.ComplexMetricSerde;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class NestedDataComplexTypeSerde extends ComplexMetricSerde
 {
@@ -146,6 +147,12 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
       public boolean readRetainsBufferReference()
       {
         return false;
+      }
+
+      @Override
+      public ByteOrder getByteOrder()
+      {
+        return ByteOrder.LITTLE_ENDIAN;
       }
     };
   }

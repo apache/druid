@@ -72,4 +72,10 @@ public class ArrayOfDoublesSketchObjectStrategy implements ObjectStrategy<ArrayO
         SafeWritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
     );
   }
+
+  @Override
+  public ByteOrder getByteOrder()
+  {
+    return ByteOrder.LITTLE_ENDIAN;
+  }
 }

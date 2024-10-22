@@ -26,6 +26,7 @@ import org.apache.druid.segment.writeout.WriteOutBytes;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Comparator;
 
 @ExtensionPoint
@@ -75,6 +76,18 @@ public interface ObjectStrategy<T> extends Comparator<T>
   default boolean readRetainsBufferReference()
   {
     return true;
+  }
+
+  /**
+   * Preferred byte order to read values from a buffer with {@link #fromByteBuffer(ByteBuffer, int)} and similar methods
+   *
+   * This is currently only used as a helper for {@link org.apache.druid.segment.serde.CompressedComplexColumn} when
+   * {@link org.apache.druid.segment.IndexSpec#complexMetricCompression} is set, so that the buffer does not need
+   * to be explicitly set inside the object strategy when materializing values
+   */
+  default ByteOrder getByteOrder()
+  {
+    return ByteOrder.BIG_ENDIAN;
   }
 
   /**

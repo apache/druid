@@ -67,6 +67,7 @@ public class CompressedComplexColumnSupplier implements Supplier<ComplexColumn>
             ),
             fileBuffer,
             metadata.getByteOrder(),
+            objectStrategy.getByteOrder(),
             objectStrategy.readRetainsBufferReference(),
             mapper
         );

@@ -34,17 +34,29 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
   public static CompressedVariableSizedBlobColumnSupplier fromByteBuffer(
       String filenameBase,
       ByteBuffer buffer,
-      ByteOrder order,
+      ByteOrder compressionOrder,
       SmooshedFileMapper mapper
   ) throws IOException
   {
-    return fromByteBuffer(filenameBase, buffer, order, false, mapper);
+    return fromByteBuffer(filenameBase, buffer, compressionOrder, compressionOrder, false, mapper);
   }
 
   public static CompressedVariableSizedBlobColumnSupplier fromByteBuffer(
       String filenameBase,
       ByteBuffer buffer,
-      ByteOrder order,
+      ByteOrder compressionOrder,
+      ByteOrder valueOrder,
+      SmooshedFileMapper mapper
+  ) throws IOException
+  {
+    return fromByteBuffer(filenameBase, buffer, compressionOrder, valueOrder, false, mapper);
+  }
+
+  public static CompressedVariableSizedBlobColumnSupplier fromByteBuffer(
+      String filenameBase,
+      ByteBuffer buffer,
+      ByteOrder compressionOrder,
+      ByteOrder valueOrder,
       boolean copyValuesOnRead,
       SmooshedFileMapper mapper
   ) throws IOException
@@ -59,7 +71,14 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
       final ByteBuffer dataBuffer = mapper.mapFile(
           CompressedVariableSizedBlobColumnSerializer.getCompressedBlobsFileName(filenameBase)
       );
-      return new CompressedVariableSizedBlobColumnSupplier(offsetsBuffer, dataBuffer, order, numElements, copyValuesOnRead);
+      return new CompressedVariableSizedBlobColumnSupplier(
+          offsetsBuffer,
+          dataBuffer,
+          compressionOrder,
+          valueOrder,
+          numElements,
+          copyValuesOnRead
+      );
     }
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
@@ -72,14 +91,20 @@ public class CompressedVariableSizedBlobColumnSupplier implements Supplier<Compr
   private CompressedVariableSizedBlobColumnSupplier(
       ByteBuffer offsetsBuffer,
       ByteBuffer dataBuffer,
-      ByteOrder order,
+      ByteOrder compressionOrder,
+      ByteOrder valueOrder,
       int numElements,
       boolean copyValuesOnRead
   )
   {
     this.numElements = numElements;
-    this.offsetReaderSupplier = CompressedLongsReader.fromByteBuffer(offsetsBuffer, order);
-    this.blockDataReaderSupplier = CompressedBlockReader.fromByteBuffer(dataBuffer, order, copyValuesOnRead);
+    this.offsetReaderSupplier = CompressedLongsReader.fromByteBuffer(offsetsBuffer, compressionOrder);
+    this.blockDataReaderSupplier = CompressedBlockReader.fromByteBuffer(
+        dataBuffer,
+        compressionOrder,
+        valueOrder,
+        copyValuesOnRead
+    );
   }
 
   @Override

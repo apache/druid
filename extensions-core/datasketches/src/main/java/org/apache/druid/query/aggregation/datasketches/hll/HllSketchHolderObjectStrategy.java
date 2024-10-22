@@ -79,6 +79,12 @@ public class HllSketchHolderObjectStrategy implements ObjectStrategy<HllSketchHo
     );
   }
 
+  @Override
+  public ByteOrder getByteOrder()
+  {
+    return ByteOrder.LITTLE_ENDIAN;
+  }
+
   /**
    * Checks if a sketch is empty and can be converted to null. Returns true if it is and false if it is not, or if is
    * not possible to say for sure.

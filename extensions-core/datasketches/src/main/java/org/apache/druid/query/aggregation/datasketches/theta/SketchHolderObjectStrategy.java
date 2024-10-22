@@ -80,4 +80,10 @@ public class SketchHolderObjectStrategy implements ObjectStrategy<SketchHolder>
         SafeWritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
     );
   }
+
+  @Override
+  public ByteOrder getByteOrder()
+  {
+    return ByteOrder.LITTLE_ENDIAN;
+  }
 }

@@ -73,4 +73,10 @@ public class KllFloatsSketchObjectStrategy implements ObjectStrategy<KllFloatsSk
         SafeWritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
     );
   }
+
+  @Override
+  public ByteOrder getByteOrder()
+  {
+    return ByteOrder.LITTLE_ENDIAN;
+  }
 }
