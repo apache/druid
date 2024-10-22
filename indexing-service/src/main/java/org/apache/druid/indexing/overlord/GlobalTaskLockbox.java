@@ -116,6 +116,12 @@ public class GlobalTaskLockbox
     }
   }
 
+  private static class DatasourceSync
+  {
+    final Set<Task> storedActiveTasks = new HashSet<>();
+    final List<Pair<Task, TaskLock>> storedLocks = new ArrayList<>();
+  }
+
   /**
    * Wipe out our current in-memory state and resync it from our bundled {@link TaskStorage}.
    *
@@ -127,20 +133,28 @@ public class GlobalTaskLockbox
 
     try {
       // Load stuff from taskStorage first. If this fails, we don't want to lose all our locks.
-      final Set<Task> storedActiveTasks = new HashSet<>();
-      final List<Pair<Task, TaskLock>> storedLocks = new ArrayList<>();
+      final Map<String, DatasourceSync> datasourceSyncs = new HashMap<>();
+      int activeTaskCount = 0;
+      int totalLockCount = 0;
       for (final Task task : taskStorage.getActiveTasks()) {
-        storedActiveTasks.add(task);
+        ++activeTaskCount;
+        final DatasourceSync sync = datasourceSyncs.computeIfAbsent(task.getDataSource(), ds -> new DatasourceSync());
+        sync.storedActiveTasks.add(task);
         for (final TaskLock taskLock : taskStorage.getLocks(task.getId())) {
-          storedLocks.add(Pair.of(task, taskLock));
+          ++totalLockCount;
+          sync.storedLocks.add(Pair.of(task, taskLock));
         }
       }
 
       // Set of task groups in which at least one task failed to re-acquire a lock
       final Set<Task> tasksToFail = new HashSet<>();
       int taskLockCount = 0;
-      for (TaskLockbox datasourceLockbox : datasourceLocks.values()) {
-        TaskLockboxSyncResult result = datasourceLockbox.resetState(storedActiveTasks, storedLocks);
+
+      datasourceLocks.clear();
+      for (String dataSource : datasourceSyncs.keySet()) {
+        final DatasourceSync sync = datasourceSyncs.get(dataSource);
+        final TaskLockboxSyncResult result = getDatasourceLockbox(dataSource)
+            .resetState(sync.storedActiveTasks, sync.storedLocks);
         tasksToFail.addAll(result.getTasksToFail());
         taskLockCount += result.getTaskLockCount();
       }
@@ -148,8 +162,8 @@ public class GlobalTaskLockbox
       log.info(
           "Synced [%,d] locks for [%,d] activeTasks from storage ([%,d] locks ignored).",
           taskLockCount,
-          storedActiveTasks.size(),
-          storedLocks.size() - taskLockCount
+          activeTaskCount,
+          totalLockCount - taskLockCount
       );
 
       return new TaskLockboxSyncResult(tasksToFail, taskLockCount);
@@ -314,12 +328,12 @@ public class GlobalTaskLockbox
     }
 
     final Map<String, List<Interval>> datasourceToLockedIntervals = new HashMap<>();
-    datasourceToFilterPolicies.forEach(
-        (datasource, policies) -> datasourceToLockedIntervals.put(
-            datasource,
-            getDatasourceLockbox(datasource).getLockedIntervals(policies)
-        )
-    );
+    datasourceToFilterPolicies.forEach((datasource, policies) -> {
+      final List<Interval> lockedIntervals = getDatasourceLockbox(datasource).getLockedIntervals(policies);
+      if (!lockedIntervals.isEmpty()) {
+        datasourceToLockedIntervals.put(datasource, lockedIntervals);
+      }
+    });
 
     return datasourceToLockedIntervals;
   }
@@ -337,12 +351,12 @@ public class GlobalTaskLockbox
     }
 
     final Map<String, List<TaskLock>> datasourceToActiveLocks = new HashMap<>();
-    datasourceToFilterPolicies.forEach(
-        (datasource, policies) -> datasourceToActiveLocks.put(
-            datasource,
-            getDatasourceLockbox(datasource).getActiveLocks(policies)
-        )
-    );
+    datasourceToFilterPolicies.forEach((datasource, policies) -> {
+      final List<TaskLock> datasourceLocks = getDatasourceLockbox(datasource).getActiveLocks(policies);
+      if (!datasourceLocks.isEmpty()) {
+        datasourceToActiveLocks.put(datasource, datasourceLocks);
+      }
+    });
 
     return datasourceToActiveLocks;
   }
@@ -390,10 +404,16 @@ public class GlobalTaskLockbox
   @VisibleForTesting
   Map<String, NavigableMap<DateTime, SortedMap<Interval, List<TaskLockbox.TaskLockPosse>>>> getAllLocks()
   {
-    Map<String, NavigableMap<DateTime, SortedMap<Interval, List<TaskLockbox.TaskLockPosse>>>> allLocks
-        = new HashMap<>();
+    final Map<String, NavigableMap<DateTime, SortedMap<Interval, List<TaskLockbox.TaskLockPosse>>>>
+        allLocks = new HashMap<>();
 
-    datasourceLocks.forEach((datasource, lockbox) -> allLocks.put(datasource, lockbox.getAllLocks()));
+    datasourceLocks.forEach((datasource, lockbox) -> {
+      final NavigableMap<DateTime, SortedMap<Interval, List<TaskLockbox.TaskLockPosse>>>
+          locks = lockbox.getAllLocks();
+      if (!locks.isEmpty()) {
+        allLocks.put(datasource, locks);
+      }
+    });
 
     return allLocks;
   }
