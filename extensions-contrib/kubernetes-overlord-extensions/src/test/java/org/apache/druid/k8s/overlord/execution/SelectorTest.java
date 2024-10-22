@@ -30,6 +30,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -47,7 +48,7 @@ public class SelectorTest
         "TestSelector",
         cxtTagsConditions,
         Sets.newHashSet(NoopTask.TYPE),
-        Sets.newHashSet()
+        new HashSet<>()
     );
 
     Assert.assertTrue(selector.evaluate(task));
@@ -65,7 +66,7 @@ public class SelectorTest
     Selector selector = new Selector(
         "TestSelector",
         cxtTagsConditions,
-        Sets.newHashSet(),
+        new HashSet<>(),
         Sets.newHashSet(datasource)
     );
 
