@@ -18,8 +18,8 @@
 
 import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { QueryResult, QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
+import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
@@ -61,7 +61,7 @@ import { metadataStateStore } from '../metadata-state-store';
 import { ResultTablePane } from '../result-table-pane/result-table-pane';
 import type { RunPanelProps } from '../run-panel/run-panel';
 import { RunPanel } from '../run-panel/run-panel';
-import { workStateStore } from '../work-state-store';
+import { WORK_STATE_STORE } from '../work-state-store';
 
 import './query-tab.scss';
 
@@ -362,12 +362,13 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.data, executionState.error]);
 
-  const incrementWorkVersion = useStore(
-    workStateStore,
-    useCallback(state => state.increment, []),
-  );
   useEffect(() => {
-    incrementWorkVersion();
+    const effectiveEngine = query.getEffectiveEngine();
+    if (effectiveEngine === 'sql-msq-task') {
+      WORK_STATE_STORE.getState().incrementMsqTask();
+    } else if (effectiveEngine === 'sql-msq-dart') {
+      WORK_STATE_STORE.getState().incrementMsqDart();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.loading, Boolean(executionState.intermediate)]);
 

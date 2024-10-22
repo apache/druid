@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-import type { Column } from '@druid-toolkit/query';
-import { C } from '@druid-toolkit/query';
 import type { Ace } from 'ace-builds';
 import ace from 'ace-builds';
+import type { Column } from 'druid-query-toolkit';
+import { C } from 'druid-query-toolkit';
 import React from 'react';
 import AceEditor from 'react-ace';
 

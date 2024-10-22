@@ -99,9 +99,10 @@ export function localDateRangeToInterval(localRange: DateRange): string {
   }`;
 }
 
-export function ceilToUtcDay(date: Date): Date {
-  date = new Date(date.valueOf());
-  date.setUTCHours(0, 0, 0, 0);
-  date.setUTCDate(date.getUTCDate() + 1);
-  return date;
+export function maxDate(a: Date, b: Date): Date {
+  return a > b ? a : b;
+}
+
+export function minDate(a: Date, b: Date): Date {
+  return a < b ? a : b;
 }
