@@ -3044,6 +3044,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     validateTestMaxColumnsToMergeOutputSegment(merged7);
   }
 
+
   @Test
   public void testMergeProjections() throws IOException
   {
@@ -3111,7 +3112,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
 
     List<AggregateProjectionSpec> projections = Arrays.asList(
         new AggregateProjectionSpec(
-            "ab_hourly_c_sum",
+            "a_hourly_c_sum",
             VirtualColumns.create(
                 Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
             ),
@@ -3124,7 +3125,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             }
         ),
         new AggregateProjectionSpec(
-            "ab_c_sum",
+            "a_c_sum",
             VirtualColumns.EMPTY,
             Collections.singletonList(
                 new StringDimensionSchema("a")
@@ -3136,17 +3137,6 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     );
 
     IndexBuilder bob = IndexBuilder.create()
-                       .tmpDir(tmp)
-                       .schema(
-                           IncrementalIndexSchema.builder()
-                                                 .withDimensionsSpec(dimensionsBuilder.build())
-                                                 .withRollup(false)
-                                                 .withProjections(projections)
-                                                 .build()
-                       )
-                       .rows(rows1);
-
-    IndexBuilder bob2 = IndexBuilder.create()
                                    .tmpDir(tmp)
                                    .schema(
                                        IncrementalIndexSchema.builder()
@@ -3155,7 +3145,18 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                                                              .withProjections(projections)
                                                              .build()
                                    )
-                                   .rows(rows2);
+                                   .rows(rows1);
+
+    IndexBuilder bob2 = IndexBuilder.create()
+                                    .tmpDir(tmp)
+                                    .schema(
+                                        IncrementalIndexSchema.builder()
+                                                              .withDimensionsSpec(dimensionsBuilder.build())
+                                                              .withRollup(false)
+                                                              .withProjections(projections)
+                                                              .build()
+                                    )
+                                    .rows(rows2);
 
     QueryableIndex q1 = bob.buildMMappedIndex();
     QueryableIndex q2 = bob2.buildMMappedIndex();
@@ -3178,7 +3179,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     CursorBuildSpec p1Spec = CursorBuildSpec.builder()
                                             .setQueryContext(
                                                 QueryContext.of(
-                                                    ImmutableMap.of(QueryContexts.USE_PROJECTION, "ab_hourly_c_sum")
+                                                    ImmutableMap.of(QueryContexts.USE_PROJECTION, "a_hourly_c_sum")
                                                 )
                                             )
                                             .setVirtualColumns(
@@ -3196,7 +3197,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     CursorBuildSpec p2Spec = CursorBuildSpec.builder()
                                             .setQueryContext(
                                                 QueryContext.of(
-                                                    ImmutableMap.of(QueryContexts.USE_PROJECTION, "ab_c_sum")
+                                                    ImmutableMap.of(QueryContexts.USE_PROJECTION, "a_c_sum")
                                                 )
                                             )
                                             .setAggregators(
@@ -3230,7 +3231,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
       Assert.assertEquals(3, rowCount);
     }
 
-    QueryableIndex p1Index = merged.getProjectionQueryableIndex("ab_hourly_c_sum");
+    QueryableIndex p1Index = merged.getProjectionQueryableIndex("a_hourly_c_sum");
     Assert.assertNotNull(p1Index);
     ColumnHolder aHolder = p1Index.getColumnHolder("a");
     DictionaryEncodedColumn aCol = (DictionaryEncodedColumn) aHolder.getColumn();
@@ -3244,14 +3245,14 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         ).size()
     );
 
-    QueryableIndex p2Index = merged.getProjectionQueryableIndex("ab_hourly_c_sum");
+    QueryableIndex p2Index = merged.getProjectionQueryableIndex("a_c_sum");
     Assert.assertNotNull(p2Index);
     ColumnHolder aHolder2 = p2Index.getColumnHolder("a");
     DictionaryEncodedColumn aCol2 = (DictionaryEncodedColumn) aHolder2.getColumn();
     Assert.assertEquals(3, aCol2.getCardinality());
 
     Assert.assertEquals(
-        2,
+        1,
         resultFactory.toImmutableBitmap(
             aHolder2.getIndexSupplier().as(ValueIndexes.class).forValue("a", ColumnType.STRING).computeBitmapResult(resultFactory, false)
         ).size()
