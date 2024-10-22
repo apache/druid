@@ -21,6 +21,7 @@ recipeList:
       obsoleteRunners:
         - org.junit.experimental.runners.Enclosed
   - org.openrewrite.apache.commons.lang.UpgradeApacheCommonsLang_2_3
+  - org.openrewrite.java.jackson.CodehausToFasterXML
 ---
 type: specs.openrewrite.org/v1beta/recipe
 name: org.apache.druid.UpgradeCalciteTestsToJunit5
