@@ -44,6 +44,8 @@ import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecor
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.utils.CompressionUtils;
+import org.apache.druid.utils.CompressionUtils.Format;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -69,6 +71,22 @@ import static org.apache.druid.indexing.kinesis.KinesisSequenceNumber.UNREAD_TRI
 
 public class KinesisRecordSupplierTest extends EasyMockSupport
 {
+  private static List<Record> compressRecords(List<Record> baseRecords, CompressionUtils.Format format)
+  {
+    return baseRecords.stream()
+      .map(record -> {
+        try {
+          return new Record().withData(
+                  CompressionUtils.compress(record.getData(), format)
+          ).withSequenceNumber(record.getSequenceNumber());
+        } 
+        catch (Exception e) {
+          throw new RuntimeException("Error compressing record data", e);
+        }
+      })
+      .collect(Collectors.toList());
+  }
+
   private static final String STREAM = "stream";
   private static final long POLL_TIMEOUT_MILLIS = 2000;
   private static final String SHARD_ID1 = "1";
@@ -120,7 +138,6 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
           ))
           .collect(Collectors.toList()))
       .build();
-
 
   private static ByteBuffer jb(String timestamp, String dim1, String dim2, String dimLong, String dimFloat, String met1)
   {
@@ -216,7 +233,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
@@ -273,7 +291,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        true
+        true,
+        null
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
@@ -380,7 +399,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
             5000,
         1_000_000,
             true,
-            false
+            false,
+            null
     );
 
     recordSupplier.assign(partitions);
@@ -437,7 +457,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -512,7 +533,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -576,7 +598,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -609,7 +632,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -669,7 +693,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -758,7 +783,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -832,7 +858,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     Assert.assertEquals("0", recordSupplier.getLatestSequenceNumber(StreamPartition.of(STREAM, SHARD_ID0)));
@@ -867,7 +894,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
     return recordSupplier;
   }
@@ -954,7 +982,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
 
     recordSupplier.assign(partitions);
@@ -1009,7 +1038,8 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
         5000,
         1_000_000,
         true,
-        false
+        false,
+        null
     );
     StreamPartition<String> partition = new StreamPartition<>(STREAM, SHARD_ID0);
 
@@ -1038,6 +1068,80 @@ public class KinesisRecordSupplierTest extends EasyMockSupport
     Assert.assertFalse(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("0")));
 
     Assert.assertTrue(target.isOffsetAvailable(partition, KinesisSequenceNumber.of("10")));
+  }
+
+
+  @Test
+  public void testPollDeaggregateWithCompressedData() throws InterruptedException
+  {
+    EasyMock.expect(kinesis.getShardIterator(
+            EasyMock.anyObject(),
+            EasyMock.eq(SHARD_ID0),
+            EasyMock.anyString(),
+            EasyMock.anyString()
+    )).andReturn(
+            getShardIteratorResult0).anyTimes();
+
+    EasyMock.expect(kinesis.getShardIterator(
+            EasyMock.anyObject(),
+            EasyMock.eq(SHARD_ID1),
+            EasyMock.anyString(),
+            EasyMock.anyString()
+    )).andReturn(
+            getShardIteratorResult1).anyTimes();
+
+    EasyMock.expect(getShardIteratorResult0.getShardIterator()).andReturn(SHARD0_ITERATOR).anyTimes();
+    EasyMock.expect(getShardIteratorResult1.getShardIterator()).andReturn(SHARD1_ITERATOR).anyTimes();
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD0_ITERATOR)))
+            .andReturn(getRecordsResult0)
+            .anyTimes();
+    EasyMock.expect(kinesis.getRecords(generateGetRecordsReq(SHARD1_ITERATOR)))
+            .andReturn(getRecordsResult1)
+            .anyTimes();
+    EasyMock.expect(getRecordsResult0.getRecords()).andReturn(compressRecords(SHARD0_RECORDS, Format.ZSTD)).once();
+    EasyMock.expect(getRecordsResult1.getRecords()).andReturn(compressRecords(SHARD1_RECORDS, Format.ZSTD)).once();
+    EasyMock.expect(getRecordsResult0.getNextShardIterator()).andReturn(null).anyTimes();
+    EasyMock.expect(getRecordsResult1.getNextShardIterator()).andReturn(null).anyTimes();
+    EasyMock.expect(getRecordsResult0.getMillisBehindLatest()).andReturn(SHARD0_LAG_MILLIS).once();
+    EasyMock.expect(getRecordsResult1.getMillisBehindLatest()).andReturn(SHARD1_LAG_MILLIS).once();
+
+    replayAll();
+
+    Set<StreamPartition<String>> partitions = ImmutableSet.of(
+            StreamPartition.of(STREAM, SHARD_ID0),
+            StreamPartition.of(STREAM, SHARD_ID1)
+    );
+
+
+    recordSupplier = new KinesisRecordSupplier(
+            kinesis,
+            0,
+            2,
+            10_000,
+            5000,
+            5000,
+            1_000_000,
+            true,
+            false,
+            Format.ZSTD
+    );
+
+    recordSupplier.assign(partitions);
+    recordSupplier.seekToEarliest(partitions);
+    recordSupplier.start();
+
+    for (int i = 0; i < 10 && recordSupplier.bufferSize() < 12; i++) {
+      Thread.sleep(100);
+    }
+
+    List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> polledRecords = cleanRecords(recordSupplier.poll(
+            POLL_TIMEOUT_MILLIS));
+
+    verifyAll();
+
+    Assert.assertEquals(partitions, recordSupplier.getAssignment());
+    Assert.assertTrue(polledRecords.containsAll(ALL_RECORDS));
+    Assert.assertEquals(SHARDS_LAG_MILLIS, recordSupplier.getPartitionResourcesTimeLag());
   }
 
   private void setupMockKinesisForShardId(AmazonKinesis kinesis, String shardId,

@@ -267,7 +267,8 @@ public class KinesisIOConfigTest
         "endpoint",
         2000,
         "awsAssumedRoleArn",
-        "awsExternalId"
+        "awsExternalId",
+        null
     );
 
     final byte[] json = mapper.writeValueAsBytes(currentConfig);

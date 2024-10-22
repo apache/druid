@@ -94,6 +94,7 @@ public class KinesisIndexTaskSerdeTest
       "endpoint",
       null,
       null,
+      null,
       null
   );
   private static final String ACCESS_KEY = "test-access-key";
