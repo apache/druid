@@ -91,6 +91,7 @@ import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorProvider;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
@@ -134,14 +135,14 @@ public class SqlStatementResource
       final @MultiStageQuery SqlStatementFactory msqSqlStatementFactory,
       final ObjectMapper jsonMapper,
       final OverlordClient overlordClient,
-      final @MultiStageQuery StorageConnector storageConnector,
+      final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
       final AuthorizerMapper authorizerMapper
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
     this.jsonMapper = jsonMapper;
     this.overlordClient = overlordClient;
-    this.storageConnector = storageConnector;
+    this.storageConnector = storageConnectorProvider.createStorageConnector(null);
     this.authorizerMapper = authorizerMapper;
   }
 

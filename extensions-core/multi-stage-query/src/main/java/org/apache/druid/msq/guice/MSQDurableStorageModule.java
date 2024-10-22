@@ -27,14 +27,12 @@ import com.google.inject.Key;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.JsonConfigProvider;
-import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.overlord.duty.OverlordDuty;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleaner;
 import org.apache.druid.msq.indexing.cleaner.DurableStorageCleanerConfig;
 import org.apache.druid.storage.NilStorageConnector;
-import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
 
 import java.util.List;
@@ -84,10 +82,6 @@ public class MSQDurableStorageModule implements DruidModule
           MultiStageQuery.class
       );
 
-      binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class))
-            .toProvider(Key.get(StorageConnectorProvider.class, MultiStageQuery.class))
-            .in(LazySingleton.class);
-
       if (nodeRoles.contains(NodeRole.OVERLORD)) {
         JsonConfigProvider.bind(
             binder,
@@ -99,11 +93,9 @@ public class MSQDurableStorageModule implements DruidModule
                    .addBinding()
                    .to(DurableStorageCleaner.class);
       }
-    } else if (nodeRoles.contains(NodeRole.BROKER)) {
-      // bind with nil implementation so that configs are not required during service startups of broker since SQLStatementResource uses it.
-      binder.bind(Key.get(StorageConnector.class, MultiStageQuery.class)).toInstance(NilStorageConnector.getInstance());
     } else {
-      // do nothing
+      // bind with nil implementation so that configs are not required during service startups.
+      binder.bind(Key.get(StorageConnectorProvider.class, MultiStageQuery.class)).toInstance(tempDir -> NilStorageConnector.getInstance());
     }
   }
 
