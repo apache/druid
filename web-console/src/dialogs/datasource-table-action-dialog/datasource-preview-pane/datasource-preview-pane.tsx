@@ -44,7 +44,7 @@ export const DatasourcePreviewPane = React.memo(function DatasourcePreviewPane(
       try {
         result = await queryRunner.runQuery({
           query: `SELECT * FROM ${T(datasource)}`,
-          extraQueryContext: { sqlOuterLimit: 100 },
+          extraQueryContext: { sqlOuterLimit: 100, requireTimeCondition: false },
           cancelToken,
         });
       } catch (e) {
