@@ -710,9 +710,9 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
 
   protected static class InitializedDictionaryMergerLookups<T>
   {
-    public final int numMergeIndex;
-    public final Indexed<T> dimValueLookup;
-    public final Indexed<T>[] dimValueLookups;
+    private final int numMergeIndex;
+    private final Indexed<T> dimValueLookup;
+    private final Indexed<T>[] dimValueLookups;
 
     public InitializedDictionaryMergerLookups(int numMergeIndex, Indexed<T> dimValueLookup, Indexed<T>[] dimValueLookups)
     {
@@ -720,6 +720,20 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       this.dimValueLookup = dimValueLookup;
       this.dimValueLookups = dimValueLookups;
     }
-  }
 
+    public Indexed<T> getDimValueLookup()
+    {
+      return dimValueLookup;
+    }
+
+    public int getNumMergeIndex()
+    {
+      return numMergeIndex;
+    }
+
+    public Indexed<T>[] getDimValueLookups()
+    {
+      return dimValueLookups;
+    }
+  }
 }

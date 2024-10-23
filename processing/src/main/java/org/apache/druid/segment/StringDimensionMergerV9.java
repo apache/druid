@@ -184,7 +184,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
       }
       InitializedDictionaryMergerLookups<String> lookups = initializeDictionaryMergerLookups(projectionAdapters);
       dictionaryMergeIterator = new DictionaryMergingIterator<>(
-          lookups.dimValueLookups,
+          lookups.getDimValueLookups(),
           getDictionaryMergingComparator(),
           true
       );
@@ -195,7 +195,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
         dictionaryMergeIterator.next();
       }
       for (int i = 0; i < adapters.size(); i++) {
-        if (lookups.dimValueLookups[i] != null && dictionaryMergeIterator.needConversion(i)) {
+        if (lookups.getDimValueLookups()[i] != null && dictionaryMergeIterator.needConversion(i)) {
           dimConversions.set(i, dictionaryMergeIterator.conversions[i]);
         }
       }
