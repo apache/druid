@@ -29,7 +29,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryExecutor;
+import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -43,10 +43,10 @@ import java.util.List;
 import java.util.Optional;
 
 public class UnionQueryQueryToolChest extends QueryToolChest<UnionResult, UnionQuery>
-    implements QueryExecutor<UnionResult>
+    implements QueryLogic<UnionResult>
 {
   @Override
-  public QueryRunner<UnionResult> makeQueryRunner(Query<UnionResult> query,
+  public QueryRunner<UnionResult> entryPoint(Query<UnionResult> query,
       QuerySegmentWalker clientQuerySegmentWalker)
   {
     return new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker);

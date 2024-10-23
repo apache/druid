@@ -22,9 +22,9 @@ package org.apache.druid.query;
 /**
  * Executes the query by utilizing the given walker.
  */
-public interface QueryExecutor<T>
+public interface QueryLogic<T>
 {
-  QueryRunner<T> makeQueryRunner(
+  QueryRunner<T> entryPoint(
       Query<T> query,
       QuerySegmentWalker walker
   );

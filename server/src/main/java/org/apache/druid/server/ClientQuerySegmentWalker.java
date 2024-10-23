@@ -49,7 +49,7 @@ import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryExecutor;
+import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -178,9 +178,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    final QueryExecutor<T> queryExecutor = conglomerate.getQueryExecutor(query);
+    final QueryLogic<T> queryExecutor = conglomerate.getQueryExecutor(query);
     if (queryExecutor != null) {
-      return queryExecutor.makeQueryRunner(query, this);
+      return queryExecutor.entryPoint(query, this);
     }
 
     final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
@@ -451,10 +451,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               )
           );
 
-          QueryExecutor<Object> subQueryExecutor = conglomerate.getQueryExecutor(subQuery);
+          QueryLogic<Object> subQueryExecutor = conglomerate.getQueryExecutor(subQuery);
           final QueryRunner subQueryRunner;
           if (subQueryExecutor != null) {
-            subQueryRunner = subQueryExecutor.makeQueryRunner(subQueryWithSerialization, this);
+            subQueryRunner = subQueryExecutor.entryPoint(subQueryWithSerialization, this);
           } else {
             subQueryRunner = subQueryWithSerialization.getRunner(this);
           }

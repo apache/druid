@@ -260,7 +260,7 @@ public class UnionQueryQueryToolChestTest
     Mockito.when(walker.getQueryRunnerForIntervals(argThat(scan2::matchQuery), any()))
         .thenReturn((q, ctx) -> (Sequence) scan2.makeResultSequence());
 
-    QueryRunner<UnionResult> unionRunner = toolChest.makeQueryRunner(query, walker);
+    QueryRunner<UnionResult> unionRunner = toolChest.entryPoint(query, walker);
     Sequence<UnionResult> results = unionRunner.run(QueryPlus.wrap(query), null);
 
     QueryToolChestTestHelper.assertArrayResultsEquals(
