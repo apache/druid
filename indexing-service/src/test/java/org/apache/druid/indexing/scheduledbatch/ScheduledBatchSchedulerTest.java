@@ -52,6 +52,7 @@ public class ScheduledBatchSchedulerTest
   private BlockingExecutorService executor;
   private BrokerClient brokerClient;
   private StubServiceEmitter serviceEmitter;
+  private ScheduledBatchStatusTracker statusTracker;
   private SqlQuery query;
   private SqlQuery query2;
 
@@ -64,6 +65,7 @@ public class ScheduledBatchSchedulerTest
     taskMaster = new TaskMaster(null, null);
     taskMaster.becomeLeader(Mockito.mock(TaskRunner.class), Mockito.mock(TaskQueue.class));
     executor = new BlockingExecutorService("test");
+    statusTracker = new ScheduledBatchStatusTracker();
     serviceEmitter = new StubServiceEmitter();
     query = new SqlQuery(
         "REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY ALL",
@@ -92,7 +94,8 @@ public class ScheduledBatchSchedulerTest
         taskMaster,
         (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
         brokerClient,
-        serviceEmitter
+        serviceEmitter,
+        statusTracker
     );
   }
 

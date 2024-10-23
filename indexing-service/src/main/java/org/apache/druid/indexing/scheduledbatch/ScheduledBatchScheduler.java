@@ -81,14 +81,15 @@ public class ScheduledBatchScheduler
       final TaskMaster taskMaster,
       final ScheduledExecutorFactory executorFactory,
       final BrokerClient brokerClient,
-      final ServiceEmitter emitter
+      final ServiceEmitter emitter,
+      final ScheduledBatchStatusTracker statusTracker
   )
   {
     this.taskMaster = taskMaster;
     this.cronExecutor = executorFactory.create(1, "ScheduledBatchCronScheduler-%s");
     this.brokerClient = brokerClient;
     this.emitter = emitter;
-    this.statusTracker = new ScheduledBatchStatusTracker(); // this can perhaps be injected and used for test verification.
+    this.statusTracker = statusTracker;
 
     this.taskRunnerListener = new TaskRunnerListener()
     {
