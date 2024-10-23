@@ -19,7 +19,6 @@
 
 package org.apache.druid.query;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import java.util.IdentityHashMap;
@@ -30,10 +29,10 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
   private final Map<Class<? extends Query>, QueryRunnerFactory> factories;
   private final Map<Class<? extends Query>, QueryToolChest> toolchests;
 
-  @VisibleForTesting
-  public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories)
+  public static DefaultQueryRunnerFactoryConglomerate buildFromQueryRunnerFactories(
+      Map<Class<? extends Query>, QueryRunnerFactory> factories)
   {
-    this(factories, Maps.transformValues(factories, f -> f.getToolchest()));
+    return new DefaultQueryRunnerFactoryConglomerate(factories, Maps.transformValues(factories, f -> f.getToolchest()));
   }
 
   @Inject

@@ -188,12 +188,10 @@ public class ServerManagerTest
     queryNotifyLatch = new CountDownLatch(1);
     factory = new MyQueryRunnerFactory(queryWaitLatch, queryWaitYieldLatch, queryNotifyLatch);
     serverManagerExec = Execs.multiThreaded(2, "ServerManagerTest-%d");
-    QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap
-            .<Class<? extends Query>, QueryRunnerFactory>builder()
-            .put(SearchQuery.class, factory)
-            .build()
-    );
+    QueryRunnerFactoryConglomerate conglomerate = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap
+        .<Class<? extends Query>, QueryRunnerFactory>builder()
+        .put(SearchQuery.class, factory)
+        .build());
     serverManager = new ServerManager(
         conglomerate,
         new NoopServiceEmitter(),

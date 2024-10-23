@@ -300,9 +300,7 @@ public class QueryStackTests
       final TestBufferPool testBufferPool,
       final TestGroupByBuffers groupByBuffers)
   {
-    final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
-        makeDefaultQueryRunnerFactories(processingConfig, minTopNThreshold, jsonMapper, testBufferPool, groupByBuffers)
-    );
+    final QueryRunnerFactoryConglomerate conglomerate = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(makeDefaultQueryRunnerFactories(processingConfig, minTopNThreshold, jsonMapper, testBufferPool, groupByBuffers));
     return conglomerate;
   }
 

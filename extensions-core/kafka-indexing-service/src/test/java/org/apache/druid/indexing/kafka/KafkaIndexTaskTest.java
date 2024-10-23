@@ -2891,28 +2891,26 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @Override
   protected QueryRunnerFactoryConglomerate makeQueryRunnerConglomerate()
   {
-    return new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
-                    .put(
-                        TimeseriesQuery.class,
-                        new TimeseriesQueryRunnerFactory(
-                            new TimeseriesQueryQueryToolChest(),
-                            new TimeseriesQueryEngine(),
-                            (query, future) -> {
-                              // do nothing
-                            }
-                        )
+    return DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
+                .put(
+                    TimeseriesQuery.class,
+                    new TimeseriesQueryRunnerFactory(
+                        new TimeseriesQueryQueryToolChest(),
+                        new TimeseriesQueryEngine(),
+                        (query, future) -> {
+                          // do nothing
+                        }
                     )
-                    .put(
-                        ScanQuery.class,
-                        new ScanQueryRunnerFactory(
-                            new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
-                            new ScanQueryEngine(),
-                            new ScanQueryConfig()
-                        )
+                )
+                .put(
+                    ScanQuery.class,
+                    new ScanQueryRunnerFactory(
+                        new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
+                        new ScanQueryEngine(),
+                        new ScanQueryConfig()
                     )
-                    .build()
-    );
+                )
+                .build());
   }
 
   private void makeToolboxFactory() throws IOException
