@@ -23,7 +23,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -35,7 +34,6 @@ import org.apache.druid.query.context.ResponseContext;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 class UnionQueryRunner implements QueryRunner<Object>
 {
@@ -105,22 +103,17 @@ class UnionQueryRunner implements QueryRunner<Object>
     QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
     Sequence<T> seq = runner.run(withQuery, responseContext);
     Sequence<?> resultSeq;
-    switch (serializationMode)
-    {
+    switch (serializationMode) {
       case ROWS:
         resultSeq = toolChest.resultsAsArrays(query, seq);
         break;
       case FRAMES:
-        Optional<Sequence<FrameSignaturePair>> resultsAsFrames = toolChest.resultsAsFrames(
+        resultSeq = toolChest.resultsAsFrames(
             query,
             seq,
             ArenaMemoryAllocatorFactory.makeDefault(),
             false
-        );
-        if (resultsAsFrames.isEmpty()) {
-          throw DruidException.defensive("Unable to materialize the results as frames.");
-        }
-        resultSeq = resultsAsFrames.get();
+        ).orElseThrow(() -> DruidException.defensive("Unable to materialize the results as frames."));
         break;
       default:
         throw DruidException.defensive("Not supported serializationMode [%s].", serializationMode);

@@ -1349,7 +1349,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     try {
       Query<T> newQuery;
-      if(query instanceof UnionQuery) {
+      if (query instanceof UnionQuery) {
         UnionQuery unionQuery = (UnionQuery) query;
         newQuery = (Query<T>) unionQuery
             .withDataSources(recursivelyClearDatasource(unionQuery.getDataSources(), queryJsonMapper));
