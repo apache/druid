@@ -721,16 +721,6 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       this.dimValueLookups = dimValueLookups;
     }
 
-    public Indexed<T> getDimValueLookup()
-    {
-      return dimValueLookup;
-    }
-
-    public int getNumMergeIndex()
-    {
-      return numMergeIndex;
-    }
-
     public Indexed<T>[] getDimValueLookups()
     {
       return dimValueLookups;
