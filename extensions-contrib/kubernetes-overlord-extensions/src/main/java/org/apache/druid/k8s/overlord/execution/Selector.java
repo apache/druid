@@ -23,7 +23,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.utils.CollectionUtils;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -70,6 +72,7 @@ public class Selector
   public boolean evaluate(Task task)
   {
     boolean isMatch = true;
+
     if (cxtTagsConditions != null) {
       isMatch = cxtTagsConditions.entrySet().stream().allMatch(entry -> {
         String tagKey = entry.getKey();
@@ -80,15 +83,15 @@ public class Selector
         }
         Object tagValue = tags.get(tagKey);
 
-        return tagValue == null ? false : tagValues.contains((String) tagValue);
+        return tagValue != null && tagValues.contains((String) tagValue);
       });
     }
 
-    if (isMatch && taskTypeCondition != null) {
+    if (isMatch && !CollectionUtils.isNullOrEmpty(taskTypeCondition)) {
       isMatch = taskTypeCondition.contains(task.getType());
     }
 
-    if (isMatch && dataSourceCondition != null) {
+    if (isMatch && !CollectionUtils.isNullOrEmpty(dataSourceCondition)) {
       isMatch = dataSourceCondition.contains(task.getDataSource());
     }
 
