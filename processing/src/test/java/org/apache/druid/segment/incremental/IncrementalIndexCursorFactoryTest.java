@@ -232,10 +232,10 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     Assert.assertEquals(2, results.size());
 
     ResultRow row = results.get(0);
-    Assert.assertArrayEquals(new Object[]{NullHandling.defaultStringValue(), "bo", 1L}, row.getArray());
+    Assert.assertArrayEquals(new Object[]{null, "bo", 1L}, row.getArray());
 
     row = results.get(1);
-    Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
+    Assert.assertArrayEquals(new Object[]{"hi", null, 1L}, row.getArray());
   }
 
   @Test
@@ -295,7 +295,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     Assert.assertEquals(2, results.size());
 
     ResultRow row = results.get(0);
-    Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L, 2.0}, row.getArray());
+    Assert.assertArrayEquals(new Object[]{"hi", null, 1L, 2.0}, row.getArray());
 
     row = results.get(1);
     Assert.assertArrayEquals(
@@ -444,7 +444,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
     Assert.assertEquals(1, results.size());
 
     ResultRow row = results.get(0);
-    Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
+    Assert.assertArrayEquals(new Object[]{"hi", null, 1L}, row.getArray());
   }
 
   @Test
@@ -627,15 +627,15 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
         IndexedInts rowC = dimSelector1C.getRow();
         rowC.forEach(i -> Assert.assertTrue(i < cardinalityA));
         IndexedInts rowD = dimSelector2D.getRow();
-        // no null id, so should get empty dims array
-        Assert.assertEquals(0, rowD.size());
+        Assert.assertEquals(1, rowD.size());
+        Assert.assertEquals(1, rowD.get(0));
         IndexedInts rowE = dimSelector3E.getRow();
         if (NullHandling.replaceWithDefault()) {
           Assert.assertEquals(1, rowE.size());
-          // the null id
           Assert.assertEquals(0, rowE.get(0));
         } else {
-          Assert.assertEquals(0, rowE.size());
+          Assert.assertEquals(1, rowE.size());
+          Assert.assertEquals(1, rowE.get(0));
         }
         cursor.advance();
         rowNumInCursor++;

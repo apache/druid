@@ -70,7 +70,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class ExpressionSelectorsTest extends InitializedNullHandlingTest
@@ -616,7 +615,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     // DimensionSelector.nameLookupPossibleInAdvance in the indexers of an IncrementalIndex, which resulted in an
     // exception trying to make an optimized string expression selector that was not appropriate to use for the
     // underlying dimension selector.
-    // This occurred during schemaless ingestion with spare dimension values and no explicit null rows, so the
+    // This occurred during schemaless ingestion with sparse dimension values and no explicit null rows, so the
     // conditions are replicated by this test. See https://github.com/apache/druid/pull/10248 for details
     IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
                                                           .withTimestampSpec(new TimestampSpec("time", "millis", DateTimes.nowUtc()))
@@ -656,10 +655,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
       while (!cursor.isDone()) {
         Object x = xExprSelector.getObject();
         Object y = yExprSelector.getObject();
-        List<String> expectedFoo = Collections.singletonList("foofoo");
-        List<String> expectedNull = NullHandling.replaceWithDefault()
-                                    ? Collections.singletonList("foo")
-                                    : Collections.singletonList(null);
+        String expectedFoo = "foofoo";
+        String expectedNull = NullHandling.replaceWithDefault() ? "foo" : null;
         if (rowCount == 0) {
           Assert.assertEquals(expectedFoo, x);
           Assert.assertEquals(expectedNull, y);
@@ -672,6 +669,43 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
       }
 
       Assert.assertEquals(2, rowCount);
+    }
+  }
+
+  @Test
+  public void test_incrementalIndexStringSelectorCast() throws IndexSizeExceededException
+  {
+    IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
+                                                          .withTimestampSpec(new TimestampSpec("time", "millis", DateTimes.nowUtc()))
+                                                          .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+                                                          .build();
+
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder().setMaxRowCount(100).setIndexSchema(schema).build();
+    index.add(
+        new MapBasedInputRow(
+            DateTimes.nowUtc().getMillis(),
+            ImmutableList.of("x"),
+            ImmutableMap.of("x", "1.1")
+        )
+    );
+
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
+      ColumnValueSelector<?> xExprSelector = ExpressionSelectors.makeColumnValueSelector(
+          cursor.getColumnSelectorFactory(),
+          Parser.parse("cast(x, 'DOUBLE')", ExprMacroTable.nil())
+      );
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        Object x = xExprSelector.getObject();
+        double expectedFoo = 1.1;
+        Assert.assertEquals(expectedFoo, x);
+        rowCount++;
+        cursor.advance();
+      }
+
+      Assert.assertEquals(1, rowCount);
     }
   }
 

@@ -35,6 +35,7 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class IncrementalIndexCursorHolder implements CursorHolder
 {
@@ -76,7 +77,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     return new IncrementalIndexCursor(
         rowSelector,
         currentRow,
-        makeSelectorFactory(spec, currentRow),
+        () -> makeSelectorFactory(spec, currentRow),
         spec,
         getTimeOrder(ordering)
     );
@@ -93,7 +94,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     return new IncrementalIndexColumnSelectorFactory(
         rowSelector,
         currEntry,
-        buildSpec.getVirtualColumns(),
+        buildSpec,
         getTimeOrder()
     );
   }
@@ -113,15 +114,15 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     IncrementalIndexCursor(
         IncrementalIndexRowSelector rowSelector,
         IncrementalIndexRowHolder currentRow,
-        ColumnSelectorFactory selectorFactory,
+        Supplier<ColumnSelectorFactory> columnSelectorFactorySupplier,
         CursorBuildSpec buildSpec,
         Order timeOrder
     )
     {
       currEntry = currentRow;
-      columnSelectorFactory = selectorFactory;
       // Set maxRowIndex before creating the filterMatcher. See https://github.com/apache/druid/pull/6340
       maxRowIndex = rowSelector.getLastRowIndex();
+      columnSelectorFactory = columnSelectorFactorySupplier.get();
       numAdvanced = -1;
 
       cursorIterable = rowSelector.getFacts().timeRangeIterable(

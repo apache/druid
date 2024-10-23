@@ -85,6 +85,7 @@ public class CursorOnlyStrategy extends SearchStrategy
                                                            )
                                                        )
                                                        .setVirtualColumns(query.getVirtualColumns())
+                                                       .setPhyiscalColumns(query.getRequiredColumns())
                                                        .setQueryContext(query.context())
                                                        .build();
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(buildSpec)) {
