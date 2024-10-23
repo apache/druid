@@ -63,8 +63,9 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
     final QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics(queryToolChest);
     final Sequence<T> baseSequence = delegate.run(queryWithMetrics, responseContext);
 
-    cpuTimeAccumulator.addAndGet(JvmUtils.getCurrentThreadCpuTime() - startRun);
-    responseContext.addCpuNanos(JvmUtils.getCurrentThreadCpuTime() - startRun);
+    long cpuTimeDelta = JvmUtils.getCurrentThreadCpuTime() - startRun;
+    cpuTimeAccumulator.addAndGet(cpuTimeDelta);
+    responseContext.addCpuNanos(cpuTimeDelta);
 
     return Sequences.wrap(
         baseSequence,
@@ -78,8 +79,9 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
               return sequenceProcessing.get();
             }
             finally {
-              cpuTimeAccumulator.addAndGet(JvmUtils.getCurrentThreadCpuTime() - start);
-              responseContext.addCpuNanos(JvmUtils.getCurrentThreadCpuTime() - start);
+              long cpuTimeDelta = JvmUtils.getCurrentThreadCpuTime() - start;
+              cpuTimeAccumulator.addAndGet(cpuTimeDelta);
+              responseContext.addCpuNanos(cpuTimeDelta);
             }
           }
 
@@ -87,7 +89,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
           public void after(boolean isDone, Throwable thrown)
           {
             if (report) {
-              final long cpuTimeNs = cpuTimeAccumulator.get();
+              final long cpuTimeNs = responseContext.getCpuNanos();
               if (cpuTimeNs > 0) {
                 queryWithMetrics.getQueryMetrics().reportCpuTime(cpuTimeNs).emit(emitter);
               }
