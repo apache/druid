@@ -219,15 +219,15 @@ public class UnionQuery implements Query<Object>
   @Override
   public DataSourceAnalysis getDataSourceAnalysis()
   {
-    OpagueDataSourceCover ds = new OpagueDataSourceCover(new UnionDataSource(getDataSources()));
+    OpaqueDataSourceCover ds = new OpaqueDataSourceCover(new UnionDataSource(getDataSources()));
     return new DataSourceAnalysis(ds, null, null, Collections.emptyList());
   }
 
-  private static class OpagueDataSourceCover implements DataSource
+  private static class OpaqueDataSourceCover implements DataSource
   {
     private DataSource delegate;
 
-    public OpagueDataSourceCover(DataSource delegate)
+    public OpaqueDataSourceCover(DataSource delegate)
     {
       this.delegate = delegate;
     }
