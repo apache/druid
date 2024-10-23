@@ -26,6 +26,7 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.BytesFullResponseHolder;
 import org.apache.druid.messages.MessageBatch;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
@@ -68,11 +69,12 @@ public class MessageRelayClientImpl<MessageType> implements MessageRelayClient<M
         startWatermark
     );
 
+    ListenableFuture<BytesFullResponseHolder> asyncRequest = serviceClient.asyncRequest(
+        new RequestBuilder(HttpMethod.GET, path),
+        new BytesFullResponseHandler()
+    );
     return FutureUtils.transform(
-        serviceClient.asyncRequest(
-            new RequestBuilder(HttpMethod.GET, path),
-            new BytesFullResponseHandler()
-        ),
+        asyncRequest,
         holder -> {
           if (holder.getResponse().getStatus().getCode() == HttpStatus.NO_CONTENT_204) {
             return new MessageBatch<>(Collections.emptyList(), epoch, startWatermark);
