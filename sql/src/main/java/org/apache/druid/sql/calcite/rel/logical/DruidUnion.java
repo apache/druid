@@ -111,7 +111,7 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
       return new SourceDesc(new QueryDataSource(new UnionQuery(queries)), signature);
     }
 
-    throw DruidException.defensive("XXXOnly Table and Values are supported as inputs for Union [%s]", sources);
+    throw DruidException.defensive("Union with input [%s] is not supported. This should not happen.", sources);
   }
 
   private boolean mayUseUnionQuery(List<SourceDesc> sources)
