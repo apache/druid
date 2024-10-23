@@ -408,7 +408,7 @@ Metric monitoring is an essential part of Druid operations. The following monito
 |`org.apache.druid.server.metrics.TaskSlotCountStatsMonitor`|Reports metrics about task slot usage per emission period.|
 |`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. Only supported by Middle Manager node types.|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|
-|`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report statistics for group by queries like disk spill, merge buffer usage. |
+|`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report statistics for groupBy queries like disk spill, merge buffer usage. |
 
 For example, you might configure monitors on all services for system and JVM information within `common.runtime.properties` as follows:
 

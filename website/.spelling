@@ -2405,6 +2405,7 @@ ddSketch
 DDSketch
 druid-ddsketch
 numBins
+aquisitionTimeNs
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram

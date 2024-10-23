@@ -64,12 +64,10 @@ public class GroupByStatsProvider
 
   public void reportSpilledBytes(String queryId, long bytes)
   {
-    if (queryId == null) {
+    if (queryId == null || bytes == 0) {
       return;
     }
-    if (bytes > 0) {
-      spilledBytesPerQuery.computeIfAbsent(queryId, value -> new AtomicLong(0)).addAndGet(bytes);
-    }
+    spilledBytesPerQuery.computeIfAbsent(queryId, value -> new AtomicLong(0)).addAndGet(bytes);
   }
 
   public synchronized void closeQuery(String queryId)
