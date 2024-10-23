@@ -121,7 +121,7 @@ public class UnionQuery implements Query<UnionResult>
   @Override
   public Duration getDuration()
   {
-    throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
+    throw DruidException.methodNotSupported();
   }
 
   @Override
@@ -133,7 +133,7 @@ public class UnionQuery implements Query<UnionResult>
   @Override
   public DateTimeZone getTimezone()
   {
-    throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
+    throw DruidException.methodNotSupported();
   }
 
   @Override
@@ -145,7 +145,7 @@ public class UnionQuery implements Query<UnionResult>
   @Override
   public Ordering<UnionResult> getResultOrdering()
   {
-    throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
+    throw DruidException.methodNotSupported();
   }
 
   @Override
@@ -158,7 +158,7 @@ public class UnionQuery implements Query<UnionResult>
   @Override
   public Query<UnionResult> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
+    throw DruidException.methodNotSupported();
   }
 
   @Override
@@ -247,7 +247,7 @@ public class UnionQuery implements Query<UnionResult>
     @Override
     public DataSource withChildren(List<DataSource> children)
     {
-      throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
+      throw DruidException.methodNotSupported();
     }
 
     @Override
@@ -271,13 +271,13 @@ public class UnionQuery implements Query<UnionResult>
     @Override
     public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc)
     {
-      throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
+      throw DruidException.methodNotSupported();
     }
 
     @Override
     public DataSource withUpdatedDataSource(DataSource newSource)
     {
-      throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
+      throw DruidException.methodNotSupported();
     }
 
     @Override
@@ -289,7 +289,7 @@ public class UnionQuery implements Query<UnionResult>
     @Override
     public DataSourceAnalysis getAnalysis()
     {
-      throw DruidException.defensive("Method supported. [%s]", DruidException.getCurrentMethodName());
+      throw DruidException.methodNotSupported();
     }
   }
 }

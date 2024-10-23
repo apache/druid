@@ -524,9 +524,8 @@ public class DruidException extends RuntimeException
     protected abstract DruidException makeException(DruidExceptionBuilder bob);
   }
 
-  public static String getCurrentMethodName()
+  public static DruidException methodNotSupported()
   {
-    StackTraceElement stackTraceElement = Thread.currentThread().getStackTrace()[2];
-    return stackTraceElement.getClassName() + "#" + stackTraceElement.getMethodName();
+    return defensive("Method Not supported.");
   }
 }
