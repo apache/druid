@@ -243,7 +243,13 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     final Metadata projectionMetadata = new Metadata(null, projectionSpec.getSchema().getAggregators(), null, null, true, projectionSpec.getSchema().getOrderingWithTimeColumnSubstitution(), null);
     return new SimpleQueryableIndex(
         dataInterval,
-        new ListIndexed<>(projectionSpec.getSchema().getGroupingColumns().stream().filter(x -> !x.equals(projectionSpec.getSchema().getTimeColumnName())).collect(Collectors.toList())),
+        new ListIndexed<>(
+            projectionSpec.getSchema()
+                          .getGroupingColumns()
+                          .stream()
+                          .filter(x -> !x.equals(projectionSpec.getSchema().getTimeColumnName()))
+                          .collect(Collectors.toList())
+        ),
         bitmapFactory,
         projectionColumns.get(name),
         fileMapper,
