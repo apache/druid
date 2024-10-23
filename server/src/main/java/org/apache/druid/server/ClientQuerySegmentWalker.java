@@ -178,9 +178,9 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    final QueryLogic<T> queryLogic = conglomerate.getQueryExecutor(query);
-    if (queryLogic != null) {
-      return queryLogic.entryPoint(query, this);
+    final QueryLogic<T> queryExecutor = conglomerate.getQueryExecutor(query);
+    if (queryExecutor != null) {
+      return queryExecutor.entryPoint(query, this);
     }
 
     final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
@@ -313,10 +313,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    */
   private <T> boolean canRunQueryUsingClusterWalker(Query<T> query)
   {
-    if (conglomerate.getQueryExecutor(query) != null) {
-      // these type of queries should be able to run
-      return true;
-    }
     final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
     final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
 
@@ -383,6 +379,42 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       // This datasource is a subquery.
       final Query subQuery = ((QueryDataSource) dataSource).getQuery();
       final QueryToolChest toolChest = conglomerate.getToolChest(subQuery);
+      final QueryLogic<Object> subQueryLogic = conglomerate.getQueryExecutor(subQuery);
+
+      if (subQueryLogic != null) {
+        final Sequence<?> queryResults;
+
+        if (dryRun) {
+          queryResults = Sequences.empty();
+        } else {
+          Query subQueryWithSerialization = subQuery.withOverriddenContext(
+              Collections.singletonMap(
+                  ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
+                  ClientQuerySegmentWalkerUtils.getLimitType(maxSubqueryMemory, cannotMaterializeToFrames.get())
+                      .serializationMode()
+                      .toString()
+              )
+          );
+          queryResults = subQueryLogic
+              .entryPoint(subQueryWithSerialization, this)
+              .run(QueryPlus.wrap(subQueryWithSerialization), DirectDruidClient.makeResponseContextForQuery());
+        }
+
+        return toInlineDataSource(
+            subQuery,
+            queryResults,
+            conglomerate.getToolChest(subQuery),
+            subqueryRowLimitAccumulator,
+            subqueryMemoryLimitAccumulator,
+            cannotMaterializeToFrames,
+            maxSubqueryRows,
+            maxSubqueryMemory,
+            useNestedForUnknownTypeInSubquery,
+            subqueryStatsProvider,
+            !dryRun,
+            emitter
+        );
+      }
 
       if (toolChestIfOutermost != null && toolChestIfOutermost.canPerformSubquery(subQuery)) {
         // Strip outer queries that are handleable by the toolchest, and inline subqueries that may be underneath
@@ -451,15 +483,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               )
           );
 
-          QueryLogic<Object> subQueryLogic = conglomerate.getQueryExecutor(subQuery);
-          final QueryRunner subQueryRunner;
-          if (subQueryLogic != null) {
-            subQueryRunner = subQueryLogic.entryPoint(subQueryWithSerialization, this);
-          } else {
-            subQueryRunner = subQueryWithSerialization.getRunner(this);
-          }
-
-          queryResults = subQueryRunner
+          queryResults = subQueryWithSerialization
+              .getRunner(this)
               .run(QueryPlus.wrap(subQueryWithSerialization), DirectDruidClient.makeResponseContextForQuery());
         }
 
