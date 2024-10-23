@@ -7200,7 +7200,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_DIFFERENT_RESULTSET, separateDefaultModeTest = true)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_SUBSTRING_EMPTY, separateDefaultModeTest = true)
   @Test
   public void testUnnestExtractionFn()
   {

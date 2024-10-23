@@ -241,7 +241,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
             new RetryQueryRunnerConfig(),
             objectMapper
         ),
-        toolChestWarehouse.getToolChest(query),
+        conglomerate.getToolChest(query),
         query,
         objectMapper,
         cache,

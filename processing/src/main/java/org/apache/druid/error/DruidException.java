@@ -524,4 +524,8 @@ public class DruidException extends RuntimeException
     protected abstract DruidException makeException(DruidExceptionBuilder bob);
   }
 
+  public static DruidException methodNotSupported()
+  {
+    return defensive("Method Not supported.");
+  }
 }

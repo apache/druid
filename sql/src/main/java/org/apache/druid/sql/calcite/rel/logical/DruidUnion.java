@@ -31,11 +31,15 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,24 +70,72 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
   @Override
   public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> sources)
   {
-    List<DataSource> dataSources = new ArrayList<>();
-    RowSignature signature = null;
-    for (SourceDesc sourceDesc : sources) {
-      checkDataSourceSupported(sourceDesc.dataSource);
-      dataSources.add(sourceDesc.dataSource);
-      if (signature == null) {
-        signature = sourceDesc.rowSignature;
-      } else {
-        if (!signature.equals(sourceDesc.rowSignature)) {
-          throw DruidException.defensive(
-              "Row signature mismatch in Union inputs [%s] and [%s]",
-              signature,
-              sourceDesc.rowSignature
-          );
+    if (mayUseUnionDataSource(sources)) {
+      List<DataSource> dataSources = new ArrayList<>();
+      RowSignature signature = null;
+      for (SourceDesc sourceDesc : sources) {
+        checkDataSourceSupported(sourceDesc.dataSource);
+        dataSources.add(sourceDesc.dataSource);
+        if (signature == null) {
+          signature = sourceDesc.rowSignature;
+        } else {
+          if (!signature.equals(sourceDesc.rowSignature)) {
+            throw DruidException.defensive(
+                "Row signature mismatch in Union inputs [%s] and [%s]",
+                signature,
+                sourceDesc.rowSignature
+            );
+          }
         }
       }
+      return new SourceDesc(new UnionDataSource(dataSources), signature);
     }
-    return new SourceDesc(new UnionDataSource(dataSources), signature);
+    if (mayUseUnionQuery(sources)) {
+      RowSignature signature = null;
+      List<Query<?>> queries = new ArrayList<>();
+      for (SourceDesc sourceDesc : sources) {
+        QueryDataSource qds = (QueryDataSource) sourceDesc.dataSource;
+        queries.add(qds.getQuery());
+        if (signature == null) {
+          signature = sourceDesc.rowSignature;
+        } else {
+          if (!signature.equals(sourceDesc.rowSignature)) {
+            throw DruidException.defensive(
+                "Row signature mismatch in Union inputs [%s] and [%s]",
+                signature,
+                sourceDesc.rowSignature
+            );
+          }
+        }
+      }
+      return new SourceDesc(new QueryDataSource(new UnionQuery(queries)), signature);
+    }
+
+    throw DruidException.defensive("Union with input [%s] is not supported. This should not happen.", sources);
+  }
+
+  private boolean mayUseUnionQuery(List<SourceDesc> sources)
+  {
+    for (SourceDesc sourceDesc : sources) {
+      DataSource dataSource = sourceDesc.dataSource;
+      if (dataSource instanceof QueryDataSource) {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  private boolean mayUseUnionDataSource(List<SourceDesc> sources)
+  {
+    for (SourceDesc sourceDesc : sources) {
+      DataSource dataSource = sourceDesc.dataSource;
+      if (dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource) {
+        continue;
+      }
+      return false;
+    }
+    return true;
   }
 
   private void checkDataSourceSupported(DataSource dataSource)
