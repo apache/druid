@@ -61,4 +61,10 @@ public final class DummyBlockingPool<T> implements BlockingPool<T>
   {
     return 0;
   }
+
+  @Override
+  public long getUsedResourcesCount()
+  {
+    return 0;
+  }
 }

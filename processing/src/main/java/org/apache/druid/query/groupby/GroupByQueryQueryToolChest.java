@@ -100,6 +100,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private final GroupByQueryConfig queryConfig;
   private final GroupByQueryMetricsFactory queryMetricsFactory;
   private final GroupByResourcesReservationPool groupByResourcesReservationPool;
+  private final GroupByStatsProvider groupByStatsProvider;
 
   @VisibleForTesting
   public GroupByQueryQueryToolChest(
@@ -111,7 +112,24 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         groupingEngine,
         GroupByQueryConfig::new,
         DefaultGroupByQueryMetricsFactory.instance(),
-        groupByResourcesReservationPool
+        groupByResourcesReservationPool,
+        new GroupByStatsProvider()
+    );
+  }
+
+  @VisibleForTesting
+  public GroupByQueryQueryToolChest(
+      GroupingEngine groupingEngine,
+      GroupByResourcesReservationPool groupByResourcesReservationPool,
+      GroupByStatsProvider groupByStatsProvider
+  )
+  {
+    this(
+        groupingEngine,
+        GroupByQueryConfig::new,
+        DefaultGroupByQueryMetricsFactory.instance(),
+        groupByResourcesReservationPool,
+        groupByStatsProvider
     );
   }
 
@@ -120,13 +138,15 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       GroupingEngine groupingEngine,
       Supplier<GroupByQueryConfig> queryConfigSupplier,
       GroupByQueryMetricsFactory queryMetricsFactory,
-      @Merging GroupByResourcesReservationPool groupByResourcesReservationPool
+      @Merging GroupByResourcesReservationPool groupByResourcesReservationPool,
+      GroupByStatsProvider groupByStatsProvider
   )
   {
     this.groupingEngine = groupingEngine;
     this.queryConfig = queryConfigSupplier.get();
     this.queryMetricsFactory = queryMetricsFactory;
     this.groupByResourcesReservationPool = groupByResourcesReservationPool;
+    this.groupByStatsProvider = groupByStatsProvider;
   }
 
   @Override
@@ -180,16 +200,19 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       );
     }
     try {
+      Closer closer = Closer.create();
+
       final Sequence<ResultRow> mergedSequence = mergeGroupByResults(
           query,
           resource,
           runner,
-          context
+          context,
+          closer
       );
-      Closer closer = Closer.create();
 
       // Clean up the resources reserved during the execution of the query
       closer.register(() -> groupByResourcesReservationPool.clean(queryResourceId));
+      closer.register(() -> groupByStatsProvider.closeQuery(query.getId()));
       return Sequences.withBaggage(mergedSequence, closer);
     }
     catch (Exception e) {
@@ -203,20 +226,22 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       final GroupByQuery query,
       GroupByQueryResources resource,
       QueryRunner<ResultRow> runner,
-      ResponseContext context
+      ResponseContext context,
+      Closer closer
   )
   {
     if (isNestedQueryPushDown(query)) {
       return mergeResultsWithNestedQueryPushDown(query, resource, runner, context);
     }
-    return mergeGroupByResultsWithoutPushDown(query, resource, runner, context);
+    return mergeGroupByResultsWithoutPushDown(query, resource, runner, context, closer);
   }
 
   private Sequence<ResultRow> mergeGroupByResultsWithoutPushDown(
       GroupByQuery query,
       GroupByQueryResources resource,
       QueryRunner<ResultRow> runner,
-      ResponseContext context
+      ResponseContext context,
+      Closer closer
   )
   {
     // If there's a subquery, merge subquery results and then apply the aggregator
@@ -241,6 +266,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         }
         subqueryContext.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
         subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(subqueryContext);
+
+        closer.register(() -> groupByStatsProvider.closeQuery(subquery.getId()));
       }
       catch (ClassCastException e) {
         throw new UnsupportedOperationException("Subqueries must be of type 'group by'");
@@ -250,7 +277,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
           subquery,
           resource,
           runner,
-          context
+          context,
+          closer
       );
 
       final Sequence<ResultRow> finalizingResults = finalizeSubqueryResults(subqueryResult, subquery);

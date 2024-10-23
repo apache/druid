@@ -231,6 +231,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         return "v2";
       }
     };
+
     final GroupByQueryConfig v2SmallBufferConfig = new GroupByQueryConfig()
     {
 
@@ -356,21 +357,24 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       );
     }
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
+        new GroupByResourcesReservationPool(bufferPools.getMergePool(), config, groupByStatsProvider);
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         configSupplier,
         groupByResourcesReservationPool,
         mapper,
         mapper,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         groupingEngine,
         () -> config,
         DefaultGroupByQueryMetricsFactory.instance(),
-        groupByResourcesReservationPool
+        groupByResourcesReservationPool,
+        groupByStatsProvider
     );
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPools.getProcessingPool());
   }
@@ -13660,8 +13664,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
   private void assumeTimeOrdered()
   {
+    assumeTimeOrdered(originalRunner);
+  }
+
+  static void assumeTimeOrdered(TestQueryRunner<ResultRow> runner)
+  {
     try (final CursorHolder cursorHolder =
-             originalRunner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+             runner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Assume.assumeTrue(Cursors.getTimeOrdering(cursorHolder.getOrdering()) == Order.ASCENDING);
     }
   }

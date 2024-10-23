@@ -34,6 +34,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryResources;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
@@ -93,7 +94,8 @@ public class GroupByRowProcessor
       final GroupByQueryResources resource,
       final ObjectMapper spillMapper,
       final String processingTmpDir,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final GroupByStatsProvider groupByStatsProvider
   )
   {
     final Closer closeOnExit = Closer.create();
@@ -109,7 +111,10 @@ public class GroupByRowProcessor
         querySpecificConfig.getMaxOnDiskStorage().getBytes()
     );
 
-    closeOnExit.register(temporaryStorage);
+    final EmittingLimitedTemporaryStorage emittingTemporaryStorage =
+        new EmittingLimitedTemporaryStorage(query.getId(), groupByStatsProvider, temporaryStorage);
+
+    closeOnExit.register(emittingTemporaryStorage);
 
     Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
         query,

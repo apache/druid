@@ -119,7 +119,7 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
       throw new RuntimeException(e);
     }
     finally {
-      pendingRequests.incrementAndGet();
+      pendingRequests.decrementAndGet();
     }
   }
 
@@ -127,6 +127,12 @@ public class DefaultBlockingPool<T> implements BlockingPool<T>
   public long getPendingRequests()
   {
     return pendingRequests.get();
+  }
+
+  @Override
+  public long getUsedResourcesCount()
+  {
+    return maxSize - objects.size();
   }
 
   private List<T> pollObjects(int elementNum) throws InterruptedException
