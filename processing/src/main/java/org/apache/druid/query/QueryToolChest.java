@@ -74,7 +74,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   }
 
   @Inject
-  public void setWarehouse(QueryRunnerFactoryConglomerate conglomerate)
+  public void initialize(QueryRunnerFactoryConglomerate conglomerate)
   {
     this.conglomerate = conglomerate;
   }

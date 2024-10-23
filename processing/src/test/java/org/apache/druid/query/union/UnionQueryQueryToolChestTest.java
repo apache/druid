@@ -76,7 +76,7 @@ public class UnionQueryQueryToolChestTest
             .put(ScanQuery.class, scanToolChest)
             .build()
     );
-    toolChest.setWarehouse(conglomerate);
+    toolChest.initialize(conglomerate);
   }
 
   @Test
