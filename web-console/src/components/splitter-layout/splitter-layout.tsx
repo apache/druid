@@ -203,20 +203,19 @@ export class SplitterLayout extends Component<SplitterLayoutProps, SplitterLayou
     if (childrenArray.length === 0) return null;
 
     const effectivePrimaryIndex = primaryIndex === 1 ? 1 : 0;
-    const wrappedChildren = childrenArray.map((child, i) => (
-      <LayoutPane
-        key={i}
-        vertical={vertical}
-        percentage={percentage}
-        size={
-          childrenArray.length > 1 && i !== effectivePrimaryIndex
-            ? this.state.secondaryPaneSize
-            : undefined
-        }
-      >
-        {child}
-      </LayoutPane>
-    ));
+    const wrappedChildren = childrenArray.map((child, i) => {
+      const isSecondary = childrenArray.length > 1 && i !== effectivePrimaryIndex;
+      return (
+        <LayoutPane
+          key={isSecondary ? 'secondary' : 'primary'}
+          vertical={vertical}
+          percentage={percentage}
+          size={isSecondary ? this.state.secondaryPaneSize : undefined}
+        >
+          {child}
+        </LayoutPane>
+      );
+    });
 
     return (
       <div
