@@ -926,7 +926,6 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           primaryIndex={0}
           secondaryMinSize={250}
           secondaryMaxSize={500}
-          splitterSize={8}
           secondaryInitialSize={
             Number(localStorageGetJson(LocalStorageKeys.WORKBENCH_RIGHT_SIZE)) || 250
           }
@@ -938,7 +937,6 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
             primaryIndex={1}
             secondaryMinSize={250}
             secondaryMaxSize={500}
-            splitterSize={8}
             secondaryInitialSize={
               Number(localStorageGetJson(LocalStorageKeys.WORKBENCH_LEFT_SIZE)) || 250
             }

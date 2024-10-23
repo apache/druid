@@ -18,6 +18,8 @@
 
 // Originally copied from https://github.com/zesik/react-splitter-layout/blob/master/src/stylesheets/index.css and heavily refactored
 
+$default-splitter-size: 8px;
+
 .splitter-layout {
   display: flex;
   overflow: hidden;
@@ -30,7 +32,7 @@
     }
 
     & > .layout-splitter {
-      width: 4px;
+      width: $default-splitter-size;
       height: 100%;
       cursor: col-resize;
     }
@@ -45,7 +47,7 @@
 
     & > .layout-splitter {
       width: 100%;
-      height: 4px;
+      height: $default-splitter-size;
       cursor: row-resize;
     }
   }
