@@ -162,9 +162,10 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
 
     final boolean isSingleThreaded = querySpecificConfig.isSingleThreaded();
 
+    final String queryId = query.getId();
     final File temporaryStorageDirectory = new File(
         processingTmpDir,
-        StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
+        StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), queryId)
     );
 
     final int priority = queryContext.getPriority();
@@ -188,11 +189,12 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                   temporaryStorageDirectory,
                   querySpecificConfig.getMaxOnDiskStorage().getBytes()
               );
-              final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
-                  ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);
-              resources.register(temporaryStorageHolder);
+              final EmittingLimitedTemporaryStorage emittingTemporaryStorage =
+                  new EmittingLimitedTemporaryStorage(queryId, groupByStatsProvider, temporaryStorage);
 
-              groupByStatsProvider.registerTemporaryStorage(temporaryStorage);
+              final ReferenceCountingResourceHolder<EmittingLimitedTemporaryStorage> temporaryStorageHolder =
+                  ReferenceCountingResourceHolder.fromCloseable(emittingTemporaryStorage);
+              resources.register(temporaryStorageHolder);
 
               // If parallelCombine is enabled, we need two merge buffers for parallel aggregating and parallel combining
               final int numMergeBuffers = querySpecificConfig.getNumParallelCombineThreads() > 1 ? 2 : 1;

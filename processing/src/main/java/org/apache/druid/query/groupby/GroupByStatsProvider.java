@@ -21,10 +21,10 @@ package org.apache.druid.query.groupby;
 
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.query.groupby.epinephelinae.LimitedTemporaryStorage;
 
-import java.util.Iterator;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Collects stats for group by queries like used merged buffer count, spilled bytes and group by resource acquisition time.
@@ -35,11 +35,14 @@ public class GroupByStatsProvider
   private long mergeBufferAcquisitionTimeNs = 0;
   private long mergeBufferAcquisitionCount = 0;
 
-  private final ConcurrentLinkedQueue<LimitedTemporaryStorage> temporaryStorages;
+  private long spilledBytesSince = 0;
+  private long spilledQueries = 0;
+
+  private final Map<String, AtomicLong> spilledBytesPerQuery;
 
   public GroupByStatsProvider()
   {
-    this.temporaryStorages = new ConcurrentLinkedQueue<>();
+    this.spilledBytesPerQuery = new ConcurrentHashMap<>();
   }
 
   public synchronized void mergeBufferAcquisitionTimeNs(long delayNs)
@@ -52,33 +55,43 @@ public class GroupByStatsProvider
   {
     Pair<Long, Long> pair = Pair.of(mergeBufferAcquisitionCount, mergeBufferAcquisitionTimeNs);
 
+    // reset
     mergeBufferAcquisitionTimeNs = 0;
     mergeBufferAcquisitionCount = 0;
 
     return pair;
   }
 
-  public void registerTemporaryStorage(LimitedTemporaryStorage temporaryStorage)
+  public void reportSpilledBytes(String queryId, long bytes)
   {
-    temporaryStorages.add(temporaryStorage);
+    if (queryId == null) {
+      return;
+    }
+    if (bytes > 0) {
+      spilledBytesPerQuery.computeIfAbsent(queryId, value -> new AtomicLong(0)).addAndGet(bytes);
+    }
   }
 
-  public long getSpilledBytes()
+  public synchronized void closeQuery(String queryId)
   {
-    long spilledBytes = 0;
-
-    Iterator<LimitedTemporaryStorage> iterator = temporaryStorages.iterator();
-
-    while (iterator.hasNext()) {
-      LimitedTemporaryStorage limitedTemporaryStorage = iterator.next();
-
-      spilledBytes += limitedTemporaryStorage.currentSize();
-
-      if (limitedTemporaryStorage.isClosed()) {
-        iterator.remove();
-      }
+    if (queryId == null) {
+      return;
     }
+    AtomicLong spilledBytes = spilledBytesPerQuery.remove(queryId);
+    if (spilledBytes != null) {
+      spilledQueries++;
+      spilledBytesSince += spilledBytes.get();
+    }
+  }
 
-    return spilledBytes;
+  public synchronized Pair<Long, Long> getAndResetSpilledBytes()
+  {
+    Pair<Long, Long> pair = Pair.of(spilledQueries, spilledBytesSince);
+
+    // reset
+    spilledQueries = 0;
+    spilledBytesSince = 0;
+
+    return pair;
   }
 }

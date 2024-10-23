@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby;
 
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.groupby.epinephelinae.EmittingLimitedTemporaryStorage;
 import org.apache.druid.query.groupby.epinephelinae.LimitedTemporaryStorage;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -54,8 +55,10 @@ public class GroupByStatsProviderTest
     LimitedTemporaryStorage temporaryStorage2 =
         new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024);
 
-    statsProvider.registerTemporaryStorage(temporaryStorage1);
-    statsProvider.registerTemporaryStorage(temporaryStorage2);
+    EmittingLimitedTemporaryStorage emittingTemporaryStorage1 =
+        new EmittingLimitedTemporaryStorage("q1", statsProvider, temporaryStorage1);
+    EmittingLimitedTemporaryStorage emittingTemporaryStorage2 =
+        new EmittingLimitedTemporaryStorage("q1", statsProvider, temporaryStorage2);
 
     LimitedTemporaryStorage.LimitedOutputStream outputStream1 = temporaryStorage1.createFile();
     outputStream1.write(5);
@@ -65,12 +68,15 @@ public class GroupByStatsProviderTest
     outputStream2.write(8);
     outputStream2.flush();
 
-    Assert.assertEquals(2, statsProvider.getSpilledBytes());
+    Assert.assertEquals(Pair.of(0L, 0L), statsProvider.getAndResetSpilledBytes());
 
-    temporaryStorage1.close();
-    temporaryStorage2.close();
+    emittingTemporaryStorage1.close();
+    emittingTemporaryStorage2.close();
 
-    Assert.assertEquals(2, statsProvider.getSpilledBytes());
-    Assert.assertEquals(0, statsProvider.getSpilledBytes());
+    Assert.assertEquals(Pair.of(0L, 0L), statsProvider.getAndResetSpilledBytes());
+
+    statsProvider.closeQuery("q1");
+
+    Assert.assertEquals(Pair.of(1L, 2L), statsProvider.getAndResetSpilledBytes());
   }
 }

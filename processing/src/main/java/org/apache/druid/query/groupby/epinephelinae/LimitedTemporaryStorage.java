@@ -134,6 +134,7 @@ public class LimitedTemporaryStorage implements Closeable
         return;
       }
       closed = true;
+      bytesUsed.set(0);
       for (File file : ImmutableSet.copyOf(files)) {
         delete(file);
       }

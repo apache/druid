@@ -23,12 +23,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.guice.annotations.Merging;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.java.util.metrics.KeyedDiff;
-import org.apache.druid.query.groupby.GroupByStatsProvider;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
@@ -37,19 +35,19 @@ public class QueryCountStatsMonitor extends AbstractMonitor
 {
   private final KeyedDiff keyedDiff = new KeyedDiff();
   private final QueryCountStatsProvider statsProvider;
-  private final GroupByStatsProvider groupByStatsProvider;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
+  private final boolean emitMergeBufferPendingRequests;
 
   @Inject
   public QueryCountStatsMonitor(
       QueryCountStatsProvider statsProvider,
-      GroupByStatsProvider groupByStatsProvider,
+      MonitorsConfig monitorsConfig,
       @Merging BlockingPool<ByteBuffer> mergeBufferPool
   )
   {
     this.statsProvider = statsProvider;
-    this.groupByStatsProvider = groupByStatsProvider;
     this.mergeBufferPool = mergeBufferPool;
+    this.emitMergeBufferPendingRequests = !monitorsConfig.getMonitors().contains(GroupByStatsMonitor.class);
   }
 
   @Override
@@ -77,23 +75,10 @@ public class QueryCountStatsMonitor extends AbstractMonitor
       }
     }
 
-    long pendingQueries = this.mergeBufferPool.getPendingRequests();
-    emitter.emit(builder.setMetric("mergeBuffer/pendingRequests", pendingQueries));
-
-    emitter.emit(
-        builder.setMetric(
-            "mergeBuffer/usedCount",
-            this.mergeBufferPool.getUsedResourcesCount()
-        )
-    );
-
-    Pair<Long, Long> groupByResourceAcquisitionStats =
-        groupByStatsProvider.getAndResetMergeBufferAcquisitionStats();
-
-    emitter.emit(builder.setMetric("mergeBuffer/acquisitionCount", groupByResourceAcquisitionStats.lhs));
-    emitter.emit(builder.setMetric("mergeBuffer/acquisitionTimeNs", groupByResourceAcquisitionStats.rhs));
-
-    emitter.emit(builder.setMetric("groupBy/spilledBytes", groupByStatsProvider.getSpilledBytes()));
+    if (emitMergeBufferPendingRequests) {
+      long pendingQueries = this.mergeBufferPool.getPendingRequests();
+      emitter.emit(builder.setMetric("mergeBuffer/pendingRequests", pendingQueries));
+    }
 
     return true;
   }

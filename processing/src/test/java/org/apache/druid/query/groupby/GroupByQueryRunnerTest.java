@@ -373,7 +373,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         groupingEngine,
         () -> config,
         DefaultGroupByQueryMetricsFactory.instance(),
-        groupByResourcesReservationPool
+        groupByResourcesReservationPool,
+        groupByStatsProvider
     );
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPools.getProcessingPool());
   }
@@ -13663,8 +13664,13 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
   private void assumeTimeOrdered()
   {
+    assumeTimeOrdered(originalRunner);
+  }
+
+  static void assumeTimeOrdered(TestQueryRunner<ResultRow> runner)
+  {
     try (final CursorHolder cursorHolder =
-             originalRunner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+             runner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Assume.assumeTrue(Cursors.getTimeOrdering(cursorHolder.getOrdering()) == Order.ASCENDING);
     }
   }

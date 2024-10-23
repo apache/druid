@@ -111,10 +111,10 @@ public class GroupByRowProcessor
         querySpecificConfig.getMaxOnDiskStorage().getBytes()
     );
 
-    closeOnExit.register(temporaryStorage);
+    final EmittingLimitedTemporaryStorage emittingTemporaryStorage =
+        new EmittingLimitedTemporaryStorage(query.getId(), groupByStatsProvider, temporaryStorage);
 
-
-    groupByStatsProvider.registerTemporaryStorage(temporaryStorage);
+    closeOnExit.register(emittingTemporaryStorage);
 
     Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
         query,
