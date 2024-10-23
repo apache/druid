@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
 import org.apache.druid.server.coordinator.loading.SegmentHolder;
@@ -331,7 +330,7 @@ public class DruidCoordinatorRuntimeParams
     public Builder withUsedSegments(Collection<DataSegment> usedSegments)
     {
       this.usedSegmentsNewestFirst = createUsedSegmentsSet(usedSegments);
-      this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments, ImmutableMap.of());
+      this.dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments);
       return this;
     }
 

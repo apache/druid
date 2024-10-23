@@ -20,7 +20,6 @@ import type { MenuItemProps } from '@blueprintjs/core';
 import { MenuItem } from '@blueprintjs/core';
 import classNames from 'classnames';
 import type { ReactNode } from 'react';
-import React from 'react';
 
 import { tickIcon } from '../../utils';
 

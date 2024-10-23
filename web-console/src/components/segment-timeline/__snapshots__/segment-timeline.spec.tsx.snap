@@ -59,9 +59,13 @@ exports[`SegmentTimeline matches snapshot 1`] = `
       >
         <div
           class="bp5-segmented-control bp5-fill"
+          role="radiogroup"
         >
           <button
+            aria-checked="true"
             class="bp5-button"
+            role="radio"
+            tabindex="0"
             type="button"
           >
             <span
@@ -71,7 +75,10 @@ exports[`SegmentTimeline matches snapshot 1`] = `
             </span>
           </button>
           <button
+            aria-checked="false"
             class="bp5-button bp5-minimal"
+            role="radio"
+            tabindex="-1"
             type="button"
           >
             <span

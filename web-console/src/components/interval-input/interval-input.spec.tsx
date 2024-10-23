@@ -18,7 +18,6 @@
 
 import { Intent } from '@blueprintjs/core';
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import { IntervalInput } from './interval-input';
 

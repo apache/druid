@@ -993,6 +993,58 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   }
 
   @Test
+  public void testSeekableStreamSupervisorSpecWithScaleInThresholdGreaterThanPartitions() throws InterruptedException
+  {
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(2, false)).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.replay(spec);
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.replay(taskMaster);
+
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
+    Map<String, Object> modifiedScaleInProps = getScaleInProperties();
+
+    modifiedScaleInProps.put("taskCountMax", 20);
+    modifiedScaleInProps.put("taskCountMin", 15);
+
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
+        supervisor,
+        DATASOURCE,
+        mapper.convertValue(
+            modifiedScaleInProps,
+            LagBasedAutoScalerConfig.class
+        ),
+        spec,
+        emitter
+    );
+
+    // enable autoscaler so that taskcount config will be ignored and init value of taskCount will use taskCountMin.
+    Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
+    supervisor.getIoConfig().setTaskCount(2);
+    supervisor.start();
+    autoScaler.start();
+    supervisor.runInternal();
+
+    Assert.assertEquals(2, (int) supervisor.getIoConfig().getTaskCount());
+    Thread.sleep(2000);
+    Assert.assertEquals(10, (int) supervisor.getIoConfig().getTaskCount());
+
+    autoScaler.reset();
+    autoScaler.stop();
+  }
+
+  @Test
   public void testSeekableStreamSupervisorSpecWithScaleInAlreadyAtMin() throws InterruptedException
   {
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();

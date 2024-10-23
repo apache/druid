@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
@@ -37,6 +38,7 @@ import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -333,8 +335,7 @@ public class DruidCoordinator
     return new CompactionRunSimulator(compactionStatusTracker, overlordClient).simulateRunWithConfig(
         metadataManager.configs().getCurrentCompactionConfig().withClusterConfig(updateRequest),
         metadataManager.segments()
-                       .getSnapshotOfDataSourcesWithAllUsedSegments()
-                       .getUsedSegmentsTimelinesPerDataSource(),
+                       .getSnapshotOfDataSourcesWithAllUsedSegments(),
         CompactionEngine.NATIVE
     );
   }
@@ -669,9 +670,23 @@ public class DruidCoordinator
         }
 
         if (metadataManager.isStarted() && serverInventoryView.isStarted()) {
+          final DataSourcesSnapshot dataSourcesSnapshot;
+          if (dutyGroup.getName().equals(COMPACT_SEGMENTS_DUTIES_DUTY_GROUP)) {
+            // If this is a compact segments duty group triggered by IT,
+            // use a future snapshotTime to ensure that compaction always runs
+            dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
+                metadataManager.segments()
+                               .getSnapshotOfDataSourcesWithAllUsedSegments()
+                               .iterateAllUsedSegmentsInSnapshot(),
+                DateTimes.nowUtc().plusMinutes(60)
+            );
+          } else {
+            dataSourcesSnapshot = metadataManager.segments().getSnapshotOfDataSourcesWithAllUsedSegments();
+          }
+
           final DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
               .builder()
-              .withDataSourcesSnapshot(metadataManager.segments().getSnapshotOfDataSourcesWithAllUsedSegments())
+              .withDataSourcesSnapshot(dataSourcesSnapshot)
               .withDynamicConfigs(metadataManager.configs().getCurrentDynamicConfig())
               .withCompactionConfig(metadataManager.configs().getCurrentCompactionConfig())
               .build();

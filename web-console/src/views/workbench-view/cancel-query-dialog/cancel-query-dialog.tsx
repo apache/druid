@@ -17,7 +17,6 @@
  */
 
 import { Intent } from '@blueprintjs/core';
-import React from 'react';
 
 import { AlertDialog } from '../../../dialogs';
 
