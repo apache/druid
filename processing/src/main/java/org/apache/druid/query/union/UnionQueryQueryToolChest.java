@@ -25,7 +25,6 @@ import com.google.common.base.Functions;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.Query;
@@ -38,23 +37,21 @@ import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Finalization;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 
-public class UnionQueryQueryToolChest extends QueryToolChest<UnionResult, UnionQuery>
-    implements QueryLogic<UnionResult>
+public class UnionQueryQueryToolChest extends QueryToolChest<Object, UnionQuery>
+    implements QueryLogic<Object>
 {
   @Override
-  public QueryRunner<UnionResult> entryPoint(Query<UnionResult> query,
+  public QueryRunner<Object> entryPoint(Query<Object> query,
       QuerySegmentWalker clientQuerySegmentWalker)
   {
-    return new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker);
+    return new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker, conglomerate);
   }
 
   @Override
   @SuppressWarnings("unchecked")
-  public QueryRunner<UnionResult> mergeResults(QueryRunner<UnionResult> runner)
+  public QueryRunner<Object> mergeResults(QueryRunner<Object> runner)
   {
     throw new UnsupportedOperationException("Not supported");
   }
@@ -66,7 +63,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<UnionResult, UnionQ
   }
 
   @Override
-  public Function<UnionResult, UnionResult> makePreComputeManipulatorFn(
+  public Function<Object, Object> makePreComputeManipulatorFn(
       UnionQuery query,
       MetricManipulationFn fn)
   {
@@ -74,7 +71,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<UnionResult, UnionQ
   }
 
   @Override
-  public TypeReference<UnionResult> getResultTypeReference()
+  public TypeReference<Object> getResultTypeReference()
   {
     return null;
   }
@@ -88,66 +85,29 @@ public class UnionQueryQueryToolChest extends QueryToolChest<UnionResult, UnionQ
         return sig;
       }
     }
-    throw DruidException.defensive("None of the subqueries support row signature");
+    throw DruidException.defensive("None of the subqueries have a valid row signature");
   }
 
   @Override
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Sequence<Object[]> resultsAsArrays(
       UnionQuery query,
-      Sequence<UnionResult> resultSequence)
+      Sequence<Object> resultSequence)
   {
-    return new UnionSequenceMaker<Object[]>()
-    {
-      @Override
-      public Optional<Sequence<Object[]>> transformResults(Query<?> query, Sequence<Object> results)
-      {
-        QueryToolChest toolChest = conglomerate.getToolChest(query);
-        return Optional.of(toolChest.resultsAsArrays(query, results));
-      }
-    }.transform(query, resultSequence).get();
+    Sequence<?> res = resultSequence;
+    return (Sequence<Object[]>) res;
   }
 
   @Override
   @SuppressWarnings({"unchecked", "rawtypes"})
   public Optional<Sequence<FrameSignaturePair>> resultsAsFrames(
       UnionQuery query,
-      Sequence<UnionResult> resultSequence,
+      Sequence<Object> resultSequence,
       MemoryAllocatorFactory memoryAllocatorFactory,
       boolean useNestedForUnknownTypes)
   {
-    return new UnionSequenceMaker<FrameSignaturePair>()
-    {
-      @Override
-      public Optional<Sequence<FrameSignaturePair>> transformResults(Query<?> query, Sequence<Object> results)
-      {
-        QueryToolChest toolChest = conglomerate.getToolChest(query);
-        return toolChest.resultsAsFrames(query, results, memoryAllocatorFactory, useNestedForUnknownTypes);
-      }
-    }.transform(query, resultSequence);
+    Sequence<?> res = resultSequence;
+    return Optional.of((Sequence<FrameSignaturePair>) res);
   }
 
-  abstract static class UnionSequenceMaker<T>
-  {
-    public Optional<Sequence<T>> transform(
-        UnionQuery query,
-        Sequence<UnionResult> resultSequence)
-    {
-      List<UnionResult> results = resultSequence.toList();
-      List<Sequence<T>> resultSeqs = new ArrayList<>();
-
-      for (int i = 0; i < results.size(); i++) {
-        Query<?> q = query.queries.get(i);
-        UnionResult realUnionResult = results.get(i);
-        Optional<Sequence<T>> queryResults = transformResults(q, realUnionResult.getResults());
-        if (!queryResults.isPresent()) {
-          return Optional.empty();
-        }
-        resultSeqs.add(queryResults.get());
-      }
-      return Optional.of(Sequences.concat(resultSeqs));
-    }
-
-    public abstract Optional<Sequence<T>> transformResults(Query<?> q, Sequence<Object> results);
-  }
 }

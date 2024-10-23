@@ -50,7 +50,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
-public class UnionQuery implements Query<UnionResult>
+public class UnionQuery implements Query<Object>
 {
   @JsonProperty("context")
   protected final Map<String, Object> context;
@@ -107,7 +107,7 @@ public class UnionQuery implements Query<UnionResult>
   }
 
   @Override
-  public QueryRunner<UnionResult> getRunner(QuerySegmentWalker walker)
+  public QueryRunner<Object> getRunner(QuerySegmentWalker walker)
   {
     throw DruidException.defensive("Use QueryToolChest to get a Runner");
   }
@@ -143,26 +143,26 @@ public class UnionQuery implements Query<UnionResult>
   }
 
   @Override
-  public Ordering<UnionResult> getResultOrdering()
+  public Ordering<Object> getResultOrdering()
   {
     throw DruidException.methodNotSupported();
   }
 
   @Override
-  public Query<UnionResult> withOverriddenContext(Map<String, Object> contextOverrides)
+  public Query<Object> withOverriddenContext(Map<String, Object> contextOverrides)
   {
     List<Query<?>> newQueries = mapQueries(q -> q.withOverriddenContext(contextOverrides));
     return new UnionQuery(newQueries, QueryContexts.override(getContext(), contextOverrides));
   }
 
   @Override
-  public Query<UnionResult> withQuerySegmentSpec(QuerySegmentSpec spec)
+  public Query<Object> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
     throw DruidException.methodNotSupported();
   }
 
   @Override
-  public Query<UnionResult> withId(String id)
+  public Query<Object> withId(String id)
   {
     return withOverriddenContext(ImmutableMap.of(BaseQuery.QUERY_ID, id));
   }
@@ -174,7 +174,7 @@ public class UnionQuery implements Query<UnionResult>
   }
 
   @Override
-  public Query<UnionResult> withSubQueryId(String subQueryId)
+  public Query<Object> withSubQueryId(String subQueryId)
   {
     return withOverriddenContext(ImmutableMap.of(BaseQuery.SUB_QUERY_ID, subQueryId));
   }
@@ -186,12 +186,12 @@ public class UnionQuery implements Query<UnionResult>
   }
 
   @Override
-  public Query<UnionResult> withDataSource(DataSource dataSource)
+  public Query<Object> withDataSource(DataSource dataSource)
   {
     throw new RuntimeException("This method is not supported. Use withDataSources instead!");
   }
 
-  public Query<UnionResult> withDataSources(List<DataSource> children)
+  public Query<Object> withDataSources(List<DataSource> children)
   {
     Preconditions.checkArgument(queries.size() == children.size(), "Number of children must match number of queries");
     List<Query<?>> newQueries = new ArrayList<>();

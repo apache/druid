@@ -22,15 +22,11 @@ package org.apache.druid.query.union;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.frame.allocation.HeapMemoryAllocator;
-import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.FrameBasedInlineDataSource;
-import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -38,7 +34,9 @@ import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryToolChestTestHelper;
+import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryQueryToolChestTest;
 import org.apache.druid.query.scan.ScanResultValue;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -66,14 +64,16 @@ public class UnionQueryQueryToolChestTest
   }
 
   final UnionQueryQueryToolChest toolChest;
+  private ScanQueryQueryToolChest scanToolChest;
 
   public UnionQueryQueryToolChestTest()
   {
     toolChest = new UnionQueryQueryToolChest();
+    scanToolChest = ScanQueryQueryToolChestTest.makeTestScanQueryToolChest();
     DefaultQueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         Collections.emptyMap(),
         ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-            .put(ScanQuery.class, ScanQueryQueryToolChestTest.makeTestScanQueryToolChest())
+            .put(ScanQuery.class, scanToolChest)
             .build()
     );
     toolChest.setWarehouse(conglomerate);
@@ -150,86 +150,14 @@ public class UnionQueryQueryToolChestTest
 
     private boolean matchQuery(ScanQuery query)
     {
-      return query != null && this.query.equals(query);
+      return query != null && serializedAsRows(this.query).equals(serializedAsRows(query));
     }
-  }
 
-  @Test
-  public void testResultsAsArrays()
-  {
-    RowSignature sig = RowSignature.builder()
-        .add("a", ColumnType.STRING)
-        .add("b", ColumnType.STRING)
-        .build();
-
-    TestScanQuery scan1 = new TestScanQuery("foo", sig)
-        .appendRow("a", "a")
-        .appendRow("a", "b");
-    TestScanQuery scan2 = new TestScanQuery("bar", sig)
-        .appendRow("x", "x")
-        .appendRow("x", "y");
-
-    UnionQuery query = new UnionQuery(
-        ImmutableList.of(
-            scan1.query,
-            scan2.query
-        )
-    );
-    QueryToolChestTestHelper.assertArrayResultsEquals(
-        ImmutableList.<Object[]>builder()
-            .addAll(scan1.results)
-            .addAll(scan2.results)
-            .build(),
-        toolChest.resultsAsArrays(
-            query,
-            Sequences.of(
-                new UnionResult(scan1.makeResultSequence()),
-                new UnionResult(scan2.makeResultSequence())
-            )
-        )
-    );
-  }
-
-  @Test
-  public void testResultsAsFrames()
-  {
-    RowSignature sig = RowSignature.builder()
-        .add("a", ColumnType.STRING)
-        .add("b", ColumnType.STRING)
-        .build();
-
-    TestScanQuery scan1 = new TestScanQuery("foo", sig)
-        .appendRow("a", "a")
-        .appendRow("a", "b");
-    TestScanQuery scan2 = new TestScanQuery("bar", sig)
-        .appendRow("x", "x")
-        .appendRow("x", "y");
-
-    UnionQuery query = new UnionQuery(
-        ImmutableList.of(
-            scan1.query,
-            scan2.query
-        )
-    );
-    List<FrameSignaturePair> frames = toolChest.resultsAsFrames(
-        query,
-        Sequences.of(
-            new UnionResult(scan1.makeResultSequence()),
-            new UnionResult(scan2.makeResultSequence())
-        ),
-        new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
-        true
-    ).get().toList();
-
-    Sequence<Object[]> rows = new FrameBasedInlineDataSource(frames, scan1.query.getRowSignature()).getRowsAsSequence();
-
-    QueryToolChestTestHelper.assertArrayResultsEquals(
-        ImmutableList.<Object[]>builder()
-            .addAll(scan1.results)
-            .addAll(scan2.results)
-            .build(),
-        rows
-    );
+    public Sequence<Object[]> makeResultsAsArrays()
+    {
+      ScanQueryQueryToolChest scanToolChest = ScanQueryQueryToolChestTest.makeTestScanQueryToolChest();
+      return scanToolChest.resultsAsArrays(query, makeResultSequence());
+    }
   }
 
   @Test
@@ -253,6 +181,7 @@ public class UnionQueryQueryToolChestTest
             scan2.query
         )
     );
+    query = (UnionQuery) serializedAsRows(query);
 
     QuerySegmentWalker walker = Mockito.mock(QuerySegmentWalker.class);
     Mockito.when(walker.getQueryRunnerForIntervals(argThat(scan1::matchQuery), any()))
@@ -260,21 +189,24 @@ public class UnionQueryQueryToolChestTest
     Mockito.when(walker.getQueryRunnerForIntervals(argThat(scan2::matchQuery), any()))
         .thenReturn((q, ctx) -> (Sequence) scan2.makeResultSequence());
 
-    QueryRunner<UnionResult> unionRunner = toolChest.entryPoint(query, walker);
-    Sequence<UnionResult> results = unionRunner.run(QueryPlus.wrap(query), null);
+    QueryRunner<Object> unionRunner = toolChest.entryPoint(query, walker);
+    Sequence<Object> results = unionRunner.run(QueryPlus.wrap(query), null);
 
     QueryToolChestTestHelper.assertArrayResultsEquals(
         ImmutableList.<Object[]>builder()
             .addAll(scan1.results)
             .addAll(scan2.results)
             .build(),
-        toolChest.resultsAsArrays(
-            query,
-            Sequences.of(
-                new UnionResult(scan1.makeResultSequence()),
-                new UnionResult(scan2.makeResultSequence())
-            )
+            Sequences.concat(
+                scan1.makeResultsAsArrays(),
+                scan2.makeResultsAsArrays()
         )
     );
+  }
+
+  private static Query<?> serializedAsRows(Query<?> query)
+  {
+    return query
+        .withOverriddenContext(ImmutableMap.of(ResultSerializationMode.CTX_SERIALIZATION_PARAMETER, "rows"));
   }
 }
