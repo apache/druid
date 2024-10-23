@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import 'core-js/stable';
 import './bootstrap/ace';
 
 import { Icons } from '@blueprintjs/icons';
