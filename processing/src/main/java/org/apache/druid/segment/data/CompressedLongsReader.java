@@ -29,7 +29,7 @@ public final class CompressedLongsReader implements ColumnarLongs
 {
   public static Supplier<CompressedLongsReader> fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
-    final Supplier<CompressedBlockReader> baseReader = CompressedBlockReader.fromByteBuffer(buffer, order, false);
+    final Supplier<CompressedBlockReader> baseReader = CompressedBlockReader.fromByteBuffer(buffer, order, order, false);
     return () -> new CompressedLongsReader(baseReader.get());
   }
 

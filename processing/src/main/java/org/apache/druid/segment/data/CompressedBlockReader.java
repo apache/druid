@@ -59,6 +59,7 @@ public final class CompressedBlockReader implements Closeable
   public static Supplier<CompressedBlockReader> fromByteBuffer(
       ByteBuffer buffer,
       ByteOrder byteOrder,
+      ByteOrder valueOrder,
       boolean copyValuesOnRead
   )
   {
@@ -94,7 +95,8 @@ public final class CompressedBlockReader implements Closeable
           copyValuesOnRead,
           offsetView.asReadOnlyBuffer(),
           compressedDataView.asReadOnlyBuffer().order(byteOrder),
-          byteOrder
+          byteOrder,
+          valueOrder
       );
     }
     throw new IAE("Unknown version[%s]", versionFromBuffer);
@@ -123,7 +125,8 @@ public final class CompressedBlockReader implements Closeable
       boolean copyValuesOnRead,
       IntBuffer endOffsetsBuffer,
       ByteBuffer compressedDataBuffer,
-      ByteOrder byteOrder
+      ByteOrder compressionOrder,
+      ByteOrder valueOrder
   )
   {
     this.decompressor = compressionStrategy.getDecompressor();
@@ -134,11 +137,11 @@ public final class CompressedBlockReader implements Closeable
     this.endOffsetsBuffer = endOffsetsBuffer;
     this.compressedDataBuffer = compressedDataBuffer;
     this.closer = Closer.create();
-    this.decompressedDataBufferHolder = CompressedPools.getByteBuf(byteOrder);
+    this.decompressedDataBufferHolder = CompressedPools.getByteBuf(compressionOrder);
     closer.register(decompressedDataBufferHolder);
     this.decompressedDataBuffer = decompressedDataBufferHolder.get();
     this.decompressedDataBuffer.clear();
-    this.byteOrder = byteOrder;
+    this.byteOrder = valueOrder;
   }
 
   /**

@@ -73,4 +73,10 @@ public class KllDoublesSketchObjectStrategy implements ObjectStrategy<KllDoubles
         SafeWritableMemory.wrap(buffer, ByteOrder.LITTLE_ENDIAN).region(buffer.position(), numBytes)
     );
   }
+
+  @Override
+  public ByteOrder getByteOrder()
+  {
+    return ByteOrder.LITTLE_ENDIAN;
+  }
 }
