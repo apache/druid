@@ -747,21 +747,4 @@
     ]]></notes>
     <vulnerabilityName>CVE-2024-45772</vulnerabilityName>
   </suppress>
-
-  <suppress>
-    <!-- -->
-    <notes><![CDATA[
-    file name: azure-core-1.48.0.jar
-    ]]></notes>
-    <vulnerabilityName>CVE-2024-43591</vulnerabilityName>
-  </suppress>
-
-  <suppress>
-    <!-- Not affected by this CVE since we donot use lucene directly-->
-    <notes><![CDATA[
-    file name: azure-identity-1.12.0.jar
-    ]]></notes>
-    <vulnerabilityName>CVE-2024-43591</vulnerabilityName>
-  </suppress>
-
 </suppressions>
