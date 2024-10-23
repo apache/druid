@@ -3044,7 +3044,6 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     validateTestMaxColumnsToMergeOutputSegment(merged7);
   }
 
-
   @Test
   public void testMergeProjections() throws IOException
   {
@@ -3236,14 +3235,6 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     ColumnHolder aHolder = p1Index.getColumnHolder("a");
     DictionaryEncodedColumn aCol = (DictionaryEncodedColumn) aHolder.getColumn();
     Assert.assertEquals(3, aCol.getCardinality());
-    BitmapResultFactory resultFactory = new DefaultBitmapResultFactory(serdeFactory.getBitmapFactory());
-
-    Assert.assertEquals(
-        2,
-        resultFactory.toImmutableBitmap(
-            aHolder.getIndexSupplier().as(ValueIndexes.class).forValue("a", ColumnType.STRING).computeBitmapResult(resultFactory, false)
-        ).size()
-    );
 
     QueryableIndex p2Index = merged.getProjectionQueryableIndex("a_c_sum");
     Assert.assertNotNull(p2Index);
@@ -3251,12 +3242,30 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     DictionaryEncodedColumn aCol2 = (DictionaryEncodedColumn) aHolder2.getColumn();
     Assert.assertEquals(3, aCol2.getCardinality());
 
-    Assert.assertEquals(
-        1,
-        resultFactory.toImmutableBitmap(
-            aHolder2.getIndexSupplier().as(ValueIndexes.class).forValue("a", ColumnType.STRING).computeBitmapResult(resultFactory, false)
-        ).size()
-    );
+    if (serdeFactory != null) {
+
+      BitmapResultFactory resultFactory = new DefaultBitmapResultFactory(serdeFactory.getBitmapFactory());
+
+      Assert.assertEquals(
+          2,
+          resultFactory.toImmutableBitmap(
+              aHolder.getIndexSupplier()
+                     .as(ValueIndexes.class)
+                     .forValue("a", ColumnType.STRING)
+                     .computeBitmapResult(resultFactory, false)
+          ).size()
+      );
+
+      Assert.assertEquals(
+          1,
+          resultFactory.toImmutableBitmap(
+              aHolder2.getIndexSupplier()
+                      .as(ValueIndexes.class)
+                      .forValue("a", ColumnType.STRING)
+                      .computeBitmapResult(resultFactory, false)
+          ).size()
+      );
+    }
   }
 
   private QueryableIndex persistAndLoad(List<DimensionSchema> schema, InputRow... rows) throws IOException
