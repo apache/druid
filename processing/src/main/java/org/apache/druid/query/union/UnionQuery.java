@@ -79,7 +79,6 @@ public class UnionQuery implements Query<UnionResult>
     throw DruidException.defensive("This is not supported");
   }
 
-  @Override
   public List<DataSource> getDataSources()
   {
     List<DataSource> dataSources = new ArrayList<>();
@@ -192,7 +191,6 @@ public class UnionQuery implements Query<UnionResult>
     throw new RuntimeException("This method is not supported. Use withDataSources instead!");
   }
 
-  @Override
   public Query<UnionResult> withDataSources(List<DataSource> children)
   {
     Preconditions.checkArgument(queries.size() == children.size(), "Number of children must match number of queries");

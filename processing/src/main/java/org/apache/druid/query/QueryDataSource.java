@@ -23,9 +23,12 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.SegmentReference;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -48,7 +51,7 @@ public class QueryDataSource implements DataSource
   public Set<String> getTableNames()
   {
     Set<String> names = new HashSet<>();
-    for (DataSource ds : query.getDataSources()) {
+    for (DataSource ds : getQueryDataSources()) {
       names.addAll(ds.getTableNames());
     }
     return names;
@@ -63,13 +66,28 @@ public class QueryDataSource implements DataSource
   @Override
   public List<DataSource> getChildren()
   {
-    return query.getDataSources();
+    return getQueryDataSources();
+  }
+
+  private List<DataSource> getQueryDataSources()
+  {
+    if (query instanceof UnionQuery) {
+      return ((UnionQuery) query).getDataSources();
+    }
+    return Collections.singletonList(query.getDataSource());
   }
 
   @Override
   public DataSource withChildren(List<DataSource> children)
   {
-    return new QueryDataSource(query.withDataSources(children));
+    if (query instanceof UnionQuery) {
+      return new QueryDataSource(((UnionQuery) query).withDataSources(children));
+    } else {
+      if (children.size() != 1) {
+        throw new IAE("Must have exactly one child");
+      }
+      return new QueryDataSource(query.withDataSource(children.get(0)));
+    }
   }
 
   @Override
