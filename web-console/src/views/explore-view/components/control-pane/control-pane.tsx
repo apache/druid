@@ -30,7 +30,6 @@ import { IconNames } from '@blueprintjs/icons';
 import type { Column, SqlExpression } from '@druid-toolkit/query';
 import { SqlColumn } from '@druid-toolkit/query';
 import type { JSX } from 'react';
-import React from 'react';
 
 import {
   AutoForm,
@@ -356,6 +355,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
         if (visible === false) return;
 
         const value = parameterValues[name];
+
         function onValueChange(newValue: unknown) {
           onUpdateParameterValues({ [name]: newValue });
         }

@@ -89,7 +89,7 @@ export function parseFilterModeAndNeedle(
   filter: Filter,
   loose = false,
 ): FilterModeAndNeedle | undefined {
-  const m = String(filter.value).match(/^(~|=|!=|<=|>=)?(.*)$/);
+  const m = /^(~|=|!=|<=|>=)?(.*)$/.exec(String(filter.value));
   if (!m) return;
   if (!loose && !m[2]) return;
   const mode = (m[1] as FilterMode) || '~';

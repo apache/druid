@@ -19,7 +19,7 @@
 import { Icon, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { QueryResult, SqlExpression } from '@druid-toolkit/query';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { LearnMore, PopoverText } from '../../../../components';
 import { getLink } from '../../../../links';

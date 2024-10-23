@@ -412,6 +412,7 @@ maxNumSegments
 max_map_count
 memcached
 mergeable
+mergeability
 metadata
 metastores
 millis

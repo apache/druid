@@ -36,18 +36,21 @@ export interface SupervisorsCardProps {
 
 export const SupervisorsCard = React.memo(function SupervisorsCard(props: SupervisorsCardProps) {
   const [supervisorCountState] = useQueryManager<Capabilities, SupervisorCounts>({
-    processQuery: async capabilities => {
+    processQuery: async (capabilities, cancelToken) => {
       if (capabilities.hasSql()) {
         return (
-          await queryDruidSql({
-            query: `SELECT
+          await queryDruidSql(
+            {
+              query: `SELECT
   COUNT(*) FILTER (WHERE "suspended" = 0) AS "running",
   COUNT(*) FILTER (WHERE "suspended" = 1) AS "suspended"
 FROM sys.supervisors`,
-          })
+            },
+            cancelToken,
+          )
         )[0];
       } else if (capabilities.hasOverlordAccess()) {
-        const resp = await Api.instance.get('/druid/indexer/v1/supervisor?full');
+        const resp = await Api.instance.get('/druid/indexer/v1/supervisor?full', { cancelToken });
         const data = resp.data;
         return {
           running: data.filter((d: any) => d.spec.suspended === false).length,

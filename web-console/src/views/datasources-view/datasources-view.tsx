@@ -26,7 +26,6 @@ import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
-  type TableColumnSelectorColumn,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
@@ -37,6 +36,7 @@ import {
   SegmentTimeline,
   TableClickableCell,
   TableColumnSelector,
+  type TableColumnSelectorColumn,
   ViewControlBar,
 } from '../../components';
 import {
@@ -426,19 +426,22 @@ GROUP BY 1, 2`;
     this.datasourceQueryManager = new QueryManager<DatasourceQuery, DatasourcesAndDefaultRules>({
       processQuery: async (
         { capabilities, visibleColumns, showUnused },
-        _cancelToken,
+        cancelToken,
         setIntermediateQuery,
       ) => {
         let datasources: DatasourceQueryResultRow[];
         if (capabilities.hasSql()) {
           const query = DatasourcesView.query(visibleColumns);
           setIntermediateQuery(query);
-          datasources = await queryDruidSql({ query });
+          datasources = await queryDruidSql({ query }, cancelToken);
         } else if (capabilities.hasCoordinatorAccess()) {
           const datasourcesResp = await Api.instance.get(
             '/druid/coordinator/v1/datasources?simple',
+            { cancelToken },
           );
-          const loadstatusResp = await Api.instance.get('/druid/coordinator/v1/loadstatus?simple');
+          const loadstatusResp = await Api.instance.get('/druid/coordinator/v1/loadstatus?simple', {
+            cancelToken,
+          });
           const loadstatus = loadstatusResp.data;
           datasources = datasourcesResp.data.map((d: any): DatasourceQueryResultRow => {
             const totalDataSize = deepGet(d, 'properties.segments.size') || -1;

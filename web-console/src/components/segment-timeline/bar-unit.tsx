@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 interface BarChartUnitProps {
   x: number | undefined;
   y: number;
