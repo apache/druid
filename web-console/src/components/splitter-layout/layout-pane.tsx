@@ -16,19 +16,33 @@
  * limitations under the License.
  */
 
-.lookups-view {
-  height: 100%;
-  width: 100%;
+import classNames from 'classnames';
+import type { ReactNode } from 'react';
 
-  .ReactTable {
-    position: absolute;
-    top: 60px;
-    bottom: 0;
-    width: 100%;
-  }
+export interface LayoutPaneProps {
+  vertical?: boolean;
+  size: number | undefined;
+  percentage?: boolean;
+  children: ReactNode;
+}
 
-  .init-pane {
-    text-align: center;
-    margin-top: 35vh;
-  }
+export function LayoutPane(props: LayoutPaneProps) {
+  return (
+    <div
+      className={classNames('layout-pane', {
+        'layout-pane-primary': typeof props.size === 'undefined',
+      })}
+      style={
+        typeof props.size === 'number'
+          ? {
+              [props.vertical ? 'height' : 'width']: `${props.size}${
+                props.percentage ? '%' : 'px'
+              }`,
+            }
+          : undefined
+      }
+    >
+      {props.children}
+    </div>
+  );
 }

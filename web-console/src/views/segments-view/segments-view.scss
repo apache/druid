@@ -22,12 +22,26 @@
   height: 100%;
   width: 100%;
 
-  .ReactTable {
+  .splitter-layout {
     position: absolute;
     top: $view-control-bar-height + $standard-padding;
     bottom: 0;
     width: 100%;
 
+    & > .layout-splitter:hover {
+      background: black;
+      opacity: 0.1;
+      border-radius: 2px;
+    }
+  }
+
+  .segment-timeline {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+
+  .ReactTable {
     .-totalPages {
       display: none;
     }
@@ -58,17 +72,6 @@
       &:hover .full-shard-spec-icon {
         display: block;
       }
-    }
-  }
-
-  &.show-segment-timeline {
-    .segment-timeline {
-      height: calc(50% - 55px);
-      margin-top: 10px;
-    }
-
-    .ReactTable {
-      top: 50%;
     }
   }
 }

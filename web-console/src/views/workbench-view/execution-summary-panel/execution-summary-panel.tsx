@@ -142,7 +142,7 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
       <Button
         key="reset"
         icon={IconNames.CROSS}
-        data-tooltip="Clear output pane"
+        data-tooltip="Clear output"
         minimal
         onClick={onReset}
       />,

@@ -19,7 +19,6 @@
 import { FormGroup, InputGroup, Intent, MenuItem, Switch, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { SqlQuery, T } from '@druid-toolkit/query';
-import classNames from 'classnames';
 import { sum } from 'd3-array';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -34,6 +33,7 @@ import {
   MoreButton,
   RefreshButton,
   SegmentTimeline,
+  SplitterLayout,
   TableClickableCell,
   TableColumnSelector,
   type TableColumnSelectorColumn,
@@ -1678,11 +1678,7 @@ GROUP BY 1, 2`;
     } = this.state;
 
     return (
-      <div
-        className={classNames('datasources-view app-view', {
-          'show-segment-timeline': showSegmentTimeline,
-        })}
-      >
+      <div className="datasources-view app-view">
         <ViewControlBar label="Datasources">
           <RefreshButton
             onRefresh={auto => {
@@ -1717,8 +1713,17 @@ GROUP BY 1, 2`;
             tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>
-        {showSegmentTimeline && <SegmentTimeline capabilities={capabilities} />}
-        {this.renderDatasourcesTable()}
+        <SplitterLayout
+          vertical
+          percentage
+          secondaryInitialSize={35}
+          primaryIndex={1}
+          primaryMinSize={20}
+          secondaryMinSize={10}
+        >
+          {showSegmentTimeline && <SegmentTimeline capabilities={capabilities} />}
+          {this.renderDatasourcesTable()}
+        </SplitterLayout>
         {datasourceTableActionDialogId && (
           <DatasourceTableActionDialog
             datasource={datasourceTableActionDialogId}

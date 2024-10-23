@@ -104,7 +104,7 @@ type SearchMode = 'tables-and-columns' | 'tables-only' | 'columns-only';
 
 const SEARCH_MODES: SearchMode[] = ['tables-and-columns', 'tables-only', 'columns-only'];
 
-const SEARCH_MDOE_TITLE: Record<SearchMode, string> = {
+const SEARCH_MODE_TITLE: Record<SearchMode, string> = {
   'tables-and-columns': 'Tables and columns',
   'tables-only': 'Tables only',
   'columns-only': 'Columns only',
@@ -641,7 +641,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     <MenuItem
                       key={mode}
                       icon={tickIcon(mode === searchMode)}
-                      text={SEARCH_MDOE_TITLE[mode]}
+                      text={SEARCH_MODE_TITLE[mode]}
                       onClick={() => this.setState({ searchMode: mode })}
                     />
                   ))}

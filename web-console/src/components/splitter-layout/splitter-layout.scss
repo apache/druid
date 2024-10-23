@@ -1,0 +1,68 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Originally copied from https://github.com/zesik/react-splitter-layout/blob/master/src/stylesheets/index.css and heavily refactored
+
+$default-splitter-size: 8px;
+
+.splitter-layout {
+  display: flex;
+  overflow: hidden;
+
+  &.splitter-layout-horizontal {
+    flex-direction: row;
+
+    &.layout-changing {
+      cursor: col-resize;
+    }
+
+    & > .layout-splitter {
+      width: $default-splitter-size;
+      height: 100%;
+      cursor: col-resize;
+    }
+  }
+
+  &.splitter-layout-vertical {
+    flex-direction: column;
+
+    &.layout-changing {
+      cursor: row-resize;
+    }
+
+    & > .layout-splitter {
+      width: 100%;
+      height: $default-splitter-size;
+      cursor: row-resize;
+    }
+  }
+
+  & > .layout-pane {
+    position: relative;
+    flex: 0 0 auto;
+    overflow: auto;
+
+    &.layout-pane-primary {
+      flex: 1 1 auto;
+    }
+  }
+
+  & > .layout-splitter {
+    flex: 0 0 auto;
+  }
+}
