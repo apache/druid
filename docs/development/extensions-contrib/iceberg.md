@@ -31,11 +31,11 @@ Apache Iceberg is an open table format for huge analytic datasets. [IcebergInput
 
 Iceberg manages most of its metadata in metadata files in the object storage. However, it is still dependent on a metastore to manage a certain amount of metadata.
 Iceberg refers to these metastores as catalogs. The Iceberg extension lets you connect to the following Iceberg catalog types:
+
+* Glue catalog
 * REST-based catalog
 * Hive metastore catalog
 * Local catalog
-
-Druid does not support AWS Glue catalog yet.
 
 For a given catalog, Iceberg input source reads the table name from the catalog, applies the filters, and extracts all the underlying live data files up to the latest snapshot.
 The data files can be in Parquet, ORC, or Avro formats. The data files typically reside in a warehouse location, which can be in HDFS, S3, or the local filesystem.
@@ -115,6 +115,12 @@ The `warehouseSource` is set to `local` because this catalog only supports readi
 
 To connect to an Iceberg REST Catalog server, configure the `icebergCatalog` type as `rest`. The Iceberg REST Open API spec gives catalogs greater control over the implementation and in most cases, the `warehousePath` does not have to be provided by the client.
 Security credentials may be provided in the `catalogProperties` object.
+
+## Glue catalog
+
+Configure the `icebergCatalog` type as `glue`.`warehousePath` and properties must be provided in `catalogProperties` object.
+Refer [Iceberg Glue Catalog documentation](https://iceberg.apache.org/docs/1.6.0/aws/#glue-catalog) for setting properties. 
+
 
 ## Downloading Iceberg extension
 
