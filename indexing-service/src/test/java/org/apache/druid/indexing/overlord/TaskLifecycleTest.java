@@ -232,7 +232,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   private ObjectMapper mapper;
   private TaskQueryTool tsqa = null;
   private TaskStorage taskStorage = null;
-  private TaskLockbox taskLockbox = null;
+  private GlobalTaskLockbox taskLockbox = null;
   private TaskQueue taskQueue = null;
   private TaskRunner taskRunner = null;
   private TestIndexerMetadataStorageCoordinator mdc = null;
@@ -547,7 +547,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
 
-    taskLockbox = new TaskLockbox(taskStorage, mdc);
+    taskLockbox = new GlobalTaskLockbox(taskStorage, mdc);
     tac = new LocalTaskActionClientFactory(
         new TaskActionToolbox(
             taskLockbox,
