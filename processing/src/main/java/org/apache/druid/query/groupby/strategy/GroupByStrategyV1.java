@@ -151,7 +151,8 @@ public class GroupByStrategyV1 implements GroupByStrategy
       GroupByQuery query,
       GroupByQueryResource resource,
       Sequence<ResultRow> subqueryResult,
-      boolean wasQueryPushedDown
+      boolean wasQueryPushedDown,
+      ResponseContext responseContext
   )
   {
     final Set<AggregatorFactory> aggs = new HashSet<>();
@@ -237,7 +238,8 @@ public class GroupByStrategyV1 implements GroupByStrategy
                             new MultipleIntervalSegmentSpec(ImmutableList.of(interval))
                         ),
                         new IncrementalIndexStorageAdapter(innerQueryResultIndex),
-                        null
+                        null,
+                        responseContext
                     );
                   }
                 }
@@ -276,11 +278,12 @@ public class GroupByStrategyV1 implements GroupByStrategy
   public Sequence<ResultRow> process(
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
-      @Nullable final GroupByQueryMetrics groupByQueryMetrics
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics,
+      ResponseContext responseContext
   )
   {
     return Sequences.map(
-        engine.process(query, storageAdapter, groupByQueryMetrics),
+        engine.process(query, storageAdapter, groupByQueryMetrics, responseContext),
         row -> GroupByQueryHelper.toResultRow(query, row)
     );
   }

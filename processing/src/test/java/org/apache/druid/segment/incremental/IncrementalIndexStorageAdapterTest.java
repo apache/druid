@@ -40,6 +40,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilters;
@@ -150,7 +151,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           ),
           pool
       );
-
+      ResponseContext responseContext = ResponseContext.createEmpty();
       final Sequence<Row> rows = engine.process(
           GroupByQuery.builder()
                       .setDataSource("test")
@@ -161,7 +162,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                       .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
                       .build(),
           new IncrementalIndexStorageAdapter(index),
-          null
+          null,
+              responseContext
       );
 
       final List<Row> results = rows.toList();
@@ -173,6 +175,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
       row = (MapBasedRow) results.get(1);
       Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
+
+      Assert.assertEquals(2L, (long) responseContext.getRowScanCount());
     }
   }
 
@@ -240,7 +244,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                       )
                       .build(),
           new IncrementalIndexStorageAdapter(index),
-          null
+          null,
+              null
       );
 
       final List<Row> results = rows.toList();
@@ -352,7 +357,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                   .aggregators(new LongSumAggregatorFactory("cnt", "cnt"))
                   .build(),
               new IncrementalIndexStorageAdapter(index),
-              null
+              null,
+              ResponseContext.createEmpty()
           )
           .toList();
 
@@ -411,6 +417,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                       .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                       .build(),
           new IncrementalIndexStorageAdapter(index),
+          null,
           null
       );
 

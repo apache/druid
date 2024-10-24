@@ -425,7 +425,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
       GroupByQuery query,
       GroupByQueryResource resource,
       Sequence<ResultRow> subqueryResult,
-      boolean wasQueryPushedDown
+      boolean wasQueryPushedDown,
+      ResponseContext context
   )
   {
     // Keep a reference to resultSupplier outside the "try" so we can close it if something goes wrong
@@ -706,7 +707,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
   public Sequence<ResultRow> process(
       GroupByQuery query,
       StorageAdapter storageAdapter,
-      @Nullable GroupByQueryMetrics groupByQueryMetrics
+      @Nullable GroupByQueryMetrics groupByQueryMetrics,
+      ResponseContext responseContext
   )
   {
     return GroupByQueryEngineV2.process(
@@ -715,7 +717,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
         bufferPool,
         configSupplier.get().withOverrides(query),
         processingConfig,
-        groupByQueryMetrics
+        groupByQueryMetrics,
+        responseContext
     );
   }
 

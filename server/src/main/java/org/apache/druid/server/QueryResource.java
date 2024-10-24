@@ -103,6 +103,7 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String QUERY_SEGMENT_COUNT_HEADER = "X-Druid-Query-Segment-Count";
   public static final String BROKER_QUERY_TIME_RESPONSE_HEADER = "X-Broker-Query-Time";
   public static final String QUERY_CPU_TIME = "X-Druid-Query-Cpu-Time";
+  public static final String NUM_SCANNED_ROWS = "X-Num-Scanned-Rows";
   public static final String HEADER_ETAG = "ETag";
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
@@ -220,6 +221,8 @@ public class QueryResource implements QueryCountStatsProvider
 
       try {
         final ObjectWriter jsonWriter = queryLifecycle.newOutputWriter(ioReaderWriter);
+        long rowsScanned = responseContext.get(Keys.NUM_SCANNED_ROWS) != null ?
+                (long) responseContext.get(Keys.NUM_SCANNED_ROWS) : 0;
 
         Response.ResponseBuilder responseBuilder = Response
             .ok(
@@ -267,13 +270,13 @@ public class QueryResource implements QueryCountStatsProvider
             // Emit Cpu time as a response header. Note that it doesn't include Cpu spent on serializing the response.
             // Druid streams the output which results in the header being sent out before the response is fully serialized and sent to the client.
             .header(QUERY_CPU_TIME,
-                responseContext.get(Keys.CPU_CONSUMED_NANOS) != null ?
-                        responseContext.get(Keys.CPU_CONSUMED_NANOS) : 0);
+                    responseContext.get(Keys.CPU_CONSUMED_NANOS) != null ?
+                            responseContext.get(Keys.CPU_CONSUMED_NANOS) : 0)
+            .header(NUM_SCANNED_ROWS, rowsScanned);
 
         attachResponseContextToHttpResponse(queryId, responseContext, responseBuilder, jsonMapper,
                                             responseContextConfig, selfNode
         );
-
         return responseBuilder.build();
       }
       catch (QueryException e) {

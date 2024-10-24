@@ -136,6 +136,7 @@ public interface GroupByStrategy
    * @param subqueryResult     result rows from the subquery
    * @param wasQueryPushedDown true if the outer query was pushed down (so we only need to merge the outer query's
    *                           results, not run it from scratch like a normal outer query)
+   * @param responseContext    response context for the query
    *
    * @return results of the outer query
    */
@@ -144,7 +145,8 @@ public interface GroupByStrategy
       GroupByQuery query,
       GroupByQueryResource resource,
       Sequence<ResultRow> subqueryResult,
-      boolean wasQueryPushedDown
+      boolean wasQueryPushedDown,
+      ResponseContext responseContext
   );
 
   /**
@@ -185,13 +187,15 @@ public interface GroupByStrategy
    *
    * @param query          the groupBy query
    * @param storageAdapter storage adatper for the segment in question
+   * @param responseContext response context for the query
    *
    * @return result sequence for the storage adapter
    */
   Sequence<ResultRow> process(
       GroupByQuery query,
       StorageAdapter storageAdapter,
-      @Nullable GroupByQueryMetrics groupByQueryMetrics);
+      @Nullable GroupByQueryMetrics groupByQueryMetrics,
+      ResponseContext responseContext);
 
   /**
    * Returns whether this strategy supports pushing down outer queries. This is used by

@@ -41,11 +41,13 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.query.aggregation.PostAggregator;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.RowCountingCursorDecorator;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -88,7 +90,8 @@ public class GroupByQueryEngine
   public Sequence<Row> process(
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
-      @Nullable final GroupByQueryMetrics groupByQueryMetrics
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics,
+      ResponseContext responseContext
   )
   {
     if (storageAdapter == null) {
@@ -136,7 +139,7 @@ public class GroupByQueryEngine
                           @Override
                           public RowIterator make()
                           {
-                            return new RowIterator(query, cursor, bufferHolder.get(), config.get());
+                            return new RowIterator(query, new RowCountingCursorDecorator(cursor, responseContext), bufferHolder.get(), config.get());
                           }
 
                           @Override
@@ -299,7 +302,7 @@ public class GroupByQueryEngine
   private static class RowIterator implements CloseableIterator<Row>
   {
     private final GroupByQuery query;
-    private final Cursor cursor;
+    private final RowCountingCursorDecorator cursor;
     private final ByteBuffer metricsBuffer;
     private final int maxIntermediateRows;
 
@@ -313,7 +316,7 @@ public class GroupByQueryEngine
     private List<ByteBuffer> unprocessedKeys;
     private Iterator<Row> delegate;
 
-    public RowIterator(GroupByQuery query, final Cursor cursor, ByteBuffer metricsBuffer, GroupByQueryConfig config)
+    public RowIterator(GroupByQuery query, final RowCountingCursorDecorator cursor, ByteBuffer metricsBuffer, GroupByQueryConfig config)
     {
       final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
 

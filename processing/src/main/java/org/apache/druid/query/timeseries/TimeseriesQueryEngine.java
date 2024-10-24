@@ -36,9 +36,11 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.RowCountingCursorDecorator;
 import org.apache.druid.segment.SegmentMissingException;
 import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
@@ -84,7 +86,8 @@ public class TimeseriesQueryEngine
   public Sequence<Result<TimeseriesResultValue>> process(
       final TimeseriesQuery query,
       final StorageAdapter adapter,
-      @Nullable final TimeseriesQueryMetrics timeseriesQueryMetrics
+      @Nullable final TimeseriesQueryMetrics timeseriesQueryMetrics,
+      ResponseContext responseContext
   )
   {
     if (adapter == null) {
@@ -109,9 +112,9 @@ public class TimeseriesQueryEngine
     final Sequence<Result<TimeseriesResultValue>> result;
 
     if (doVectorize) {
-      result = processVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics);
+      result = processVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics, responseContext);
     } else {
-      result = processNonVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics);
+      result = processNonVectorized(query, adapter, filter, interval, gran, descending, timeseriesQueryMetrics, responseContext);
     }
 
     final int limit = query.getLimit();
@@ -129,7 +132,8 @@ public class TimeseriesQueryEngine
       final Interval queryInterval,
       final Granularity gran,
       final boolean descending,
-      final TimeseriesQueryMetrics timeseriesQueryMetrics
+      final TimeseriesQueryMetrics timeseriesQueryMetrics,
+      final ResponseContext responseContext
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
@@ -187,6 +191,7 @@ public class TimeseriesQueryEngine
                   bucketInterval -> {
                     // Whether or not the current bucket is empty
                     boolean emptyBucket = true;
+                    long numRowsScanned = 0;
 
                     while (!cursor.isDone()) {
                       granularizer.setCurrentOffsets(bucketInterval);
@@ -202,13 +207,16 @@ public class TimeseriesQueryEngine
                             granularizer.getStartOffset(),
                             granularizer.getEndOffset()
                         );
-
+                        numRowsScanned += granularizer.getEndOffset() - granularizer.getStartOffset();
                         emptyBucket = false;
                       }
 
                       if (!granularizer.advanceCursorWithinBucket()) {
                         break;
                       }
+                    }
+                    if (responseContext != null) {
+                      responseContext.addRowScanCount(numRowsScanned);
                     }
 
                     if (emptyBucket && skipEmptyBuckets) {
@@ -256,12 +264,12 @@ public class TimeseriesQueryEngine
       final Interval queryInterval,
       final Granularity gran,
       final boolean descending,
-      final TimeseriesQueryMetrics timeseriesQueryMetrics
+      final TimeseriesQueryMetrics timeseriesQueryMetrics,
+      final ResponseContext responseContext
   )
   {
     final boolean skipEmptyBuckets = query.isSkipEmptyBuckets();
     final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
-
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
         Collections.singletonList(queryInterval),
@@ -269,7 +277,8 @@ public class TimeseriesQueryEngine
         query.getVirtualColumns(),
         descending,
         gran,
-        cursor -> {
+        c -> {
+          RowCountingCursorDecorator cursor = new RowCountingCursorDecorator(c, responseContext);
           if (skipEmptyBuckets && cursor.isDone()) {
             return null;
           }
@@ -289,7 +298,6 @@ public class TimeseriesQueryEngine
               }
               cursor.advance();
             }
-
             TimeseriesResultBuilder bob = new TimeseriesResultBuilder(cursor.getTime());
 
             for (int i = 0; i < aggregatorSpecs.size(); i++) {

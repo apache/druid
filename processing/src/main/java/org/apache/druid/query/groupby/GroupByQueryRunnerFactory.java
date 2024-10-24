@@ -104,7 +104,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
 
       return strategySelector
           .strategize((GroupByQuery) query)
-          .process((GroupByQuery) query, adapter, (GroupByQueryMetrics) queryPlus.getQueryMetrics());
+          .process((GroupByQuery) query, adapter, (GroupByQueryMetrics) queryPlus.getQueryMetrics(), responseContext);
     }
   }
 

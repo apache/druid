@@ -235,7 +235,6 @@ public class ResponseContextTest
     final ResponseContext ctx2 = ResponseContext.createEmpty();
     // Add two non-header fields, and one that will be in the header
     ctx2.putEntityTag("not in header");
-    ctx2.addCpuNanos(100);
     ctx2.add(EXTN_COUNTER_KEY, 100);
     Assert.assertEquals(
         mapper.writeValueAsString(ImmutableMap.of(
@@ -346,19 +345,15 @@ public class ResponseContextTest
         mapper.writeValueAsString(
             ImmutableMap.of(
                 Keys.ETAG.getName(), "string-value",
-                Keys.NUM_SCANNED_ROWS.getName(), 100L,
-                Keys.CPU_CONSUMED_NANOS.getName(), 100000L
+                Keys.NUM_SCANNED_ROWS.getName(), 100L
             )
         ),
         mapper
     );
     Assert.assertEquals("string-value", ctx.getEntityTag());
     Assert.assertEquals((Long) 100L, ctx.getRowScanCount());
-    Assert.assertEquals((Long) 100000L, ctx.getCpuNanos());
     ctx.addRowScanCount(10L);
     Assert.assertEquals((Long) 110L, ctx.getRowScanCount());
-    ctx.addCpuNanos(100L);
-    Assert.assertEquals((Long) 100100L, ctx.getCpuNanos());
   }
 
   @Test

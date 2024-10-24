@@ -88,6 +88,7 @@ public class VectorGroupByEngineIteratorTest extends InitializedNullHandlingTest
         interval,
         dimensions,
         byteBuffer,
+        null,
         null
     )
     {

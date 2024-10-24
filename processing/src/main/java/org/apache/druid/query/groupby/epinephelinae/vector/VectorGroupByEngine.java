@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -132,7 +133,8 @@ public class VectorGroupByEngine
       final Interval interval,
       final GroupByQueryConfig config,
       final DruidProcessingConfig processingConfig,
-      @Nullable final GroupByQueryMetrics groupByQueryMetrics
+      @Nullable final GroupByQueryMetrics groupByQueryMetrics,
+      ResponseContext responseContext
   )
   {
     if (!canVectorize(query, storageAdapter, filter)) {
@@ -190,15 +192,16 @@ public class VectorGroupByEngine
               ).collect(Collectors.toList());
 
               return new VectorGroupByEngineIterator(
-                  query,
-                  config,
-                  processingConfig,
-                  storageAdapter,
-                  cursor,
-                  interval,
-                  dimensions,
-                  processingBuffer,
-                  fudgeTimestamp
+                      query,
+                      config,
+                      processingConfig,
+                      storageAdapter,
+                      cursor,
+                      interval,
+                      dimensions,
+                      processingBuffer,
+                      fudgeTimestamp,
+                      responseContext
               );
             }
             catch (Throwable e) {
@@ -240,6 +243,7 @@ public class VectorGroupByEngine
     private final int keySize;
     private final WritableMemory keySpace;
     private final VectorGrouper vectorGrouper;
+    private final ResponseContext responseContext;
 
     @Nullable
     private final VectorCursorGranularizer granulizer;
@@ -269,7 +273,8 @@ public class VectorGroupByEngine
         final Interval queryInterval,
         final List<GroupByVectorColumnSelector> selectors,
         final ByteBuffer processingBuffer,
-        @Nullable final DateTime fudgeTimestamp
+        @Nullable final DateTime fudgeTimestamp,
+        ResponseContext responseContext
     )
     {
       this.query = query;
@@ -284,6 +289,7 @@ public class VectorGroupByEngine
       this.keySpace = WritableMemory.allocate(keySize * cursor.getMaxVectorSize());
       this.vectorGrouper = makeGrouper();
       this.granulizer = VectorCursorGranularizer.create(storageAdapter, cursor, query.getGranularity(), queryInterval);
+      this.responseContext = responseContext;
 
       if (granulizer != null) {
         this.bucketIterator = granulizer.getBucketIterable().iterator();
@@ -391,6 +397,7 @@ public class VectorGroupByEngine
                                  ? fudgeTimestamp
                                  : query.getGranularity().toDateTime(bucketInterval.getStartMillis());
 
+      long numRowsScanned = 0l;
       while (!cursor.isDone()) {
         final int startOffset;
 
@@ -419,6 +426,7 @@ public class VectorGroupByEngine
               startOffset,
               granulizer.getEndOffset()
           );
+          numRowsScanned += granulizer.getEndOffset() - startOffset;
 
           if (result.isOk()) {
             partiallyAggregatedRows = -1;
@@ -442,6 +450,9 @@ public class VectorGroupByEngine
         } else if (selectorInternalFootprint > querySpecificConfig.getActualMaxSelectorDictionarySize(processingConfig)) {
           break;
         }
+      }
+      if (this.responseContext != null) {
+        this.responseContext.addRowScanCount(numRowsScanned);
       }
 
       final boolean resultRowHasTimestamp = query.getResultRowHasTimestamp();

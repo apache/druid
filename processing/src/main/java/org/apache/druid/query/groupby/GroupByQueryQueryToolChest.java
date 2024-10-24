@@ -237,7 +237,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         return groupByStrategy.processSubtotalsSpec(
             query,
             resource,
-            groupByStrategy.processSubqueryResult(subquery, query, resource, finalizingResults, false)
+            groupByStrategy.processSubqueryResult(subquery, query, resource, finalizingResults, false, context)
         );
       } else {
         return groupByStrategy.applyPostProcessing(groupByStrategy.processSubqueryResult(
@@ -245,7 +245,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
             query,
             resource,
             finalizingResults,
-            false
+            false,
+            context
         ), query);
       }
 
@@ -278,7 +279,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         rewrittenQuery,
         resource,
         finalizedResults,
-        true
+        true,
+        context
     ), query);
   }
 

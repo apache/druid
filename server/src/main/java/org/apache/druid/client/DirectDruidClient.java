@@ -268,6 +268,14 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
             // Add Cpu time at Data nodes.
             context.addCpuNanos(cpuTime);
+
+            long scannedRows = 0l;
+            if (response.headers().get(QueryResource.NUM_SCANNED_ROWS) != null) {
+              scannedRows = Long.parseLong(response.headers().get(QueryResource.NUM_SCANNED_ROWS));
+            }
+
+            // Add rows scanned at Data nodes.
+            context.addRowScanCount(scannedRows);
             continueReading = enqueue(response.getContent(), 0L);
           }
           catch (final IOException e) {
