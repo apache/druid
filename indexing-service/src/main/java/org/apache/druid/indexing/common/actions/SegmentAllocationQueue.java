@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -380,8 +381,9 @@ public class SegmentAllocationQueue
 
   private Set<DataSegment> retrieveUsedSegments(AllocateRequestKey key)
   {
+    IndexerSQLMetadataStorageCoordinator coordinator = (IndexerSQLMetadataStorageCoordinator) metadataStorage;
     return new HashSet<>(
-        metadataStorage.retrieveUsedSegmentsForInterval(
+        coordinator.retrieveUsedSegmentsForIntervalsFromCache(
             key.dataSource,
             key.preferredAllocationInterval,
             Segments.ONLY_VISIBLE

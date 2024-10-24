@@ -41,6 +41,8 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
@@ -53,6 +55,8 @@ import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -1166,6 +1170,85 @@ public class SegmentAllocateActionTest
     Assert.assertNull(coordinator.retrieveSegmentForId(theId.asSegmentId().toString(), true));
 
     lockbox.unlock(task1, Intervals.ETERNITY);
+  }
+
+  //@Test TODO uncomment
+  public void testBenchmark() throws Exception
+  {
+    final Task task = NoopTask.create();
+    taskActionTestKit.getTaskLockbox().add(task);
+
+    final Interval startInterval = Intervals.of("2024-01-01/2024-01-02");
+    final long dayToMillis = 1000L * 60L * 60L * 24L;
+    final long numDays = 365;
+    List<Interval> intervals = new ArrayList<>();
+    for (long day = 0; day < numDays; day++) {
+      intervals.add(
+          new Interval(
+              startInterval.getStartMillis() + dayToMillis * day,
+              startInterval.getEndMillis() + dayToMillis * day,
+              DateTimeZone.UTC
+          )
+      );
+    }
+
+    final IndexerSQLMetadataStorageCoordinator coordinator =
+        (IndexerSQLMetadataStorageCoordinator) taskActionTestKit.getMetadataStorageCoordinator();
+    final Set<DataSegment> segments = new HashSet<>();
+    final List<PendingSegmentRecord> pendingSegments = new ArrayList<>();
+    final int numUsedSegmentsPerInterval = 2000;
+    final int numPendingSegmentsPerInterval = 1000;
+    int version = 0;
+    for (Interval interval : intervals) {
+      for (int i = 0; i < numUsedSegmentsPerInterval; i++) {
+        segments.add(getSegmentForIdentifier(
+            new SegmentIdWithShardSpec(
+                DATA_SOURCE,
+                interval,
+                "version" + version,
+                new NumberedShardSpec(i, numUsedSegmentsPerInterval)
+            )
+        ));
+      }
+      coordinator.commitSegments(segments, null);
+      segments.clear();
+      for (int i = numUsedSegmentsPerInterval; i < numUsedSegmentsPerInterval + numPendingSegmentsPerInterval; i++) {
+        pendingSegments.add(new PendingSegmentRecord(
+            new SegmentIdWithShardSpec(
+                DATA_SOURCE,
+                interval,
+                "version" + version,
+                new NumberedShardSpec(i, numUsedSegmentsPerInterval)
+            ),
+            "sequence" + i,
+            "random_" + ThreadLocalRandom.current().nextInt(),
+            null,
+            null
+        ));
+      }
+      coordinator.insertPendingSegments(DATA_SOURCE, pendingSegments, true);
+      pendingSegments.clear();
+      version = (version + 1) % 10;
+      System.out.println(interval);
+    }
+
+    ExecutorService allocatorService = Execs.multiThreaded(4, "allocator-%d");
+
+    final List<Callable<SegmentIdWithShardSpec>> allocateTasks = new ArrayList<>();
+
+    long startTime = System.nanoTime();
+    for (int j = 0; j < numDays; j++) {
+      for (int i = 0; i < 20; i++) {
+        final String sequenceId = "sequence" + (numPendingSegmentsPerInterval + numUsedSegmentsPerInterval + i);
+        final int k = j;
+        allocateTasks.add(() -> allocateWithoutLineageCheck(task, intervals.get(k).getStart(), Granularities.NONE, Granularities.DAY, sequenceId, TaskLockType.APPEND));
+      }
+    }
+    for (Future<SegmentIdWithShardSpec> future : allocatorService.invokeAll(allocateTasks)) {
+      future.get();
+    }
+    long totalMillis = (System.nanoTime() - startTime) / 1_000_000;
+    System.out.println("Total allocation time for 7300 requests: " + totalMillis + "ms.");
   }
 
   private SegmentIdWithShardSpec allocate(
