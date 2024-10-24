@@ -21,11 +21,11 @@ package org.apache.druid.msq.test;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.CalciteJoinQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
-import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import java.util.Map;
 

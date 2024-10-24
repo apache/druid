@@ -50,8 +50,6 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.LookupDataSource;
-import org.apache.druid.query.JoinAlgorithm;
-import org.apache.druid.sql.calcite.planner.JoinHint;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.QueryUtils;
 import org.apache.druid.sql.calcite.rel.DruidJoinQueryRel;

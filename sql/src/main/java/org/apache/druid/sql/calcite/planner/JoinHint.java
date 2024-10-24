@@ -35,6 +35,13 @@ public enum JoinHint
       return JoinAlgorithm.SORT_MERGE;
     }
   },
+  NO_HASH_JOIN("no_hash_join") {
+    @Override
+    public JoinAlgorithm getJoinAlgorithm()
+    {
+      return JoinAlgorithm.SORT_MERGE;
+    }
+  },
   USE_HASH_JOIN("use_hash_join") {
     @Override
     public JoinAlgorithm getJoinAlgorithm()

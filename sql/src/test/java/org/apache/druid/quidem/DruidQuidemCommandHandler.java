@@ -294,88 +294,113 @@ public class DruidQuidemCommandHandler implements CommandHandler
     {
       private final List<String> hintsCollect;
 
-      HintCollector(List<String> hintsCollect) {
+      HintCollector(List<String> hintsCollect)
+      {
         this.hintsCollect = hintsCollect;
       }
 
-      @Override public RelNode visit(TableScan scan) {
+      @Override
+      public RelNode visit(TableScan scan)
+      {
         if (!scan.getHints().isEmpty()) {
           this.hintsCollect.add("TableScan:" + scan.getHints());
         }
         return super.visit(scan);
       }
 
-      @Override public RelNode visit(LogicalJoin join) {
+      @Override
+      public RelNode visit(LogicalJoin join)
+      {
         if (!join.getHints().isEmpty()) {
           this.hintsCollect.add("LogicalJoin:" + join.getHints());
         }
         return super.visit(join);
       }
 
-      @Override public RelNode visit(LogicalProject project) {
+      @Override
+      public RelNode visit(LogicalProject project)
+      {
         if (!project.getHints().isEmpty()) {
           this.hintsCollect.add("Project:" + project.getHints());
         }
         return super.visit(project);
       }
 
-      @Override public RelNode visit(LogicalAggregate aggregate) {
+      @Override
+      public RelNode visit(LogicalAggregate aggregate)
+      {
         if (!aggregate.getHints().isEmpty()) {
           this.hintsCollect.add("Aggregate:" + aggregate.getHints());
         }
         return super.visit(aggregate);
       }
 
-      @Override public RelNode visit(LogicalCorrelate correlate) {
+      @Override
+      public RelNode visit(LogicalCorrelate correlate)
+      {
         if (!correlate.getHints().isEmpty()) {
           this.hintsCollect.add("Correlate:" + correlate.getHints());
         }
         return super.visit(correlate);
       }
 
-      @Override public RelNode visit(LogicalFilter filter) {
+      @Override
+      public RelNode visit(LogicalFilter filter)
+      {
         if (!filter.getHints().isEmpty()) {
           this.hintsCollect.add("Filter:" + filter.getHints());
         }
         return super.visit(filter);
       }
 
-      @Override public RelNode visit(LogicalUnion union) {
+      @Override
+      public RelNode visit(LogicalUnion union)
+      {
         if (!union.getHints().isEmpty()) {
           this.hintsCollect.add("Union:" + union.getHints());
         }
         return super.visit(union);
       }
 
-      @Override public RelNode visit(LogicalIntersect intersect) {
+      @Override
+      public RelNode visit(LogicalIntersect intersect)
+      {
         if (!intersect.getHints().isEmpty()) {
           this.hintsCollect.add("Intersect:" + intersect.getHints());
         }
         return super.visit(intersect);
       }
 
-      @Override public RelNode visit(LogicalMinus minus) {
+      @Override
+      public RelNode visit(LogicalMinus minus)
+      {
         if (!minus.getHints().isEmpty()) {
           this.hintsCollect.add("Minus:" + minus.getHints());
         }
         return super.visit(minus);
       }
 
-      @Override public RelNode visit(LogicalSort sort) {
+      @Override
+      public RelNode visit(LogicalSort sort)
+      {
         if (!sort.getHints().isEmpty()) {
           this.hintsCollect.add("Sort:" + sort.getHints());
         }
         return super.visit(sort);
       }
 
-      @Override public RelNode visit(LogicalValues values) {
+      @Override
+      public RelNode visit(LogicalValues values)
+      {
         if (!values.getHints().isEmpty()) {
           this.hintsCollect.add("Values:" + values.getHints());
         }
         return super.visit(values);
       }
 
-      @Override public RelNode visit(RelNode other) {
+      @Override
+      public RelNode visit(RelNode other)
+      {
         if (other instanceof Window) {
           Window window = (Window) other;
           if (!window.getHints().isEmpty()) {
