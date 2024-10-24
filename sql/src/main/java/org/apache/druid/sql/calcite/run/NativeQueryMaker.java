@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.run;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
@@ -32,9 +33,13 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
@@ -87,7 +92,7 @@ public class NativeQueryMaker implements QueryMaker
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
         && !(druidQuery.getDataSource() instanceof InlineDataSource)) {
-      if (Intervals.ONLY_ETERNITY.equals(findBaseDataSourceIntervals(query))) {
+      if (!queryHasTimeFilter(query)) {
         throw new CannotBuildQueryException(
             "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
         );
@@ -162,6 +167,70 @@ public class NativeQueryMaker implements QueryMaker
                 .getBaseQuerySegmentSpec()
                 .map(QuerySegmentSpec::getIntervals)
                 .orElseGet(query::getIntervals);
+  }
+
+  private boolean queryHasTimeFilter(Query<?> query)
+  {
+    DataSource dataSource = query.getDataSource();
+    if (dataSource instanceof InlineDataSource) {
+      return true;
+    }
+    if (dataSource instanceof JoinDataSource) {
+      return joinDataSourceQueryHasTimeFilter(query);
+    }
+    return isIntervalNonEternity(findBaseDataSourceIntervals(query));
+  }
+
+  /**
+   * Checks if a join query has a valid time filter by inspecting parts of the joins and any subqueries used within.
+   * If the left datasource is a Table datasource, we require a timefilter on the top level query and a time filter on
+   * the right datasource, else we check for time filter on the left and right datasources making up the join recursively
+   */
+  private boolean joinDataSourceQueryHasTimeFilter(Query<?> query)
+  {
+    Preconditions.checkArgument(query.getDataSource() instanceof JoinDataSource);
+    JoinDataSource joinDataSource = (JoinDataSource) query.getDataSource();
+    if (joinDataSource.getLeft() instanceof TableDataSource) {
+      // Make sure we have a time filter on the base query since we have a concrete TableDataSource on the left
+      // And then make sure that right also has a time filter
+      if (isIntervalNonEternity(query.getIntervals())) {
+        return dataSourceHasTimeFilter(joinDataSource.getRight());
+      } else {
+        return false;
+      }
+    }
+    // Top level query does not have a time filter, check if all subqueries have a time filter
+    return joinDataSourceHasTimeFilter(joinDataSource);
+  }
+
+  private boolean joinDataSourceHasTimeFilter(JoinDataSource joinDataSource)
+  {
+    return dataSourceHasTimeFilter(joinDataSource.getLeft()) && dataSourceHasTimeFilter(joinDataSource.getRight());
+  }
+
+  private boolean dataSourceHasTimeFilter(DataSource dataSource)
+  {
+    if (dataSource instanceof InlineDataSource) {
+      return true;
+    }
+    if (dataSource instanceof QueryDataSource) {
+      return queryHasTimeFilter(((QueryDataSource) dataSource).getQuery());
+    }
+    if (dataSource instanceof JoinDataSource) {
+      return joinDataSourceHasTimeFilter((JoinDataSource) dataSource);
+    }
+    if (dataSource.getAnalysis().getBaseQuerySegmentSpec().isPresent()) {
+      return isIntervalNonEternity(dataSource.getAnalysis()
+                                             .getBaseQuerySegmentSpec()
+                                             .map(QuerySegmentSpec::getIntervals)
+                                             .get());
+    }
+    return false;
+  }
+
+  private boolean isIntervalNonEternity(List<Interval> intervals)
+  {
+    return !Intervals.ONLY_ETERNITY.equals(intervals);
   }
 
   @SuppressWarnings("unchecked")
