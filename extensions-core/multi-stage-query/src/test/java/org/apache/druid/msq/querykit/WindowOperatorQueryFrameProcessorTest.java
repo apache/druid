@@ -125,7 +125,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
 
     final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
     final WindowOperatorQueryFrameProcessor processor = new WindowOperatorQueryFrameProcessor(
-        query,
+        query.context(),
         factChannel.getChannel(),
         outputChannel.writable(),
         frameWriterFactory,
@@ -209,7 +209,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
 
     final BlockingQueueFrameChannel outputChannel = BlockingQueueFrameChannel.minimal();
     final WindowOperatorQueryFrameProcessor processor = new WindowOperatorQueryFrameProcessor(
-        query,
+        query.context(),
         factChannel.getChannel(),
         outputChannel.writable(),
         frameWriterFactory,
@@ -316,7 +316,7 @@ public class WindowOperatorQueryFrameProcessorTest extends FrameProcessorTestBas
     );
 
     final WindowOperatorQueryFrameProcessor processor = new WindowOperatorQueryFrameProcessor(
-        query,
+        query.context(),
         factChannel.getChannel(),
         countingWritableFrameChannel,
         frameWriterFactory,

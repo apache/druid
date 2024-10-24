@@ -39,10 +39,10 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsInAWindowFault;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.Operator;
 import org.apache.druid.query.operator.OperatorFactory;
-import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.rowsandcols.ConcatRowsAndColumns;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -83,7 +83,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   final AtomicInteger rowId = new AtomicInteger(0);
 
   public WindowOperatorQueryFrameProcessor(
-      WindowOperatorQuery query,
+      QueryContext queryContext,
       ReadableFrameChannel inputChannel,
       WritableFrameChannel outputChannel,
       FrameWriterFactory frameWriterFactory,
@@ -97,7 +97,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.frameWriterFactory = frameWriterFactory;
     this.operatorFactoryList = operatorFactoryList;
     this.resultRowAndCols = new ArrayList<>();
-    this.maxRowsMaterialized = MultiStageQueryContext.getMaxRowsMaterializedInWindow(query.context());
+    this.maxRowsMaterialized = MultiStageQueryContext.getMaxRowsMaterializedInWindow(queryContext);
     this.frameRowsAndColsBuilder = new RowsAndColumnsBuilder(this.maxRowsMaterialized);
 
     this.frameReader = frameReader;
@@ -106,7 +106,7 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
     final List<VirtualColumn> frameWriterVirtualColumns = new ArrayList<>();
     final VirtualColumn segmentGranularityVirtualColumn =
-        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
+        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, queryContext);
     if (segmentGranularityVirtualColumn != null) {
       frameWriterVirtualColumns.add(segmentGranularityVirtualColumn);
     }
