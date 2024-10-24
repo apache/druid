@@ -13241,152 +13241,162 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
     msqIncompatible();
     Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
       testQuery(
-              PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
-              "SELECT COUNT(*) FROM druid.foo\n"
-                      + "WHERE __time >= '2000-01-01' AND SUBSTRING(dim2, 1, 1) IN (\n"
-                      + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
-                      + "  WHERE dim1 <> ''\n"
-                      + ")",
-              CalciteTests.REGULAR_USER_AUTH_RESULT,
-              ImmutableList.of(),
-              ImmutableList.of()
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT COUNT(*) FROM druid.foo\n"
+          + "WHERE __time >= '2000-01-01' AND SUBSTRING(dim2, 1, 1) IN (\n"
+          + "  SELECT SUBSTRING(dim1, 1, 1) FROM druid.foo\n"
+          + "  WHERE dim1 <> ''\n"
+          + ")",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
       );
     });
     assertTrue(exception.getMessage().contains("__time column"));
   }
 
   @Test
-  public void testRequireTimeConditionNestedJoinPositive() {
+  public void testRequireTimeConditionNestedJoinPositive()
+  {
     msqIncompatible();
     skipVectorize();
     testQuery(
-            PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
-            "SELECT distinct T1.dim1, T2.dim2 FROM\n" +
-                    "        (SELECT dim1 from druid.foo WHERE dim1 <> '' AND __time >= '2000-01-01') AS T1,\n" +
-                    "  (SELECT dim2 from druid.foo WHERE dim1 <> '' AND __time >= '2000-02-01') AS T2\n" +
-                    " WHERE T1.dim1=T2.dim2",
-            CalciteTests.REGULAR_USER_AUTH_RESULT,
-            ImmutableList.of(GroupByQuery.builder()
-                    .setDataSource(JoinDataSource.create(
-                            new QueryDataSource(newScanQueryBuilder()
-                                    .dataSource(CalciteTests.DATASOURCE1)
-                                    .intervals(querySegmentSpec(Intervals.utc(
-                                            DateTimes.of("2000-01-01").getMillis(),
-                                            JodaUtils.MAX_INSTANT)))
-                                    .columns("dim1")
-                                    .filters(not(equality("dim1", "", ColumnType.STRING)))
-                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                    .context(QUERY_CONTEXT_DEFAULT)
-                                    .build()),
-                            new QueryDataSource(newScanQueryBuilder()
-                                    .dataSource(CalciteTests.DATASOURCE1)
-                                    .intervals(querySegmentSpec(Intervals.utc(
-                                            DateTimes.of("2000-02-01").getMillis(),
-                                            JodaUtils.MAX_INSTANT)))
-                                    .columns("dim2")
-                                    .filters(not(equality("dim1", "", ColumnType.STRING)))
-                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                    .context(QUERY_CONTEXT_DEFAULT)
-                                    .build()),
-                            "j0.",
-                            "(\"dim1\" == \"j0.dim2\")",
-                            JoinType.INNER,
-                            null,
-                            ExprMacroTable.nil(),
-                            CalciteTests.createJoinableFactoryWrapper()
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT distinct T1.dim1, T2.dim2 FROM\n" +
+        "        (SELECT dim1 from druid.foo WHERE dim1 <> '' AND __time >= '2000-01-01') AS T1,\n" +
+        "  (SELECT dim2 from druid.foo WHERE dim1 <> '' AND __time >= '2000-02-01') AS T2\n" +
+        " WHERE T1.dim1=T2.dim2",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(GroupByQuery.builder()
+                                     .setDataSource(JoinDataSource.create(
+                                         new QueryDataSource(newScanQueryBuilder()
+                                                                 .dataSource(CalciteTests.DATASOURCE1)
+                                                                 .intervals(querySegmentSpec(Intervals.utc(
+                                                                     DateTimes.of("2000-01-01").getMillis(),
+                                                                     JodaUtils.MAX_INSTANT
+                                                                 )))
+                                                                 .columns("dim1")
+                                                                 .filters(not(equality("dim1", "", ColumnType.STRING)))
+                                                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                                 .context(QUERY_CONTEXT_DEFAULT)
+                                                                 .build()),
+                                         new QueryDataSource(newScanQueryBuilder()
+                                                                 .dataSource(CalciteTests.DATASOURCE1)
+                                                                 .intervals(querySegmentSpec(Intervals.utc(
+                                                                     DateTimes.of("2000-02-01").getMillis(),
+                                                                     JodaUtils.MAX_INSTANT
+                                                                 )))
+                                                                 .columns("dim2")
+                                                                 .filters(not(equality("dim1", "", ColumnType.STRING)))
+                                                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                                 .context(QUERY_CONTEXT_DEFAULT)
+                                                                 .build()),
+                                         "j0.",
+                                         "(\"dim1\" == \"j0.dim2\")",
+                                         JoinType.INNER,
+                                         null,
+                                         ExprMacroTable.nil(),
+                                         CalciteTests.createJoinableFactoryWrapper()
 
-                    ))
-                    .setInterval(querySegmentSpec(Filtration.eternity()))
-                    .setGranularity(Granularities.ALL)
-                    .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0"),
-                            new DefaultDimensionSpec("j0.dim2", "d1")))
-                    .setContext(QUERY_CONTEXT_DEFAULT)
-                    .build()),
-            ImmutableList.of(new Object[]{"abc", "abc"})
+                                     ))
+                                     .setInterval(querySegmentSpec(Filtration.eternity()))
+                                     .setGranularity(Granularities.ALL)
+                                     .setDimensions(dimensions(
+                                         new DefaultDimensionSpec("dim1", "d0"),
+                                         new DefaultDimensionSpec("j0.dim2", "d1")
+                                     ))
+                                     .setContext(QUERY_CONTEXT_DEFAULT)
+                                     .build()),
+        ImmutableList.of(new Object[]{"abc", "abc"})
     );
   }
 
   @Test
-  public void testRequireTimeConditionNestedJoinNegative() {
+  public void testRequireTimeConditionNestedJoinNegative()
+  {
     msqIncompatible();
     skipVectorize();
     Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
       testQuery(
-              PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
-              "SELECT distinct T1.dim1, T2.dim2 FROM\n" +
-                      "        (SELECT dim1 from druid.foo WHERE dim1 <> '' AND __time >= '2000-01-01') AS T1,\n" +
-                      "  (SELECT dim2 from druid.foo WHERE dim1 <> '') AS T2\n" +
-                      " WHERE T1.dim1=T2.dim2",
-              CalciteTests.REGULAR_USER_AUTH_RESULT,
-              ImmutableList.of(),
-              ImmutableList.of()
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT distinct T1.dim1, T2.dim2 FROM\n" +
+          "        (SELECT dim1 from druid.foo WHERE dim1 <> '' AND __time >= '2000-01-01') AS T1,\n" +
+          "  (SELECT dim2 from druid.foo WHERE dim1 <> '') AS T2\n" +
+          " WHERE T1.dim1=T2.dim2",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
       );
     });
     assertTrue(exception.getMessage().contains("__time column"));
   }
 
   @Test
-  public void testRequireTimeConditionJoinWithInlineDatasourceNegative() {
+  public void testRequireTimeConditionJoinWithInlineDatasourceNegative()
+  {
     msqIncompatible();
     skipVectorize();
     Throwable exception = assertThrows(CannotBuildQueryException.class, () -> {
-              testQuery(
-                      PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
-                      "SELECT distinct T1.dim1, T2.A FROM\n" +
-                              "        (SELECT dim1 from druid.foo WHERE dim1 <> '') AS T1,\n" +
-                              "  (SELECT * FROM (SELECT 2 + 2 AS A)) AS T2\n" +
-                              " WHERE T1.dim1=T2.A",
-                      CalciteTests.REGULAR_USER_AUTH_RESULT,
-                      ImmutableList.of(),
-                      ImmutableList.of()
-              );
-            });
+      testQuery(
+          PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+          "SELECT distinct T1.dim1, T2.A FROM\n" +
+          "        (SELECT dim1 from druid.foo WHERE dim1 <> '') AS T1,\n" +
+          "  (SELECT * FROM (SELECT 2 + 2 AS A)) AS T2\n" +
+          " WHERE T1.dim1=T2.A",
+          CalciteTests.REGULAR_USER_AUTH_RESULT,
+          ImmutableList.of(),
+          ImmutableList.of()
+      );
+    });
     assertTrue(exception.getMessage().contains("__time column"));
   }
 
   @Test
-  public void testRequireTimeConditionJoinWithInlineDatasourcePositive() {
+  public void testRequireTimeConditionJoinWithInlineDatasourcePositive()
+  {
     msqIncompatible();
     skipVectorize();
     testQuery(
-            PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
-            "SELECT distinct T1.dim1, T2.A FROM\n" +
-                    "        (SELECT dim1 from druid.foo WHERE dim1 <> '' AND __time >= '2000-01-01') AS T1,\n" +
-                    "  (SELECT * FROM (SELECT 2 + 2 AS A)) AS T2\n" +
-                    " WHERE T1.dim1=T2.A",
-            CalciteTests.REGULAR_USER_AUTH_RESULT,
-            ImmutableList.of(GroupByQuery.builder()
-                    .setDataSource(JoinDataSource.create(
-                            new QueryDataSource(newScanQueryBuilder()
-                                    .dataSource(CalciteTests.DATASOURCE1)
-                                    .intervals(querySegmentSpec(Intervals.utc(
-                                            DateTimes.of("2000-01-01").getMillis(),
-                                            JodaUtils.MAX_INSTANT)))
-                                    .columns("dim1")
-                                    .filters(not(equality("dim1", "", ColumnType.STRING)))
-                                    .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                    .context(QUERY_CONTEXT_DEFAULT)
-                                    .build()),
-                            InlineDataSource.fromIterable(
-                                    ImmutableList.of(new Object[]{4L}),
-                                    RowSignature.builder().add("A", ColumnType.LONG).build()
-                            ),
-                            "j0.",
-                            "1",
-                            JoinType.INNER,
-                            null,
-                            ExprMacroTable.nil(),
-                            CalciteTests.createJoinableFactoryWrapper()
-                    ))
-                    .setInterval(querySegmentSpec(Filtration.eternity()))
-                    .setGranularity(Granularities.ALL)
-                    .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0"),
-                            new DefaultDimensionSpec("j0.A", "d1", ColumnType.LONG)
-                    ))
-                    .setDimFilter(equality("dim1", 4, ColumnType.LONG))
-                    .setContext(QUERY_CONTEXT_DEFAULT)
-                    .build()),
-            ImmutableList.of()
+        PLANNER_CONFIG_REQUIRE_TIME_CONDITION,
+        "SELECT distinct T1.dim1, T2.A FROM\n" +
+        "        (SELECT dim1 from druid.foo WHERE dim1 <> '' AND __time >= '2000-01-01') AS T1,\n" +
+        "  (SELECT * FROM (SELECT 2 + 2 AS A)) AS T2\n" +
+        " WHERE T1.dim1=T2.A",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(GroupByQuery.builder()
+                                     .setDataSource(JoinDataSource.create(
+                                         new QueryDataSource(newScanQueryBuilder()
+                                                                 .dataSource(CalciteTests.DATASOURCE1)
+                                                                 .intervals(querySegmentSpec(Intervals.utc(
+                                                                     DateTimes.of("2000-01-01").getMillis(),
+                                                                     JodaUtils.MAX_INSTANT
+                                                                 )))
+                                                                 .columns("dim1")
+                                                                 .filters(not(equality("dim1", "", ColumnType.STRING)))
+                                                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                                                 .context(QUERY_CONTEXT_DEFAULT)
+                                                                 .build()),
+                                         InlineDataSource.fromIterable(
+                                             ImmutableList.of(new Object[]{4L}),
+                                             RowSignature.builder().add("A", ColumnType.LONG).build()
+                                         ),
+                                         "j0.",
+                                         "1",
+                                         JoinType.INNER,
+                                         null,
+                                         ExprMacroTable.nil(),
+                                         CalciteTests.createJoinableFactoryWrapper()
+                                     ))
+                                     .setInterval(querySegmentSpec(Filtration.eternity()))
+                                     .setGranularity(Granularities.ALL)
+                                     .setDimensions(dimensions(
+                                         new DefaultDimensionSpec("dim1", "d0"),
+                                         new DefaultDimensionSpec("j0.A", "d1", ColumnType.LONG)
+                                     ))
+                                     .setDimFilter(equality("dim1", 4, ColumnType.LONG))
+                                     .setContext(QUERY_CONTEXT_DEFAULT)
+                                     .build()),
+        ImmutableList.of()
     );
   }
 
