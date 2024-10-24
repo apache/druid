@@ -38,6 +38,8 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.hint.HintPredicates;
+import org.apache.calcite.rel.hint.HintStrategyTable;
 import org.apache.calcite.rel.metadata.CachingRelMetadataProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -295,7 +297,8 @@ public class CalcitePlanner implements Planner, ViewExpander
         rexBuilder
     );
     final SqlToRelConverter.Config config =
-        sqlToRelConverterConfig.withTrimUnusedFields(false);
+        sqlToRelConverterConfig.withTrimUnusedFields(false)
+                               .withHintStrategyTable(HintTools.HINT_STRATEGY_TABLE);
     final SqlToRelConverter sqlToRelConverter =
         new DruidSqlToRelConverter(this, validator,
                               createCatalogReader(), cluster, convertletTable, config
@@ -500,6 +503,26 @@ public class CalcitePlanner implements Planner, ViewExpander
     {
       throw new IllegalArgumentException("cannot move from " + planner.state
                                          + " to " + this);
+    }
+  }
+
+  /** Define some tool members and methods for hints. */
+  private static class HintTools
+  {
+    static final HintStrategyTable HINT_STRATEGY_TABLE = createHintStrategies();
+
+    /**
+     * Creates hint strategies.
+     *
+     * @return HintStrategyTable instance
+     */
+    private static HintStrategyTable createHintStrategies()
+    {
+      return HintStrategyTable.builder()
+                              .hintStrategy("no_hash_join", HintPredicates.JOIN)
+                              .hintStrategy("use_hash_join", HintPredicates.JOIN)
+                              .hintStrategy("use_merge_join", HintPredicates.JOIN)
+                              .build();
     }
   }
 }
