@@ -46,8 +46,8 @@ public class QueryableIndexSegment implements Segment
   public QueryableIndexSegment(QueryableIndex index, final SegmentId segmentId)
   {
     this.index = index;
-    this.cursorFactory = new QueryableIndexCursorFactory(index);
     this.timeBoundaryInspector = QueryableIndexTimeBoundaryInspector.create(index);
+    this.cursorFactory = new QueryableIndexCursorFactory(index, timeBoundaryInspector);
     this.segmentId = segmentId;
   }
 
