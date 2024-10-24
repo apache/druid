@@ -19,9 +19,13 @@
 
 package org.apache.druid.indexing.kafka.supervisor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import org.apache.druid.indexing.kafka.KafkaIndexTaskModule;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -39,12 +43,13 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 
-public class KafkaSupervisorSpecTest
+public class KafkaSupervisorSpecTest 
 {
   private final ObjectMapper mapper;
 
-  public KafkaSupervisorSpecTest()
+  public KafkaSupervisorSpecTest() 
   {
     mapper = new DefaultObjectMapper();
     mapper.setInjectableValues(
@@ -59,69 +64,69 @@ public class KafkaSupervisorSpecTest
             .addValue(RowIngestionMetersFactory.class, null)
             .addValue(SupervisorStateManagerConfig.class, null)
             .addValue(ExprMacroTable.class.getName(), LookupEnabledTestExprMacroTable.INSTANCE)
-    );
+            );
     mapper.registerModules((Iterable<Module>) new KafkaIndexTaskModule().getJacksonModules());
   }
 
   @Test
-  public void testSerde() throws IOException
+  public void testSerde() throws IOException 
   {
     String json = "{\n"
-                  + "  \"type\": \"kafka\",\n"
-                  + "  \"dataSchema\": {\n"
-                  + "    \"dataSource\": \"metrics-kafka\",\n"
-                  + "    \"parser\": {\n"
-                  + "      \"type\": \"string\",\n"
-                  + "      \"parseSpec\": {\n"
-                  + "        \"format\": \"json\",\n"
-                  + "        \"timestampSpec\": {\n"
-                  + "          \"column\": \"timestamp\",\n"
-                  + "          \"format\": \"auto\"\n"
-                  + "        },\n"
-                  + "        \"dimensionsSpec\": {\n"
-                  + "          \"dimensions\": [],\n"
-                  + "          \"dimensionExclusions\": [\n"
-                  + "            \"timestamp\",\n"
-                  + "            \"value\"\n"
-                  + "          ]\n"
-                  + "        }\n"
-                  + "      }\n"
-                  + "    },\n"
-                  + "    \"metricsSpec\": [\n"
-                  + "      {\n"
-                  + "        \"name\": \"count\",\n"
-                  + "        \"type\": \"count\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_sum\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleSum\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_min\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMin\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_max\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMax\"\n"
-                  + "      }\n"
-                  + "    ],\n"
-                  + "    \"granularitySpec\": {\n"
-                  + "      \"type\": \"uniform\",\n"
-                  + "      \"segmentGranularity\": \"HOUR\",\n"
-                  + "      \"queryGranularity\": \"NONE\"\n"
-                  + "    }\n"
-                  + "  },\n"
-                  + "  \"ioConfig\": {\n"
-                  + "    \"topic\": \"metrics\",\n"
-                  + "    \"consumerProperties\": {\n"
-                  + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                  + "    },\n"
-                  + "    \"taskCount\": 1\n"
-                  + "  }\n"
-                  + "}";
+        + "  \"type\": \"kafka\",\n"
+        + "  \"dataSchema\": {\n"
+        + "    \"dataSource\": \"metrics-kafka\",\n"
+        + "    \"parser\": {\n"
+        + "      \"type\": \"string\",\n"
+        + "      \"parseSpec\": {\n"
+        + "        \"format\": \"json\",\n"
+        + "        \"timestampSpec\": {\n"
+        + "          \"column\": \"timestamp\",\n"
+        + "          \"format\": \"auto\"\n"
+        + "        },\n"
+        + "        \"dimensionsSpec\": {\n"
+        + "          \"dimensions\": [],\n"
+        + "          \"dimensionExclusions\": [\n"
+        + "            \"timestamp\",\n"
+        + "            \"value\"\n"
+        + "          ]\n"
+        + "        }\n"
+        + "      }\n"
+        + "    },\n"
+        + "    \"metricsSpec\": [\n"
+        + "      {\n"
+        + "        \"name\": \"count\",\n"
+        + "        \"type\": \"count\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_sum\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleSum\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_min\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMin\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_max\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMax\"\n"
+        + "      }\n"
+        + "    ],\n"
+        + "    \"granularitySpec\": {\n"
+        + "      \"type\": \"uniform\",\n"
+        + "      \"segmentGranularity\": \"HOUR\",\n"
+        + "      \"queryGranularity\": \"NONE\"\n"
+        + "    }\n"
+        + "  },\n"
+        + "  \"ioConfig\": {\n"
+        + "    \"topic\": \"metrics\",\n"
+        + "    \"consumerProperties\": {\n"
+        + "      \"bootstrap.servers\": \"localhost:9092\"\n"
+        + "    },\n"
+        + "    \"taskCount\": 1\n"
+        + "  }\n"
+        + "}";
     KafkaSupervisorSpec spec = mapper.readValue(json, KafkaSupervisorSpec.class);
 
     Assert.assertNotNull(spec);
@@ -149,64 +154,64 @@ public class KafkaSupervisorSpecTest
   }
 
   @Test
-  public void testSerdeWithTopicPattern() throws IOException
+  public void testSerdeWithTopicPattern() throws IOException 
   {
     String json = "{\n"
-                  + "  \"type\": \"kafka\",\n"
-                  + "  \"dataSchema\": {\n"
-                  + "    \"dataSource\": \"metrics-kafka\",\n"
-                  + "    \"parser\": {\n"
-                  + "      \"type\": \"string\",\n"
-                  + "      \"parseSpec\": {\n"
-                  + "        \"format\": \"json\",\n"
-                  + "        \"timestampSpec\": {\n"
-                  + "          \"column\": \"timestamp\",\n"
-                  + "          \"format\": \"auto\"\n"
-                  + "        },\n"
-                  + "        \"dimensionsSpec\": {\n"
-                  + "          \"dimensions\": [],\n"
-                  + "          \"dimensionExclusions\": [\n"
-                  + "            \"timestamp\",\n"
-                  + "            \"value\"\n"
-                  + "          ]\n"
-                  + "        }\n"
-                  + "      }\n"
-                  + "    },\n"
-                  + "    \"metricsSpec\": [\n"
-                  + "      {\n"
-                  + "        \"name\": \"count\",\n"
-                  + "        \"type\": \"count\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_sum\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleSum\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_min\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMin\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_max\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMax\"\n"
-                  + "      }\n"
-                  + "    ],\n"
-                  + "    \"granularitySpec\": {\n"
-                  + "      \"type\": \"uniform\",\n"
-                  + "      \"segmentGranularity\": \"HOUR\",\n"
-                  + "      \"queryGranularity\": \"NONE\"\n"
-                  + "    }\n"
-                  + "  },\n"
-                  + "  \"ioConfig\": {\n"
-                  + "    \"topicPattern\": \"metrics.*\",\n"
-                  + "    \"consumerProperties\": {\n"
-                  + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                  + "    },\n"
-                  + "    \"taskCount\": 1\n"
-                  + "  }\n"
-                  + "}";
+        + "  \"type\": \"kafka\",\n"
+        + "  \"dataSchema\": {\n"
+        + "    \"dataSource\": \"metrics-kafka\",\n"
+        + "    \"parser\": {\n"
+        + "      \"type\": \"string\",\n"
+        + "      \"parseSpec\": {\n"
+        + "        \"format\": \"json\",\n"
+        + "        \"timestampSpec\": {\n"
+        + "          \"column\": \"timestamp\",\n"
+        + "          \"format\": \"auto\"\n"
+        + "        },\n"
+        + "        \"dimensionsSpec\": {\n"
+        + "          \"dimensions\": [],\n"
+        + "          \"dimensionExclusions\": [\n"
+        + "            \"timestamp\",\n"
+        + "            \"value\"\n"
+        + "          ]\n"
+        + "        }\n"
+        + "      }\n"
+        + "    },\n"
+        + "    \"metricsSpec\": [\n"
+        + "      {\n"
+        + "        \"name\": \"count\",\n"
+        + "        \"type\": \"count\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_sum\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleSum\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_min\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMin\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_max\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMax\"\n"
+        + "      }\n"
+        + "    ],\n"
+        + "    \"granularitySpec\": {\n"
+        + "      \"type\": \"uniform\",\n"
+        + "      \"segmentGranularity\": \"HOUR\",\n"
+        + "      \"queryGranularity\": \"NONE\"\n"
+        + "    }\n"
+        + "  },\n"
+        + "  \"ioConfig\": {\n"
+        + "    \"topicPattern\": \"metrics.*\",\n"
+        + "    \"consumerProperties\": {\n"
+        + "      \"bootstrap.servers\": \"localhost:9092\"\n"
+        + "    },\n"
+        + "    \"taskCount\": 1\n"
+        + "  }\n"
+        + "}";
     KafkaSupervisorSpec spec = mapper.readValue(json, KafkaSupervisorSpec.class);
 
     Assert.assertNotNull(spec);
@@ -227,67 +232,68 @@ public class KafkaSupervisorSpecTest
 
     Assert.assertEquals(serialized, stable);
   }
+
   @Test
-  public void testSerdeWithInputFormat() throws IOException
+  public void testSerdeWithInputFormat() throws IOException 
   {
     String json = "{\n"
-                  + "  \"type\": \"kafka\",\n"
-                  + "  \"dataSchema\": {\n"
-                  + "    \"dataSource\": \"metrics-kafka\",\n"
-                  + "    \"timestampSpec\": {\n"
-                  + "      \"column\": \"timestamp\",\n"
-                  + "      \"format\": \"auto\"\n"
-                  + "     },\n"
-                  + "    \"dimensionsSpec\": {\n"
-                  + "      \"dimensions\": [],\n"
-                  + "      \"dimensionExclusions\": [\n"
-                  + "        \"timestamp\",\n"
-                  + "        \"value\"\n"
-                  + "       ]\n"
-                  + "    },\n"
-                  + "    \"metricsSpec\": [\n"
-                  + "      {\n"
-                  + "        \"name\": \"count\",\n"
-                  + "        \"type\": \"count\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_sum\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleSum\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_min\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMin\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_max\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMax\"\n"
-                  + "      }\n"
-                  + "    ],\n"
-                  + "    \"granularitySpec\": {\n"
-                  + "      \"type\": \"uniform\",\n"
-                  + "      \"segmentGranularity\": \"HOUR\",\n"
-                  + "      \"queryGranularity\": \"NONE\"\n"
-                  + "    }\n"
-                  + "  },\n"
-                  + "  \"ioConfig\": {\n"
-                  + "    \"topic\": \"metrics\",\n"
-                  + "    \"inputFormat\": {\n"
-                  + "      \"type\": \"json\",\n"
-                  + "      \"flattenSpec\": {\n"
-                  + "        \"useFieldDiscovery\": true,\n"
-                  + "        \"fields\": []\n"
-                  + "      },\n"
-                  + "      \"featureSpec\": {}\n"
-                  + "    },"
-                  + "    \"consumerProperties\": {\n"
-                  + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                  + "    },\n"
-                  + "    \"taskCount\": 1\n"
-                  + "  }\n"
-                  + "}";
+        + "  \"type\": \"kafka\",\n"
+        + "  \"dataSchema\": {\n"
+        + "    \"dataSource\": \"metrics-kafka\",\n"
+        + "    \"timestampSpec\": {\n"
+        + "      \"column\": \"timestamp\",\n"
+        + "      \"format\": \"auto\"\n"
+        + "     },\n"
+        + "    \"dimensionsSpec\": {\n"
+        + "      \"dimensions\": [],\n"
+        + "      \"dimensionExclusions\": [\n"
+        + "        \"timestamp\",\n"
+        + "        \"value\"\n"
+        + "       ]\n"
+        + "    },\n"
+        + "    \"metricsSpec\": [\n"
+        + "      {\n"
+        + "        \"name\": \"count\",\n"
+        + "        \"type\": \"count\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_sum\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleSum\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_min\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMin\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_max\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMax\"\n"
+        + "      }\n"
+        + "    ],\n"
+        + "    \"granularitySpec\": {\n"
+        + "      \"type\": \"uniform\",\n"
+        + "      \"segmentGranularity\": \"HOUR\",\n"
+        + "      \"queryGranularity\": \"NONE\"\n"
+        + "    }\n"
+        + "  },\n"
+        + "  \"ioConfig\": {\n"
+        + "    \"topic\": \"metrics\",\n"
+        + "    \"inputFormat\": {\n"
+        + "      \"type\": \"json\",\n"
+        + "      \"flattenSpec\": {\n"
+        + "        \"useFieldDiscovery\": true,\n"
+        + "        \"fields\": []\n"
+        + "      },\n"
+        + "      \"featureSpec\": {}\n"
+        + "    },"
+        + "    \"consumerProperties\": {\n"
+        + "      \"bootstrap.servers\": \"localhost:9092\"\n"
+        + "    },\n"
+        + "    \"taskCount\": 1\n"
+        + "  }\n"
+        + "}";
     KafkaSupervisorSpec spec = mapper.readValue(json, KafkaSupervisorSpec.class);
 
     Assert.assertNotNull(spec);
@@ -300,6 +306,7 @@ public class KafkaSupervisorSpecTest
     Assert.assertNull(spec.getContext());
     Assert.assertFalse(spec.isSuspended());
     String serialized = mapper.writeValueAsString(spec);
+    String sortedSerializedJson = sortJsonString(serialized);
 
     // expect default values populated in reserialized string
     Assert.assertTrue(serialized.contains("\"tuningConfig\":{"));
@@ -310,71 +317,115 @@ public class KafkaSupervisorSpecTest
     KafkaSupervisorSpec spec2 = mapper.readValue(serialized, KafkaSupervisorSpec.class);
 
     String stable = mapper.writeValueAsString(spec2);
+    String sortedStableJson = sortJsonString(stable);
 
-    Assert.assertEquals(serialized, stable);
+    Assert.assertEquals(sortedSerializedJson, sortedStableJson);
+  }
+
+  public String sortJsonString(String json) throws JsonProcessingException {
+    // Deserialize the JSON string into a JsonNode and sort it
+    JsonNode sortedNode = sortJsonNode(mapper.readTree(json));
+    // Serialize the sorted JsonNode back to a string
+    return mapper.writeValueAsString(sortedNode);
+  }
+
+  private JsonNode sortJsonNode(JsonNode node) {
+    if (node.isObject()) {
+      // Sort the fields of the object node
+      ObjectNode sortedObjectNode = mapper.createObjectNode();
+      node.fields().forEachRemaining(entry -> {
+        sortedObjectNode.set(entry.getKey(), sortJsonNode(entry.getValue()));
+      });
+      return sortedObjectNode;
+    } else if (node.isArray()) {
+      // Sort elements in the array node
+      ArrayNode arrayNode = (ArrayNode) node;
+      ArrayNode sortedArrayNode = mapper.createArrayNode();
+      arrayNode.elements().forEachRemaining(element -> sortedArrayNode.add(sortJsonNode(element)));
+      // Sort the array elements if necessary
+      sortArrayNode(sortedArrayNode);
+      return sortedArrayNode;
+    } else {
+      return node; // Return the node itself if it's a value node
+    }
+  }
+
+  private void sortArrayNode(ArrayNode arrayNode) {
+    if (arrayNode.size() > 0 && arrayNode.get(0).isTextual()) {
+      // Convert ArrayNode to a String array, sort it, and set back
+      String[] elements = new String[arrayNode.size()];
+      for (int i = 0; i < arrayNode.size(); i++) {
+        elements[i] = arrayNode.get(i).asText();
+      }
+      Arrays.sort(elements);
+      arrayNode.removeAll();
+      for (String element : elements) {
+        arrayNode.add(element);
+      }
+    }
   }
 
   @Test
-  public void testSerdeWithSpec() throws IOException
+  public void testSerdeWithSpec() throws IOException 
   {
     String json = "{\n"
-                  + "  \"type\": \"kafka\",\n"
-                  + "  \"spec\": {\n"
-                  + "  \"dataSchema\": {\n"
-                  + "    \"dataSource\": \"metrics-kafka\",\n"
-                  + "    \"parser\": {\n"
-                  + "      \"type\": \"string\",\n"
-                  + "      \"parseSpec\": {\n"
-                  + "        \"format\": \"json\",\n"
-                  + "        \"timestampSpec\": {\n"
-                  + "          \"column\": \"timestamp\",\n"
-                  + "          \"format\": \"auto\"\n"
-                  + "        },\n"
-                  + "        \"dimensionsSpec\": {\n"
-                  + "          \"dimensions\": [],\n"
-                  + "          \"dimensionExclusions\": [\n"
-                  + "            \"timestamp\",\n"
-                  + "            \"value\"\n"
-                  + "          ]\n"
-                  + "        }\n"
-                  + "      }\n"
-                  + "    },\n"
-                  + "    \"metricsSpec\": [\n"
-                  + "      {\n"
-                  + "        \"name\": \"count\",\n"
-                  + "        \"type\": \"count\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_sum\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleSum\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_min\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMin\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_max\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMax\"\n"
-                  + "      }\n"
-                  + "    ],\n"
-                  + "    \"granularitySpec\": {\n"
-                  + "      \"type\": \"uniform\",\n"
-                  + "      \"segmentGranularity\": \"HOUR\",\n"
-                  + "      \"queryGranularity\": \"NONE\"\n"
-                  + "    }\n"
-                  + "  },\n"
-                  + "  \"ioConfig\": {\n"
-                  + "    \"topic\": \"metrics\",\n"
-                  + "    \"consumerProperties\": {\n"
-                  + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                  + "    },\n"
-                  + "    \"taskCount\": 1\n"
-                  + "  }\n"
-                  + "  }\n"
-                  + "}";
+        + "  \"type\": \"kafka\",\n"
+        + "  \"spec\": {\n"
+        + "  \"dataSchema\": {\n"
+        + "    \"dataSource\": \"metrics-kafka\",\n"
+        + "    \"parser\": {\n"
+        + "      \"type\": \"string\",\n"
+        + "      \"parseSpec\": {\n"
+        + "        \"format\": \"json\",\n"
+        + "        \"timestampSpec\": {\n"
+        + "          \"column\": \"timestamp\",\n"
+        + "          \"format\": \"auto\"\n"
+        + "        },\n"
+        + "        \"dimensionsSpec\": {\n"
+        + "          \"dimensions\": [],\n"
+        + "          \"dimensionExclusions\": [\n"
+        + "            \"timestamp\",\n"
+        + "            \"value\"\n"
+        + "          ]\n"
+        + "        }\n"
+        + "      }\n"
+        + "    },\n"
+        + "    \"metricsSpec\": [\n"
+        + "      {\n"
+        + "        \"name\": \"count\",\n"
+        + "        \"type\": \"count\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_sum\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleSum\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_min\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMin\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_max\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMax\"\n"
+        + "      }\n"
+        + "    ],\n"
+        + "    \"granularitySpec\": {\n"
+        + "      \"type\": \"uniform\",\n"
+        + "      \"segmentGranularity\": \"HOUR\",\n"
+        + "      \"queryGranularity\": \"NONE\"\n"
+        + "    }\n"
+        + "  },\n"
+        + "  \"ioConfig\": {\n"
+        + "    \"topic\": \"metrics\",\n"
+        + "    \"consumerProperties\": {\n"
+        + "      \"bootstrap.servers\": \"localhost:9092\"\n"
+        + "    },\n"
+        + "    \"taskCount\": 1\n"
+        + "  }\n"
+        + "  }\n"
+        + "}";
     KafkaSupervisorSpec spec = mapper.readValue(json, KafkaSupervisorSpec.class);
 
     Assert.assertNotNull(spec);
@@ -402,68 +453,68 @@ public class KafkaSupervisorSpecTest
   }
 
   @Test
-  public void testSerdeWithSpecAndInputFormat() throws IOException
+  public void testSerdeWithSpecAndInputFormat() throws IOException 
   {
     String json = "{\n"
-                  + "  \"type\": \"kafka\",\n"
-                  + "  \"spec\": {\n"
-                  + "  \"dataSchema\": {\n"
-                  + "    \"dataSource\": \"metrics-kafka\",\n"
-                  + "    \"timestampSpec\": {\n"
-                  + "      \"column\": \"timestamp\",\n"
-                  + "      \"format\": \"auto\"\n"
-                  + "    },\n"
-                  + "    \"dimensionsSpec\": {\n"
-                  + "      \"dimensions\": [],\n"
-                  + "      \"dimensionExclusions\": [\n"
-                  + "        \"timestamp\",\n"
-                  + "        \"value\"\n"
-                  + "      ]\n"
-                  + "    },\n"
-                  + "    \"metricsSpec\": [\n"
-                  + "      {\n"
-                  + "        \"name\": \"count\",\n"
-                  + "        \"type\": \"count\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_sum\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleSum\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_min\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMin\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_max\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMax\"\n"
-                  + "      }\n"
-                  + "    ],\n"
-                  + "    \"granularitySpec\": {\n"
-                  + "      \"type\": \"uniform\",\n"
-                  + "      \"segmentGranularity\": \"HOUR\",\n"
-                  + "      \"queryGranularity\": \"NONE\"\n"
-                  + "    }\n"
-                  + "  },\n"
-                  + "  \"ioConfig\": {\n"
-                  + "    \"topic\": \"metrics\",\n"
-                  + "    \"inputFormat\": {\n"
-                  + "      \"type\": \"json\",\n"
-                  + "      \"flattenSpec\": {\n"
-                  + "        \"useFieldDiscovery\": true,\n"
-                  + "        \"fields\": []\n"
-                  + "      },\n"
-                  + "      \"featureSpec\": {}\n"
-                  + "    },"
-                  + "    \"consumerProperties\": {\n"
-                  + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                  + "    },\n"
-                  + "    \"taskCount\": 1\n"
-                  + "  }\n"
-                  + "  }\n"
-                  + "}";
+        + "  \"type\": \"kafka\",\n"
+        + "  \"spec\": {\n"
+        + "  \"dataSchema\": {\n"
+        + "    \"dataSource\": \"metrics-kafka\",\n"
+        + "    \"timestampSpec\": {\n"
+        + "      \"column\": \"timestamp\",\n"
+        + "      \"format\": \"auto\"\n"
+        + "    },\n"
+        + "    \"dimensionsSpec\": {\n"
+        + "      \"dimensions\": [],\n"
+        + "      \"dimensionExclusions\": [\n"
+        + "        \"timestamp\",\n"
+        + "        \"value\"\n"
+        + "      ]\n"
+        + "    },\n"
+        + "    \"metricsSpec\": [\n"
+        + "      {\n"
+        + "        \"name\": \"count\",\n"
+        + "        \"type\": \"count\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_sum\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleSum\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_min\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMin\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_max\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMax\"\n"
+        + "      }\n"
+        + "    ],\n"
+        + "    \"granularitySpec\": {\n"
+        + "      \"type\": \"uniform\",\n"
+        + "      \"segmentGranularity\": \"HOUR\",\n"
+        + "      \"queryGranularity\": \"NONE\"\n"
+        + "    }\n"
+        + "  },\n"
+        + "  \"ioConfig\": {\n"
+        + "    \"topic\": \"metrics\",\n"
+        + "    \"inputFormat\": {\n"
+        + "      \"type\": \"json\",\n"
+        + "      \"flattenSpec\": {\n"
+        + "        \"useFieldDiscovery\": true,\n"
+        + "        \"fields\": []\n"
+        + "      },\n"
+        + "      \"featureSpec\": {}\n"
+        + "    },"
+        + "    \"consumerProperties\": {\n"
+        + "      \"bootstrap.servers\": \"localhost:9092\"\n"
+        + "    },\n"
+        + "    \"taskCount\": 1\n"
+        + "  }\n"
+        + "  }\n"
+        + "}";
     KafkaSupervisorSpec spec = mapper.readValue(json, KafkaSupervisorSpec.class);
 
     Assert.assertNotNull(spec);
@@ -491,64 +542,64 @@ public class KafkaSupervisorSpecTest
   }
 
   @Test
-  public void testSuspendResume() throws IOException
+  public void testSuspendResume() throws IOException 
   {
     String json = "{\n"
-                  + "  \"type\": \"kafka\",\n"
-                  + "  \"dataSchema\": {\n"
-                  + "    \"dataSource\": \"metrics-kafka\",\n"
-                  + "    \"parser\": {\n"
-                  + "      \"type\": \"string\",\n"
-                  + "      \"parseSpec\": {\n"
-                  + "        \"format\": \"json\",\n"
-                  + "        \"timestampSpec\": {\n"
-                  + "          \"column\": \"timestamp\",\n"
-                  + "          \"format\": \"auto\"\n"
-                  + "        },\n"
-                  + "        \"dimensionsSpec\": {\n"
-                  + "          \"dimensions\": [],\n"
-                  + "          \"dimensionExclusions\": [\n"
-                  + "            \"timestamp\",\n"
-                  + "            \"value\"\n"
-                  + "          ]\n"
-                  + "        }\n"
-                  + "      }\n"
-                  + "    },\n"
-                  + "    \"metricsSpec\": [\n"
-                  + "      {\n"
-                  + "        \"name\": \"count\",\n"
-                  + "        \"type\": \"count\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_sum\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleSum\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_min\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMin\"\n"
-                  + "      },\n"
-                  + "      {\n"
-                  + "        \"name\": \"value_max\",\n"
-                  + "        \"fieldName\": \"value\",\n"
-                  + "        \"type\": \"doubleMax\"\n"
-                  + "      }\n"
-                  + "    ],\n"
-                  + "    \"granularitySpec\": {\n"
-                  + "      \"type\": \"uniform\",\n"
-                  + "      \"segmentGranularity\": \"HOUR\",\n"
-                  + "      \"queryGranularity\": \"NONE\"\n"
-                  + "    }\n"
-                  + "  },\n"
-                  + "  \"ioConfig\": {\n"
-                  + "    \"topic\": \"metrics\",\n"
-                  + "    \"consumerProperties\": {\n"
-                  + "      \"bootstrap.servers\": \"localhost:9092\"\n"
-                  + "    },\n"
-                  + "    \"taskCount\": 1\n"
-                  + "  }\n"
-                  + "}";
+        + "  \"type\": \"kafka\",\n"
+        + "  \"dataSchema\": {\n"
+        + "    \"dataSource\": \"metrics-kafka\",\n"
+        + "    \"parser\": {\n"
+        + "      \"type\": \"string\",\n"
+        + "      \"parseSpec\": {\n"
+        + "        \"format\": \"json\",\n"
+        + "        \"timestampSpec\": {\n"
+        + "          \"column\": \"timestamp\",\n"
+        + "          \"format\": \"auto\"\n"
+        + "        },\n"
+        + "        \"dimensionsSpec\": {\n"
+        + "          \"dimensions\": [],\n"
+        + "          \"dimensionExclusions\": [\n"
+        + "            \"timestamp\",\n"
+        + "            \"value\"\n"
+        + "          ]\n"
+        + "        }\n"
+        + "      }\n"
+        + "    },\n"
+        + "    \"metricsSpec\": [\n"
+        + "      {\n"
+        + "        \"name\": \"count\",\n"
+        + "        \"type\": \"count\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_sum\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleSum\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_min\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMin\"\n"
+        + "      },\n"
+        + "      {\n"
+        + "        \"name\": \"value_max\",\n"
+        + "        \"fieldName\": \"value\",\n"
+        + "        \"type\": \"doubleMax\"\n"
+        + "      }\n"
+        + "    ],\n"
+        + "    \"granularitySpec\": {\n"
+        + "      \"type\": \"uniform\",\n"
+        + "      \"segmentGranularity\": \"HOUR\",\n"
+        + "      \"queryGranularity\": \"NONE\"\n"
+        + "    }\n"
+        + "  },\n"
+        + "  \"ioConfig\": {\n"
+        + "    \"topic\": \"metrics\",\n"
+        + "    \"consumerProperties\": {\n"
+        + "      \"bootstrap.servers\": \"localhost:9092\"\n"
+        + "    },\n"
+        + "    \"taskCount\": 1\n"
+        + "  }\n"
+        + "}";
     KafkaSupervisorSpec spec = mapper.readValue(json, KafkaSupervisorSpec.class);
 
     Assert.assertNotNull(spec);
