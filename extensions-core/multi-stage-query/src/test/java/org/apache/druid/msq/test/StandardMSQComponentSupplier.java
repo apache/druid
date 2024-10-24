@@ -31,7 +31,7 @@ import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 
-public final class StandardMSQComponentSupplier extends StandardComponentSupplier
+public class StandardMSQComponentSupplier extends StandardComponentSupplier
 {
   public StandardMSQComponentSupplier(TempDirProducer tempFolderProducer)
   {

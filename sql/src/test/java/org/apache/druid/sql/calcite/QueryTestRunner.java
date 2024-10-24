@@ -772,8 +772,11 @@ public class QueryTestRunner
 
   public QueryResults resultsOnly()
   {
-    ExecuteQuery execStep = (ExecuteQuery) runSteps.get(0);
-    execStep.run();
+    for (QueryRunStep runStep : runSteps) {
+      runStep.run();
+    }
+
+    BaseExecuteQuery execStep = (BaseExecuteQuery) runSteps.get(runSteps.size() - 1);
     return execStep.results().get(0);
   }
 }
