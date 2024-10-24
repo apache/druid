@@ -311,4 +311,11 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   {
     return runnerSupplier.get();
   }
+
+  @Override
+  @VisibleForTesting
+  public String status()
+  {
+    return getRunner().getStatus().name();
+  }
 }
