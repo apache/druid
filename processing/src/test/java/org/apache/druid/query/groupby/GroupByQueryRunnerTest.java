@@ -153,6 +153,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.rules.ExpectedException;
+import org.junit.rules.ExternalResource;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -209,98 +210,98 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   private final GroupByQueryRunnerFactory factory;
   private final GroupByQueryConfig config;
   private final boolean vectorize;
+  private final GroupByStatsProvider statsProvider;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
+  static final GroupByQueryConfig V2_CONFIG = new GroupByQueryConfig()
+  {
+    @Override
+    public int getBufferGrouperInitialBuckets()
+    {
+      // Small initial table to force some growing.
+      return 4;
+    }
+
+    @Override
+    public String toString()
+    {
+      return "v2";
+    }
+  };
+
+  private static final GroupByQueryConfig V2_SMALL_BUFFER_CONFIG = new GroupByQueryConfig()
+  {
+    @Override
+    public int getBufferGrouperMaxSize()
+    {
+      return 2;
+    }
+
+    @Override
+    public HumanReadableBytes getMaxOnDiskStorage()
+    {
+      return HumanReadableBytes.valueOf(10L * 1024 * 1024);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "v2SmallBuffer";
+    }
+  };
+
+  private static final GroupByQueryConfig V2_SMALL_DICTIONARY_CONFIG = new GroupByQueryConfig()
+  {
+    @Override
+    public long getConfiguredMaxSelectorDictionarySize()
+    {
+      return 20;
+    }
+
+    @Override
+    public long getConfiguredMaxMergingDictionarySize()
+    {
+      return 400;
+    }
+
+    @Override
+    public HumanReadableBytes getMaxOnDiskStorage()
+    {
+      return HumanReadableBytes.valueOf(10L * 1024 * 1024);
+    }
+
+    @Override
+    public String toString()
+    {
+      return "v2SmallDictionary";
+    }
+  };
+
+  private static final GroupByQueryConfig V2_PARALLEL_COMBINE_CONFIG = new GroupByQueryConfig()
+  {
+
+    @Override
+    public int getNumParallelCombineThreads()
+    {
+      return DEFAULT_PROCESSING_CONFIG.getNumThreads();
+    }
+
+    @Override
+    public String toString()
+    {
+      return "v2ParallelCombine";
+    }
+  };
+
   public static List<GroupByQueryConfig> testConfigs()
   {
-    final GroupByQueryConfig v2Config = new GroupByQueryConfig()
-    {
-
-      @Override
-      public int getBufferGrouperInitialBuckets()
-      {
-        // Small initial table to force some growing.
-        return 4;
-      }
-
-      @Override
-      public String toString()
-      {
-        return "v2";
-      }
-    };
-
-    final GroupByQueryConfig v2SmallBufferConfig = new GroupByQueryConfig()
-    {
-
-      @Override
-      public int getBufferGrouperMaxSize()
-      {
-        return 2;
-      }
-
-      @Override
-      public HumanReadableBytes getMaxOnDiskStorage()
-      {
-        return HumanReadableBytes.valueOf(10L * 1024 * 1024);
-      }
-
-      @Override
-      public String toString()
-      {
-        return "v2SmallBuffer";
-      }
-    };
-    final GroupByQueryConfig v2SmallDictionaryConfig = new GroupByQueryConfig()
-    {
-
-      @Override
-      public long getConfiguredMaxSelectorDictionarySize()
-      {
-        return 20;
-      }
-
-      @Override
-      public long getConfiguredMaxMergingDictionarySize()
-      {
-        return 400;
-      }
-
-      @Override
-      public HumanReadableBytes getMaxOnDiskStorage()
-      {
-        return HumanReadableBytes.valueOf(10L * 1024 * 1024);
-      }
-
-      @Override
-      public String toString()
-      {
-        return "v2SmallDictionary";
-      }
-    };
-    final GroupByQueryConfig v2ParallelCombineConfig = new GroupByQueryConfig()
-    {
-
-      @Override
-      public int getNumParallelCombineThreads()
-      {
-        return DEFAULT_PROCESSING_CONFIG.getNumThreads();
-      }
-
-      @Override
-      public String toString()
-      {
-        return "v2ParallelCombine";
-      }
-    };
-
     return ImmutableList.of(
-        v2Config,
-        v2SmallBufferConfig,
-        v2SmallDictionaryConfig,
-        v2ParallelCombineConfig
+        V2_CONFIG,
+        V2_SMALL_BUFFER_CONFIG,
+        V2_SMALL_DICTIONARY_CONFIG,
+        V2_PARALLEL_COMBINE_CONFIG
     );
   }
 
@@ -315,15 +316,26 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
             DEFAULT_PROCESSING_CONFIG.intermediateComputeSizeBytes(),
             DEFAULT_PROCESSING_CONFIG.getNumMergeBuffers()
         ),
-        DEFAULT_PROCESSING_CONFIG
+        DEFAULT_PROCESSING_CONFIG,
+        new GroupByStatsProvider()
     );
   }
+
   public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
       final GroupByQueryConfig config,
       final TestGroupByBuffers bufferPools
   )
   {
-    return makeQueryRunnerFactory(DEFAULT_MAPPER, config, bufferPools, DEFAULT_PROCESSING_CONFIG);
+    return makeQueryRunnerFactory(DEFAULT_MAPPER, config, bufferPools, DEFAULT_PROCESSING_CONFIG, new GroupByStatsProvider());
+  }
+
+  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+      final GroupByQueryConfig config,
+      final TestGroupByBuffers bufferPools,
+      final GroupByStatsProvider statsProvider
+  )
+  {
+    return makeQueryRunnerFactory(DEFAULT_MAPPER, config, bufferPools, DEFAULT_PROCESSING_CONFIG, statsProvider);
   }
 
   public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
@@ -332,14 +344,25 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       final TestGroupByBuffers bufferPools
   )
   {
-    return makeQueryRunnerFactory(mapper, config, bufferPools, DEFAULT_PROCESSING_CONFIG);
+    return makeQueryRunnerFactory(mapper, config, bufferPools, DEFAULT_PROCESSING_CONFIG, new GroupByStatsProvider());
   }
 
   public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
       final ObjectMapper mapper,
       final GroupByQueryConfig config,
       final TestGroupByBuffers bufferPools,
-      final DruidProcessingConfig processingConfig
+      final GroupByStatsProvider statsProvider
+  )
+  {
+    return makeQueryRunnerFactory(mapper, config, bufferPools, DEFAULT_PROCESSING_CONFIG, statsProvider);
+  }
+
+  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+      final ObjectMapper mapper,
+      final GroupByQueryConfig config,
+      final TestGroupByBuffers bufferPools,
+      final DruidProcessingConfig processingConfig,
+      final GroupByStatsProvider statsProvider
   )
   {
     if (bufferPools.getBufferSize() != processingConfig.intermediateComputeSizeBytes()) {
@@ -357,7 +380,6 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       );
     }
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
     final GroupingEngine groupingEngine = new GroupingEngine(
@@ -367,17 +389,28 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
         mapper,
         mapper,
         QueryRunnerTestHelper.NOOP_QUERYWATCHER,
-        groupByStatsProvider
+        statsProvider
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         groupingEngine,
         () -> config,
         DefaultGroupByQueryMetricsFactory.instance(),
         groupByResourcesReservationPool,
-        groupByStatsProvider
+        statsProvider
     );
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPools.getProcessingPool());
   }
+
+  @Rule
+  public ExternalResource externalResource = new ExternalResource()
+  {
+    @Override
+    protected void before()
+    {
+      // reset the aggregate before each test parameter is run
+      statsProvider.getStatsSince();
+    }
+  };
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
@@ -387,14 +420,15 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     final List<Object[]> constructors = new ArrayList<>();
     for (GroupByQueryConfig config : testConfigs()) {
-      final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config, BUFFER_POOLS);
+      final GroupByStatsProvider statsProvider = new GroupByStatsProvider();
+      final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config, BUFFER_POOLS, statsProvider);
       for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(factory, true)) {
         for (boolean vectorize : ImmutableList.of(false, true)) {
           final String testName = StringUtils.format("config=%s, runner=%s, vectorize=%s", config, runner, vectorize);
 
           // Add vectorization tests for any indexes that support it.
           if (!vectorize || (QueryRunnerTestHelper.isTestRunnerVectorizable(runner))) {
-            constructors.add(new Object[]{testName, config, factory, runner, vectorize});
+            constructors.add(new Object[]{testName, config, factory, runner, vectorize, statsProvider});
           }
         }
       }
@@ -424,7 +458,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       GroupByQueryConfig config,
       GroupByQueryRunnerFactory factory,
       TestQueryRunner runner,
-      boolean vectorize
+      boolean vectorize,
+      GroupByStatsProvider statsProvider
   )
   {
     this.config = config;
@@ -432,6 +467,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
     this.originalRunner = runner;
     this.vectorize = vectorize;
+    this.statsProvider = statsProvider;
   }
 
   @Test
@@ -3464,6 +3500,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "first-last-aggs");
+
+    if (config.equals(V2_SMALL_BUFFER_CONFIG)) {
+      verifyMetrics(1, false);
+    }
   }
 
   @Test
@@ -6059,8 +6099,11 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-multiple-aggs");
-  }
 
+    if (config.toString().equals("v2SmallBuffer")) {
+      verifyMetrics(1, false);
+    }
+  }
 
   @Test
   public void testDifferentGroupingSubqueryWithFilter()
@@ -6105,6 +6148,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-filter");
+
+    if (config.equals(V2_SMALL_BUFFER_CONFIG)) {
+      verifyMetrics(1, false);
+    }
   }
 
   @Test
@@ -6799,6 +6846,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     // Subqueries are handled by the ToolChest
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-postaggs");
+
+    if (config.toString().equals("v2SmallBuffer")) {
+      verifyMetrics(1, false);
+    }
   }
 
   @Test
@@ -12387,6 +12438,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+
+    if (config.equals(V2_SMALL_BUFFER_CONFIG)) {
+      verifyMetrics(1, true);
+    }
   }
 
   @Test
@@ -12467,6 +12522,10 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
+
+    if (config.equals(V2_SMALL_BUFFER_CONFIG)) {
+      verifyMetrics(1, true);
+    }
   }
 
   @Test
@@ -13664,13 +13723,8 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
 
   private void assumeTimeOrdered()
   {
-    assumeTimeOrdered(originalRunner);
-  }
-
-  static void assumeTimeOrdered(TestQueryRunner<ResultRow> runner)
-  {
     try (final CursorHolder cursorHolder =
-             runner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+             originalRunner.getSegment().asCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Assume.assumeTrue(Cursors.getTimeOrdering(cursorHolder.getOrdering()) == Order.ASCENDING);
     }
   }
@@ -13689,6 +13743,18 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     if (vectorize) {
       expectedException.expect(RuntimeException.class);
       expectedException.expectMessage("Cannot vectorize!");
+    }
+  }
+
+  private void verifyMetrics(long queries, boolean skipMergeDictionary)
+  {
+    GroupByStatsProvider.AggregateStats aggregateStats = statsProvider.getStatsSince();
+    Assert.assertEquals(queries, aggregateStats.getSpilledQueries());
+    Assert.assertTrue(aggregateStats.getSpilledBytes() > 0);
+    Assert.assertEquals(1, aggregateStats.getMergeBufferAcquisitionCount());
+    Assert.assertTrue(aggregateStats.getMergeBufferAcquisitionTimeNs() > 0);
+    if (!skipMergeDictionary) {
+      Assert.assertTrue(aggregateStats.getMergeDictionarySize() > 0);
     }
   }
 }

@@ -51,7 +51,7 @@ public class GroupByStatsMonitorTest
     groupByStatsProvider = new GroupByStatsProvider()
     {
       @Override
-      public AggregateStats getStatsSince()
+      public synchronized AggregateStats getStatsSince()
       {
         return new AggregateStats(
                 1L,

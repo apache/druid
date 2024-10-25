@@ -157,11 +157,6 @@ public class LimitedTemporaryStorage implements Closeable
     }
   }
 
-  public boolean isClosed()
-  {
-    return closed;
-  }
-
   public class LimitedOutputStream extends OutputStream
   {
     private final File file;
