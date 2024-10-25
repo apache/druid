@@ -132,6 +132,21 @@ public class DruidOverlord
 
           leaderLifecycle.addManagedInstance(taskRunner);
           leaderLifecycle.addManagedInstance(taskQueue);
+          leaderLifecycle.addHandler(
+              new Lifecycle.Handler() {
+                @Override
+                public void start()
+                {
+                  taskMaster.becomeLeader(taskRunner, taskQueue);
+                }
+
+                @Override
+                public void stop()
+                {
+                  taskMaster.stopBeingLeader();
+                }
+              }
+          );
           leaderLifecycle.addManagedInstance(supervisorManager);
           leaderLifecycle.addManagedInstance(overlordDutyExecutor);
           leaderLifecycle.addHandler(
@@ -141,7 +156,6 @@ public class DruidOverlord
                 public void start()
                 {
                   segmentAllocationQueue.becomeLeader();
-                  taskMaster.becomeLeader(taskRunner, taskQueue);
                   compactionScheduler.start();
 
                   // Announce the node only after all the services have been initialized
@@ -154,7 +168,6 @@ public class DruidOverlord
                 {
                   serviceAnnouncer.unannounce(node);
                   compactionScheduler.stop();
-                  taskMaster.stopBeingLeader();
                   segmentAllocationQueue.stopBeingLeader();
                 }
               }
