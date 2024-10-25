@@ -133,7 +133,7 @@ jobs:
         run: |
           find "${GITHUB_WORKSPACE}" \
             \( -name '*.hprof' -or -name 'hs_err_pid*' -or -name 'replay_pid*' -or -regex '.*/core\.[0-9]*' \) \
-            -exec tar -cvzf ${RUNNER_TEMP}/hprof-dumps.tgz {} \;
+            -exec tar -cvzf ${RUNNER_TEMP}/hprof-dumps.tgz {} +
 
       - name: Upload hprof dumps to GitHub if they exist on failure
         if: ${{ failure() && env.found_dumps == 'true' }}
