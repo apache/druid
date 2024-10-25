@@ -22,6 +22,7 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Longs;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
@@ -395,26 +396,16 @@ public class VirtualColumnsTest extends InitializedNullHandlingTest
   @Test
   public void testEqualsAndHashCode()
   {
-    final VirtualColumns virtualColumns = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
-        )
-    );
-
-    final VirtualColumns virtualColumns2 = VirtualColumns.create(
-        ImmutableList.of(
-            new ExpressionVirtualColumn("expr", "x + y", ColumnType.FLOAT, TestExprMacroTable.INSTANCE)
-        )
-    );
-
-    Assert.assertEquals(virtualColumns, virtualColumns);
-    Assert.assertEquals(virtualColumns, virtualColumns2);
-    Assert.assertNotEquals(VirtualColumns.EMPTY, virtualColumns);
-    Assert.assertNotEquals(VirtualColumns.EMPTY, null);
-
-    Assert.assertEquals(virtualColumns.hashCode(), virtualColumns.hashCode());
-    Assert.assertEquals(virtualColumns.hashCode(), virtualColumns2.hashCode());
-    Assert.assertNotEquals(VirtualColumns.EMPTY.hashCode(), virtualColumns.hashCode());
+    EqualsVerifier.forClass(VirtualColumns.class)
+                  .usingGetClass()
+                  .withIgnoredFields(
+                      "virtualColumnNames",
+                      "equivalence",
+                      "withDotSupport",
+                      "withoutDotSupport",
+                      "hasNoDotColumns"
+                  )
+                  .verify();
   }
 
   @Test

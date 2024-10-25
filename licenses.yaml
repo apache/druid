@@ -331,7 +331,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.20.0
+version: 2.35.1
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -3285,7 +3285,7 @@ name: Checker Qual
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.5.7
+version: 3.48.1
 copyright: the Checker Framework developers
 license_file_path: licenses/bin/checker-qual.MIT
 libraries:
