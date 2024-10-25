@@ -76,7 +76,7 @@ public class ThresholdBasedQueryPrioritizationStrategy implements QueryPrioritiz
     this.segmentRangeThreshold = segmentRangeThresholdString == null
                                  ? Optional.empty()
                                  : Optional.of(new Period(segmentRangeThresholdString).toStandardDuration());
-    this.exemptDatasources = (exemptDatasources == null) ? Collections.emptySet():exemptDatasources;
+    this.exemptDatasources = (exemptDatasources == null) ? Collections.emptySet(): exemptDatasources;
     Preconditions.checkArgument(
         segmentCountThreshold != null || periodThreshold.isPresent() || durationThreshold.isPresent() || segmentRangeThreshold.isPresent(),
         "periodThreshold, durationThreshold, segmentCountThreshold or segmentRangeThreshold must be set"
@@ -91,7 +91,7 @@ public class ThresholdBasedQueryPrioritizationStrategy implements QueryPrioritiz
 
     if (!exemptDatasources.isEmpty()) {
       boolean isExempt = exemptDatasources.containsAll(datasource.getTableNames());
-      if(isExempt) {
+      if (isExempt) {
         return Optional.empty();
       }
     }
