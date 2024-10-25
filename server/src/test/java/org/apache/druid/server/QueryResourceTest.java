@@ -1326,7 +1326,7 @@ public class QueryResourceTest
     final CountDownLatch waitOneScheduled = new CountDownLatch(1);
     final QueryScheduler scheduler = new QueryScheduler(
         40,
-        new ThresholdBasedQueryPrioritizationStrategy(null, "P90D", null, null, null),
+        new ThresholdBasedQueryPrioritizationStrategy(null, "P90D", null, null, null, null),
         new HiLoQueryLaningStrategy(1),
         new ServerConfig()
     );
