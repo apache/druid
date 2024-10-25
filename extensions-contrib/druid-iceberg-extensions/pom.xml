@@ -36,6 +36,7 @@
 
   <properties>
     <iceberg.core.version>1.6.1</iceberg.core.version>
+    <awssdk.version>2.28.28</awssdk.version>
     <hive.version>3.1.3</hive.version>
   </properties>
   <dependencies>
@@ -276,7 +277,29 @@
       <artifactId>iceberg-aws</artifactId>
       <version>${iceberg.core.version}</version>
     </dependency>
-
+<!--    GlueCatalog class-->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>bundle</artifactId>
+      <version>${awssdk.version}</version>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.apache.iceberg/iceberg-aws-bundle -->
+    <dependency>
+      <groupId>org.apache.iceberg</groupId>
+      <artifactId>iceberg-aws-bundle</artifactId>
+      <version>1.5.2</version>
+    </dependency>
+<!--    for java.lang.NoClassDefFoundError: org/apache/avro/LogicalType-->
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro</artifactId>
+      <version>1.11.1</version> </dependency>
+    <!-- https://mvnrepository.com/artifact/software.amazon.awssdk/url-connection-client -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>url-connection-client</artifactId>
+      <version>${awssdk.version}</version>
+    </dependency>
     <dependency>
       <groupId>org.apache.hive</groupId>
       <artifactId>hive-metastore</artifactId>

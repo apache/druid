@@ -21,7 +21,6 @@ public class GlueIcebergCatalogTest  {
     @Test
     public void testCatalogCreate() {
         GlueIcebergCatalog glueCatalog = new GlueIcebergCatalog(
-                "s3://testbucket/testpath",
                 new HashMap<>(),
                 true,
                 mapper
@@ -31,7 +30,6 @@ public class GlueIcebergCatalogTest  {
     @Test
     public void testIsCaseSensitive() {
         GlueIcebergCatalog glueCatalog = new GlueIcebergCatalog(
-                "s3://testbucket/testpath",
                 new HashMap<>(),
                 true,
                 mapper

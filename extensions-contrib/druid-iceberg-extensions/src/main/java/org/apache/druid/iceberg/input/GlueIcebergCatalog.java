@@ -8,7 +8,9 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.DynamicConfigProviderUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.iceberg.CatalogProperties;
+import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.aws.glue.GlueCatalog;
 import javax.annotation.Nullable;
@@ -21,25 +23,32 @@ public class GlueIcebergCatalog extends IcebergCatalog {
     public static final String TYPE_KEY = "glue";
 
     @JsonProperty
-    private String warehousePath;
-
-    @JsonProperty
     private Map<String, String> catalogProperties;
 
     @JsonProperty
     private final Boolean caseSensitive;
     private static final Logger log = new Logger(GlueIcebergCatalog.class);
 
+    /*
+    * catalogProperties must have all the config that iceberg glue catalog expect.
+    * Ref: https://iceberg.apache.org/docs/nightly/kafka-connect/?h=kafka#glue-example
+    * and https://iceberg.apache.org/concepts/catalog/?h=catalog
+    *
+    * e.g.
+    * "catalogProperties" :
+           {
+           	"type" : "glue",
+           	"io-impl": "org.apache.iceberg.aws.s3.S3FileIO",
+           	"warehouse": "s3://bucket/iceberg_catalog/druid/warehouse"
+           }
+    * */
     @JsonCreator
     public GlueIcebergCatalog(
-            @JsonProperty("warehousePath") String warehousePath,
-            @JsonProperty("catalogProperties") @Nullable
-            Map<String, Object> catalogProperties,
+            @JsonProperty("catalogProperties") @Nullable Map<String, Object> catalogProperties,
             @JsonProperty("caseSensitive") Boolean caseSensitive,
             @JacksonInject @Json ObjectMapper mapper
     )
     {
-        this.warehousePath = Preconditions.checkNotNull(warehousePath, "warehousePath cannot be null");
         this.catalogProperties = DynamicConfigProviderUtils.extraConfigAndSetStringMap(catalogProperties, DRUID_DYNAMIC_CONFIG_PROVIDER_KEY, mapper);
         this.caseSensitive = caseSensitive == null ? true : caseSensitive;
         this.catalog = retrieveCatalog();
@@ -56,9 +65,8 @@ public class GlueIcebergCatalog extends IcebergCatalog {
     }
 
     private Catalog setupGlueCatalog() {
-        catalog = new GlueCatalog();
-        catalogProperties.put(CatalogProperties.WAREHOUSE_LOCATION, warehousePath);
-        catalog.initialize(CATALOG_NAME, catalogProperties);
+        // We are not passing any hadoop config, third parameter is null
+        catalog = CatalogUtil.buildIcebergCatalog(CATALOG_NAME, catalogProperties, null);
         return catalog;
     }
 
