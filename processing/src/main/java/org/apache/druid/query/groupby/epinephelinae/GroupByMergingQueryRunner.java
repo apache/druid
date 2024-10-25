@@ -328,8 +328,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
     if (resource == null) {
       throw DruidException.defensive(
-          "Expected merge buffers to be reserved in the reservation pool for the query id [%s] however while executing "
-          + "the GroupByMergingQueryRunner, however none were provided.",
+          "Expected merge buffers to be reserved in the reservation pool for the query resource id [%s] however while executing "
+          + "the GroupByMergingQueryRunner none were provided.",
           queryResourceId
       );
     }

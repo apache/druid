@@ -646,7 +646,10 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         query = query.withSqlQueryId(parentSqlQueryId);
       }
 
-      query = ResourceIdPopulatingQueryRunner.populateResourceId(query);
+      query.withOverriddenContext(Collections.singletonMap(
+          QueryContexts.QUERY_RESOURCE_ID,
+          parentQueryResourceId
+      ));
 
       currentDataSource = new QueryDataSource(query);
     }
