@@ -60,7 +60,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
   public void testPrioritizationPeriodThresholdInsidePeriod()
   {
     QueryPrioritizationStrategy strategy = new ThresholdBasedQueryPrioritizationStrategy(
-        "P90D", null, null, null,null, adjustment);
+        "P90D", null, null, null, null, adjustment);
     DateTime startDate = DateTimes.nowUtc().minusDays(1);
     DateTime endDate = DateTimes.nowUtc();
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
