@@ -116,7 +116,7 @@ public class MSQTasks
       final UnknownFault fault =
           UnknownFault.forMessage(
               StringUtils.format(
-                  "Incorrect type for column [%s]. Expected [Long] but got [%s]. Please ensure the value is casted to [Long].",
+                  "Incorrect type for column [%s]. Expected LONG but got type [%s]. Please ensure that the value is cast to LONG.",
                   ColumnHolder.TIME_COLUMN_NAME,
                   timestamp.getClass().getSimpleName()
               )
