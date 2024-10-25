@@ -133,14 +133,14 @@ jobs:
         run: |
           find "${GITHUB_WORKSPACE}" \
             \( -name '*.hprof' -or -name 'hs_err_pid*' -or -name 'replay_pid*' -or -regex '.*/core\.[0-9]*' \) \
-            -exec tar -cvzf ${RUNNER_TEMP}/hprof-dumps.tgz {} +
+            -exec tar -cvzf ${RUNNER_TEMP}/failure-dumps.tar.gz {} +
 
-      - name: Upload hprof dumps to GitHub if they exist on failure
+      - name: Upload dumps to GitHub if they exist on failure
         if: ${{ failure() && env.found_dumps == 'true' }}
         uses: actions/upload-artifact@master
         with:
-          name: Hprof-${{ inputs.group }} hprof dumps (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }})
-          path: ${{ runner.temp }}/hprof-dumps.tgz
+          name: Failure-${{ inputs.group }} failure dumps (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }})
+          path: ${{ runner.temp }}/failure-dumps.tar.gz
 
       - name: set outputs on failure
         id: set_outputs
