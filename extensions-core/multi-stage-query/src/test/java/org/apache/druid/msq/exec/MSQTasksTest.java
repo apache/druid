@@ -278,7 +278,8 @@ public class MSQTasksTest
                 ColumnHolder.TIME_COLUMN_NAME,
                 timestamp.getClass().getSimpleName()
             )
-        ), e.getFault()
+        ),
+        e.getFault()
     );
   }
 
