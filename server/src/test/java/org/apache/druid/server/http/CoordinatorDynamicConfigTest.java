@@ -41,8 +41,6 @@ public class CoordinatorDynamicConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
-                     + "  \"mergeBytesLimit\": 1,\n"
-                     + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
@@ -73,13 +71,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.15,
         2,
-        false,
         1,
         decommissioning,
         false,
@@ -93,13 +88,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.15,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         false,
@@ -113,13 +105,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.15,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         false,
@@ -133,13 +122,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.15,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         true,
@@ -153,13 +139,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.15,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         true,
@@ -173,13 +156,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.15,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         true,
@@ -193,13 +173,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.1,
         2,
-        false,
         1,
         ImmutableSet.of("host1"),
         true,
@@ -213,13 +190,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.1,
         5,
-        false,
         1,
         ImmutableSet.of("host1"),
         true,
@@ -247,8 +221,6 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         10,
         null,
@@ -270,8 +242,6 @@ public class CoordinatorDynamicConfigTest
   public void testConstructorWithSpecificDataSourcesToKillShouldNotKillUnusedSegmentsInAllDatasources()
   {
     CoordinatorDynamicConfig config = new CoordinatorDynamicConfig(
-        1,
-        1,
         1,
         1,
         1,
@@ -297,8 +267,6 @@ public class CoordinatorDynamicConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
-                     + "  \"mergeBytesLimit\": 1,\n"
-                     + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
@@ -324,13 +292,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.1,
         Integer.MAX_VALUE,
-        false,
         1,
         decommissioning,
         false,
@@ -344,13 +309,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.1,
         Integer.MAX_VALUE,
-        false,
         1,
         ImmutableSet.of("host1"),
         false,
@@ -364,13 +326,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.1,
         Integer.MAX_VALUE,
-        false,
         1,
         ImmutableSet.of("host1"),
         false,
@@ -383,8 +342,6 @@ public class CoordinatorDynamicConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
-                     + "  \"mergeBytesLimit\": 1,\n"
-                     + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
@@ -408,13 +365,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         ImmutableSet.of("test1", "test2"),
         0.1,
         Integer.MAX_VALUE,
-        false,
         1,
         ImmutableSet.of(),
         false,
@@ -427,8 +381,6 @@ public class CoordinatorDynamicConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
-                     + "  \"mergeBytesLimit\": 1,\n"
-                     + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
@@ -452,13 +404,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         whitelist,
         0.1,
         Integer.MAX_VALUE,
-        false,
         1,
         decommissioning,
         false,
@@ -471,8 +420,6 @@ public class CoordinatorDynamicConfigTest
   {
     String jsonStr = "{\n"
                      + "  \"millisToWaitBeforeDeleting\": 1,\n"
-                     + "  \"mergeBytesLimit\": 1,\n"
-                     + "  \"mergeSegmentsLimit\" : 1,\n"
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
@@ -492,13 +439,10 @@ public class CoordinatorDynamicConfigTest
         1,
         1,
         1,
-        1,
-        1,
         2,
         ImmutableSet.of(),
         0.1,
         Integer.MAX_VALUE,
-        true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         ImmutableSet.of(),
         false,
@@ -514,8 +458,6 @@ public class CoordinatorDynamicConfigTest
     assertConfig(
         defaultConfig,
         900000,
-        524288000,
-        100,
         100,
         15,
         500,
@@ -523,7 +465,6 @@ public class CoordinatorDynamicConfigTest
         emptyList,
         0.1,
         Integer.MAX_VALUE,
-        true,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         emptyList,
         false,
@@ -542,8 +483,6 @@ public class CoordinatorDynamicConfigTest
     assertConfig(
         config,
         900000,
-        524288000,
-        100,
         100,
         15,
         500,
@@ -551,7 +490,6 @@ public class CoordinatorDynamicConfigTest
         ImmutableSet.of("DATASOURCE"),
         0.1,
         Integer.MAX_VALUE,
-        false,
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         ImmutableSet.of(),
         false,
@@ -569,26 +507,7 @@ public class CoordinatorDynamicConfigTest
 
     Assert.assertEquals(
         current,
-        new CoordinatorDynamicConfig.Builder(
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null
-        ).build(current)
+        CoordinatorDynamicConfig.builder().build(current)
     );
   }
 
@@ -604,8 +523,6 @@ public class CoordinatorDynamicConfigTest
   private void assertConfig(
       CoordinatorDynamicConfig config,
       long expectedLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
-      long expectedMergeBytesLimit,
-      int expectedMergeSegmentsLimit,
       int expectedMaxSegmentsToMove,
       int expectedReplicantLifetime,
       int expectedReplicationThrottleLimit,
@@ -613,7 +530,6 @@ public class CoordinatorDynamicConfigTest
       Set<String> expectedSpecificDataSourcesToKillUnusedSegmentsIn,
       Double expectedKillTaskSlotRatio,
       @Nullable Integer expectedMaxKillTaskSlots,
-      boolean expectedKillUnusedSegmentsInAllDataSources,
       int expectedMaxSegmentsInNodeLoadingQueue,
       Set<String> decommissioningNodes,
       boolean pauseCoordination,
@@ -624,8 +540,6 @@ public class CoordinatorDynamicConfigTest
         expectedLeadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments,
         config.getMarkSegmentAsUnusedDelayMillis()
     );
-    Assert.assertEquals(expectedMergeBytesLimit, config.getMergeBytesLimit());
-    Assert.assertEquals(expectedMergeSegmentsLimit, config.getMergeSegmentsLimit());
     Assert.assertEquals(expectedMaxSegmentsToMove, config.getMaxSegmentsToMove());
     Assert.assertEquals(expectedReplicantLifetime, config.getReplicantLifetime());
     Assert.assertEquals(expectedReplicationThrottleLimit, config.getReplicationThrottleLimit());

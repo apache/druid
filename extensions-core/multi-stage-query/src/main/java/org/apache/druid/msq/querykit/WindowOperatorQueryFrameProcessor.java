@@ -144,6 +144,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
 
       if (needToProcessBatch()) {
         runAllOpsOnBatch();
+        if (inputChannel.isFinished()) {
+          return ReturnOrAwait.runAgain();
+        }
         flushAllRowsAndCols();
       }
       return ReturnOrAwait.runAgain();

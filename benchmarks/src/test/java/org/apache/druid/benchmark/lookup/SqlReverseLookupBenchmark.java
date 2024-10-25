@@ -20,7 +20,7 @@
 package org.apache.druid.benchmark.lookup;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.benchmark.query.SqlBenchmark;
+import org.apache.druid.benchmark.query.SqlBaseBenchmark;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -54,6 +54,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -111,10 +112,11 @@ public class SqlReverseLookupBenchmark
     final QueryableIndex index =
         segmentGenerator.generate(dataSegment, schemaInfo, IndexSpec.DEFAULT, Granularities.NONE, 1);
 
-    final Pair<PlannerFactory, SqlEngine> sqlSystem = SqlBenchmark.createSqlSystem(
+    final Pair<PlannerFactory, SqlEngine> sqlSystem = SqlBaseBenchmark.createSqlSystem(
         ImmutableMap.of(dataSegment, index),
+        Collections.emptyMap(),
         ImmutableMap.of("benchmark-lookup", lookup),
-        null,
+        SqlBaseBenchmark.BenchmarkStorage.MMAP,
         closer
     );
 
