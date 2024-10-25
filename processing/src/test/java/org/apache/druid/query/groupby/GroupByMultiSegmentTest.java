@@ -243,7 +243,7 @@ public class GroupByMultiSegmentTest extends InitializedNullHandlingTest
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
     final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergePool, config, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergePool, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,

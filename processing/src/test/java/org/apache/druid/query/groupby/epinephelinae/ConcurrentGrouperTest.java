@@ -35,6 +35,7 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.Entry;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.KeySerde;
@@ -146,9 +147,11 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
   @Test()
   public void testAggregate() throws InterruptedException, ExecutionException, IOException
   {
+    GroupByStatsProvider.PerQueryStats perQueryStats = new GroupByStatsProvider.PerQueryStats();
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryFolder.newFolder(),
-        1024 * 1024
+        1024 * 1024,
+        perQueryStats
     );
 
     final ConcurrentGrouper<LongKey> grouper = new ConcurrentGrouper<>(
@@ -172,7 +175,8 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         0,
         4,
         parallelCombineThreads,
-        mergeThreadLocal
+        mergeThreadLocal,
+        perQueryStats
     );
     closer.register(grouper);
     grouper.init();
@@ -221,6 +225,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
       return;
     }
 
+    GroupByStatsProvider.PerQueryStats perQueryStats = new GroupByStatsProvider.PerQueryStats();
     final ConcurrentGrouper<LongKey> grouper = new ConcurrentGrouper<>(
         bufferSupplier,
         TEST_RESOURCE_HOLDER,
@@ -231,7 +236,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         1024,
         0.7f,
         1,
-        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024),
+        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024, perQueryStats),
         new DefaultObjectMapper(),
         concurrencyHint,
         null,
@@ -242,7 +247,8 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         1,
         4,
         parallelCombineThreads,
-        mergeThreadLocal
+        mergeThreadLocal,
+        perQueryStats
     );
     closer.register(grouper);
     grouper.init();
@@ -370,6 +376,12 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         public List<String> getDictionary()
         {
           return ImmutableList.of();
+        }
+
+        @Override
+        public Long getDictionarySize()
+        {
+          return 0L;
         }
 
         @Override

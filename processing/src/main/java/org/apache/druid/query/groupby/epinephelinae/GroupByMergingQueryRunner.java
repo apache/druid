@@ -162,11 +162,13 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
 
     final boolean isSingleThreaded = querySpecificConfig.isSingleThreaded();
 
-    final String queryId = query.getId();
     final File temporaryStorageDirectory = new File(
         processingTmpDir,
-        StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), queryId)
+        StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
+
+    GroupByStatsProvider.PerQueryStats perQueryStats =
+        groupByStatsProvider.getPerQueryStatsContainer(query.context().getQueryResourceId());
 
     final int priority = queryContext.getPriority();
 
@@ -187,13 +189,12 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
             try {
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
                   temporaryStorageDirectory,
-                  querySpecificConfig.getMaxOnDiskStorage().getBytes()
+                  querySpecificConfig.getMaxOnDiskStorage().getBytes(),
+                  perQueryStats
               );
-              final EmittingLimitedTemporaryStorage emittingTemporaryStorage =
-                  new EmittingLimitedTemporaryStorage(queryId, groupByStatsProvider, temporaryStorage);
 
-              final ReferenceCountingResourceHolder<EmittingLimitedTemporaryStorage> temporaryStorageHolder =
-                  ReferenceCountingResourceHolder.fromCloseable(emittingTemporaryStorage);
+              final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
+                  ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);
               resources.register(temporaryStorageHolder);
 
               // If parallelCombine is enabled, we need two merge buffers for parallel aggregating and parallel combining
@@ -223,7 +224,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                       priority,
                       hasTimeout,
                       timeoutAt,
-                      mergeBufferSize
+                      mergeBufferSize,
+                      perQueryStats
                   );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;

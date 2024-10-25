@@ -99,7 +99,7 @@ public class GroupByQueryRunnerFailureTest
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
     final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(MERGE_BUFFER_POOL, config, groupByStatsProvider);
+        new GroupByResourcesReservationPool(MERGE_BUFFER_POOL, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         DEFAULT_PROCESSING_CONFIG,
         configSupplier,

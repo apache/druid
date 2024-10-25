@@ -95,7 +95,7 @@ public class GroupByRowProcessor
       final ObjectMapper spillMapper,
       final String processingTmpDir,
       final int mergeBufferSize,
-      final GroupByStatsProvider groupByStatsProvider
+      final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
     final Closer closeOnExit = Closer.create();
@@ -108,13 +108,11 @@ public class GroupByRowProcessor
 
     final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
         temporaryStorageDirectory,
-        querySpecificConfig.getMaxOnDiskStorage().getBytes()
+        querySpecificConfig.getMaxOnDiskStorage().getBytes(),
+        perQueryStats
     );
 
-    final EmittingLimitedTemporaryStorage emittingTemporaryStorage =
-        new EmittingLimitedTemporaryStorage(query.getId(), groupByStatsProvider, temporaryStorage);
-
-    closeOnExit.register(emittingTemporaryStorage);
+    closeOnExit.register(temporaryStorage);
 
     Pair<Grouper<RowBasedKey>, Accumulator<AggregateResult, ResultRow>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
         query,
@@ -133,7 +131,8 @@ public class GroupByRowProcessor
         },
         temporaryStorage,
         spillMapper,
-        mergeBufferSize
+        mergeBufferSize,
+        perQueryStats
     );
     final Grouper<RowBasedKey> grouper = pair.lhs;
     final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;

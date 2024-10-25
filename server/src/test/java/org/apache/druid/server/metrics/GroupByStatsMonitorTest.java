@@ -21,7 +21,6 @@ package org.apache.druid.server.metrics;
 
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.junit.After;
@@ -33,8 +32,11 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class GroupByStatsMonitorTest
@@ -49,15 +51,15 @@ public class GroupByStatsMonitorTest
     groupByStatsProvider = new GroupByStatsProvider()
     {
       @Override
-      public synchronized Pair<Long, Long> getAndResetMergeBufferAcquisitionStats()
+      public AggregateStats getStatsSince()
       {
-        return Pair.of(1L, 1L);
-      }
-
-      @Override
-      public Pair<Long, Long> getAndResetSpilledBytes()
-      {
-        return Pair.of(2L, 2L);
+        return new AggregateStats(
+                1L,
+                100L,
+                2L,
+                200L,
+                300L
+            );
       }
     };
 
@@ -87,21 +89,23 @@ public class GroupByStatsMonitorTest
                                              event -> (String) event.toMap().get("metric"),
                                              event -> (Long) event.toMap().get("value")
                                          ));
-    Assert.assertEquals(6, resultMap.size());
+    Assert.assertEquals(7, resultMap.size());
     Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/pendingRequests"));
     Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/usedCount"));
     Assert.assertEquals(1, (long) resultMap.get("mergeBuffer/acquisitionCount"));
-    Assert.assertEquals(1, (long) resultMap.get("mergeBuffer/acquisitionTimeNs"));
+    Assert.assertEquals(100, (long) resultMap.get("mergeBuffer/acquisitionTimeNs"));
     Assert.assertEquals(2, (long) resultMap.get("groupBy/spilledQueries"));
-    Assert.assertEquals(2, (long) resultMap.get("groupBy/spilledBytes"));
+    Assert.assertEquals(200, (long) resultMap.get("groupBy/spilledBytes"));
+    Assert.assertEquals(300, (long) resultMap.get("groupBy/mergeDictionarySize"));
   }
 
   @Test
   public void testMonitoringMergeBuffer_acquiredCount()
+      throws ExecutionException, InterruptedException, TimeoutException
   {
     executorService.submit(() -> {
       mergeBufferPool.takeBatch(4);
-    });
+    }).get(20, TimeUnit.SECONDS);
 
     final GroupByStatsMonitor monitor =
         new GroupByStatsMonitor(groupByStatsProvider, mergeBufferPool);
@@ -114,7 +118,7 @@ public class GroupByStatsMonitorTest
     Assert.assertEquals(4, numbers.get(0).intValue());
   }
 
-  @Test
+  @Test(timeout = 2_000L)
   public void testMonitoringMergeBuffer_pendingRequests()
   {
     executorService.submit(() -> {

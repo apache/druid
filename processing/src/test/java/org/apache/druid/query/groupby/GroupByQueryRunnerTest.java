@@ -359,7 +359,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
     final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(bufferPools.getMergePool(), config, groupByStatsProvider);
+        new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         configSupplier,

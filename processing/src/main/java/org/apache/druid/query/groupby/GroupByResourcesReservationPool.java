@@ -98,25 +98,26 @@ public class GroupByResourcesReservationPool
    */
   private final GroupByQueryConfig groupByQueryConfig;
 
-  private final GroupByStatsProvider groupByStatsProvider;
-
   @Inject
   public GroupByResourcesReservationPool(
       @Merging BlockingPool<ByteBuffer> mergeBufferPool,
-      GroupByQueryConfig groupByQueryConfig,
-      GroupByStatsProvider groupByStatsProvider
+      GroupByQueryConfig groupByQueryConfig
   )
   {
     this.mergeBufferPool = mergeBufferPool;
     this.groupByQueryConfig = groupByQueryConfig;
-    this.groupByStatsProvider = groupByStatsProvider;
   }
 
   /**
    * Reserves appropriate resources, and maps it to the queryResourceId (usually the query's resource id) in the internal map.
    * This is a blocking call, and can block up to the given query's timeout
    */
-  public void reserve(QueryResourceId queryResourceId, GroupByQuery groupByQuery, boolean willMergeRunner)
+  public void reserve(
+      QueryResourceId queryResourceId,
+      GroupByQuery groupByQuery,
+      boolean willMergeRunner,
+      GroupByStatsProvider.PerQueryStats perQueryStats
+  )
   {
     long startNs = System.nanoTime();
     if (queryResourceId == null) {
@@ -151,7 +152,7 @@ public class GroupByResourcesReservationPool
     // allocated resources from it
     reference.compareAndSet(null, resources);
 
-    groupByStatsProvider.mergeBufferAcquisitionTimeNs(System.nanoTime() - startNs);
+    perQueryStats.mergeBufferAcquisitionTime(System.nanoTime() - startNs);
   }
 
   /**

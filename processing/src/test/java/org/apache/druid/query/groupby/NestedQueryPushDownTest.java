@@ -289,9 +289,9 @@ public class NestedQueryPushDownTest extends InitializedNullHandlingTest
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
     final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergePool, config, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergePool, config);
     final GroupByResourcesReservationPool groupByResourcesReservationPool2 =
-        new GroupByResourcesReservationPool(mergePool2, config, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergePool2, config);
     final GroupingEngine engine1 = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,

@@ -182,14 +182,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     // transform TableDataSource to GlobalTableDataSource when eligible
     // before further transformation to potentially inline
 
+    Query<T> newQuery = ResourceIdPopulatingQueryRunner.populateResourceId(query);
+
     // Populate the subquery ids of the subquery id present in the main query
-    Query<T> newQuery = query.withDataSource(generateSubqueryIds(
+    newQuery = newQuery.withDataSource(generateSubqueryIds(
         query.getDataSource(),
         query.getId(),
-        query.getSqlQueryId()
+        query.getSqlQueryId(),
+        query.context().getString(QueryContexts.QUERY_RESOURCE_ID)
     ));
-
-    newQuery = ResourceIdPopulatingQueryRunner.populateResourceId(newQuery);
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
@@ -565,15 +566,17 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    * sibling order of all the subqueries that are present.
    * It also plumbs parent query's id and sql id in case the subqueries don't have it set by default
    *
-   * @param rootDataSource   Datasource whose subqueries need to be populated
-   * @param parentQueryId    Parent Query's ID, can be null if it does not need to update this in the subqueries
-   * @param parentSqlQueryId Parent Query's SQL Query ID, can be null if it does not need to update this in the subqueries
+   * @param rootDataSource        Datasource whose subqueries need to be populated
+   * @param parentQueryId         Parent Query's ID, can be null if it does not need to update this in the subqueries
+   * @param parentSqlQueryId      Parent Query's SQL Query ID, can be null if it does not need to update this in the subqueries
+   * @param parentQueryResourceId Parent Query's Query Resource ID
    * @return DataSource populated with the subqueries
    */
   private DataSource generateSubqueryIds(
       DataSource rootDataSource,
       @Nullable final String parentQueryId,
-      @Nullable final String parentSqlQueryId
+      @Nullable final String parentSqlQueryId,
+      final String parentQueryResourceId
   )
   {
     Queue<DataSource> queue = new ArrayDeque<>();
@@ -602,7 +605,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     Returns the datasource by populating all the subqueries with the id generated in the map above.
     Implemented in a separate function since the methods on datasource and queries return a new datasource/query
      */
-    return insertSubqueryIds(rootDataSource, queryDataSourceToSubqueryIds, parentQueryId, parentSqlQueryId);
+    return insertSubqueryIds(rootDataSource, queryDataSourceToSubqueryIds, parentQueryId, parentSqlQueryId, parentQueryResourceId);
   }
 
   /**
@@ -613,13 +616,15 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
    * @param queryDataSourceToSubqueryIds Map of the datasources to their level and sibling order
    * @param parentQueryId                Parent query's id
    * @param parentSqlQueryId             Parent query's sqlQueryId
+   * @param parentQueryResourceId        Parent query's resource Id
    * @return Populates the subqueries from the map
    */
   private DataSource insertSubqueryIds(
       DataSource currentDataSource,
       Map<QueryDataSource, Pair<Integer, Integer>> queryDataSourceToSubqueryIds,
       @Nullable final String parentQueryId,
-      @Nullable final String parentSqlQueryId
+      @Nullable final String parentSqlQueryId,
+      final String parentQueryResourceId
   )
   {
     if (currentDataSource instanceof QueryDataSource
@@ -641,6 +646,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         query = query.withSqlQueryId(parentSqlQueryId);
       }
 
+      query = ResourceIdPopulatingQueryRunner.populateResourceId(query);
+
       currentDataSource = new QueryDataSource(query);
     }
     return currentDataSource.withChildren(currentDataSource.getChildren()
@@ -649,7 +656,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                                                                childDataSource,
                                                                queryDataSourceToSubqueryIds,
                                                                parentQueryId,
-                                                               parentSqlQueryId
+                                                               parentSqlQueryId,
+                                                               parentQueryResourceId
                                                            ))
                                                            .collect(Collectors.toList()));
   }

@@ -78,7 +78,7 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
     final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
 
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergePool, config, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergePool, config);
 
     final GroupingEngine groupingEngine = new GroupingEngine(
         new DruidProcessingConfig()

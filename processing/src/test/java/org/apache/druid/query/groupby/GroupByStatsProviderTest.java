@@ -19,64 +19,52 @@
 
 package org.apache.druid.query.groupby;
 
-import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.query.groupby.epinephelinae.EmittingLimitedTemporaryStorage;
-import org.apache.druid.query.groupby.epinephelinae.LimitedTemporaryStorage;
+import org.apache.druid.query.QueryResourceId;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
-import java.io.IOException;
 
 public class GroupByStatsProviderTest
 {
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
   @Test
-  public void testMergeBufferAcquisitionTime()
+  public void testMetricCollection()
   {
     GroupByStatsProvider statsProvider = new GroupByStatsProvider();
 
-    statsProvider.mergeBufferAcquisitionTimeNs(100);
-    statsProvider.mergeBufferAcquisitionTimeNs(300);
+    QueryResourceId id1 = new QueryResourceId("q1");
+    GroupByStatsProvider.PerQueryStats stats1 = statsProvider.getPerQueryStatsContainer(id1);
 
-    Assert.assertEquals(Pair.of(2L, 400L), statsProvider.getAndResetMergeBufferAcquisitionStats());
-  }
+    stats1.mergeBufferAcquisitionTime(300);
+    stats1.mergeBufferAcquisitionTime(400);
+    stats1.spilledBytes(200);
+    stats1.spilledBytes(400);
+    stats1.dictionarySize(100);
+    stats1.dictionarySize(200);
 
-  @Test
-  public void testSpilledBytes() throws IOException
-  {
-    GroupByStatsProvider statsProvider = new GroupByStatsProvider();
+    QueryResourceId id2 = new QueryResourceId("q2");
+    GroupByStatsProvider.PerQueryStats stats2 = statsProvider.getPerQueryStatsContainer(id2);
 
-    LimitedTemporaryStorage temporaryStorage1 =
-        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024);
-    LimitedTemporaryStorage temporaryStorage2 =
-        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024);
+    stats2.mergeBufferAcquisitionTime(500);
+    stats2.mergeBufferAcquisitionTime(600);
+    stats2.spilledBytes(400);
+    stats2.spilledBytes(600);
+    stats2.dictionarySize(300);
+    stats2.dictionarySize(400);
 
-    EmittingLimitedTemporaryStorage emittingTemporaryStorage1 =
-        new EmittingLimitedTemporaryStorage("q1", statsProvider, temporaryStorage1);
-    EmittingLimitedTemporaryStorage emittingTemporaryStorage2 =
-        new EmittingLimitedTemporaryStorage("q1", statsProvider, temporaryStorage2);
+    GroupByStatsProvider.AggregateStats aggregateStats = statsProvider.getStatsSince();
+    Assert.assertEquals(0L, aggregateStats.getMergeBufferAcquisitionCount());
+    Assert.assertEquals(0L, aggregateStats.getMergeBufferAcquisitionTimeNs());
+    Assert.assertEquals(0L, aggregateStats.getSpilledQueries());
+    Assert.assertEquals(0L, aggregateStats.getSpilledBytes());
+    Assert.assertEquals(0L, aggregateStats.getMergeDictionarySize());
 
-    LimitedTemporaryStorage.LimitedOutputStream outputStream1 = temporaryStorage1.createFile();
-    outputStream1.write(5);
-    outputStream1.flush();
+    statsProvider.closeQuery(id1);
+    statsProvider.closeQuery(id2);
 
-    LimitedTemporaryStorage.LimitedOutputStream outputStream2 = temporaryStorage2.createFile();
-    outputStream2.write(8);
-    outputStream2.flush();
-
-    Assert.assertEquals(Pair.of(0L, 0L), statsProvider.getAndResetSpilledBytes());
-
-    emittingTemporaryStorage1.close();
-    emittingTemporaryStorage2.close();
-
-    Assert.assertEquals(Pair.of(0L, 0L), statsProvider.getAndResetSpilledBytes());
-
-    statsProvider.closeQuery("q1");
-
-    Assert.assertEquals(Pair.of(1L, 2L), statsProvider.getAndResetSpilledBytes());
+    aggregateStats = statsProvider.getStatsSince();
+    Assert.assertEquals(2, aggregateStats.getMergeBufferAcquisitionCount());
+    Assert.assertEquals(1800L, aggregateStats.getMergeBufferAcquisitionTimeNs());
+    Assert.assertEquals(2L, aggregateStats.getSpilledQueries());
+    Assert.assertEquals(1600L, aggregateStats.getSpilledBytes());
+    Assert.assertEquals(1000L, aggregateStats.getMergeDictionarySize());
   }
 }

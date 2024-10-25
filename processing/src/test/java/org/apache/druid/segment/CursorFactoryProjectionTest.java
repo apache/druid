@@ -366,8 +366,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
                     5
                 )
             ),
-            new GroupByQueryConfig(),
-            new GroupByStatsProvider()
+            new GroupByQueryConfig()
         ),
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),

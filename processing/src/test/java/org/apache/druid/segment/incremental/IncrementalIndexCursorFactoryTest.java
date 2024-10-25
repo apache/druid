@@ -172,8 +172,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
                     5
                 )
             ),
-            new GroupByQueryConfig(),
-            new GroupByStatsProvider()
+            new GroupByQueryConfig()
         ),
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),

@@ -1298,7 +1298,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     );
     final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergeBufferPool, queryConfig, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergeBufferPool, queryConfig);
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         queryConfigSupplier,

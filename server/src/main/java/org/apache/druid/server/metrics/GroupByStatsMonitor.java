@@ -22,7 +22,6 @@ package org.apache.druid.server.metrics;
 import com.google.inject.Inject;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.guice.annotations.Merging;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
@@ -54,15 +53,24 @@ public class GroupByStatsMonitor extends AbstractMonitor
 
     emitter.emit(builder.setMetric("mergeBuffer/usedCount", mergeBufferPool.getUsedResourcesCount()));
 
-    Pair<Long, Long> groupByResourceAcquisitionStats =
-        groupByStatsProvider.getAndResetMergeBufferAcquisitionStats();
+    GroupByStatsProvider.AggregateStats statsContainer = groupByStatsProvider.getStatsSince();
 
-    emitter.emit(builder.setMetric("mergeBuffer/acquisitionCount", groupByResourceAcquisitionStats.lhs));
-    emitter.emit(builder.setMetric("mergeBuffer/acquisitionTimeNs", groupByResourceAcquisitionStats.rhs));
+    if (statsContainer.getMergeBufferAcquisitionCount() > 0) {
+      emitter.emit(builder.setMetric("mergeBuffer/acquisitionCount", statsContainer.getMergeBufferAcquisitionCount()));
+      emitter.emit(builder.setMetric(
+          "mergeBuffer/acquisitionTimeNs",
+          statsContainer.getMergeBufferAcquisitionTimeNs()
+      ));
+    }
 
-    Pair<Long, Long> spilledBytes = groupByStatsProvider.getAndResetSpilledBytes();
-    emitter.emit(builder.setMetric("groupBy/spilledQueries", spilledBytes.lhs));
-    emitter.emit(builder.setMetric("groupBy/spilledBytes", spilledBytes.rhs));
+    if (statsContainer.getSpilledQueries() > 0) {
+      emitter.emit(builder.setMetric("groupBy/spilledQueries", statsContainer.getSpilledQueries()));
+      emitter.emit(builder.setMetric("groupBy/spilledBytes", statsContainer.getSpilledBytes()));
+    }
+
+    if (statsContainer.getMergeDictionarySize() > 0) {
+      emitter.emit(builder.setMetric("groupBy/mergeDictionarySize", statsContainer.getMergeDictionarySize()));
+    }
 
     return true;
   }

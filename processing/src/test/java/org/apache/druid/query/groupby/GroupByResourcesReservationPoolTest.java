@@ -94,10 +94,8 @@ public class GroupByResourcesReservationPoolTest
     // Blocking pool with a single buffer, which means only one of the queries can succeed at a time
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
 
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
-
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG);
 
     // Latch indicating that the first thread has called reservationPool.reserve()
     CountDownLatch reserveCalledByFirstThread = new CountDownLatch(1);
@@ -128,7 +126,12 @@ public class GroupByResourcesReservationPoolTest
           return super.equals(o);
         }
       };
-      groupByResourcesReservationPool.reserve(queryResourceId1, QUERY, true);
+      groupByResourcesReservationPool.reserve(
+          queryResourceId1,
+          QUERY,
+          true,
+          new GroupByStatsProvider.PerQueryStats()
+      );
       reserveCalledByFirstThread.countDown();
       try {
         reserveCalledBySecondThread.await();
@@ -167,7 +170,12 @@ public class GroupByResourcesReservationPoolTest
       // Since the reserve() call is blocking, we need to execute it separately, so that we can count down the latch
       // and inform Thread1 the reserve call has been made by this thread
       executor.submit(() -> {
-        groupByResourcesReservationPool.reserve(queryResourceId2, QUERY, true);
+        groupByResourcesReservationPool.reserve(
+            queryResourceId2,
+            QUERY,
+            true,
+            new GroupByStatsProvider.PerQueryStats()
+        );
         threadsCompleted.countDown();
       });
       try {
@@ -194,16 +202,25 @@ public class GroupByResourcesReservationPoolTest
   public void testMultipleSimultaneousAllocationAttemptsFail()
   {
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG);
     QueryResourceId queryResourceId = new QueryResourceId("test-id");
 
-    groupByResourcesReservationPool.reserve(queryResourceId, QUERY, true);
+    groupByResourcesReservationPool.reserve(
+        queryResourceId,
+        QUERY,
+        true,
+        new GroupByStatsProvider.PerQueryStats()
+    );
 
     Assert.assertThrows(
         DruidException.class,
-        () -> groupByResourcesReservationPool.reserve(queryResourceId, QUERY, true)
+        () -> groupByResourcesReservationPool.reserve(
+            queryResourceId,
+            QUERY,
+            true,
+            new GroupByStatsProvider.PerQueryStats()
+        )
     );
   }
 
@@ -211,19 +228,28 @@ public class GroupByResourcesReservationPoolTest
   public void testMultipleSequentialAllocationAttemptsSucceed()
   {
     BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(() -> ByteBuffer.allocate(100), 1);
-    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergeBufferPool, CONFIG);
     QueryResourceId queryResourceId = new QueryResourceId("test-id");
 
-    groupByResourcesReservationPool.reserve(queryResourceId, QUERY, true);
+    groupByResourcesReservationPool.reserve(
+        queryResourceId,
+        QUERY,
+        true,
+        new GroupByStatsProvider.PerQueryStats()
+    );
     GroupByQueryResources oldResources = groupByResourcesReservationPool.fetch(queryResourceId);
 
     // Cleanup the resources
     groupByResourcesReservationPool.clean(queryResourceId);
 
     // Repeat the calls
-    groupByResourcesReservationPool.reserve(queryResourceId, QUERY, true);
+    groupByResourcesReservationPool.reserve(
+        queryResourceId,
+        QUERY,
+        true,
+        new GroupByStatsProvider.PerQueryStats()
+    );
     GroupByQueryResources newResources = groupByResourcesReservationPool.fetch(queryResourceId);
     Assert.assertNotNull(newResources);
 

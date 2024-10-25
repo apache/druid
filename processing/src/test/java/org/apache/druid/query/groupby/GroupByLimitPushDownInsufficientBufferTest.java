@@ -330,13 +330,11 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     final GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(
         mergePool,
-        config,
-        groupByStatsProvider
+        config
     );
     final GroupByResourcesReservationPool tooSmallGroupByResourcesReservationPool = new GroupByResourcesReservationPool(
         tooSmallMergePool,
-        config,
-        groupByStatsProvider
+        config
     );
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,

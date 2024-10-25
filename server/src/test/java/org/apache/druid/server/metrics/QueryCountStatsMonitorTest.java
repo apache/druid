@@ -124,8 +124,7 @@ public class QueryCountStatsMonitorTest
     Assert.assertEquals(4L, (long) resultMap.get("query/timeout/count"));
     Assert.assertEquals(10L, (long) resultMap.get("query/count"));
   }
-
-  @Test
+  @Test(timeout = 2_000L)
   public void testMonitor_emitPendingBuffer()
   {
     monitorsConfig = new MonitorsConfig(Collections.singletonList(QueryCountStatsMonitor.class.getName()));

@@ -30,7 +30,6 @@ import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -87,7 +86,6 @@ public class GroupByQueryMetricsTest
   private final QueryRunner<ResultRow> runner;
   private final TestQueryRunner<ResultRow> originalRunner;
   private final GroupByQueryRunnerFactory factory;
-  private final GroupByQueryConfig config;
   private final GroupByStatsProvider groupByStatsProvider;
   private final boolean vectorize;
 
@@ -139,7 +137,7 @@ public class GroupByQueryMetricsTest
     }
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(bufferPools.getMergePool(), config, statsProvider);
+        new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         configSupplier,
@@ -181,7 +179,7 @@ public class GroupByQueryMetricsTest
 
         // Add vectorization tests for any indexes that support it.
         if (!vectorize || (QueryRunnerTestHelper.isTestRunnerVectorizable(runner))) {
-          constructors.add(new Object[]{testName, config, factory, runner, statsProvider, vectorize});
+          constructors.add(new Object[]{testName, factory, runner, statsProvider, vectorize});
         }
       }
     }
@@ -207,14 +205,12 @@ public class GroupByQueryMetricsTest
   @SuppressWarnings("unused")
   public GroupByQueryMetricsTest(
       String testName,
-      GroupByQueryConfig config,
       GroupByQueryRunnerFactory factory,
       TestQueryRunner runner,
       GroupByStatsProvider groupByStatsProvider,
       boolean vectorize
   )
   {
-    this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner));
     this.originalRunner = runner;
@@ -303,7 +299,7 @@ public class GroupByQueryMetricsTest
     // Subqueries are handled by the ToolChest
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
-    verifySpilledBytes(2);
+    verifyMetrics(2);
   }
 
   @Test
@@ -348,7 +344,7 @@ public class GroupByQueryMetricsTest
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
-    verifySpilledBytes(1);
+    verifyMetrics(1);
   }
 
   @Test
@@ -385,7 +381,7 @@ public class GroupByQueryMetricsTest
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
-    verifySpilledBytes(1);
+    verifyMetrics(1, true);
   }
 
   @Test
@@ -428,7 +424,7 @@ public class GroupByQueryMetricsTest
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
-    verifySpilledBytes(1);
+    verifyMetrics(1);
   }
 
   @Test
@@ -494,7 +490,7 @@ public class GroupByQueryMetricsTest
         QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(allGranQuery))
     ).toList();
 
-    verifySpilledBytes(1);
+    verifyMetrics(1);
   }
 
   @Test
@@ -517,7 +513,7 @@ public class GroupByQueryMetricsTest
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
-    verifySpilledBytes(1);
+    verifyMetrics(1);
   }
 
   @Test
@@ -541,14 +537,24 @@ public class GroupByQueryMetricsTest
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
 
-    verifySpilledBytes(1);
+    verifyMetrics(1, true);
   }
 
-  private void verifySpilledBytes(long queries)
+  private void verifyMetrics(long queries, boolean skipMergeDictionary)
   {
-    Pair<Long, Long> pair = groupByStatsProvider.getAndResetSpilledBytes();
-    Assert.assertEquals(queries, pair.lhs.longValue());
-    Assert.assertTrue(pair.rhs > 0);
+    GroupByStatsProvider.AggregateStats aggregateStats = groupByStatsProvider.getStatsSince();
+    Assert.assertEquals(queries, aggregateStats.getSpilledQueries());
+    Assert.assertTrue(aggregateStats.getSpilledBytes() > 0);
+    Assert.assertEquals(1, aggregateStats.getMergeBufferAcquisitionCount());
+    Assert.assertTrue(aggregateStats.getMergeBufferAcquisitionTimeNs() > 0);
+    if (!skipMergeDictionary) {
+      Assert.assertTrue(aggregateStats.getMergeDictionarySize() > 0);
+    }
+  }
+
+  private void verifyMetrics(long queries)
+  {
+    verifyMetrics(queries, false);
   }
 
   private GroupByQuery.Builder makeQueryBuilder()

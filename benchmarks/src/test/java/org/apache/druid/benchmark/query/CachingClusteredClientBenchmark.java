@@ -360,7 +360,7 @@ public class CachingClusteredClientBenchmark
     );
     final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(mergeBufferPool, config, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergeBufferPool, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         configSupplier,

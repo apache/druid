@@ -20,76 +20,172 @@
 package org.apache.druid.query.groupby;
 
 import org.apache.druid.guice.LazySingleton;
-import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.query.QueryResourceId;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Collects stats for group by queries like used merged buffer count, spilled bytes and group by resource acquisition time.
+ * Metrics collector for groupBy queries like spilled bytes, merge buffer acquistion time, dictionary size.
  */
 @LazySingleton
 public class GroupByStatsProvider
 {
-  private long mergeBufferAcquisitionTimeNs = 0;
-  private long mergeBufferAcquisitionCount = 0;
-
-  private long spilledBytesSince = 0;
-  private long spilledQueries = 0;
-
-  private final Map<String, AtomicLong> spilledBytesPerQuery;
+  private final Map<QueryResourceId, PerQueryStats> perQueryStats;
+  private final AggregateStats aggregateStatsContainer;
 
   public GroupByStatsProvider()
   {
-    this.spilledBytesPerQuery = new ConcurrentHashMap<>();
+    this.perQueryStats = new ConcurrentHashMap<>();
+    this.aggregateStatsContainer = new AggregateStats();
   }
 
-  public synchronized void mergeBufferAcquisitionTimeNs(long delayNs)
+  public PerQueryStats getPerQueryStatsContainer(QueryResourceId resourceId)
   {
-    mergeBufferAcquisitionTimeNs += delayNs;
-    mergeBufferAcquisitionCount++;
+    if (resourceId == null) {
+      return null;
+    }
+    return perQueryStats.computeIfAbsent(resourceId, value -> new PerQueryStats());
   }
 
-  public synchronized Pair<Long, Long> getAndResetMergeBufferAcquisitionStats()
+  public synchronized void closeQuery(QueryResourceId resourceId)
   {
-    Pair<Long, Long> pair = Pair.of(mergeBufferAcquisitionCount, mergeBufferAcquisitionTimeNs);
-
-    // reset
-    mergeBufferAcquisitionTimeNs = 0;
-    mergeBufferAcquisitionCount = 0;
-
-    return pair;
-  }
-
-  public void reportSpilledBytes(String queryId, long bytes)
-  {
-    if (queryId == null || bytes == 0) {
+    if (resourceId == null || !perQueryStats.containsKey(resourceId)) {
       return;
     }
-    spilledBytesPerQuery.computeIfAbsent(queryId, value -> new AtomicLong(0)).addAndGet(bytes);
+    PerQueryStats container = perQueryStats.remove(resourceId);
+    aggregateStatsContainer.addQueryStats(container);
   }
 
-  public synchronized void closeQuery(String queryId)
+  public synchronized AggregateStats getStatsSince()
   {
-    if (queryId == null) {
-      return;
+    return aggregateStatsContainer.reset();
+  }
+
+  public static class AggregateStats
+  {
+    private long mergeBufferAcquisitionCount = 0;
+    private long mergeBufferAcquisitionTimeNs = 0;
+    private long spilledQueries = 0;
+    private long spilledBytes = 0;
+    private long mergeDictionarySize = 0;
+
+    public AggregateStats()
+    {
     }
-    AtomicLong spilledBytes = spilledBytesPerQuery.remove(queryId);
-    if (spilledBytes != null) {
-      spilledQueries++;
-      spilledBytesSince += spilledBytes.get();
+
+    public AggregateStats(
+        long mergeBufferAcquisitionCount,
+        long mergeBufferAcquisitionTimeNs,
+        long spilledQueries,
+        long spilledBytes,
+        long mergeDictionarySize
+    )
+    {
+      this.mergeBufferAcquisitionCount = mergeBufferAcquisitionCount;
+      this.mergeBufferAcquisitionTimeNs = mergeBufferAcquisitionTimeNs;
+      this.spilledQueries = spilledQueries;
+      this.spilledBytes = spilledBytes;
+      this.mergeDictionarySize = mergeDictionarySize;
+    }
+
+    public long getMergeBufferAcquisitionCount()
+    {
+      return mergeBufferAcquisitionCount;
+    }
+
+    public long getMergeBufferAcquisitionTimeNs()
+    {
+      return mergeBufferAcquisitionTimeNs;
+    }
+
+    public long getSpilledQueries()
+    {
+      return spilledQueries;
+    }
+
+    public long getSpilledBytes()
+    {
+      return spilledBytes;
+    }
+
+    public long getMergeDictionarySize()
+    {
+      return mergeDictionarySize;
+    }
+
+    public void addQueryStats(PerQueryStats perQueryStats)
+    {
+      if (perQueryStats.getMergeBufferAcquisitionTimeNs() > 0) {
+        mergeBufferAcquisitionCount++;
+        mergeBufferAcquisitionTimeNs += perQueryStats.getMergeBufferAcquisitionTimeNs();
+      }
+
+      if (perQueryStats.getSpilledBytes() > 0) {
+        spilledQueries++;
+        spilledBytes += perQueryStats.getSpilledBytes();
+      }
+
+      mergeDictionarySize += perQueryStats.getMergeDictionarySize();
+    }
+
+    public AggregateStats reset()
+    {
+      AggregateStats aggregateStats =
+          new AggregateStats(
+              mergeBufferAcquisitionCount,
+              mergeBufferAcquisitionTimeNs,
+              spilledQueries,
+              spilledBytes,
+              mergeDictionarySize
+          );
+
+      this.mergeBufferAcquisitionCount = 0;
+      this.mergeBufferAcquisitionTimeNs = 0;
+      this.spilledQueries = 0;
+      this.spilledBytes = 0;
+      this.mergeDictionarySize = 0;
+
+      return aggregateStats;
     }
   }
 
-  public synchronized Pair<Long, Long> getAndResetSpilledBytes()
+  public static class PerQueryStats
   {
-    Pair<Long, Long> pair = Pair.of(spilledQueries, spilledBytesSince);
+    private final AtomicLong mergeBufferAcquisitionTimeNs = new AtomicLong(0);
+    private final AtomicLong spilledBytes = new AtomicLong(0);
+    private final AtomicLong mergeDictionarySize = new AtomicLong(0);
 
-    // reset
-    spilledQueries = 0;
-    spilledBytesSince = 0;
+    public void mergeBufferAcquisitionTime(long delay)
+    {
+      mergeBufferAcquisitionTimeNs.addAndGet(delay);
+    }
 
-    return pair;
+    public void spilledBytes(long bytes)
+    {
+
+      spilledBytes.addAndGet(bytes);
+    }
+
+    public void dictionarySize(long size)
+    {
+      mergeDictionarySize.addAndGet(size);
+    }
+
+    public long getMergeBufferAcquisitionTimeNs()
+    {
+      return mergeBufferAcquisitionTimeNs.get();
+    }
+
+    public long getSpilledBytes()
+    {
+      return spilledBytes.get();
+    }
+
+    public long getMergeDictionarySize()
+    {
+      return mergeDictionarySize.get();
+    }
   }
 }

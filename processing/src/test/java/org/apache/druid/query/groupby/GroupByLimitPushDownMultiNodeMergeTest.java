@@ -581,11 +581,11 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
 
     final GroupByResourcesReservationPool groupByResourcesReservationPoolBroker =
-        new GroupByResourcesReservationPool(mergePoolBroker, config, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergePoolBroker, config);
     final GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical =
-        new GroupByResourcesReservationPool(mergePoolHistorical, config, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergePoolHistorical, config);
     final GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical2 =
-        new GroupByResourcesReservationPool(mergePoolHistorical2, config, groupByStatsProvider);
+        new GroupByResourcesReservationPool(mergePoolHistorical2, config);
 
     final GroupingEngine groupingEngineBroker = new GroupingEngine(
         druidProcessingConfig,

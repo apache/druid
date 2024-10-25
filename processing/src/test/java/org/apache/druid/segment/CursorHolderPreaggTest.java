@@ -98,8 +98,7 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
         GroupByQueryConfig::new,
         new GroupByResourcesReservationPool(
             closer.closeLater(mergePool),
-            new GroupByQueryConfig(),
-            groupByStatsProvider
+            new GroupByQueryConfig()
         ),
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
