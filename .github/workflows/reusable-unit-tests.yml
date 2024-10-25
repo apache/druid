@@ -121,7 +121,7 @@ jobs:
         if: ${{ failure() }}
         id: check_for_dumps
         run: |
-          if test -n "$(find "${GITHUB_WORKSPACE}" \( -name '*.hprof' -or -name 'hs_err_pid*' -or 'replay_pid*' -or -regex '.*/core\.[0-9]*' \))"
+          if test -n "$(find "${GITHUB_WORKSPACE}" \( -name '*.hprof' -or -name 'hs_err_pid*' -or -name 'replay_pid*' -or -regex '.*/core\.[0-9]*' \))"
           then
             echo "found_dumps=true" >> "$GITHUB_ENV"
           else
@@ -132,7 +132,7 @@ jobs:
         if: ${{ failure() && env.found_dumps == 'true' }}
         run: |
           find "${GITHUB_WORKSPACE}"
-            \( -name '*.hprof' -or -name 'hs_err_pid*' -or 'replay_pid*' -or -regex '.*/core\.[0-9]*' \)
+            \( -name '*.hprof' -or -name 'hs_err_pid*' -or -name 'replay_pid*' -or -regex '.*/core\.[0-9]*' \)
             -exec tar -cvzf ${RUNNER_TEMP}/hprof-dumps.tgz {} \;
 
       - name: Upload hprof dumps to GitHub if they exist on failure
