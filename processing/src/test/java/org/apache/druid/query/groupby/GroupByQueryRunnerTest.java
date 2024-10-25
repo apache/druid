@@ -361,6 +361,16 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
       final ObjectMapper mapper,
       final GroupByQueryConfig config,
       final TestGroupByBuffers bufferPools,
+      final DruidProcessingConfig processingConfig
+  )
+  {
+    return makeQueryRunnerFactory(mapper, config, bufferPools, processingConfig, new GroupByStatsProvider());
+  }
+
+  public static GroupByQueryRunnerFactory makeQueryRunnerFactory(
+      final ObjectMapper mapper,
+      final GroupByQueryConfig config,
+      final TestGroupByBuffers bufferPools,
       final DruidProcessingConfig processingConfig,
       final GroupByStatsProvider statsProvider
   )
