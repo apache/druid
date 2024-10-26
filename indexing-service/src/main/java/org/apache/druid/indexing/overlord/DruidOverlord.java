@@ -130,6 +130,8 @@ public class DruidOverlord
                .emit();
           }
 
+          // First add "half leader" services: everything required for APIs except the supervisor manager.
+          // Then, become "half leader" so those APIs light up and supervisor initialization can proceed.
           leaderLifecycle.addManagedInstance(taskRunner);
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addHandler(
@@ -137,13 +139,15 @@ public class DruidOverlord
                 @Override
                 public void start()
                 {
-                  taskMaster.becomeLeader(taskRunner, taskQueue);
+                  segmentAllocationQueue.becomeLeader();
+                  taskMaster.becomeHalfLeader(taskRunner, taskQueue);
                 }
 
                 @Override
                 public void stop()
                 {
                   taskMaster.stopBeingLeader();
+                  segmentAllocationQueue.stopBeingLeader();
                 }
               }
           );
@@ -155,7 +159,7 @@ public class DruidOverlord
                 @Override
                 public void start()
                 {
-                  segmentAllocationQueue.becomeLeader();
+                  taskMaster.becomeFullLeader();
                   compactionScheduler.start();
 
                   // Announce the node only after all the services have been initialized
@@ -168,7 +172,7 @@ public class DruidOverlord
                 {
                   serviceAnnouncer.unannounce(node);
                   compactionScheduler.stop();
-                  segmentAllocationQueue.stopBeingLeader();
+                  taskMaster.stopBeingLeader();
                 }
               }
           );

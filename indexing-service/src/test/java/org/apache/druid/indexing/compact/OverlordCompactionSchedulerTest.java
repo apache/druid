@@ -112,7 +112,7 @@ public class OverlordCompactionSchedulerTest
     taskQueue = Mockito.mock(TaskQueue.class);
 
     taskMaster = new TaskMaster(null, null);
-    taskMaster.becomeLeader(taskRunner, taskQueue);
+    taskMaster.becomeHalfLeader(taskRunner, taskQueue);
 
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
 
