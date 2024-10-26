@@ -113,6 +113,7 @@ public class OverlordCompactionSchedulerTest
 
     taskMaster = new TaskMaster(null, null);
     taskMaster.becomeHalfLeader(taskRunner, taskQueue);
+    taskMaster.becomeFullLeader();
 
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
 
