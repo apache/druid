@@ -25,20 +25,34 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -46,6 +60,8 @@ import java.util.concurrent.TimeoutException;
 
 public class SegmentAllocationQueueTest
 {
+  private static final Logger log = new Logger(SegmentAllocationQueueTest.class);
+
   @Rule
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
@@ -73,6 +89,12 @@ public class SegmentAllocationQueueTest
       {
         return 0;
       }
+
+      @Override
+      public boolean isSegmentAllocationReduceMetadataIO()
+      {
+        return true;
+      }
     };
 
     allocationQueue = new SegmentAllocationQueue(
@@ -97,6 +119,133 @@ public class SegmentAllocationQueueTest
       executor.shutdownNow();
     }
     emitter.flush();
+  }
+
+  @Test
+  @Ignore
+  public void testLongQueue() throws Exception
+  {
+    allocationQueue.start();
+    allocationQueue.becomeLeader();
+    final Task task = NoopTask.create();
+    taskActionTestKit.getTaskLockbox().add(task);
+
+    final Interval startInterval = Intervals.of("2024-01-01/PT1H");
+    final long hourToMillis = 1000L * 60L * 60L;
+    final long numHours = 48;
+    List<Interval> intervals = new ArrayList<>();
+    for (long hour = 0; hour < numHours; hour++) {
+      intervals.add(
+          new Interval(
+              startInterval.getStartMillis() + hourToMillis * hour,
+              startInterval.getStartMillis() + hourToMillis * hour + hourToMillis,
+              DateTimeZone.UTC
+          )
+      );
+    }
+
+    final IndexerSQLMetadataStorageCoordinator coordinator =
+        (IndexerSQLMetadataStorageCoordinator) taskActionTestKit.getMetadataStorageCoordinator();
+
+    final List<String> dimensions = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      dimensions.add("dimension_" + i);
+    }
+    final Set<DataSegment> segments = new HashSet<>();
+    final int numUsedSegmentsPerInterval = 2000;
+    int version = 0;
+    for (Interval interval : intervals) {
+      for (int i = 0; i < numUsedSegmentsPerInterval; i++) {
+        segments.add(
+            DataSegment.builder()
+                       .dataSource(task.getDataSource())
+                       .interval(interval)
+                       .version("version" + version)
+                       .shardSpec(new NumberedShardSpec(i, numUsedSegmentsPerInterval))
+                       .dimensions(dimensions)
+                       .size(100)
+                       .build()
+        );
+      }
+      coordinator.commitSegments(segments, null);
+      segments.clear();
+      version = (version + 1) % 10;
+    }
+
+
+    final int numAllocations = 10;
+    final int replicas = 2;
+    Map<String, List<Future<SegmentIdWithShardSpec>>> sequenceNameAndPrevIdToFutures = new HashMap<>();
+    for (int i = 0; i < numAllocations; i++) {
+      for (int j = 0; j < numHours; j++) {
+        final int id = numUsedSegmentsPerInterval + i / replicas;
+        final String sequenceId = j + "-sequence" + id;
+        final String prevSequenceId = j + "-sequence" + (id - 1);
+        sequenceNameAndPrevIdToFutures.computeIfAbsent(
+            sequenceId + "|" + prevSequenceId,
+            k -> new ArrayList<>()
+        ).add(
+            allocationQueue.add(
+                new SegmentAllocateRequest(
+                    task,
+                    new SegmentAllocateAction(
+                        task.getDataSource(),
+                        intervals.get(j).getStart(),
+                        Granularities.NONE,
+                        Granularities.HOUR,
+                        sequenceId,
+                        prevSequenceId,
+                        false,
+                        NumberedPartialShardSpec.instance(),
+                        LockGranularity.TIME_CHUNK,
+                        TaskLockType.APPEND
+                    ),
+                    10
+                )
+            )
+        );
+      }
+    }
+    executor.finishAllPendingTasks();
+
+    final Set<SegmentIdWithShardSpec> allocatedIds = new HashSet<>();
+    for (List<Future<SegmentIdWithShardSpec>> sameIds : sequenceNameAndPrevIdToFutures.values()) {
+      if (sameIds.isEmpty()) {
+        return;
+      }
+      final SegmentIdWithShardSpec id = sameIds.get(0).get();
+      Assert.assertNotNull(id);
+      for (int i = 1; i < sameIds.size(); i++) {
+        Assert.assertEquals(id, sameIds.get(i).get());
+      }
+      Assert.assertFalse(allocatedIds.contains(id));
+      allocatedIds.add(id);
+    }
+    Assert.assertEquals(numHours * numAllocations, allocatedIds.size() * replicas);
+    printStats("task/action/batch/runTime");
+    printStats("task/action/batch/queueTime");
+  }
+
+  private void printStats(String metricName)
+  {
+    int count = 0;
+    double max = 0;
+    double min = Double.POSITIVE_INFINITY;
+    double sum = 0;
+    for (ServiceMetricEvent event : emitter.getMetricEvents().get(metricName)) {
+      count++;
+      max = Math.max(max, event.getValue().doubleValue());
+      min = Math.min(min, event.getValue().doubleValue());
+      sum += event.getValue().doubleValue();
+    }
+    double avg = 0;
+    if (count > 0) {
+      avg = sum / count;
+    }
+    log.info(
+        "Metric[%s]: count[%d], min[%f], max[%f], avg[%f], sum[%f]",
+        metricName, count, min, max, avg, sum
+    );
   }
 
   @Test

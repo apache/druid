@@ -25,6 +25,7 @@ import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -179,6 +180,8 @@ public interface IndexerMetadataStorageCoordinator
    *                                Should be set to false if replica tasks would index events in same order
    * @param requests                Requests for which to allocate segments. All
    *                                the requests must share the same partition space.
+   * @param skipSegmentPayloadFetch If true, try to use the segment ids instead of fetching every segment
+   *                                payload from the metadata store
    * @return Map from request to allocated segment id. The map does not contain
    * entries for failed requests.
    */
@@ -186,7 +189,20 @@ public interface IndexerMetadataStorageCoordinator
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
-      List<SegmentCreateRequest> requests
+      List<SegmentCreateRequest> requests,
+      boolean skipSegmentPayloadFetch
+  );
+
+  /**
+   * Return a segment timeline of all used segments including overshadowed ones for a given datasource and interval
+   * if skipSegmentPayloadFetchForAllocation is set to true, do not fetch all the segment payloads for allocation
+   * Instead fetch all the ids and numCorePartitions using exactly one segment per version per interval
+   * return a dummy DataSegment for each id that holds only the SegmentId and a NumberedShardSpec with numCorePartitions
+   */
+  SegmentTimeline getSegmentTimelineForAllocation(
+      String dataSource,
+      Interval interval,
+      boolean skipSegmentPayloadFetchForAllocation
   );
 
   /**
