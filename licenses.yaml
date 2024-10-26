@@ -3724,30 +3724,6 @@ libraries:
 
 ---
 
-name: JAXB
-license_category: binary
-module: hadoop-client
-license_name: CDDL 1.1
-version: 2.2.2
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.xml.bind: jaxb-api
-
----
-
-name: JAXB
-license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 2.3.1
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.xml.bind: jaxb-api
-
----
-
 name: jsp-api
 license_category: binary
 module: hadoop-client
