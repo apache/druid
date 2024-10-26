@@ -87,6 +87,11 @@ public class KubernetesTaskRunnerConfig
 
   @JsonProperty
   @NotNull
+  // how long to wait to join peon k8s jobs on startup
+  private Period taskJoinTimeout = new Period("PT1M");
+
+  @JsonProperty
+  @NotNull
   // how long to wait for the peon k8s job to launch
   private Period k8sjobLaunchTimeout = new Period("PT1H");
 
@@ -246,6 +251,11 @@ public class KubernetesTaskRunnerConfig
   public Period getTaskTimeout()
   {
     return maxTaskDuration;
+  }
+
+  public Period getTaskJoinTimeout()
+  {
+    return taskJoinTimeout;
   }
 
   public Period getTaskCleanupDelay()

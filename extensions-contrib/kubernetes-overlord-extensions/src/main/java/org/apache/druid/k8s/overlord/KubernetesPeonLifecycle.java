@@ -23,12 +23,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
@@ -94,7 +97,7 @@ public class KubernetesPeonLifecycle
   @MonotonicNonNull
   private LogWatch logWatch;
 
-  private TaskLocation taskLocation;
+  private final SettableFuture<TaskLocation> taskLocation = SettableFuture.create();
 
   protected KubernetesPeonLifecycle(
       Task task,
@@ -130,8 +133,6 @@ public class KubernetesPeonLifecycle
         writeTaskPayload(task);
       }
 
-      // In case something bad happens and run is called twice on this KubernetesPeonLifecycle, reset taskLocation.
-      taskLocation = null;
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
           task,
@@ -183,7 +184,7 @@ public class KubernetesPeonLifecycle
         since Druid doesn't support retrying tasks from a external system (K8s). We can explore adding a fabric8 watcher
         if we decide we need to change this later.
       **/
-      taskLocation = getTaskLocationFromK8s();
+      taskLocation.set(getTaskLocationFromK8s());
       updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
 
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
@@ -260,11 +261,19 @@ public class KubernetesPeonLifecycle
     since Druid doesn't support retrying tasks from a external system (K8s). We can explore adding a fabric8 watcher
     if we decide we need to change this later.
     **/
-    if (taskLocation == null) {
+    if (!taskLocation.isDone()) {
       log.warn("Unknown task location for [%s]", taskId);
       return TaskLocation.unknown();
     }
 
+    return FutureUtils.getUncheckedImmediately(taskLocation);
+  }
+
+  /**
+   * Get a future that resolves to the task location, when available.
+   */
+  public ListenableFuture<TaskLocation> getTaskLocationAsync()
+  {
     return taskLocation;
   }
 
@@ -392,5 +401,10 @@ public class KubernetesPeonLifecycle
         pod.getMetadata() != null ? pod.getMetadata().getName() : ""
     );
 
+  }
+
+  public ListenableFuture<?> locatedFuture()
+  {
+    return taskLocation;
   }
 }

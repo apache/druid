@@ -20,8 +20,10 @@
 package org.apache.druid.k8s.overlord;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -34,7 +36,7 @@ import java.io.InputStream;
 public class KubernetesWorkItem extends TaskRunnerWorkItem
 {
   private final Task task;
-  private KubernetesPeonLifecycle kubernetesPeonLifecycle = null;
+  private final SettableFuture<KubernetesPeonLifecycle> kubernetesPeonLifecycle = SettableFuture.create();
 
   public KubernetesWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture)
   {
@@ -44,16 +46,17 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
 
   protected synchronized void setKubernetesPeonLifecycle(KubernetesPeonLifecycle kubernetesPeonLifecycle)
   {
-    Preconditions.checkState(this.kubernetesPeonLifecycle == null);
-    this.kubernetesPeonLifecycle = kubernetesPeonLifecycle;
+    if (!this.kubernetesPeonLifecycle.set(kubernetesPeonLifecycle)) {
+      throw DruidException.defensive("Unexpected call to setKubernetesPeonLifecycle, can only call this once.");
+    }
   }
 
   protected synchronized void shutdown()
   {
-
-    if (this.kubernetesPeonLifecycle != null) {
-      this.kubernetesPeonLifecycle.startWatchingLogs();
-      this.kubernetesPeonLifecycle.shutdown();
+    if (kubernetesPeonLifecycle.isDone()) {
+      final KubernetesPeonLifecycle lifecycle = FutureUtils.getUncheckedImmediately(kubernetesPeonLifecycle);
+      lifecycle.startWatchingLogs();
+      lifecycle.shutdown();
     }
   }
 
@@ -69,11 +72,11 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
 
   protected RunnerTaskState getRunnerTaskState()
   {
-    if (kubernetesPeonLifecycle == null) {
+    if (!kubernetesPeonLifecycle.isDone()) {
       return RunnerTaskState.PENDING;
     }
 
-    switch (kubernetesPeonLifecycle.getState()) {
+    switch (FutureUtils.getUncheckedImmediately(kubernetesPeonLifecycle).getState()) {
       case NOT_STARTED:
       case PENDING:
         return RunnerTaskState.PENDING;
@@ -88,19 +91,19 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
 
   protected Optional<InputStream> streamTaskLogs()
   {
-    if (kubernetesPeonLifecycle == null) {
+    if (!kubernetesPeonLifecycle.isDone()) {
       return Optional.absent();
     }
-    return kubernetesPeonLifecycle.streamLogs();
+    return FutureUtils.getUncheckedImmediately(kubernetesPeonLifecycle).streamLogs();
   }
 
   @Override
   public TaskLocation getLocation()
   {
-    if (kubernetesPeonLifecycle == null) {
+    if (!kubernetesPeonLifecycle.isDone()) {
       return TaskLocation.unknown();
     }
-    return kubernetesPeonLifecycle.getTaskLocation();
+    return FutureUtils.getUncheckedImmediately(kubernetesPeonLifecycle).getTaskLocation();
   }
 
   @Override
@@ -118,5 +121,13 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   public Task getTask()
   {
     return task;
+  }
+
+  /**
+   * Future that resolves when the work item's lifecycle has been initialized.
+   */
+  public ListenableFuture<TaskLocation> getTaskLocationAsync()
+  {
+    return FutureUtils.transformAsync(kubernetesPeonLifecycle, KubernetesPeonLifecycle::getTaskLocationAsync);
   }
 }

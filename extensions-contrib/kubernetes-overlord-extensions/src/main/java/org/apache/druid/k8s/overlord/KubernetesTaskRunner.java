@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -55,12 +56,14 @@ import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -151,11 +154,10 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
   }
 
-  protected ListenableFuture<TaskStatus> joinAsync(Task task)
+  protected KubernetesWorkItem joinAsync(Task task)
   {
     synchronized (tasks) {
-      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task))))
-                  .getResult();
+      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task))));
     }
   }
 
@@ -270,7 +272,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     synchronized (tasks) {
       tasks.remove(taskid);
     }
-    
   }
 
   @Override
@@ -321,16 +322,41 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public void start()
   {
     log.info("Starting K8sTaskRunner...");
-    // Load tasks from previously running jobs and wait for their statuses to be updated asynchronously.
-    for (Job job : client.getPeonJobs()) {
+
+    // Load tasks from previously running jobs and wait for their locations to be discovered.
+    final List<ListenableFuture<TaskLocation>> taskLocationFutures = new ArrayList<>();
+    final List<Job> peonJobs = client.getPeonJobs();
+
+    log.info("Locating [%,d] active tasks.", peonJobs.size());
+
+    for (final Job job : peonJobs) {
       try {
-        joinAsync(adapter.toTask(job));
+        taskLocationFutures.add(joinAsync(adapter.toTask(job)).getTaskLocationAsync());
       }
       catch (IOException e) {
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
       }
     }
-    log.info("Loaded %,d tasks from previous run", tasks.size());
+
+    try {
+      final DateTime nowUtc = DateTimes.nowUtc();
+      final long timeoutMs = nowUtc.plus(config.getTaskJoinTimeout()).getMillis() - nowUtc.getMillis();
+      if (timeoutMs > 0) {
+        FutureUtils.coalesce(taskLocationFutures).get(timeoutMs, TimeUnit.MILLISECONDS);
+      }
+      log.info("Located [%,d] active tasks.", taskLocationFutures.size());
+    }
+    catch (Exception e) {
+      final long numInitialized =
+          tasks.values().stream().filter(item -> item.getTaskLocationAsync().isDone()).count();
+      log.warn(
+          e,
+          "Located [%,d] out of [%,d] active tasks (timeout = %s). Locating others asynchronously.",
+          numInitialized,
+          taskLocationFutures.size(),
+          config.getTaskJoinTimeout()
+      );
+    }
 
     cleanupExecutor.scheduleAtFixedRate(
         () ->
@@ -350,6 +376,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public void stop()
   {
     log.debug("Stopping KubernetesTaskRunner");
+    exec.shutdownNow();
     cleanupExecutor.shutdownNow();
     log.debug("Stopped KubernetesTaskRunner");
   }

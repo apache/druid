@@ -113,15 +113,18 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     )
     {
       @Override
-      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      protected KubernetesWorkItem joinAsync(Task task)
       {
-        return tasks.computeIfAbsent(
+        final KubernetesWorkItem workItem = tasks.computeIfAbsent(
             task.getId(),
             k -> new KubernetesWorkItem(
                 task,
                 Futures.immediateFuture(TaskStatus.success(task.getId()))
             )
-        ).getResult();
+        );
+
+        workItem.setKubernetesPeonLifecycle(kubernetesPeonLifecycle);
+        return workItem;
       }
     };
 
@@ -133,6 +136,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job));
     EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
+    EasyMock.expect(kubernetesPeonLifecycle.getTaskLocationAsync())
+            .andReturn(Futures.immediateFuture(TaskLocation.create("localhost", 1234, -1)));
 
     replayAll();
 
@@ -142,6 +147,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Assert.assertNotNull(runner.tasks);
     Assert.assertEquals(1, runner.tasks.size());
+
+    runner.stop();
   }
 
   @Test
@@ -157,10 +164,9 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     )
     {
       @Override
-      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      protected KubernetesWorkItem joinAsync(Task task)
       {
-        return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, null))
-                    .getResult();
+        return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, null));
       }
     };
 
@@ -181,6 +187,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     Assert.assertNotNull(runner.tasks);
     Assert.assertEquals(0, runner.tasks.size());
+
+    runner.stop();
   }
 
   @Test
@@ -286,8 +294,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     replayAll();
 
-    ListenableFuture<TaskStatus> future = runner.joinAsync(task);
-    Assert.assertEquals(taskStatus, future.get());
+    KubernetesWorkItem workItem = runner.joinAsync(task);
+    Assert.assertEquals(taskStatus, workItem.getResult().get());
 
     verifyAll();
   }
@@ -310,7 +318,8 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     replayAll();
 
-    ListenableFuture<TaskStatus> future = runner.joinAsync(task);
+    KubernetesWorkItem workItem = runner.joinAsync(task);
+    final ListenableFuture<TaskStatus> future = workItem.getResult();
 
     Exception e = Assert.assertThrows(ExecutionException.class, future::get);
     Assert.assertTrue(e.getCause() instanceof RuntimeException);
