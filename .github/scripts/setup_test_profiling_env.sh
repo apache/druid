@@ -25,7 +25,7 @@ if [ "$#" -ne 5 ]; then
     echo "usage: $0 <jdk_version> <run_id> <run_number> <run_attempt> <module>"
 fi
 
-if [[ "$1" -ge "17" ]];
+if [[ "$1" -eq "17" ]];
 then
   curl https://static.imply.io/cp/$JAR_INPUT_FILE -s -o $JAR_OUTPUT_FILE
 
