@@ -72,21 +72,27 @@ public class HttpEmitterTest
         .setHttpTimeoutAllowanceFactor(timeoutAllowanceFactor)
         .setFlushTimeout(BaseHttpEmittingConfig.TEST_FLUSH_TIMEOUT_MILLIS)
         .build();
-    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER);
+    try (final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER)) {
+      long startMs = System.currentTimeMillis();
+      emitter.start();
+      emitter.emitAndReturnBatch(new IntEvent());
+      emitter.flush();
+      long fillTimeMs = System.currentTimeMillis() - startMs;
+      MatcherAssert.assertThat(
+          (double) timeoutUsed.get(),
+          Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5))
+      );
 
-    long startMs = System.currentTimeMillis();
-    emitter.start();
-    emitter.emitAndReturnBatch(new IntEvent());
-    emitter.flush();
-    long fillTimeMs = System.currentTimeMillis() - startMs;
-    MatcherAssert.assertThat((double) timeoutUsed.get(), Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5)));
-
-    startMs = System.currentTimeMillis();
-    final Batch batch = emitter.emitAndReturnBatch(new IntEvent());
-    Thread.sleep(1000);
-    batch.seal();
-    emitter.flush();
-    fillTimeMs = System.currentTimeMillis() - startMs;
-    MatcherAssert.assertThat((double) timeoutUsed.get(), Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5)));
+      startMs = System.currentTimeMillis();
+      final Batch batch = emitter.emitAndReturnBatch(new IntEvent());
+      Thread.sleep(1000);
+      batch.seal();
+      emitter.flush();
+      fillTimeMs = System.currentTimeMillis() - startMs;
+      MatcherAssert.assertThat(
+          (double) timeoutUsed.get(),
+          Matchers.lessThan(fillTimeMs * (timeoutAllowanceFactor + 0.5))
+      );
+    }
   }
 }
