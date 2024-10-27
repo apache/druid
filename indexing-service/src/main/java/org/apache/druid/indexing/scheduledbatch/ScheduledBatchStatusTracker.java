@@ -22,8 +22,6 @@ package org.apache.druid.indexing.scheduledbatch;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.sql.http.SqlTaskStatus;
 
-import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;

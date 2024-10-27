@@ -50,14 +50,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Metrics:
- * 1. Number of supervisor schedulers started and stopped.
- * 2. Number of jobs submitted per supervisor
- * 3. Number of jobs submitted completed per supervisor
- * 4. Number of jobs errored out per supervisor
- */
-// Metrics: 1. number of supervisors increment when start/stop is called. 2. number of jobs 3. number of
 public class ScheduledBatchScheduler
 {
   private static final Logger log = new EmittingLogger(ScheduledBatchScheduler.class);
@@ -158,7 +150,6 @@ public class ScheduledBatchScheduler
     final com.google.common.base.Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (taskRunnerOptional.isPresent()) {
       taskRunnerOptional.get().unregisterListener(taskRunnerListener.getListenerId());
-      log.info("Task runner unregistered.");
     }
 
     supervisorToManager.clear();
