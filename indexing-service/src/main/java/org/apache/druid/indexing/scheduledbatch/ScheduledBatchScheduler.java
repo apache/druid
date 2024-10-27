@@ -20,8 +20,8 @@
 package org.apache.druid.indexing.scheduledbatch;
 
 import com.cronutils.model.time.ExecutionTime;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -78,7 +78,7 @@ public class ScheduledBatchScheduler
   )
   {
     this.taskMaster = taskMaster;
-    this.cronExecutor = executorFactory.create(1, "ScheduledBatchCronScheduler-%s");
+    this.cronExecutor = executorFactory.create(1, "ScheduledBatchScheduler-%s");
     this.brokerClient = brokerClient;
     this.emitter = emitter;
     this.statusTracker = statusTracker;
@@ -184,10 +184,8 @@ public class ScheduledBatchScheduler
       throws ExecutionException, InterruptedException
   {
     log.info("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
-    final ListenableFuture<SqlTaskStatus> sqlTaskStatusListenableFuture = brokerClient.submitSqlTask(spec);
-    final SqlTaskStatus sqlTaskStatus;
-    sqlTaskStatus = sqlTaskStatusListenableFuture.get();
-    statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus);
+    final SqlTaskStatus taskStatus = FutureUtils.get(brokerClient.submitSqlTask(spec), true);
+    statusTracker.onTaskSubmitted(supervisorId, taskStatus);
   }
 
   private class SchedulerManager

@@ -26,16 +26,23 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.sql.client.BrokerClient;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -52,15 +59,11 @@ public class ScheduledBatchSchedulerTest
   private static final String TASK_ID_BAR2 = "barTaskId2";
 
   private static final QuartzCronSchedulerConfig CRON_SCHEDULE_1_SECOND = new QuartzCronSchedulerConfig("* * * * * ?");
-  private static final QuartzCronSchedulerConfig CRON_SCHEDULE_10_SECONDS = new QuartzCronSchedulerConfig("*/10 * * * * ?");
-  private static final QuartzCronSchedulerConfig CRON_SCHEDULE_30_SECONDS = new QuartzCronSchedulerConfig("*/30 * * * * ?");
 
-  private TaskMaster taskMaster;
   private BlockingExecutorService executor;
   private BrokerClient brokerClient;
   private StubServiceEmitter serviceEmitter;
-  private ScheduledBatchStatusTracker statusTracker;
-  private SqlQuery query;
+  private SqlQuery query1;
   private SqlQuery query2;
   private ScheduledBatchScheduler scheduler;
 
@@ -68,16 +71,20 @@ public class ScheduledBatchSchedulerTest
   public void setUp()
   {
     brokerClient = Mockito.mock(BrokerClient.class);
-    taskMaster = new TaskMaster(null, null);
     executor = new BlockingExecutorService("test");
-    statusTracker = new ScheduledBatchStatusTracker();
     serviceEmitter = new StubServiceEmitter();
-    query = createSqlQuery("REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY ALL");
+    query1 = createSqlQuery("REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY ALL");
     query2 = createSqlQuery("REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY DAY");
-    initScheduler();
+    scheduler = new ScheduledBatchScheduler(
+        new TaskMaster(null, null),
+        (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
+        brokerClient,
+        serviceEmitter,
+        new ScheduledBatchStatusTracker()
+    );
   }
 
-  private SqlQuery createSqlQuery(final String query)
+  private static SqlQuery createSqlQuery(final String query)
   {
     return new SqlQuery(
         query,
@@ -90,63 +97,15 @@ public class ScheduledBatchSchedulerTest
     );
   }
 
-  private void initScheduler()
-  {
-    scheduler = new ScheduledBatchScheduler(
-        taskMaster,
-        (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
-        brokerClient,
-        serviceEmitter,
-        statusTracker
-    );
-  }
-
   @Test
-  public void testStartStopSchedulingSupervisor()
-  {
-    scheduler.start();
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, CRON_SCHEDULE_30_SECONDS, query);
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
-
-    scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN);
-
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, CRON_SCHEDULE_10_SECONDS, query);
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
-
-    scheduler.stop();
-    assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_FOO));
-    serviceEmitter.verifyNotEmitted("batchSupervisor/tasks/submit/success");
-  }
-
-  @Test
-  public void testStartStopSchedulingSupervisorWhenResponseIsNull() throws Exception
-  {
-    Mockito.when(brokerClient.submitSqlTask(query))
-           .thenReturn(Futures.immediateFuture(new SqlTaskStatus(TASK_ID_FOO1, TaskState.SUCCESS, null)));
-
-    scheduler.start();
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, CRON_SCHEDULE_1_SECOND, query);
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
-
-    Thread.sleep(1200);
-    scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN);
-
-    scheduler.stop();
-    assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_FOO));
-    serviceEmitter.verifyNotEmitted("batchSupervisor/tasks/submit/success");
-  }
-
-  @Test
-  public void testStartStopSchedulingSupervisorWhenResponseIsValid() throws Exception
+  public void testSchedulerWithSuccessfulTaskSubmission() throws Exception
   {
     SqlTaskStatus expectedTaskStatus = new SqlTaskStatus(TASK_ID_FOO1, TaskState.SUCCESS, null);
-    Mockito.when(brokerClient.submitSqlTask(query))
+    Mockito.when(brokerClient.submitSqlTask(query1))
            .thenReturn(Futures.immediateFuture(expectedTaskStatus));
 
     scheduler.start();
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, CRON_SCHEDULE_1_SECOND, query);
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, CRON_SCHEDULE_1_SECOND, query1);
     verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
     Thread.sleep(1200);
@@ -168,11 +127,51 @@ public class ScheduledBatchSchedulerTest
 
     scheduler.stop();
     assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_FOO));
-    serviceEmitter.verifyEmitted("batchSupervisor/tasks/submit/success", 1);
+    serviceEmitter.verifyEmitted(
+        "batchSupervisor/tasks/submit/success",
+        ImmutableMap.of("supervisorId", SUPERVISOR_ID_FOO),
+        1
+    );
   }
 
   @Test
-  public void testStartStopSchedulingMultipleSupervisors() throws Exception
+  public void testSchedulerWithFailedTaskSubmission() throws Exception
+  {
+    Mockito.when(brokerClient.submitSqlTask(query1))
+           .thenReturn(
+               Futures.immediateFailedFuture(
+                   new HttpResponseException(
+                       new StringFullResponseHolder(
+                           new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.INTERNAL_SERVER_ERROR),
+                           StandardCharsets.UTF_8
+                       )
+                   )
+               ));
+
+    scheduler.start();
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, CRON_SCHEDULE_1_SECOND, query1);
+    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
+
+    Thread.sleep(1200);
+    executor.finishNextPendingTask();
+    scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
+    verifySchedulerSnapshot(
+        SUPERVISOR_ID_FOO,
+        ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN
+    );
+
+    scheduler.stop();
+    assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_FOO));
+    serviceEmitter.verifyEmitted(
+        "batchSupervisor/tasks/submit/failed",
+        ImmutableMap.of("supervisorId", SUPERVISOR_ID_FOO),
+        1
+    );
+  }
+
+
+  @Test
+  public void testSchedulerWithMultipleSupervisors() throws Exception
   {
     SqlTaskStatus expectedFooTask1 = new SqlTaskStatus(TASK_ID_FOO1, TaskState.SUCCESS, null);
     SqlTaskStatus expectedFooTask2 = new SqlTaskStatus(TASK_ID_FOO2, TaskState.RUNNING, null);
@@ -180,7 +179,7 @@ public class ScheduledBatchSchedulerTest
         InvalidInput.exception("some exception")));
     SqlTaskStatus expectedBarTask2 = new SqlTaskStatus(TASK_ID_BAR2, TaskState.SUCCESS, null);
 
-    Mockito.when(brokerClient.submitSqlTask(query))
+    Mockito.when(brokerClient.submitSqlTask(query1))
            .thenReturn(Futures.immediateFuture(expectedFooTask1))
            .thenReturn(Futures.immediateFuture(expectedFooTask2));
     Mockito.when(brokerClient.submitSqlTask(query2))
@@ -188,7 +187,7 @@ public class ScheduledBatchSchedulerTest
            .thenReturn(Futures.immediateFuture(expectedBarTask2));
 
     scheduler.start();
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, CRON_SCHEDULE_1_SECOND, query);
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, CRON_SCHEDULE_1_SECOND, query1);
     scheduler.startScheduledIngestion(SUPERVISOR_ID_BAR, CRON_SCHEDULE_1_SECOND, query2);
 
     verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
@@ -227,17 +226,29 @@ public class ScheduledBatchSchedulerTest
     scheduler.stop();
     assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_FOO));
     assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_BAR));
-    serviceEmitter.verifyEmitted("batchSupervisor/tasks/submit/success", 4);
+    serviceEmitter.verifyEmitted(
+        "batchSupervisor/tasks/submit/success",
+        ImmutableMap.of("supervisorId", SUPERVISOR_ID_FOO),
+        2
+    );
+    serviceEmitter.verifyEmitted(
+        "batchSupervisor/tasks/submit/success",
+        ImmutableMap.of("supervisorId", SUPERVISOR_ID_BAR),
+        2
+    );
   }
 
-  private void verifySchedulerSnapshot(final String supervisorId, final ScheduledBatchSupervisorPayload.BatchSupervisorStatus expectedStatus)
+  private void verifySchedulerSnapshot(
+      final String supervisorId,
+      final ScheduledBatchSupervisorPayload.BatchSupervisorStatus expectedSupervisorStatus
+  )
   {
-    verifySchedulerSnapshotWithTasks(supervisorId, expectedStatus, ImmutableMap.of(), ImmutableMap.of());
+    verifySchedulerSnapshotWithTasks(supervisorId, expectedSupervisorStatus, ImmutableMap.of(), ImmutableMap.of());
   }
 
   private void verifySchedulerSnapshotWithTasks(
       final String supervisorId,
-      final ScheduledBatchSupervisorPayload.BatchSupervisorStatus expectedStatus,
+      final ScheduledBatchSupervisorPayload.BatchSupervisorStatus expectedSupervisorStatus,
       final ImmutableMap<String, TaskStatus> expectedActiveTasks,
       final ImmutableMap<String, TaskStatus> expectedCompletedTasks
   )
@@ -247,6 +258,6 @@ public class ScheduledBatchSchedulerTest
     assertEquals(supervisorId, snapshot.getSupervisorId());
     assertEquals(expectedActiveTasks, snapshot.getActiveTasks());
     assertEquals(expectedCompletedTasks, snapshot.getCompletedTasks());
-    assertEquals(expectedStatus, snapshot.getStatus());
+    assertEquals(expectedSupervisorStatus, snapshot.getStatus());
   }
 }
