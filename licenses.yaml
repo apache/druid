@@ -3724,30 +3724,6 @@ libraries:
 
 ---
 
-name: JAXB
-license_category: binary
-module: hadoop-client
-license_name: CDDL 1.1
-version: 2.2.2
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.xml.bind: jaxb-api
-
----
-
-name: JAXB
-license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 2.3.1
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.xml.bind: jaxb-api
-
----
-
 name: jsp-api
 license_category: binary
 module: hadoop-client
@@ -5005,6 +4981,23 @@ version: 1.2.1
 libraries:
   - com.sun.activation: jakarta.activation
 
+---
+name: jakarta.activation-api
+license_category: binary
+module: core
+license_name: Eclipse Distribution License 1.0
+version: 1.2.2
+libraries:
+  - jakarta.activation: jakarta.activation-api
+
+---
+name: jakarta.xml.bind-api
+license_category: binary
+module: core
+license_name: Eclipse Distribution License 1.0
+version: 2.3.3
+libraries:
+  - jakarta.xml.bind: jakarta.xml.bind-api
 ---
 
 # Web console modules start
