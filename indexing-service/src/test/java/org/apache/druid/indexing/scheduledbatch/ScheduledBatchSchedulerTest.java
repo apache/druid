@@ -38,6 +38,8 @@ import org.apache.druid.sql.http.SqlTaskStatus;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -58,7 +60,20 @@ public class ScheduledBatchSchedulerTest
   private static final String TASK_ID_BAR1 = "barTaskId1";
   private static final String TASK_ID_BAR2 = "barTaskId2";
 
-  private static final QuartzCronSchedulerConfig CRON_SCHEDULE_1_SECOND = new QuartzCronSchedulerConfig("* * * * * ?");
+  private static final CronSchedulerConfig IMMEDIATE_SCHEDULER_CONFIG = new CronSchedulerConfig()
+  {
+    @Override
+    public DateTime getNextTaskSubmissionTime(final DateTime dateTime)
+    {
+      return dateTime;
+    }
+
+    @Override
+    public Duration getTimeUntilNextTaskSubmission(final DateTime dateTime)
+    {
+      return Duration.ZERO;
+    }
+  };
 
   private BlockingExecutorService executor;
   private BrokerClient brokerClient;
@@ -98,18 +113,17 @@ public class ScheduledBatchSchedulerTest
   }
 
   @Test
-  public void testSchedulerWithSuccessfulTaskSubmission() throws Exception
+  public void testSchedulerWithSuccessfulTaskSubmission()
   {
-    SqlTaskStatus expectedTaskStatus = new SqlTaskStatus(TASK_ID_FOO1, TaskState.SUCCESS, null);
+    final SqlTaskStatus expectedTaskStatus = new SqlTaskStatus(TASK_ID_FOO1, TaskState.SUCCESS, null);
     Mockito.when(brokerClient.submitSqlTask(query1))
            .thenReturn(Futures.immediateFuture(expectedTaskStatus));
 
     scheduler.start();
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, CRON_SCHEDULE_1_SECOND, query1);
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, IMMEDIATE_SCHEDULER_CONFIG, query1);
     verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
-    Thread.sleep(1200);
-    executor.finishNextPendingTask();
+    executor.finishNextPendingTasks(2);
     verifySchedulerSnapshotWithTasks(
         SUPERVISOR_ID_FOO,
         ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING,
@@ -135,7 +149,7 @@ public class ScheduledBatchSchedulerTest
   }
 
   @Test
-  public void testSchedulerWithFailedTaskSubmission() throws Exception
+  public void testSchedulerWithFailedTaskSubmission()
   {
     Mockito.when(brokerClient.submitSqlTask(query1))
            .thenReturn(
@@ -149,11 +163,10 @@ public class ScheduledBatchSchedulerTest
                ));
 
     scheduler.start();
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, CRON_SCHEDULE_1_SECOND, query1);
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, IMMEDIATE_SCHEDULER_CONFIG, query1);
     verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
-    Thread.sleep(1200);
-    executor.finishNextPendingTask();
+    executor.finishNextPendingTasks(2);
     scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
     verifySchedulerSnapshot(
         SUPERVISOR_ID_FOO,
@@ -169,15 +182,14 @@ public class ScheduledBatchSchedulerTest
     );
   }
 
-
   @Test
-  public void testSchedulerWithMultipleSupervisors() throws Exception
+  public void testSchedulerWithMultipleSupervisors()
   {
-    SqlTaskStatus expectedFooTask1 = new SqlTaskStatus(TASK_ID_FOO1, TaskState.SUCCESS, null);
-    SqlTaskStatus expectedFooTask2 = new SqlTaskStatus(TASK_ID_FOO2, TaskState.RUNNING, null);
-    SqlTaskStatus expectedBarTask1 = new SqlTaskStatus(TASK_ID_BAR1, TaskState.FAILED, new ErrorResponse(
+    final SqlTaskStatus expectedFooTask1 = new SqlTaskStatus(TASK_ID_FOO1, TaskState.SUCCESS, null);
+    final SqlTaskStatus expectedFooTask2 = new SqlTaskStatus(TASK_ID_FOO2, TaskState.RUNNING, null);
+    final SqlTaskStatus expectedBarTask1 = new SqlTaskStatus(TASK_ID_BAR1, TaskState.FAILED, new ErrorResponse(
         InvalidInput.exception("some exception")));
-    SqlTaskStatus expectedBarTask2 = new SqlTaskStatus(TASK_ID_BAR2, TaskState.SUCCESS, null);
+    final SqlTaskStatus expectedBarTask2 = new SqlTaskStatus(TASK_ID_BAR2, TaskState.SUCCESS, null);
 
     Mockito.when(brokerClient.submitSqlTask(query1))
            .thenReturn(Futures.immediateFuture(expectedFooTask1))
@@ -187,14 +199,13 @@ public class ScheduledBatchSchedulerTest
            .thenReturn(Futures.immediateFuture(expectedBarTask2));
 
     scheduler.start();
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, CRON_SCHEDULE_1_SECOND, query1);
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_BAR, CRON_SCHEDULE_1_SECOND, query2);
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, IMMEDIATE_SCHEDULER_CONFIG, query1);
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_BAR, IMMEDIATE_SCHEDULER_CONFIG, query2);
 
     verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
     verifySchedulerSnapshot(SUPERVISOR_ID_BAR, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
-    Thread.sleep(1200);
-    executor.finishAllPendingTasks();
+    executor.finishNextPendingTasks(3);
 
     verifySchedulerSnapshotWithTasks(
         SUPERVISOR_ID_FOO,
@@ -203,8 +214,7 @@ public class ScheduledBatchSchedulerTest
         ImmutableMap.of(expectedFooTask1.getTaskId(), TaskStatus.success(expectedFooTask1.getTaskId()))
     );
 
-    Thread.sleep(1200);
-    executor.finishAllPendingTasks();
+    executor.finishNextPendingTasks(6);
     scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
     verifySchedulerSnapshotWithTasks(
         SUPERVISOR_ID_FOO,
@@ -218,8 +228,8 @@ public class ScheduledBatchSchedulerTest
         ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING,
         ImmutableMap.of(),
         ImmutableMap.of(
-            expectedBarTask2.getTaskId(), TaskStatus.success(expectedBarTask2.getTaskId()),
-            expectedBarTask1.getTaskId(), TaskStatus.failure(expectedBarTask1.getTaskId(), null)
+            TASK_ID_BAR2, TaskStatus.success(TASK_ID_BAR2),
+            TASK_ID_BAR1, TaskStatus.failure(TASK_ID_BAR1, null)
         )
     );
 

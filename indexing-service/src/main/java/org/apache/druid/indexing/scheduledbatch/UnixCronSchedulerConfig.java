@@ -19,18 +19,24 @@
 
 package org.apache.druid.indexing.scheduledbatch;
 
-import com.cronutils.model.Cron;
 import com.cronutils.model.CronType;
 import com.cronutils.model.definition.CronDefinitionBuilder;
+import com.cronutils.model.time.ExecutionTime;
 import com.cronutils.parser.CronParser;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class UnixCronSchedulerConfig implements CronSchedulerConfig
 {
   public static final String TYPE = "unix";
 
   private static final CronParser CRON_PARSER = createUnixCronParserWithMacros();
+  private final ExecutionTime executionTime;
 
   private static CronParser createUnixCronParserWithMacros()
   {
@@ -40,37 +46,57 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
                          .forEach(unixDefnWithMacros::register);
     return new CronParser(
         unixDefnWithMacros.withSupportedNicknameHourly()
-                            .withSupportedNicknameMidnight()
-                            .withSupportedNicknameDaily()
-                            .withSupportedNicknameWeekly()
-                            .withSupportedNicknameMonthly()
-                            .withSupportedNicknameAnnually()
-                            .withSupportedNicknameYearly()
-                            .instance()
+                          .withSupportedNicknameMidnight()
+                          .withSupportedNicknameDaily()
+                          .withSupportedNicknameWeekly()
+                          .withSupportedNicknameMonthly()
+                          .withSupportedNicknameAnnually()
+                          .withSupportedNicknameYearly()
+                          .instance()
     );
   }
 
   @JsonProperty
   private final String schedule;
 
-  private final Cron cron;
-
   @JsonCreator
   public UnixCronSchedulerConfig(@JsonProperty("schedule") final String schedule)
   {
-    this.cron = CRON_PARSER.parse(schedule);
+    this.executionTime = ExecutionTime.forCron(CRON_PARSER.parse(schedule));
     this.schedule = schedule;
   }
 
+  @Nullable
   @Override
-  public Cron getCron()
+  public DateTime getNextTaskSubmissionTime(final DateTime dateTime)
   {
-    return cron;
+    return CronSchedulerUtils.getNextTaskSubmissionTime(executionTime, dateTime);
   }
 
-  public String getSchedule()
+  @Nullable
+  @Override
+  public Duration getTimeUntilNextTaskSubmission(final DateTime dateTime)
   {
-    return schedule;
+    return CronSchedulerUtils.getTimeUntilNextTaskSubmission(executionTime, dateTime);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    UnixCronSchedulerConfig that = (UnixCronSchedulerConfig) o;
+    return Objects.equals(schedule, that.schedule);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(schedule);
   }
 
   @Override

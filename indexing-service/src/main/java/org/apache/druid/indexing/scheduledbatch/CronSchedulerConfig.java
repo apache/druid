@@ -19,10 +19,16 @@
 
 package org.apache.druid.indexing.scheduledbatch;
 
-import com.cronutils.model.Cron;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
+import javax.annotation.Nullable;
+
+/**
+ * Interface representing a configuration for scheduling tasks based on cron expressions.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = UnixCronSchedulerConfig.TYPE, value = UnixCronSchedulerConfig.class),
@@ -30,5 +36,17 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface CronSchedulerConfig
 {
-  Cron getCron();
+  /**
+   * Gets the next task submission time after the specified reference time {@code dateTime}, or {@code null}
+   * if no future submission time can be determined (e.g., if the schedule is in the past).
+   */
+  @Nullable
+  DateTime getNextTaskSubmissionTime(DateTime dateTime);
+
+  /**
+   * Gets the duration until the next task submission after the specified reference time {@code dateTime}, or
+   * {@code null} if no future submission time can be determined (e.g., if the schedule is in the past).
+   */
+  @Nullable
+  Duration getTimeUntilNextTaskSubmission(DateTime dateTime);
 }

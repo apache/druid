@@ -106,7 +106,9 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
     if (explainPlanInfos.size() != 1) {
       throw DruidException.defensive(
           "Received an invalid EXPLAIN PLAN response for query[%s]. Expected a single plan information, but received[%d]: [%s].",
-          spec.getQuery(), explainPlanInfos.size(), explainPlanInfos
+          spec.getQuery(),
+          explainPlanInfos.size(),
+          explainPlanInfos
       );
     }
 

@@ -22,36 +22,69 @@ package org.apache.druid.indexing.scheduledbatch;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Duration;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 public class QuartzCronSchedulerConfigTest
 {
+  private static final DateTime DATE_2024_01_01 = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeZone.UTC);
+
+  @Test
+  public void testGetNextTaskSubmissionTime()
+  {
+    final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 * * * * ?");
+
+    assertEquals(DATE_2024_01_01.plusMinutes(1), config.getNextTaskSubmissionTime(DATE_2024_01_01));
+    assertEquals(Duration.standardMinutes(1), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+  }
+
   @Test
   public void testCustomSchedule()
   {
     final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 15 10 * * ? *");
-    assertEquals("0 15 10 * * ? *", config.getSchedule());
-    assertEquals("0 15 10 * * ? *", config.getCron().asString());
+
+    assertEquals(DATE_2024_01_01.withTime(10, 15, 0, 0), config.getNextTaskSubmissionTime(DATE_2024_01_01));
+    assertEquals(Duration.standardMinutes(615), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
   }
 
   @Test
   public void testOneOffYearSchedule()
   {
     final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 0 0 31 12 ? 2024-2025");
-    assertEquals("0 0 0 31 12 ? 2024-2025", config.getSchedule());
-    assertEquals("0 0 0 31 12 ? 2024-2025", config.getCron().asString());
+
+    assertEquals(DATE_2024_01_01.withDate(2024, 12, 31), config.getNextTaskSubmissionTime(DATE_2024_01_01));
+    assertEquals(Duration.standardDays(365), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+  }
+
+  @Test
+  public void testScheduleWithNoFutureExecutions()
+  {
+    final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 0 0 31 12 ? 2020-2021");
+
+    assertNull(config.getNextTaskSubmissionTime(DATE_2024_01_01));
+    assertNull(config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
   }
 
   @Test
   public void testOneOffDaySchedule()
   {
     final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 30 10-13 ? * WED,FRI");
-    assertEquals("0 30 10-13 ? * WED,FRI", config.getSchedule());
-    assertEquals("0 30 10-13 ? * 4,6", config.getCron().asString());
+
+    assertEquals(
+        DATE_2024_01_01.withDayOfWeek(3).withTime(10, 30, 0, 0),
+        config.getNextTaskSubmissionTime(DATE_2024_01_01)
+    );
+    assertEquals(
+        Duration.standardHours(58).plus(Duration.standardMinutes(30)),
+        config.getTimeUntilNextTaskSubmission(DATE_2024_01_01)
+    );
   }
 
   @Test
@@ -64,10 +97,7 @@ public class QuartzCronSchedulerConfigTest
 
     final CronSchedulerConfig deserializedConfig = objectMapper.readValue(json, CronSchedulerConfig.class);
     assertTrue(deserializedConfig instanceof QuartzCronSchedulerConfig);
-
-    final QuartzCronSchedulerConfig deserializedQuartzConfig = (QuartzCronSchedulerConfig) deserializedConfig;
-    assertEquals(config.getSchedule(), deserializedQuartzConfig.getSchedule());
-    assertEquals(config.getCron().asString(), deserializedQuartzConfig.getCron().asString());
+    assertEquals(config, deserializedConfig);
   }
 
   @Test

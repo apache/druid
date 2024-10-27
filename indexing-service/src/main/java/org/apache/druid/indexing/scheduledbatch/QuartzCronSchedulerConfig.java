@@ -19,12 +19,17 @@
 
 package org.apache.druid.indexing.scheduledbatch;
 
-import com.cronutils.model.Cron;
 import com.cronutils.model.CronType;
 import com.cronutils.model.definition.CronDefinitionBuilder;
+import com.cronutils.model.time.ExecutionTime;
 import com.cronutils.parser.CronParser;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class QuartzCronSchedulerConfig implements CronSchedulerConfig
 {
@@ -36,24 +41,27 @@ public class QuartzCronSchedulerConfig implements CronSchedulerConfig
   @JsonProperty
   private final String schedule;
 
-  private final Cron cron;
+  private final ExecutionTime executionTime;
 
   @JsonCreator
   public QuartzCronSchedulerConfig(@JsonProperty("schedule") final String schedule)
   {
-    this.cron = CRON_PARSER.parse(schedule);
+    this.executionTime = ExecutionTime.forCron(CRON_PARSER.parse(schedule));
     this.schedule = schedule;
   }
 
-  public String getSchedule()
+  @Nullable
+  @Override
+  public DateTime getNextTaskSubmissionTime(final DateTime dateTime)
   {
-    return schedule;
+    return CronSchedulerUtils.getNextTaskSubmissionTime(executionTime, dateTime);
   }
 
+  @Nullable
   @Override
-  public Cron getCron()
+  public Duration getTimeUntilNextTaskSubmission(final DateTime dateTime)
   {
-    return cron;
+    return CronSchedulerUtils.getTimeUntilNextTaskSubmission(executionTime, dateTime);
   }
 
   @Override
@@ -62,6 +70,25 @@ public class QuartzCronSchedulerConfig implements CronSchedulerConfig
     return "QuartzCronSchedulerConfig{" +
            "schedule='" + schedule + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    QuartzCronSchedulerConfig that = (QuartzCronSchedulerConfig) o;
+    return Objects.equals(schedule, that.schedule);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(schedule);
   }
 }
 

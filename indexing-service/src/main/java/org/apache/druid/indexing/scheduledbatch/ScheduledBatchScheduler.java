@@ -19,7 +19,7 @@
 
 package org.apache.druid.indexing.scheduledbatch;
 
-import com.cronutils.model.time.ExecutionTime;
+import com.google.common.base.Optional;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskLocation;
@@ -41,12 +41,8 @@ import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
-import java.time.Instant;
-import java.time.ZonedDateTime;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -67,6 +63,7 @@ public class ScheduledBatchScheduler
 
   private final ConcurrentHashMap<String, SchedulerManager> supervisorToManager
       = new ConcurrentHashMap<>();
+  private final ScheduledExecutorFactory executorFactory;
 
   @Inject
   public ScheduledBatchScheduler(
@@ -78,6 +75,7 @@ public class ScheduledBatchScheduler
   )
   {
     this.taskMaster = taskMaster;
+    this.executorFactory = executorFactory;
     this.cronExecutor = executorFactory.create(1, "ScheduledBatchScheduler-%s");
     this.brokerClient = brokerClient;
     this.emitter = emitter;
@@ -117,7 +115,7 @@ public class ScheduledBatchScheduler
         "Starting scheduled batch ingestion for supervisorId[%s] with cronSchedule[%s] and spec[%s].",
         supervisorId, cronSchedulerConfig, spec
     );
-    final SchedulerManager manager = new SchedulerManager(supervisorId, cronSchedulerConfig, spec);
+    final SchedulerManager manager = new SchedulerManager(supervisorId, cronSchedulerConfig, spec, executorFactory);
     manager.startScheduling();
     supervisorToManager.put(supervisorId, manager);
   }
@@ -136,7 +134,7 @@ public class ScheduledBatchScheduler
   public void start()
   {
     log.info("Starting scheduled batch scheduler.");
-    final com.google.common.base.Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
+    final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (taskRunnerOptional.isPresent()) {
       taskRunnerOptional.get().registerListener(taskRunnerListener, Execs.directExecutor());
     } else {
@@ -147,7 +145,7 @@ public class ScheduledBatchScheduler
   public void stop()
   {
     log.info("Stopping scheduled batch scheduler.");
-    final com.google.common.base.Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
+    final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (taskRunnerOptional.isPresent()) {
       taskRunnerOptional.get().unregisterListener(taskRunnerListener.getListenerId());
     }
@@ -192,8 +190,8 @@ public class ScheduledBatchScheduler
   {
     private final String supervisorId;
     private final SqlQuery spec;
-    private final ExecutionTime executionTime;
-    private final ScheduledExecutorService executorService;
+    private final ScheduledExecutorService managerExecutor;
+    private final CronSchedulerConfig cronSchedulerConfig;
 
     private ScheduledBatchSupervisorPayload.BatchSupervisorStatus status;
 
@@ -207,18 +205,19 @@ public class ScheduledBatchScheduler
     private SchedulerManager(
         final String supervisorId,
         final CronSchedulerConfig cronSchedulerConfig,
-        final SqlQuery spec
+        final SqlQuery spec,
+        final ScheduledExecutorFactory executorFactory
     )
     {
       this.supervisorId = supervisorId;
+      this.cronSchedulerConfig = cronSchedulerConfig;
       this.spec = spec;
-      this.executionTime = ExecutionTime.forCron(cronSchedulerConfig.getCron());
-      this.executorService = Executors.newSingleThreadScheduledExecutor();
+      this.managerExecutor = executorFactory.create(1, "scheduler-" + supervisorId + "-%d");
     }
 
     private synchronized void startScheduling()
     {
-      if (executorService.isTerminated() || executorService.isShutdown()) {
+      if (managerExecutor.isTerminated() || managerExecutor.isShutdown()) {
         return;
       }
 
@@ -229,7 +228,7 @@ public class ScheduledBatchScheduler
         return;
       }
 
-      executorService.schedule(
+      managerExecutor.schedule(
           () -> {
             enqueueTask(() -> {
               try {
@@ -251,15 +250,15 @@ public class ScheduledBatchScheduler
 
     private synchronized void stopScheduling()
     {
-      executorService.shutdown();
+      managerExecutor.shutdown();
       try {
-        if (!executorService.awaitTermination(2, TimeUnit.SECONDS)) {
-          executorService.shutdownNow();
+        if (!managerExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
+          managerExecutor.shutdownNow();
         }
       }
       catch (InterruptedException e) {
         log.error(e, "Forcing shutdown of executor service for supervisor[%s].", supervisorId);
-        executorService.shutdownNow();
+        managerExecutor.shutdownNow();
         Thread.currentThread().interrupt();
       }
       status = ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN;
@@ -269,8 +268,8 @@ public class ScheduledBatchScheduler
     {
       emitter.emit(
           ServiceMetricEvent.builder()
-              .setDimension("supervisorId", supervisorId)
-              .setMetric(metricName, value)
+                            .setDimension("supervisorId", supervisorId)
+                            .setMetric(metricName, 1)
       );
     }
 
@@ -283,21 +282,13 @@ public class ScheduledBatchScheduler
     @Nullable
     private DateTime getNextTaskSubmissionTime()
     {
-      final Optional<ZonedDateTime> zonedDateTime = executionTime.nextExecution(ZonedDateTime.now());
-      if (zonedDateTime.isPresent()) {
-        final ZonedDateTime zdt = zonedDateTime.get();
-        final Instant instant = zdt.toInstant();
-        return new DateTime(instant.toEpochMilli(), DateTimes.inferTzFromString(zdt.getZone().getId()));
-      } else {
-        return null;
-      }
+      return cronSchedulerConfig.getNextTaskSubmissionTime(DateTimes.nowUtc());
     }
 
     @Nullable
     private Duration getTimeUntilNextTaskSubmission()
     {
-      final Optional<java.time.Duration> duration = executionTime.timeToNextExecution(ZonedDateTime.now());
-      return duration.map(value -> Duration.millis(value.toMillis())).orElse(null);
+      return cronSchedulerConfig.getTimeUntilNextTaskSubmission(DateTimes.nowUtc());
     }
 
     private ScheduledBatchSupervisorPayload.BatchSupervisorStatus getSchedulerStatus()

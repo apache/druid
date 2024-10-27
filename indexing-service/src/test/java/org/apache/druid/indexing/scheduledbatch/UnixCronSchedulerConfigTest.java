@@ -22,6 +22,9 @@ package org.apache.druid.indexing.scheduledbatch;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Duration;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -30,53 +33,62 @@ import static org.junit.Assert.assertTrue;
 
 public class UnixCronSchedulerConfigTest
 {
+  private static final DateTime DATE_2024_01_01 = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeZone.UTC);
+
   @Test
   public void testHourlyMacro()
   {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@hourly");
-    assertEquals("@hourly", config.getSchedule());
-    assertEquals("0 * * * *", config.getCron().asString());
+
+    assertEquals(DATE_2024_01_01.plusHours(1), config.getNextTaskSubmissionTime(DATE_2024_01_01));
+    assertEquals(Duration.standardHours(1), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
   }
 
   @Test
   public void testDailyMacro()
   {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@daily");
-    assertEquals("@daily", config.getSchedule());
-    assertEquals("0 0 * * *", config.getCron().asString());
+
+    assertEquals(DATE_2024_01_01.plusDays(1), config.getNextTaskSubmissionTime(DATE_2024_01_01));
+    assertEquals(Duration.standardDays(1), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
   }
 
   @Test
   public void testWeeklyMacro()
   {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@weekly");
-    assertEquals("@weekly", config.getSchedule());
-    assertEquals("0 0 * * 0", config.getCron().asString());
+
+    assertEquals(DATE_2024_01_01.withDayOfWeek(7), config.getNextTaskSubmissionTime(DATE_2024_01_01));
+    assertEquals(Duration.standardDays(6), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
   }
 
   @Test
   public void testMonthlyMacro()
   {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@monthly");
-    assertEquals("@monthly", config.getSchedule());
-    assertEquals("0 0 1 * *", config.getCron().asString());
-  }
 
-  @Test
-  public void testCustomSchedule()
-  {
-    final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("0 15 10 * *");
-    assertEquals("0 15 10 * *", config.getSchedule());
-    assertEquals("0 15 10 * *", config.getCron().asString());
+    assertEquals(DATE_2024_01_01.plusMonths(1).withDayOfMonth(1), config.getNextTaskSubmissionTime(DATE_2024_01_01));
+    assertEquals(Duration.standardDays(31), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
   }
 
   @Test
   public void testYearlyMacro()
   {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@yearly");
-    assertEquals("@yearly", config.getSchedule());
-    assertEquals("0 0 1 1 *", config.getCron().asString());
+
+    assertEquals(DATE_2024_01_01.plusYears(1).withDayOfYear(1), config.getNextTaskSubmissionTime(DATE_2024_01_01));
+    assertEquals(Duration.standardDays(366), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
   }
+
+  @Test
+  public void test30MinutesSchedule()
+  {
+    final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("*/30 * * * *");
+
+    assertEquals(DATE_2024_01_01.plusMinutes(30), config.getNextTaskSubmissionTime(DATE_2024_01_01));
+    assertEquals(Duration.standardMinutes(30), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+  }
+
 
   @Test
   public void testSerde() throws JsonProcessingException
@@ -88,11 +100,7 @@ public class UnixCronSchedulerConfigTest
 
     final CronSchedulerConfig deserializedConfig = objectMapper.readValue(json, CronSchedulerConfig.class);
     assertTrue(deserializedConfig instanceof UnixCronSchedulerConfig);
-
-    final UnixCronSchedulerConfig deserializedUnixConfig = (UnixCronSchedulerConfig) deserializedConfig;
-
-    assertEquals(config.getSchedule(), deserializedUnixConfig.getSchedule());
-    assertEquals(config.getCron().asString(), deserializedUnixConfig.getCron().asString());
+    assertEquals(config, deserializedConfig);
   }
 
   @Test
