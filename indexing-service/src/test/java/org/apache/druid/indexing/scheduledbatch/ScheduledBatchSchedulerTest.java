@@ -19,23 +19,18 @@
 
 package org.apache.druid.indexing.scheduledbatch;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
-import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.overlord.TaskMaster;
-import org.apache.druid.indexing.overlord.TaskQueue;
-import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.sql.client.BrokerClient;
 import org.apache.druid.sql.http.ResultFormat;
-import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
 import org.junit.Before;
@@ -55,41 +50,33 @@ public class ScheduledBatchSchedulerTest
   private ScheduledBatchStatusTracker statusTracker;
   private SqlQuery query;
   private SqlQuery query2;
-
   private ScheduledBatchScheduler scheduler;
 
   @Before
-  public void setUp()
-  {
+  public void setUp() {
     brokerClient = Mockito.mock(BrokerClient.class);
     taskMaster = new TaskMaster(null, null);
-    taskMaster.becomeLeader(Mockito.mock(TaskRunner.class), Mockito.mock(TaskQueue.class));
     executor = new BlockingExecutorService("test");
     statusTracker = new ScheduledBatchStatusTracker();
     serviceEmitter = new StubServiceEmitter();
-    query = new SqlQuery(
-        "REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY ALL",
-        ResultFormat.ARRAY,
-        true,
-        true,
-        true,
-        ImmutableMap.of("useCache", false),
-        ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
-    );
-    query2 = new SqlQuery(
-        "REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY DAY",
-        ResultFormat.ARRAY,
-        true,
-        true,
-        true,
-        ImmutableMap.of("useCache", false),
-        ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
-    );
+    query = createSqlQuery("REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY ALL");
+    query2 = createSqlQuery("REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY DAY");
     initScheduler();
   }
 
-  private void initScheduler()
-  {
+  private SqlQuery createSqlQuery(final String query) {
+    return new SqlQuery(
+        query,
+        ResultFormat.ARRAY,
+        true,
+        true,
+        true,
+        null,
+        null
+    );
+  }
+
+  private void initScheduler() {
     scheduler = new ScheduledBatchScheduler(
         taskMaster,
         (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
@@ -100,33 +87,16 @@ public class ScheduledBatchSchedulerTest
   }
 
   @Test
-  public void testStartStopSchedulingSupervisor()
-  {
+  public void testStartStopSchedulingSupervisor() {
     scheduler.start();
-    scheduler.startScheduledIngestion("foo", new QuartzCronSchedulerConfig("*/30 * * * * ?"), query);
-    ScheduledBatchSupervisorSnapshot snapshot = scheduler.getSchedulerSnapshot("foo");
-    assertNotNull(snapshot);
-    assertEquals("foo", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    assertNull(snapshot.getLastTaskSubmittedTime());
+    startSupervisor("foo", new QuartzCronSchedulerConfig("*/30 * * * * ?"), query);
+    verifySchedulerSnapshot("foo", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
     scheduler.stopScheduledIngestion("foo");
-    snapshot = scheduler.getSchedulerSnapshot("foo");
-    assertNotNull(snapshot);
-    assertEquals("foo", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN, snapshot.getStatus());
+    verifySchedulerSnapshot("foo", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN);
 
-    scheduler.startScheduledIngestion("foo", new QuartzCronSchedulerConfig("*/10 * * * * ?"), query);
-    snapshot = scheduler.getSchedulerSnapshot("foo");
-    assertNotNull(snapshot);
-    assertEquals("foo", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
+    startSupervisor("foo", new QuartzCronSchedulerConfig("*/10 * * * * ?"), query);
+    verifySchedulerSnapshot("foo", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
     scheduler.stop();
     assertNull(scheduler.getSchedulerSnapshot("foo"));
@@ -134,30 +104,17 @@ public class ScheduledBatchSchedulerTest
   }
 
   @Test
-  public void testStartStopSchedulingSupervisorWhenResponseIsNull() throws Exception
-  {
+  public void testStartStopSchedulingSupervisorWhenResponseIsNull() throws Exception {
     Mockito.when(brokerClient.submitSqlTask(query))
            .thenReturn(Futures.immediateFuture(new SqlTaskStatus("taskId1", TaskState.SUCCESS, null)));
 
     scheduler.start();
-    scheduler.startScheduledIngestion("foo", new QuartzCronSchedulerConfig("* * * * * ?"), query);
-    ScheduledBatchSupervisorSnapshot snapshot = scheduler.getSchedulerSnapshot("foo");
-    assertNotNull(snapshot);
-    assertEquals("foo", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    assertNull(snapshot.getLastTaskSubmittedTime());
+    startSupervisor("foo", new QuartzCronSchedulerConfig("* * * * * ?"), query);
+    verifySchedulerSnapshot("foo", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
     Thread.sleep(1200);
-
     scheduler.stopScheduledIngestion("foo");
-    snapshot = scheduler.getSchedulerSnapshot("foo");
-    assertNotNull(snapshot);
-    assertEquals("foo", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN, snapshot.getStatus());
+    verifySchedulerSnapshot("foo", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN);
 
     scheduler.stop();
     assertNull(scheduler.getSchedulerSnapshot("foo"));
@@ -165,40 +122,23 @@ public class ScheduledBatchSchedulerTest
   }
 
   @Test
-  public void testStartStopSchedulingSupervisorWhenResponseIsValid() throws Exception
-  {
-    final SqlTaskStatus expectedTaskStatus = new SqlTaskStatus("taskId1", TaskState.SUCCESS, null);
+  public void testStartStopSchedulingSupervisorWhenResponseIsValid() throws Exception {
+    SqlTaskStatus expectedTaskStatus = new SqlTaskStatus("taskId1", TaskState.SUCCESS, null);
     Mockito.when(brokerClient.submitSqlTask(query))
            .thenReturn(Futures.immediateFuture(expectedTaskStatus));
 
     scheduler.start();
-    scheduler.startScheduledIngestion("foo", new QuartzCronSchedulerConfig("* * * * * ?"), query);
-    ScheduledBatchSupervisorSnapshot snapshot = scheduler.getSchedulerSnapshot("foo");
-    assertNotNull(snapshot);
-    assertEquals("foo", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    assertNull(snapshot.getLastTaskSubmittedTime());
+    startSupervisor("foo", new QuartzCronSchedulerConfig("* * * * * ?"), query);
+    verifySchedulerSnapshot("foo", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
     Thread.sleep(1200);
     executor.finishNextPendingTask();
-    snapshot = scheduler.getSchedulerSnapshot("foo");
-    assertNotNull(snapshot);
-    assertEquals("foo", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId())), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    assertNotNull(snapshot.getLastTaskSubmittedTime());
+    verifySchedulerSnapshotWithTasks("foo", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING,
+                                     ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId())));
 
     scheduler.stopScheduledIngestion("foo");
-
-    snapshot = scheduler.getSchedulerSnapshot("foo");
-    assertNotNull(snapshot);
-    assertEquals("foo", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId())), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN, snapshot.getStatus());
+    verifySchedulerSnapshotWithTasks("foo", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN,
+                                     ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId())));
 
     scheduler.stop();
     assertNull(scheduler.getSchedulerSnapshot("foo"));
@@ -206,77 +146,94 @@ public class ScheduledBatchSchedulerTest
   }
 
   @Test
-  public void testStartStopSchedulingMultipleSupervisors() throws Exception
-  {
-    final SqlTaskStatus expectedTask1 = new SqlTaskStatus("fooTaskId1", TaskState.SUCCESS, null);
-    final SqlTaskStatus expectedTask2 = new SqlTaskStatus("fooTaskId2", TaskState.RUNNING, null);
-    Mockito.when(brokerClient.submitSqlTask(query))
-           .thenReturn(Futures.immediateFuture(expectedTask1))
-           .thenReturn(Futures.immediateFuture(expectedTask2));
-
-    final SqlTaskStatus expectedBarTask1 = new SqlTaskStatus("barTaskId1", TaskState.FAILED, new ErrorResponse(
+  public void testStartStopSchedulingMultipleSupervisors() throws Exception {
+    SqlTaskStatus expectedFooTask1 = new SqlTaskStatus("fooTaskId1", TaskState.SUCCESS, null);
+    SqlTaskStatus expectedFooTask2 = new SqlTaskStatus("fooTaskId2", TaskState.RUNNING, null);
+    SqlTaskStatus expectedBarTask1 = new SqlTaskStatus("barTaskId1", TaskState.FAILED, new ErrorResponse(
         InvalidInput.exception("some exception")));
-    final SqlTaskStatus expectedBarTask2 = new SqlTaskStatus("barTaskId2", TaskState.SUCCESS, null);
+    SqlTaskStatus expectedBarTask2 = new SqlTaskStatus("barTaskId2", TaskState.SUCCESS, null);
+
+    // Mocking the task submission responses for "foo" and "bar" supervisors
+    Mockito.when(brokerClient.submitSqlTask(query))
+           .thenReturn(Futures.immediateFuture(expectedFooTask1))
+           .thenReturn(Futures.immediateFuture(expectedFooTask2));
     Mockito.when(brokerClient.submitSqlTask(query2))
            .thenReturn(Futures.immediateFuture(expectedBarTask1))
            .thenReturn(Futures.immediateFuture(expectedBarTask2));
 
     scheduler.start();
-    scheduler.startScheduledIngestion("foo", new QuartzCronSchedulerConfig("* * * * * ?"), query);
-    scheduler.startScheduledIngestion("bar", new QuartzCronSchedulerConfig("* * * * * ?"), query2);
+    startSupervisor("foo", new QuartzCronSchedulerConfig("* * * * * ?"), query);
+    startSupervisor("bar", new QuartzCronSchedulerConfig("* * * * * ?"), query2);
 
-    ScheduledBatchSupervisorSnapshot snapshot = scheduler.getSchedulerSnapshot("foo");
-    assertNotNull(snapshot);
-    assertEquals("foo", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    assertNull(snapshot.getLastTaskSubmittedTime());
+    // Verify initial state after starting the supervisors
+    verifySchedulerSnapshot("foo", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
+    verifySchedulerSnapshot("bar", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
-    snapshot = scheduler.getSchedulerSnapshot("bar");
-    assertNotNull(snapshot);
-    assertEquals("bar", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    assertNull(snapshot.getLastTaskSubmittedTime());
-
+    // Simulate task execution and completion
     Thread.sleep(1200);
     executor.finishAllPendingTasks();
-    snapshot = scheduler.getSchedulerSnapshot("foo");
-    assertNotNull(snapshot);
-    assertEquals("foo", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(expectedTask1.getTaskId(),
-                                 TaskStatus.success(expectedTask1.getTaskId())), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-    assertNotNull(snapshot.getLastTaskSubmittedTime());
 
+    // Verify state after finishing the first task for "foo"
+    verifySchedulerSnapshotWithTasks("foo", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING,
+                                     ImmutableMap.of(expectedFooTask1.getTaskId(), TaskStatus.success(expectedFooTask1.getTaskId())));
+
+    // Stop "foo" supervisor and verify its state after stopping
     Thread.sleep(1200);
     executor.finishAllPendingTasks();
     scheduler.stopScheduledIngestion("foo");
+    verifySchedulerSnapshotWithTasks("foo", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN,
+                                     ImmutableMap.of(expectedFooTask2.getTaskId(), TaskStatus.running(expectedFooTask2.getTaskId())),
+                                     ImmutableMap.of(expectedFooTask1.getTaskId(), TaskStatus.success(expectedFooTask1.getTaskId())));
 
-    snapshot = scheduler.getSchedulerSnapshot("foo");
-    assertNotNull(snapshot);
-    assertEquals("foo", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(expectedTask2.getTaskId(), TaskStatus.running(expectedTask2.getTaskId())), snapshot.getActiveTasks());
-    assertEquals(ImmutableMap.of(expectedTask1.getTaskId(), TaskStatus.success(expectedTask1.getTaskId())), snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN, snapshot.getStatus());
+    // Verify state after finishing tasks for "bar"
+    verifySchedulerSnapshotWithTasks("bar", ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING,
+                                     ImmutableMap.of(
+                                         expectedBarTask2.getTaskId(), TaskStatus.success(expectedBarTask2.getTaskId()),
+                                         expectedBarTask1.getTaskId(), TaskStatus.failure(expectedBarTask1.getTaskId(), null)
+                                     )
+    );
 
-    snapshot = scheduler.getSchedulerSnapshot("bar");
-    assertNotNull(snapshot);
-    assertEquals("bar", snapshot.getSupervisorId());
-    assertEquals(ImmutableMap.of(), snapshot.getActiveTasks());
-    assertEquals(
-        ImmutableMap.of(
-            expectedBarTask2.getTaskId(), TaskStatus.success(expectedBarTask2.getTaskId()),
-            expectedBarTask1.getTaskId(), TaskStatus.failure(expectedBarTask1.getTaskId(), null)
-        ),
-        snapshot.getCompletedTasks());
-    assertEquals(ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING, snapshot.getStatus());
-
+    // Stop all supervisors
     scheduler.stop();
     assertNull(scheduler.getSchedulerSnapshot("foo"));
+    assertNull(scheduler.getSchedulerSnapshot("bar"));
     serviceEmitter.verifyEmitted("batchSupervisor/tasks/submit/success", 4);
+  }
+
+  private void startSupervisor(final String supervisorId, final CronSchedulerConfig quartzSchedule, final SqlQuery sqlQuery)
+  {
+    scheduler.startScheduledIngestion(supervisorId, quartzSchedule, sqlQuery);
+  }
+
+  private void verifySchedulerSnapshot(
+      final String supervisorId,
+      final ScheduledBatchSupervisorPayload.BatchSupervisorStatus expectedStatus
+  )
+  {
+    verifySchedulerSnapshotWithTasks(supervisorId, expectedStatus, ImmutableMap.of(), ImmutableMap.of());
+  }
+
+  private void verifySchedulerSnapshotWithTasks(
+      final String supervisorId,
+      final ScheduledBatchSupervisorPayload.BatchSupervisorStatus expectedStatus,
+      final ImmutableMap<String, TaskStatus> expectedCompletedTasks
+  )
+  {
+    verifySchedulerSnapshotWithTasks(supervisorId, expectedStatus, ImmutableMap.of(), expectedCompletedTasks);
+  }
+
+  private void verifySchedulerSnapshotWithTasks(
+      final String supervisorId,
+      final ScheduledBatchSupervisorPayload.BatchSupervisorStatus expectedStatus,
+      final ImmutableMap<String, TaskStatus> expectedActiveTasks,
+      final ImmutableMap<String, TaskStatus> expectedCompletedTasks
+  )
+  {
+    final ScheduledBatchSupervisorSnapshot snapshot = scheduler.getSchedulerSnapshot(supervisorId);
+    assertNotNull(snapshot);
+    assertEquals(supervisorId, snapshot.getSupervisorId());
+    assertEquals(expectedActiveTasks, snapshot.getActiveTasks());
+    assertEquals(expectedCompletedTasks, snapshot.getCompletedTasks());
+    assertEquals(expectedStatus, snapshot.getStatus());
   }
 }
