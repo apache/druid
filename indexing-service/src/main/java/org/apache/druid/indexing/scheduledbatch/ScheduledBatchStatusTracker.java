@@ -22,7 +22,9 @@ package org.apache.druid.indexing.scheduledbatch;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.sql.http.SqlTaskStatus;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +60,7 @@ public class ScheduledBatchStatusTracker
 
   public BatchSupervisorTaskStatus getSupervisorTasks(final String supervisorId)
   {
-    final List<String> taskIds = supervisorToTaskIds.getOrDefault(supervisorId, new ArrayList<>());
+    final List<String> taskIds = supervisorToTaskIds.getOrDefault(supervisorId, Collections.emptyList());
 
     final Map<String, TaskStatus> completedTasks = new HashMap<>();
     final Map<String, TaskStatus> submittedTasks = new HashMap<>();

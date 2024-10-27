@@ -30,54 +30,25 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-public class ScheduledBatchStatusTrackerTest
-{
+public class ScheduledBatchStatusTrackerTest {
+
+  private static final String SUPERVISOR_ID_1 = "supervisor1";
+  private static final String SUPERVISOR_ID_2 = "supervisor2";
+  private static final String TASK_ID_1 = "taskId1";
+  private static final String TASK_ID_2 = "taskId2";
+  private static final String TASK_ID_3 = "taskId3";
 
   private ScheduledBatchStatusTracker statusTracker;
 
   @Before
-  public void setUp()
-  {
+  public void setUp() {
     statusTracker = new ScheduledBatchStatusTracker();
   }
 
   @Test
-  public void testOnTaskSubmitted()
-  {
-    final String supervisorId = "supervisor1";
-    final SqlTaskStatus sqlTaskStatus = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
-
-    statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus);
-
-    ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result = statusTracker.getSupervisorTasks(supervisorId);
-    assertNotNull(result);
-    assertEquals(ImmutableMap.of("taskId1", TaskStatus.running("taskId1")), result.getSubmittedTasks());
-    assertTrue(result.getCompletedTasks().isEmpty());
-  }
-
-  @Test
-  public void testOnTaskCompleted()
-  {
-    final String supervisorId = "supervisor1";
-    final SqlTaskStatus sqlTaskStatus = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
-    statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus);
-
-    statusTracker.onTaskCompleted("taskId1", TaskStatus.success("taskId1"));
-
+  public void testGetSupervisorTasksWithNoTasks() {
     final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result =
-        statusTracker.getSupervisorTasks(supervisorId);
-
-    assertNotNull(result);
-    assertTrue(result.getCompletedTasks().containsKey("taskId1"));
-    assertEquals(TaskState.SUCCESS, result.getCompletedTasks().get("taskId1").getStatusCode());
-    assertTrue(result.getSubmittedTasks().isEmpty());
-  }
-
-  @Test
-  public void testGetTasksWithNoTasks()
-  {
-    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result =
-        statusTracker.getSupervisorTasks("supervisor1");
+        statusTracker.getSupervisorTasks(SUPERVISOR_ID_1);
 
     assertNotNull(result);
     assertTrue(result.getSubmittedTasks().isEmpty());
@@ -85,54 +56,150 @@ public class ScheduledBatchStatusTrackerTest
   }
 
   @Test
-  public void testGetTasksWithMultipleTasks()
-  {
-    final String supervisorId = "supervisor1";
-    final SqlTaskStatus sqlTaskStatus1 = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
-    final SqlTaskStatus sqlTaskStatus2 = new SqlTaskStatus("taskId2", TaskState.RUNNING, null);
+  public void testOnTaskSubmitted() {
+    final SqlTaskStatus sqlTaskStatus = new SqlTaskStatus(TASK_ID_1, TaskState.RUNNING, null);
 
-    statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus1);
-    statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus2);
+    statusTracker.onTaskSubmitted(SUPERVISOR_ID_1, sqlTaskStatus);
 
-    statusTracker.onTaskCompleted("taskId1", TaskStatus.success("taskId1"));
-
-    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result =
-        statusTracker.getSupervisorTasks(supervisorId);
+    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result = statusTracker.getSupervisorTasks(SUPERVISOR_ID_1);
     assertNotNull(result);
-    assertTrue(result.getSubmittedTasks().containsKey("taskId2"));
-    assertEquals(TaskState.RUNNING, result.getSubmittedTasks().get("taskId2").getStatusCode());
-
-    assertTrue(result.getCompletedTasks().containsKey("taskId1"));
-    assertEquals(TaskState.SUCCESS, result.getCompletedTasks().get("taskId1").getStatusCode());
+    assertEquals(ImmutableMap.of(TASK_ID_1, TaskStatus.running(TASK_ID_1)), result.getSubmittedTasks());
+    assertTrue(result.getCompletedTasks().isEmpty());
   }
 
   @Test
-  public void testThreadSafety() throws InterruptedException
-  {
-    final String supervisorId = "supervisor1";
-    final SqlTaskStatus sqlTaskStatus1 = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
-    final SqlTaskStatus sqlTaskStatus2 = new SqlTaskStatus("taskId2", TaskState.RUNNING, null);
+  public void testOnTaskCompleted() {
+    final SqlTaskStatus sqlTaskStatus = new SqlTaskStatus(TASK_ID_1, TaskState.RUNNING, null);
+    statusTracker.onTaskSubmitted(SUPERVISOR_ID_1, sqlTaskStatus);
+
+    statusTracker.onTaskCompleted(TASK_ID_1, TaskStatus.success(TASK_ID_1));
+
+    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result = statusTracker.getSupervisorTasks(SUPERVISOR_ID_1);
+
+    assertNotNull(result);
+    assertEquals(ImmutableMap.of(TASK_ID_1, TaskStatus.success(TASK_ID_1)), result.getCompletedTasks());
+    assertTrue(result.getSubmittedTasks().isEmpty());
+  }
+
+  @Test
+  public void testGetTasksWithMultipleTasks() {
+    final SqlTaskStatus sqlTaskStatus1 = new SqlTaskStatus(TASK_ID_1, TaskState.RUNNING, null);
+    final SqlTaskStatus sqlTaskStatus2 = new SqlTaskStatus(TASK_ID_2, TaskState.RUNNING, null);
+
+    statusTracker.onTaskSubmitted(SUPERVISOR_ID_1, sqlTaskStatus1);
+    statusTracker.onTaskSubmitted(SUPERVISOR_ID_1, sqlTaskStatus2);
+
+    statusTracker.onTaskCompleted(TASK_ID_1, TaskStatus.success(TASK_ID_1));
+
+    ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result = statusTracker.getSupervisorTasks(SUPERVISOR_ID_1);
+    assertNotNull(result);
+    assertEquals(ImmutableMap.of(TASK_ID_2, TaskStatus.running(TASK_ID_2)), result.getSubmittedTasks());
+    assertEquals(ImmutableMap.of(TASK_ID_1, TaskStatus.success(TASK_ID_1)), result.getCompletedTasks());
+
+    statusTracker.onTaskCompleted(TASK_ID_2, TaskStatus.failure(TASK_ID_2, "some error message."));
+
+    result = statusTracker.getSupervisorTasks(SUPERVISOR_ID_1);
+    assertEquals(ImmutableMap.of(), result.getSubmittedTasks());
+    assertEquals(
+        ImmutableMap.of(
+            TASK_ID_1, TaskStatus.success(TASK_ID_1),
+            TASK_ID_2, TaskStatus.failure(TASK_ID_2, "some error message.")
+        ),
+        result.getCompletedTasks()
+    );
+  }
+
+  @Test
+  public void testMultipleSupervisors() {
+    // Submit tasks for supervisor 1
+    final SqlTaskStatus sqlTaskStatus1 = new SqlTaskStatus(TASK_ID_1, TaskState.RUNNING, null);
+    final SqlTaskStatus sqlTaskStatus2 = new SqlTaskStatus(TASK_ID_2, TaskState.RUNNING, null);
+    statusTracker.onTaskSubmitted(SUPERVISOR_ID_1, sqlTaskStatus1);
+    statusTracker.onTaskSubmitted(SUPERVISOR_ID_1, sqlTaskStatus2);
+
+    // Submit and complete a task for supervisor 2
+    final SqlTaskStatus sqlTaskStatus3 = new SqlTaskStatus(TASK_ID_3, TaskState.RUNNING, null);
+    statusTracker.onTaskSubmitted(SUPERVISOR_ID_2, sqlTaskStatus3);
+    statusTracker.onTaskCompleted(TASK_ID_3, TaskStatus.success(TASK_ID_3));
+
+    // Verify the state of supervisor 1
+    ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result1 = statusTracker.getSupervisorTasks(SUPERVISOR_ID_1);
+    assertNotNull(result1);
+    assertEquals(
+        ImmutableMap.of(
+            TASK_ID_1, TaskStatus.running(TASK_ID_1),
+            TASK_ID_2, TaskStatus.running(TASK_ID_2)
+        ),
+        result1.getSubmittedTasks()
+    );
+    assertTrue(result1.getCompletedTasks().isEmpty());
+
+    // Verify the state of supervisor 2
+    ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result2 = statusTracker.getSupervisorTasks(SUPERVISOR_ID_2);
+    assertNotNull(result2);
+    assertEquals(ImmutableMap.of(), result2.getSubmittedTasks());
+    assertEquals(ImmutableMap.of(TASK_ID_3, TaskStatus.success(TASK_ID_3)), result2.getCompletedTasks());
+
+    // Complete tasks for supervisor 1
+    statusTracker.onTaskCompleted(TASK_ID_1, TaskStatus.success(TASK_ID_1));
+    statusTracker.onTaskCompleted(TASK_ID_2, TaskStatus.failure(TASK_ID_2, "Task failed"));
+
+    // Verify final state of supervisor 1
+    result1 = statusTracker.getSupervisorTasks(SUPERVISOR_ID_1);
+    assertNotNull(result1);
+    assertEquals(ImmutableMap.of(), result1.getSubmittedTasks());
+    assertEquals(
+        ImmutableMap.of(
+            TASK_ID_1, TaskStatus.success(TASK_ID_1),
+            TASK_ID_2, TaskStatus.failure(TASK_ID_2, "Task failed")
+        ),
+        result1.getCompletedTasks()
+    );
+  }
+
+  @Test
+  public void testThreadSafety() throws InterruptedException {
+    final SqlTaskStatus sqlTaskStatus1 = new SqlTaskStatus(TASK_ID_1, TaskState.RUNNING, null);
+    final SqlTaskStatus sqlTaskStatus2 = new SqlTaskStatus(TASK_ID_2, TaskState.RUNNING, null);
+    final SqlTaskStatus sqlTaskStatus3 = new SqlTaskStatus(TASK_ID_3, TaskState.RUNNING, null);
 
     final Thread thread1 = new Thread(() -> {
-      statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus1);
-      statusTracker.onTaskCompleted("taskId1", TaskStatus.success("taskId1"));
+      statusTracker.onTaskSubmitted(SUPERVISOR_ID_1, sqlTaskStatus1);
+      statusTracker.onTaskCompleted(TASK_ID_1, TaskStatus.success(TASK_ID_1));
     });
     final Thread thread2 = new Thread(() -> {
-      statusTracker.onTaskSubmitted(supervisorId, sqlTaskStatus2);
-      statusTracker.onTaskCompleted("taskId2", TaskStatus.success("taskId2"));
+      statusTracker.onTaskSubmitted(SUPERVISOR_ID_1, sqlTaskStatus2);
+      statusTracker.onTaskCompleted(TASK_ID_2, TaskStatus.failure(TASK_ID_2, "Task failed"));
+    });
+    final Thread thread3 = new Thread(() -> {
+      statusTracker.onTaskSubmitted(SUPERVISOR_ID_2, sqlTaskStatus3);
+      statusTracker.onTaskCompleted(TASK_ID_3, TaskStatus.success(TASK_ID_3));
     });
 
     thread1.start();
     thread2.start();
+    thread3.start();
 
     thread1.join();
     thread2.join();
+    thread3.join();
 
-    // Verify that both tasks were correctly tracked
-    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result = statusTracker.getSupervisorTasks(supervisorId);
-    assertNotNull(result);
-    assertEquals(2, result.getCompletedTasks().size());
-    assertTrue(result.getCompletedTasks().containsKey("taskId1"));
-    assertTrue(result.getCompletedTasks().containsKey("taskId2"));
+    // Verify that tasks were correctly tracked for supervisor 1
+    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result1 = statusTracker.getSupervisorTasks(SUPERVISOR_ID_1);
+    assertNotNull(result1);
+    assertEquals(ImmutableMap.of(), result1.getSubmittedTasks());
+    assertEquals(
+        ImmutableMap.of(
+            TASK_ID_1, TaskStatus.success(TASK_ID_1),
+            TASK_ID_2, TaskStatus.failure(TASK_ID_2, "Task failed")
+        ),
+        result1.getCompletedTasks()
+    );
+
+    // Verify that tasks were correctly tracked for supervisor 2
+    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus result2 = statusTracker.getSupervisorTasks(SUPERVISOR_ID_2);
+    assertNotNull(result2);
+    assertEquals(ImmutableMap.of(), result2.getSubmittedTasks());
+    assertEquals(ImmutableMap.of(TASK_ID_3, TaskStatus.success(TASK_ID_3)), result2.getCompletedTasks());
   }
 }
