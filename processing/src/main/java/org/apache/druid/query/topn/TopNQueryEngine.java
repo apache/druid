@@ -21,6 +21,7 @@ package org.apache.druid.query.topn;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableMap;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -28,6 +29,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.CursorGranularizer;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -75,6 +77,7 @@ public class TopNQueryEngine
    */
   public Sequence<Result<TopNResultValue>> query(
       TopNQuery query,
+      TopNQueryConfig config,
       final Segment segment,
       @Nullable final TopNQueryMetrics queryMetrics
   )
@@ -84,6 +87,10 @@ public class TopNQueryEngine
       throw new SegmentMissingException(
           "Null cursor factory found. Probably trying to issue a query against a segment being memory unmapped."
       );
+    }
+
+    if (!query.context().containsKey(QueryContexts.MAX_TOP_N_AGGREGATOR_HEAP_SIZE_BYTES)){
+      query = query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_TOP_N_AGGREGATOR_HEAP_SIZE_BYTES, config.getMaxTopNAggregatorHeapSizeBytes()));
     }
 
     final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, queryMetrics);

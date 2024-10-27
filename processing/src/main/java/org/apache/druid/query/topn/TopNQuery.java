@@ -30,6 +30,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -60,6 +61,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   private final DimFilter dimFilter;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
+  private TopNAggregatorResourceHelper aggregatorHelper;
 
   @JsonCreator
   public TopNQuery(
@@ -97,7 +99,16 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
             : postAggregatorSpecs
     );
 
+
+    final long expectedAllocBytes = aggregatorSpecs.stream().mapToLong(AggregatorFactory::getMaxIntermediateSizeWithNulls).sum();
+    final long maxAggregatorHeapSizeBytes = this.context().getLong(QueryContexts.MAX_TOP_N_AGGREGATOR_HEAP_SIZE_BYTES, TopNQueryConfig.DEFAULT_MAX_AGGREGATOR_HEAP_SIZE_BYTES);
+    this.aggregatorHelper = new TopNAggregatorResourceHelper(expectedAllocBytes, new TopNAggregatorResourceHelper.Config(maxAggregatorHeapSizeBytes));
+
     topNMetricSpec.verifyPreconditions(this.aggregatorSpecs, this.postAggregatorSpecs);
+  }
+
+  public TopNAggregatorResourceHelper getAggregatorHelper() {
+    return aggregatorHelper;
   }
 
   @Override

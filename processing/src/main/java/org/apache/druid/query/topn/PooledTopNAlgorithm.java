@@ -255,6 +255,8 @@ public class PooledTopNAlgorithm
       resultsBuf.clear();
 
       final int numBytesToWorkWith = resultsBuf.remaining();
+
+      query.getAggregatorHelper().addAggregatorMemory();
       final int[] aggregatorSizes = new int[query.getAggregatorSpecs().size()];
       int numBytesPerRecord = 0;
 
@@ -329,7 +331,7 @@ public class PooledTopNAlgorithm
   @Override
   protected BufferAggregator[] makeDimValAggregateStore(PooledTopNParams params)
   {
-    return makeBufferAggregators(params.getCursor(), query.getAggregatorSpecs());
+    return makeBufferAggregators(query, params.getCursor());
   }
 
   @Override

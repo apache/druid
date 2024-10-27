@@ -552,6 +552,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     );
   }
 
+  public TopNQueryConfig getConfig()
+  {
+    return this.config;
+  }
+
   /**
    * This returns a single frame containing the rows of the topN query's results
    */

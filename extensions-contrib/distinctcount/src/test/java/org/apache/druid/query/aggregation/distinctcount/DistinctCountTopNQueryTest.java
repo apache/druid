@@ -31,6 +31,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.IncrementalIndexSegment;
@@ -133,6 +134,7 @@ public class DistinctCountTopNQueryTest extends InitializedNullHandlingTest
     final Iterable<Result<TopNResultValue>> results =
         engine.query(
             query,
+            new TopNQueryConfig(),
             new IncrementalIndexSegment(index, SegmentId.dummy(QueryRunnerTestHelper.DATA_SOURCE)),
             null
         ).toList();

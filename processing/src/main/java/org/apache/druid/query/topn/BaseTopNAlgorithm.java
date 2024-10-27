@@ -41,8 +41,11 @@ import java.util.List;
 public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Parameters extends TopNParams>
     implements TopNAlgorithm<DimValSelector, Parameters>
 {
-  public static Aggregator[] makeAggregators(Cursor cursor, List<AggregatorFactory> aggregatorSpecs)
+
+  public static Aggregator[] makeAggregators(TopNQuery query, Cursor cursor)
   {
+    query.getAggregatorHelper().addAggregatorMemory();
+    final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
     Aggregator[] aggregators = new Aggregator[aggregatorSpecs.size()];
     int aggregatorIndex = 0;
     for (AggregatorFactory spec : aggregatorSpecs) {
@@ -52,8 +55,10 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     return aggregators;
   }
 
-  protected static BufferAggregator[] makeBufferAggregators(Cursor cursor, List<AggregatorFactory> aggregatorSpecs)
+  protected static BufferAggregator[] makeBufferAggregators(TopNQuery query, Cursor cursor)
   {
+    query.getAggregatorHelper().addAggregatorMemory();
+    final List<AggregatorFactory> aggregatorSpecs = query.getAggregatorSpecs();
     BufferAggregator[] aggregators = new BufferAggregator[aggregatorSpecs.size()];
     int aggregatorIndex = 0;
     for (AggregatorFactory spec : aggregatorSpecs) {

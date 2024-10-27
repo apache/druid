@@ -50,7 +50,7 @@ public class DoubleTopNColumnAggregatesProcessor
     long key = Double.doubleToLongBits(selector.getDouble());
     return aggregatesStore.computeIfAbsent(
         key,
-        k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+        k -> BaseTopNAlgorithm.makeAggregators(query, cursor)
     );
   }
 

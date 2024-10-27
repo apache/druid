@@ -28,6 +28,7 @@ import javax.validation.constraints.Min;
 public class TopNQueryConfig
 {
   public static final int DEFAULT_MIN_TOPN_THRESHOLD = 1000;
+  public static final long DEFAULT_MAX_AGGREGATOR_HEAP_SIZE_BYTES = 10 * (2 << 20); // 10mb
 
   @JsonProperty
   @Min(1)
@@ -36,5 +37,14 @@ public class TopNQueryConfig
   public int getMinTopNThreshold()
   {
     return minTopNThreshold;
+  }
+
+  @JsonProperty
+  @Min(0)
+  private long maxTopNAggregatorHeapSizeBytes = DEFAULT_MAX_AGGREGATOR_HEAP_SIZE_BYTES;
+
+  public long getMaxTopNAggregatorHeapSizeBytes()
+  {
+    return maxTopNAggregatorHeapSizeBytes;
   }
 }

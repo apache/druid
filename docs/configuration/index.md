@@ -2147,9 +2147,10 @@ context). If query does have `maxQueuedBytes` in the context, then that value is
 
 ### TopN query config
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.query.topN.minTopNThreshold`|See [TopN Aliasing](../querying/topnquery.md#aliasing) for details.|1000|
+|Property| Description                                                                   | Default |
+|--------|-------------------------------------------------------------------------------|---------|
+|`druid.query.topN.minTopNThreshold`| See [TopN Aliasing](../querying/topnquery.md#aliasing) for details.           | 1000    |
+|`druid.query.topN.maxTopNAggregatorHeapSizeBytes`| The maximum amount of aggregator heap bytes a given segment runner can acrue. | 10MB    |
 
 ### Search query config
 

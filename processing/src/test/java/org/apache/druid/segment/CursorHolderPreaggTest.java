@@ -42,6 +42,7 @@ import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -218,6 +219,7 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
                                                       .build();
     Sequence<Result<TopNResultValue>> results = topNQueryEngine.query(
         topNQuery,
+        new TopNQueryConfig(),
         segment,
         null
     );
