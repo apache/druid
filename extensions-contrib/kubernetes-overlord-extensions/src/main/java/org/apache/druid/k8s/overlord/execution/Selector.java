@@ -25,7 +25,6 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.utils.CollectionUtils;
 
-import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;

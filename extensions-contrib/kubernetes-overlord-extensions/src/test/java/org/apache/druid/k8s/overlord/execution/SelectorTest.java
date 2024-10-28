@@ -37,7 +37,8 @@ import java.util.Set;
 public class SelectorTest
 {
   @Test
-  public void shouldReturnTrueWhenMatchTasksTagsAndEmptyDataSource() {
+  public void shouldReturnTrueWhenMatchTasksTagsAndEmptyDataSource()
+  {
     Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
     cxtTagsConditions.put("tag1", Sets.newHashSet("tag1Value"));
 
@@ -55,7 +56,8 @@ public class SelectorTest
   }
 
   @Test
-  public void shouldReturnTrueWhenMatchDataSourceTagsAndEmptyTasks() {
+  public void shouldReturnTrueWhenMatchDataSourceTagsAndEmptyTasks()
+  {
     String datasource = "table";
     Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
     cxtTagsConditions.put("tag1", Sets.newHashSet("tag1Value"));
@@ -74,7 +76,8 @@ public class SelectorTest
   }
 
   @Test
-  public void shouldReturnTrueWhenMatchDataSourceTasksAndEmptyTags() {
+  public void shouldReturnTrueWhenMatchDataSourceTasksAndEmptyTags()
+  {
     String datasource = "table";
     Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
 
