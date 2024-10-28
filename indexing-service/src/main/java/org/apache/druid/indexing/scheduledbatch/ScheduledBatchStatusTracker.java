@@ -60,10 +60,9 @@ public class ScheduledBatchStatusTracker
   {
     final List<String> taskIds = supervisorToTaskIds.getOrDefault(supervisorId, Collections.emptyList());
 
-    final Map<String, TaskStatus> completedTasks = new HashMap<>();
     final Map<String, TaskStatus> submittedTasks = new HashMap<>();
+    final Map<String, TaskStatus> completedTasks = new HashMap<>();
 
-    // Traverse the task list and segregate into completed and submitted tasks
     for (String taskId : taskIds) {
       TaskStatus taskStatus = taskStatusMap.get(taskId);
       if (taskStatus != null) {
@@ -75,28 +74,31 @@ public class ScheduledBatchStatusTracker
       }
     }
 
-    return new BatchSupervisorTaskStatus(completedTasks, submittedTasks);
+    return new BatchSupervisorTaskStatus(submittedTasks, completedTasks);
   }
 
   public static class BatchSupervisorTaskStatus
   {
-    private final Map<String, TaskStatus> completedTasks;
     private final Map<String, TaskStatus> submittedTasks;
+    private final Map<String, TaskStatus> completedTasks;
 
-    public BatchSupervisorTaskStatus(Map<String, TaskStatus> completedTasks, Map<String, TaskStatus> submittedTasks)
+    public BatchSupervisorTaskStatus(
+        final Map<String, TaskStatus> submittedTasks,
+        final Map<String, TaskStatus> completedTasks
+    )
     {
-      this.completedTasks = new HashMap<>(completedTasks);
       this.submittedTasks = new HashMap<>(submittedTasks);
-    }
-
-    public Map<String, TaskStatus> getCompletedTasks()
-    {
-      return completedTasks;
+      this.completedTasks = new HashMap<>(completedTasks);
     }
 
     public Map<String, TaskStatus> getSubmittedTasks()
     {
       return submittedTasks;
+    }
+
+    public Map<String, TaskStatus> getCompletedTasks()
+    {
+      return completedTasks;
     }
   }
 }

@@ -193,7 +193,7 @@ public class ScheduledBatchScheduler
     private final ScheduledExecutorService managerExecutor;
     private final CronSchedulerConfig cronSchedulerConfig;
 
-    private ScheduledBatchSupervisorPayload.BatchSupervisorStatus status;
+    private ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus status;
 
     /**
      * Note that the last task submitted per supervisor should eventually be persisted in the metadata store,
@@ -221,7 +221,7 @@ public class ScheduledBatchScheduler
         return;
       }
 
-      status = ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING;
+      status = ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING;
       final Duration timeUntilNextSubmission = getTimeUntilNextTaskSubmission();
       if (timeUntilNextSubmission == null) {
         log.info("No more tasks will be submitted for supervisor[%s].", supervisorId);
@@ -261,7 +261,7 @@ public class ScheduledBatchScheduler
         managerExecutor.shutdownNow();
         Thread.currentThread().interrupt();
       }
-      status = ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN;
+      status = ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN;
     }
 
     private void emitMetric(final String metricName, final int value)
@@ -291,7 +291,7 @@ public class ScheduledBatchScheduler
       return cronSchedulerConfig.getTimeUntilNextTaskSubmission(DateTimes.nowUtc());
     }
 
-    private ScheduledBatchSupervisorPayload.BatchSupervisorStatus getSchedulerStatus()
+    private ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus getSchedulerStatus()
     {
       return status;
     }

@@ -35,7 +35,7 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
 {
   public static final String TYPE = "unix";
 
-  private static final CronParser CRON_PARSER = createUnixCronParserWithMacros();
+  private static final CronParser UNIX_PARSER = createUnixCronParserWithMacros();
   private final ExecutionTime executionTime;
 
   private static CronParser createUnixCronParserWithMacros()
@@ -62,7 +62,7 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
   @JsonCreator
   public UnixCronSchedulerConfig(@JsonProperty("schedule") final String schedule)
   {
-    this.executionTime = ExecutionTime.forCron(CRON_PARSER.parse(schedule));
+    this.executionTime = ExecutionTime.forCron(UNIX_PARSER.parse(schedule));
     this.schedule = schedule;
   }
 

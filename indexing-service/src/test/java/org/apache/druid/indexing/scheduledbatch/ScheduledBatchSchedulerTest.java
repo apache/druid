@@ -121,12 +121,12 @@ public class ScheduledBatchSchedulerTest
 
     scheduler.start();
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, IMMEDIATE_SCHEDULER_CONFIG, query1);
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
+    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
     executor.finishNextPendingTasks(2);
     verifySchedulerSnapshotWithTasks(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING,
+        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING,
         ImmutableMap.of(),
         ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId()))
     );
@@ -134,7 +134,7 @@ public class ScheduledBatchSchedulerTest
     scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
     verifySchedulerSnapshotWithTasks(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN,
+        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN,
         ImmutableMap.of(),
         ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId()))
     );
@@ -164,13 +164,13 @@ public class ScheduledBatchSchedulerTest
 
     scheduler.start();
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, IMMEDIATE_SCHEDULER_CONFIG, query1);
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
+    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
     executor.finishNextPendingTasks(2);
     scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
     verifySchedulerSnapshot(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN
+        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN
     );
 
     scheduler.stop();
@@ -202,14 +202,14 @@ public class ScheduledBatchSchedulerTest
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, IMMEDIATE_SCHEDULER_CONFIG, query1);
     scheduler.startScheduledIngestion(SUPERVISOR_ID_BAR, IMMEDIATE_SCHEDULER_CONFIG, query2);
 
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
-    verifySchedulerSnapshot(SUPERVISOR_ID_BAR, ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING);
+    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
+    verifySchedulerSnapshot(SUPERVISOR_ID_BAR, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
     executor.finishNextPendingTasks(3);
 
     verifySchedulerSnapshotWithTasks(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING,
+        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING,
         ImmutableMap.of(),
         ImmutableMap.of(expectedFooTask1.getTaskId(), TaskStatus.success(expectedFooTask1.getTaskId()))
     );
@@ -218,14 +218,14 @@ public class ScheduledBatchSchedulerTest
     scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
     verifySchedulerSnapshotWithTasks(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_SHUTDOWN,
+        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN,
         ImmutableMap.of(expectedFooTask2.getTaskId(), TaskStatus.running(expectedFooTask2.getTaskId())),
         ImmutableMap.of(expectedFooTask1.getTaskId(), TaskStatus.success(expectedFooTask1.getTaskId()))
     );
 
     verifySchedulerSnapshotWithTasks(
         SUPERVISOR_ID_BAR,
-        ScheduledBatchSupervisorPayload.BatchSupervisorStatus.SCHEDULER_RUNNING,
+        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING,
         ImmutableMap.of(),
         ImmutableMap.of(
             TASK_ID_BAR2, TaskStatus.success(TASK_ID_BAR2),
@@ -250,7 +250,7 @@ public class ScheduledBatchSchedulerTest
 
   private void verifySchedulerSnapshot(
       final String supervisorId,
-      final ScheduledBatchSupervisorPayload.BatchSupervisorStatus expectedSupervisorStatus
+      final ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus expectedSupervisorStatus
   )
   {
     verifySchedulerSnapshotWithTasks(supervisorId, expectedSupervisorStatus, ImmutableMap.of(), ImmutableMap.of());
@@ -258,7 +258,7 @@ public class ScheduledBatchSchedulerTest
 
   private void verifySchedulerSnapshotWithTasks(
       final String supervisorId,
-      final ScheduledBatchSupervisorPayload.BatchSupervisorStatus expectedSupervisorStatus,
+      final ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus expectedSupervisorStatus,
       final ImmutableMap<String, TaskStatus> expectedActiveTasks,
       final ImmutableMap<String, TaskStatus> expectedCompletedTasks
   )

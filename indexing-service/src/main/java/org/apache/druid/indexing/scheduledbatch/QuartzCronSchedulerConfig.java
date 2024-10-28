@@ -35,7 +35,7 @@ public class QuartzCronSchedulerConfig implements CronSchedulerConfig
 {
   public static final String TYPE = "quartz";
 
-  private static final CronParser CRON_PARSER =
+  private static final CronParser QUARTZ_PARSER =
       new CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.QUARTZ));
 
   @JsonProperty
@@ -46,7 +46,7 @@ public class QuartzCronSchedulerConfig implements CronSchedulerConfig
   @JsonCreator
   public QuartzCronSchedulerConfig(@JsonProperty("schedule") final String schedule)
   {
-    this.executionTime = ExecutionTime.forCron(CRON_PARSER.parse(schedule));
+    this.executionTime = ExecutionTime.forCron(QUARTZ_PARSER.parse(schedule));
     this.schedule = schedule;
   }
 

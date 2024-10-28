@@ -30,11 +30,18 @@ import java.util.Map;
 
 public class ScheduledBatchSupervisorSnapshot
 {
+  public enum BatchSupervisorStatus
+  {
+    SCHEDULER_RUNNING,
+    SCHEDULER_SHUTDOWN,
+    SCHEDULER_ERROR
+  }
+
   @JsonProperty
   private final String supervisorId;
 
   @JsonProperty
-  private final ScheduledBatchSupervisorPayload.BatchSupervisorStatus status;
+  private final BatchSupervisorStatus status;
 
   @Nullable
   @JsonProperty
@@ -57,7 +64,7 @@ public class ScheduledBatchSupervisorSnapshot
   @JsonCreator
   public ScheduledBatchSupervisorSnapshot(
       @JsonProperty("supervisorId") String supervisorId,
-      @JsonProperty("status") ScheduledBatchSupervisorPayload.BatchSupervisorStatus status,
+      @JsonProperty("status") BatchSupervisorStatus status,
       @JsonProperty("lastTaskSubmittedTime") @Nullable DateTime lastTaskSubmittedTime,
       @JsonProperty("nextTaskSubmissionTime") @Nullable DateTime nextTaskSubmissionTime,
       @JsonProperty("timeUntilNextTaskSubmission") @Nullable Duration timeUntilNextTaskSubmission,
@@ -79,7 +86,7 @@ public class ScheduledBatchSupervisorSnapshot
     return supervisorId;
   }
 
-  public ScheduledBatchSupervisorPayload.BatchSupervisorStatus getStatus()
+  public ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus getStatus()
   {
     return status;
   }
