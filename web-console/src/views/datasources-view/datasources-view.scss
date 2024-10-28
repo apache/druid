@@ -42,7 +42,11 @@
     height: 100%;
   }
 
-  .clickable-cell {
-    cursor: pointer;
+  .ReactTable {
+    @include pin-full;
+
+    .clickable-cell {
+      cursor: pointer;
+    }
   }
 }

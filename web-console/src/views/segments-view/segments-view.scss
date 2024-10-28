@@ -42,6 +42,8 @@
   }
 
   .ReactTable {
+    @include pin-full;
+
     .-totalPages {
       display: none;
     }
