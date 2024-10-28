@@ -298,16 +298,16 @@ public class SqlTestFrameworkConfig
     @Override
     public void beforeEach(ExtensionContext context)
     {
-      setConfig(context);
+      makeConfigFromContext(context);
     }
 
-    public void setConfig(ExtensionContext context)
+    public void makeConfigFromContext(ExtensionContext context)
     {
       testName = buildTestCaseName(context);
       method = context.getTestMethod().get();
       Class<?> testClass = context.getTestClass().get();
       List<Annotation> annotations = collectAnnotations(testClass, method);
-      config = new SqlTestFrameworkConfig(annotations);
+      setConfig(new SqlTestFrameworkConfig(annotations));
     }
 
     public void setConfig(SqlTestFrameworkConfig config)
