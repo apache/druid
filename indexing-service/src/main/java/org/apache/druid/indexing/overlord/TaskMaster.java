@@ -103,8 +103,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<TaskRunner> getTaskRunner()
   {
-    if (leadershipState.get() == LeadershipState.HALF_LEADER
-        || leadershipState.get() == LeadershipState.FULL_LEADER) {
+    if (isHalfOrFullLeader()) {
       return Optional.of(taskRunner);
     } else {
       return Optional.absent();
@@ -113,8 +112,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<TaskQueue> getTaskQueue()
   {
-    if (leadershipState.get() == LeadershipState.HALF_LEADER
-        || leadershipState.get() == LeadershipState.FULL_LEADER) {
+    if (isHalfOrFullLeader()) {
       return Optional.of(taskQueue);
     } else {
       return Optional.absent();
@@ -123,8 +121,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<TaskActionClient> getTaskActionClient(Task task)
   {
-    if (leadershipState.get() == LeadershipState.HALF_LEADER
-        || leadershipState.get() == LeadershipState.FULL_LEADER) {
+    if (isHalfOrFullLeader()) {
       return Optional.of(taskActionClientFactory.create(task));
     } else {
       return Optional.absent();
@@ -133,8 +130,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<ScalingStats> getScalingStats()
   {
-    if (leadershipState.get() == LeadershipState.HALF_LEADER
-        || leadershipState.get() == LeadershipState.FULL_LEADER) {
+    if (isHalfOrFullLeader()) {
       return taskRunner.getScalingStats();
     } else {
       return Optional.absent();
@@ -143,7 +139,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<SupervisorManager> getSupervisorManager()
   {
-    if (leadershipState.get() == LeadershipState.FULL_LEADER) {
+    if (isFullLeader()) {
       return Optional.of(supervisorManager);
     } else {
       return Optional.absent();
@@ -274,5 +270,16 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
     } else {
       return null;
     }
+  }
+
+  public boolean isHalfOrFullLeader()
+  {
+    final LeadershipState state = leadershipState.get();
+    return state == LeadershipState.HALF_LEADER || state == LeadershipState.FULL_LEADER;
+  }
+
+  public boolean isFullLeader()
+  {
+    return leadershipState.get() == LeadershipState.FULL_LEADER;
   }
 }
