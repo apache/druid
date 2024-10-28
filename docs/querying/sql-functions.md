@@ -3287,7 +3287,7 @@ Returns the following:
 
 | `origin_city` | `uppercase` |
 | -- | -- |
-`San Juan, PR` | `SAN JUAN, PR` |
+| `San Juan, PR` | `SAN JUAN, PR` |
 
 </details>
 
