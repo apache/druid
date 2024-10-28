@@ -40,25 +40,31 @@ export interface SegmentsCardProps {
 export const SegmentsCard = React.memo(function SegmentsCard(props: SegmentsCardProps) {
   const [segmentCountState] = useQueryManager<Capabilities, SegmentCounts>({
     initQuery: props.capabilities,
-    processQuery: async capabilities => {
+    processQuery: async (capabilities, cancelToken) => {
       if (capabilities.hasSql()) {
-        const segments = await queryDruidSql({
-          query: `SELECT
+        const segments = await queryDruidSql(
+          {
+            query: `SELECT
   COUNT(*) AS "active",
   COUNT(*) FILTER (WHERE is_available = 1) AS "cached_on_historical",
   COUNT(*) FILTER (WHERE is_available = 0 AND replication_factor > 0) AS "unavailable",
   COUNT(*) FILTER (WHERE is_realtime = 1) AS "realtime"
 FROM sys.segments
 WHERE is_active = 1`,
-        });
+          },
+          cancelToken,
+        );
         return segments.length === 1 ? segments[0] : null;
       } else if (capabilities.hasCoordinatorAccess()) {
-        const loadstatusResp = await Api.instance.get('/druid/coordinator/v1/loadstatus?simple');
+        const loadstatusResp = await Api.instance.get('/druid/coordinator/v1/loadstatus?simple', {
+          cancelToken,
+        });
         const loadstatus = loadstatusResp.data;
         const unavailableSegmentNum = sum(Object.keys(loadstatus), key => loadstatus[key]);
 
         const datasourcesMetaResp = await Api.instance.get(
           '/druid/coordinator/v1/datasources?simple',
+          { cancelToken },
         );
         const datasourcesMeta = datasourcesMetaResp.data;
         const availableSegmentNum = sum(datasourcesMeta, (curr: any) =>

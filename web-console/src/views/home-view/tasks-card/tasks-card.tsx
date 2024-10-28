@@ -17,6 +17,7 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
+import type { CancelToken } from 'axios';
 import React from 'react';
 
 import { PluralPairIfNeeded } from '../../../components';
@@ -40,22 +41,28 @@ export interface TaskCounts {
   waiting?: number;
 }
 
-async function getTaskCounts(capabilities: Capabilities): Promise<TaskCounts> {
+async function getTaskCounts(
+  capabilities: Capabilities,
+  cancelToken: CancelToken,
+): Promise<TaskCounts> {
   if (capabilities.hasSql()) {
-    const taskCountsFromQuery = await queryDruidSql<{ status: string; count: number }>({
-      query: `SELECT
+    const taskCountsFromQuery = await queryDruidSql<{ status: string; count: number }>(
+      {
+        query: `SELECT
   CASE WHEN "status" = 'RUNNING' THEN "runner_status" ELSE "status" END AS "status",
   COUNT(*) AS "count"
 FROM sys.tasks
 GROUP BY 1`,
-    });
+      },
+      cancelToken,
+    );
     return lookupBy(
       taskCountsFromQuery,
       x => x.status.toLowerCase(),
       x => x.count,
     );
   } else if (capabilities.hasOverlordAccess()) {
-    const tasks: any[] = (await Api.instance.get('/druid/indexer/v1/tasks')).data;
+    const tasks: any[] = (await Api.instance.get('/druid/indexer/v1/tasks', { cancelToken })).data;
     return {
       success: tasks.filter(d => getTaskStatus(d) === 'SUCCESS').length,
       failed: tasks.filter(d => getTaskStatus(d) === 'FAILED').length,
@@ -76,14 +83,14 @@ export interface TasksCardProps {
 
 export const TasksCard = React.memo(function TasksCard(props: TasksCardProps) {
   const [cardState] = useQueryManager<Capabilities, TaskCountsAndCapacity>({
-    processQuery: async capabilities => {
-      const taskCounts = await getTaskCounts(capabilities);
+    initQuery: props.capabilities,
+    processQuery: async (capabilities, cancelToken) => {
+      const taskCounts = await getTaskCounts(capabilities, cancelToken);
       if (!capabilities.hasOverlordAccess()) return taskCounts;
 
       const capacity = await getClusterCapacity();
       return { ...taskCounts, ...capacity };
     },
-    initQuery: props.capabilities,
   });
 
   const { success, failed, running, pending, waiting, totalTaskSlots } = cardState.data || {};

@@ -26,7 +26,9 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class GeneratorSchemaInfo
@@ -58,6 +60,20 @@ public class GeneratorSchemaInfo
   {
     List<DimensionSchema> specs = getColumnSchemas().stream()
                                                     .filter(x -> !x.isMetric())
+                                                    .map(GeneratorColumnSchema::getDimensionSchema)
+                                                    .collect(Collectors.toList());
+
+    return new DimensionsSpec(specs);
+  }
+
+  public DimensionsSpec getDimensionsSpecExcludeAggs()
+  {
+    final Set<String> metricsInputs = new HashSet<>();
+    for (AggregatorFactory agg : aggs) {
+      metricsInputs.addAll(agg.requiredFields());
+    }
+    List<DimensionSchema> specs = getColumnSchemas().stream()
+                                                    .filter(x -> !x.isMetric() && !metricsInputs.contains(x.getName()))
                                                     .map(GeneratorColumnSchema::getDimensionSchema)
                                                     .collect(Collectors.toList());
 

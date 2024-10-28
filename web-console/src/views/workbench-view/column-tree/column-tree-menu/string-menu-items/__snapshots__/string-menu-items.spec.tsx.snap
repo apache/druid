@@ -12,7 +12,6 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
       tabindex="0"
     >
       <a
-        aria-expanded="false"
         aria-haspopup="menu"
         class="bp5-menu-item"
         role="none"
@@ -79,7 +78,6 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
       tabindex="0"
     >
       <a
-        aria-expanded="false"
         aria-haspopup="menu"
         class="bp5-menu-item"
         role="none"
@@ -184,7 +182,6 @@ exports[`StringMenuItems matches snapshot when menu is opened for column inside 
       tabindex="0"
     >
       <a
-        aria-expanded="false"
         aria-haspopup="menu"
         class="bp5-menu-item"
         role="none"
@@ -256,7 +253,6 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
       tabindex="0"
     >
       <a
-        aria-expanded="false"
         aria-haspopup="menu"
         class="bp5-menu-item"
         role="none"
@@ -323,7 +319,6 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
       tabindex="0"
     >
       <a
-        aria-expanded="false"
         aria-haspopup="menu"
         class="bp5-menu-item"
         role="none"
@@ -390,7 +385,6 @@ exports[`StringMenuItems matches snapshot when menu is opened for column not ins
       tabindex="0"
     >
       <a
-        aria-expanded="false"
         aria-haspopup="menu"
         class="bp5-menu-item"
         role="none"

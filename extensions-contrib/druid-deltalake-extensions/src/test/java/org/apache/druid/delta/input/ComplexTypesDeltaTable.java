@@ -28,6 +28,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -66,35 +67,35 @@ public class ComplexTypesDeltaTable
               "id", 0L,
               "array_info", ImmutableList.of(0, 1, 2, 3),
               "struct_info", ImmutableMap.of("id", 0L, "name", "0"),
-              "nested_struct_info", ImmutableMap.of("id", 0L, "name", "0", "nested", ImmutableMap.of("nested_int", 0, "nested_double", 1.0)),
+              "nested_struct_info", ImmutableMap.of("id", 0L, "name", "0", "nested", ImmutableMap.of("nested_int", 0, "nested_double", 1.0, "nested_decimal", BigDecimal.valueOf(0.23))),
               "map_info", ImmutableMap.of("key1", 1.0f, "key2", 1.0f)
           ),
           ImmutableMap.of(
               "id", 1L,
               "array_info", ImmutableList.of(1, 2, 3, 4),
               "struct_info", ImmutableMap.of("id", 1L, "name", "1"),
-              "nested_struct_info", ImmutableMap.of("id", 1L, "name", "1", "nested", ImmutableMap.of("nested_int", 1, "nested_double", 2.0)),
+              "nested_struct_info", ImmutableMap.of("id", 1L, "name", "1", "nested", ImmutableMap.of("nested_int", 1, "nested_double", 2.0, "nested_decimal", BigDecimal.valueOf(1.23))),
               "map_info", ImmutableMap.of("key1", 2.0f, "key2", 2.0f)
           ),
           ImmutableMap.of(
               "id", 2L,
               "array_info", ImmutableList.of(2, 3, 4, 5),
               "struct_info", ImmutableMap.of("id", 2L, "name", "2"),
-              "nested_struct_info", ImmutableMap.of("id", 2L, "name", "2", "nested", ImmutableMap.of("nested_int", 2, "nested_double", 3.0)),
+              "nested_struct_info", ImmutableMap.of("id", 2L, "name", "2", "nested", ImmutableMap.of("nested_int", 2, "nested_double", 3.0, "nested_decimal", BigDecimal.valueOf(2.23))),
               "map_info", ImmutableMap.of("key1", 3.0f, "key2", 3.0f)
           ),
           ImmutableMap.of(
               "id", 3L,
               "array_info", ImmutableList.of(3, 4, 5, 6),
               "struct_info", ImmutableMap.of("id", 3L, "name", "3"),
-              "nested_struct_info", ImmutableMap.of("id", 3L, "name", "3", "nested", ImmutableMap.of("nested_int", 3, "nested_double", 4.0)),
+              "nested_struct_info", ImmutableMap.of("id", 3L, "name", "3", "nested", ImmutableMap.of("nested_int", 3, "nested_double", 4.0, "nested_decimal", BigDecimal.valueOf(3.23))),
               "map_info", ImmutableMap.of("key1", 4.0f, "key2", 4.0f)
           ),
           ImmutableMap.of(
               "id", 4L,
               "array_info", ImmutableList.of(4, 5, 6, 7),
               "struct_info", ImmutableMap.of("id", 4L, "name", "4"),
-              "nested_struct_info", ImmutableMap.of("id", 4L, "name", "4", "nested", ImmutableMap.of("nested_int", 4, "nested_double", 5.0)),
+              "nested_struct_info", ImmutableMap.of("id", 4L, "name", "4", "nested", ImmutableMap.of("nested_int", 4, "nested_double", 5.0, "nested_decimal", BigDecimal.valueOf(4.23))),
               "map_info", ImmutableMap.of("key1", 5.0f, "key2", 5.0f)
           )
       )

@@ -20,19 +20,18 @@ import { Code } from '@blueprintjs/core';
 import { range } from 'd3-array';
 import { csvParseRows, tsvParseRows } from 'd3-dsv';
 import type { JSX } from 'react';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { AutoForm, ExternalLink } from '../../components';
 import { IndexSpecDialog } from '../../dialogs/index-spec-dialog/index-spec-dialog';
 import { getLink } from '../../links';
 import {
-  allowKeys,
   deepDelete,
   deepGet,
   deepMove,
   deepSet,
   deepSetIfUnset,
+  deleteKeys,
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
@@ -79,6 +78,11 @@ export interface IngestionSpec {
   readonly spec: IngestionSpecInner;
   readonly context?: { useConcurrentLocks?: boolean };
   readonly suspended?: boolean;
+
+  // Added by the server
+  readonly id?: string;
+  readonly groupId?: string;
+  readonly resource?: any;
 }
 
 export interface IngestionSpecInner {
@@ -490,11 +494,37 @@ export function normalizeSpec(spec: Partial<IngestionSpec>): IngestionSpec {
 }
 
 /**
- * Make sure that any extra junk in the spec other than 'type', 'spec', and 'context' is removed
+ * This function cleans a spec that was returned by the server so that it can be re-opened in the data loader to  be
+ * submitted again.
  * @param spec - the spec to clean
  */
 export function cleanSpec(spec: Partial<IngestionSpec>): Partial<IngestionSpec> {
-  return allowKeys(spec, ['type', 'spec', 'context', 'suspended']) as IngestionSpec;
+  const specSpec = spec.spec;
+
+  // For backwards compatible reasons the contents of `spec` (`dataSchema`, `ioConfig`, and `tuningConfig`)
+  // can be duplicated at the top level. This function removes these duplicates (if needed) so that there is no confusion
+  // which is the authoritative copy.
+  if (
+    specSpec &&
+    specSpec.dataSchema &&
+    specSpec.ioConfig &&
+    specSpec.tuningConfig &&
+    (spec as any).dataSchema &&
+    (spec as any).ioConfig &&
+    (spec as any).tuningConfig
+  ) {
+    spec = deleteKeys(spec, ['dataSchema', 'ioConfig', 'tuningConfig'] as any[]);
+  }
+
+  // Sometimes the dataSource can (redundantly) make it to the top level for some reason - delete it
+  if (
+    typeof specSpec?.dataSchema?.dataSource === 'string' &&
+    typeof (spec as any).dataSource === 'string'
+  ) {
+    spec = deleteKeys(spec, ['dataSource'] as any[]);
+  }
+
+  return deleteKeys(spec, ['id', 'groupId', 'resource']);
 }
 
 export function upgradeSpec(spec: any, yolo = false): Partial<IngestionSpec> {
@@ -1057,11 +1087,7 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           type: 'string',
           placeholder: '/path/to/deltaTable',
           required: true,
-          info: (
-            <>
-              <p>A full path to the Delta Lake table.</p>
-            </>
-          ),
+          info: <p>A full path to the Delta Lake table.</p>,
         },
         {
           name: 'inputSource.filter',
@@ -1084,7 +1110,6 @@ export function getIoConfigFormFields(ingestionComboType: IngestionComboType): F
           label: 'Delta snapshot version',
           type: 'number',
           placeholder: '(latest)',
-          zeroMeansUndefined: true,
           info: (
             <>
               The snapshot version to read from the Delta table. By default, the latest snapshot is
@@ -1344,22 +1369,14 @@ export function getIoConfigTuningFormFields(
           label: 'Fetch timeout',
           type: 'number',
           defaultValue: 60000,
-          info: (
-            <>
-              <p>Timeout for fetching the object.</p>
-            </>
-          ),
+          info: <p>Timeout for fetching the object.</p>,
         },
         {
           name: 'inputSource.maxFetchRetry',
           label: 'Max fetch retry',
           type: 'number',
           defaultValue: 3,
-          info: (
-            <>
-              <p>Maximum retry for fetching the object.</p>
-            </>
-          ),
+          info: <p>Maximum retry for fetching the object.</p>,
         },
       ];
 
@@ -1394,14 +1411,12 @@ export function getIoConfigTuningFormFields(
           defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           required: true,
           info: (
-            <>
-              <p>
-                If a supervisor is managing a dataSource for the first time, it will obtain a set of
-                starting offsets from Kafka. This flag determines whether it retrieves the earliest
-                or latest offsets in Kafka. Under normal circumstances, subsequent tasks will start
-                from where the previous segments ended so this flag will only be used on first run.
-              </p>
-            </>
+            <p>
+              If a supervisor is managing a dataSource for the first time, it will obtain a set of
+              starting offsets from Kafka. This flag determines whether it retrieves the earliest or
+              latest offsets in Kafka. Under normal circumstances, subsequent tasks will start from
+              where the previous segments ended so this flag will only be used on first run.
+            </p>
           ),
         },
         {
@@ -1424,11 +1439,7 @@ export function getIoConfigTuningFormFields(
           type: 'duration',
           defaultValue: 'PT1H',
           info: (
-            <>
-              <p>
-                The length of time before tasks stop reading and begin publishing their segment.
-              </p>
-            </>
+            <p>The length of time before tasks stop reading and begin publishing their segment.</p>
           ),
         },
         {
@@ -1436,14 +1447,12 @@ export function getIoConfigTuningFormFields(
           type: 'number',
           defaultValue: 1,
           info: (
-            <>
-              <p>
-                The maximum number of reading tasks in a replica set. This means that the maximum
-                number of reading tasks will be <Code>taskCount * replicas</Code> and the total
-                number of tasks (reading + publishing) will be higher than this. See &apos;Capacity
-                Planning&apos; below for more details.
-              </p>
-            </>
+            <p>
+              The maximum number of reading tasks in a replica set. This means that the maximum
+              number of reading tasks will be <Code>taskCount * replicas</Code> and the total number
+              of tasks (reading + publishing) will be higher than this. See &apos;Capacity
+              Planning&apos; below for more details.
+            </p>
           ),
         },
         {
@@ -1451,13 +1460,11 @@ export function getIoConfigTuningFormFields(
           type: 'number',
           defaultValue: 1,
           info: (
-            <>
-              <p>
-                The number of replica sets, where 1 means a single set of tasks (no replication).
-                Replica tasks will always be assigned to different workers to provide resiliency
-                against process failure.
-              </p>
-            </>
+            <p>
+              The number of replica sets, where 1 means a single set of tasks (no replication).
+              Replica tasks will always be assigned to different workers to provide resiliency
+              against process failure.
+            </p>
           ),
         },
         {
@@ -1465,13 +1472,11 @@ export function getIoConfigTuningFormFields(
           type: 'duration',
           defaultValue: 'PT30M',
           info: (
-            <>
-              <p>
-                The length of time to wait before declaring a publishing task as failed and
-                terminating it. If this is set too low, your tasks may never publish. The publishing
-                clock for a task begins roughly after taskDuration elapses.
-              </p>
-            </>
+            <p>
+              The length of time to wait before declaring a publishing task as failed and
+              terminating it. If this is set too low, your tasks may never publish. The publishing
+              clock for a task begins roughly after taskDuration elapses.
+            </p>
           ),
         },
         {
@@ -1480,11 +1485,9 @@ export function getIoConfigTuningFormFields(
           defaultValue: 100,
           defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           info: (
-            <>
-              <p>
-                The length of time to wait for the kafka consumer to poll records, in milliseconds.
-              </p>
-            </>
+            <p>
+              The length of time to wait for the kafka consumer to poll records, in milliseconds.
+            </p>
           ),
         },
         {
@@ -1498,11 +1501,7 @@ export function getIoConfigTuningFormFields(
           name: 'startDelay',
           type: 'duration',
           defaultValue: 'PT5S',
-          info: (
-            <>
-              <p>The period to wait before the supervisor starts managing tasks.</p>
-            </>
-          ),
+          info: <p>The period to wait before the supervisor starts managing tasks.</p>,
         },
         {
           name: 'period',
@@ -1545,14 +1544,12 @@ export function getIoConfigTuningFormFields(
           type: 'string',
           placeholder: '(none)',
           info: (
-            <>
-              <p>
-                Configure tasks to reject messages with timestamps later than this period after the
-                task reached its taskDuration; for example if this is set to PT1H, the taskDuration
-                is set to PT1H and the supervisor creates a task at 2016-01-01T12:00Z, messages with
-                timestamps later than 2016-01-01T14:00Z will be dropped.
-              </p>
-            </>
+            <p>
+              Configure tasks to reject messages with timestamps later than this period after the
+              task reached its taskDuration; for example if this is set to PT1H, the taskDuration is
+              set to PT1H and the supervisor creates a task at 2016-01-01T12:00Z, messages with
+              timestamps later than 2016-01-01T14:00Z will be dropped.
+            </p>
           ),
         },
         {
@@ -1561,14 +1558,12 @@ export function getIoConfigTuningFormFields(
           defaultValue: false,
           defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
           info: (
-            <>
-              <p>
-                Whether or not to allow gaps of missing offsets in the Kafka stream. This is
-                required for compatibility with implementations such as MapR Streams which does not
-                guarantee consecutive offsets. If this is false, an exception will be thrown if
-                offsets are not consecutive.
-              </p>
-            </>
+            <p>
+              Whether or not to allow gaps of missing offsets in the Kafka stream. This is required
+              for compatibility with implementations such as MapR Streams which does not guarantee
+              consecutive offsets. If this is false, an exception will be thrown if offsets are not
+              consecutive.
+            </p>
           ),
         },
       ];

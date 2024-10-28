@@ -20,7 +20,6 @@ import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { SqlExpression } from '@druid-toolkit/query';
 import { F, SqlFunction } from '@druid-toolkit/query';
-import React from 'react';
 
 import { oneOf, tickIcon } from '../../../utils';
 

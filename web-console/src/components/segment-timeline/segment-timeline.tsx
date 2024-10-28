@@ -269,18 +269,23 @@ ORDER BY "start" DESC`;
     };
 
     this.dataQueryManager = new QueryManager({
-      processQuery: async ({ capabilities, dateRange }) => {
+      processQuery: async ({ capabilities, dateRange }, cancelToken) => {
         let intervals: IntervalRow[];
         let datasources: string[];
         if (capabilities.hasSql()) {
-          intervals = await queryDruidSql({
-            query: SegmentTimeline.getSqlQuery(dateRange),
-          });
+          intervals = await queryDruidSql(
+            {
+              query: SegmentTimeline.getSqlQuery(dateRange),
+            },
+            cancelToken,
+          );
           datasources = uniq(intervals.map(r => r.datasource).sort());
         } else if (capabilities.hasCoordinatorAccess()) {
           const startIso = dateRange[0].toISOString();
 
-          datasources = (await Api.instance.get(`/druid/coordinator/v1/datasources`)).data;
+          datasources = (
+            await Api.instance.get(`/druid/coordinator/v1/datasources`, { cancelToken })
+          ).data;
           intervals = (
             await Promise.all(
               datasources.map(async datasource => {
@@ -289,6 +294,7 @@ ORDER BY "start" DESC`;
                     `/druid/coordinator/v1/datasources/${Api.encodePath(
                       datasource,
                     )}/intervals?simple`,
+                    { cancelToken },
                   )
                 ).data;
 

@@ -358,6 +358,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     if (!executionState.data && !executionState.error) return;
     WorkbenchRunningPromises.deletePromise(id);
     ExecutionStateCache.storeState(id, executionState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.data, executionState.error]);
 
   const incrementWorkVersion = useStore(
