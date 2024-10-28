@@ -39,7 +39,7 @@ jobs:
 
     - uses: actions/setup-java@v4
       with:
-        distribution: 'zulu'
+        distribution: 'corretto'
         java-version: '8'
         cache: 'maven'
 
