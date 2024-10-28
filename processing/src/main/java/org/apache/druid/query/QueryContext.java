@@ -19,6 +19,8 @@
 
 package org.apache.druid.query;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -57,7 +59,8 @@ public class QueryContext
 
   private final Map<String, Object> context;
 
-  public QueryContext(Map<String, Object> context)
+  @JsonCreator
+  public QueryContext(@JsonProperty("context") Map<String, Object> context)
   {
     // There is no semantic difference between an empty and a null context.
     // Ensure that a context always exists to avoid the need to check for
@@ -65,6 +68,12 @@ public class QueryContext
     this.context = context == null
         ? Collections.emptyMap()
         : Collections.unmodifiableMap(new TreeMap<>(context));
+  }
+
+  @JsonProperty("context")
+  public Map<String, Object> getContext()
+  {
+    return context;
   }
 
   public static QueryContext empty()

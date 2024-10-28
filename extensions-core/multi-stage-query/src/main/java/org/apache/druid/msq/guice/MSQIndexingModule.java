@@ -96,6 +96,7 @@ import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
 import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessorFactory;
 import org.apache.druid.msq.util.PassthroughAggregatorFactory;
+import org.apache.druid.query.QueryContext;
 
 import java.util.Collections;
 import java.util.List;
@@ -166,6 +167,9 @@ public class MSQIndexingModule implements DruidModule
         QueryResultFrameProcessorFactory.class,
         WindowOperatorQueryFrameProcessorFactory.class,
         ExportResultsFrameProcessorFactory.class,
+
+        // QueryContext
+        QueryContext.class,
 
         // DataSource classes (note: ExternalDataSource is in MSQSqlModule)
         InputNumberDataSource.class,
