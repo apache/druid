@@ -280,10 +280,10 @@
 <!--    GlueCatalog class-->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
-      <artifactId>bundle</artifactId>
+      <artifactId>glue</artifactId>
       <version>${awssdk.version}</version>
     </dependency>
-<!--  org/apache/avro/LogicalType load-->
+    <!--  org/apache/avro/LogicalType load-->
     <dependency>
       <groupId>org.apache.avro</groupId>
       <artifactId>avro</artifactId>
