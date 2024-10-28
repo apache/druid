@@ -347,6 +347,16 @@ libraries:
 
 ---
 
+name: Jettison
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.5.4
+libraries:
+  - org.codehaus.jettison: jettison
+
+---
+
 name: Failureaccess
 license_category: binary
 module: java-core
@@ -1060,6 +1070,17 @@ libraries:
   - org.bouncycastle: bcprov-ext-jdk18on
   - org.bouncycastle: bcpkix-jdk18on
   - org.bouncycastle: bcutil-jdk18on
+
+---
+
+name: org.bouncycastle bcprov-jdk15on
+license_category: binary
+module: extensions/druid-kerberos
+license_name: MIT License
+version: "1.70"
+libraries:
+  - org.bouncycastle: bcprov-jdk15on
+
 ---
 
 
@@ -2207,7 +2228,7 @@ name: Kerby
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.0.1
+version: 2.0.3
 libraries:
   - org.apache.kerby: kerb-admin
   - org.apache.kerby: kerb-client
@@ -2470,7 +2491,7 @@ name: Apache Hadoop
 license_category: binary
 module: hadoop-client
 license_name: Apache License version 2.0
-version: 3.3.6
+version: 3.4.0
 libraries:
   - org.apache.hadoop: hadoop-auth
   - org.apache.hadoop: hadoop-common
@@ -2785,6 +2806,26 @@ module: druid-kerberos
 license_name: BSD-3-Clause License
 libraries:
   - org.codehaus.woodstox: stax2-api
+
+---
+
+name: com.jcraft jsch
+license_category: binary
+version: 0.1.55
+module: druid-kerberos
+license_name: BSD-3-Clause License
+libraries:
+  - com.jcraft: jsch
+
+---
+
+name: org.jline jline
+license_category: binary
+version: 3.22.0
+module: druid-kerberos
+license_name: BSD-3-Clause License
+libraries:
+  - org.jline: jline
 
 ---
 
@@ -3158,7 +3199,7 @@ name: Hadoop Client API
 license_category: binary
 module: extensions/druid-hdfs-storage
 license_name: Apache License version 2.0
-version: 3.3.6
+version: 3.4.0
 libraries:
   - org.apache.hadoop: hadoop-client-api
 
@@ -4946,7 +4987,7 @@ name: DNS Java
 license_category: binary
 module: java-core
 license_name: BSD-2-Clause License
-version: 2.1.7
+version: 3.4.0
 libraries:
   - dnsjava: dnsjava
 
@@ -4956,9 +4997,9 @@ name: Hadoop shaded
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.1.1
+version: 1.2.0
 libraries:
-  - org.apache.hadoop.thirdparty: hadoop-shaded-protobuf_3_7
+  - org.apache.hadoop.thirdparty: hadoop-shaded-protobuf_3_21
   - org.apache.hadoop.thirdparty: hadoop-shaded-guava
 
 ---

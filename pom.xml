@@ -113,7 +113,7 @@
         <slf4j.version>1.7.36</slf4j.version>
         <jna.version>5.13.0</jna.version>
         <jna-platform.version>5.13.0</jna-platform.version>
-        <hadoop.compile.version>3.3.6</hadoop.compile.version>
+        <hadoop.compile.version>3.4.0</hadoop.compile.version>
         <mockito.version>5.5.0</mockito.version>
         <!-- mockito-inline artifact was removed in mockito 5.3 (mockito 5.x is required for Java >17),
              however it is required in some cases when running against mockito 4.x (mockito 4.x is required for Java <11.
