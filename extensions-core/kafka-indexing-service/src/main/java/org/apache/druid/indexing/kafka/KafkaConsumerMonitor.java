@@ -43,16 +43,20 @@ public class KafkaConsumerMonitor extends AbstractMonitor
       ImmutableMap.<String, String>builder()
                   .put("bytes-consumed-total", "kafka/consumer/bytesConsumed")
                   .put("records-consumed-total", "kafka/consumer/recordsConsumed")
+                  .put("io-wait-time-ns-total", "kafka/consumer/io/time")
                   .build();
   private static final String TOPIC_TAG = "topic";
+  private static final String DATASOURCE_TAG = "datasource";
   private static final Set<String> TOPIC_METRIC_TAGS = ImmutableSet.of("client-id", TOPIC_TAG);
 
   private final KafkaConsumer<?, ?> consumer;
+  private final String datasource;
   private final Map<String, AtomicLong> counters = new HashMap<>();
 
-  public KafkaConsumerMonitor(final KafkaConsumer<?, ?> consumer)
+  public KafkaConsumerMonitor(final KafkaConsumer<?, ?> consumer, String datasource)
   {
     this.consumer = consumer;
+    this.datasource = datasource;
   }
 
   @Override
@@ -71,6 +75,9 @@ public class KafkaConsumerMonitor extends AbstractMonitor
         if (newValue != priorValue) {
           final ServiceMetricEvent.Builder builder =
               new ServiceMetricEvent.Builder().setDimension(TOPIC_TAG, topic);
+          if (datasource != null) {
+            builder.setDimension(DATASOURCE_TAG, datasource);
+          }
           emitter.emit(builder.setMetric(METRICS.get(metricName.name()), newValue - priorValue));
         }
       }
