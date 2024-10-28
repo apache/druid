@@ -19,6 +19,7 @@
 
 package org.apache.druid.k8s.overlord;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.common.task.NoopTask;
@@ -60,7 +61,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
     ));
 
     Assert.assertThrows(
-        IllegalStateException.class,
+        DruidException.class,
         () -> workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
             task,
             null,
