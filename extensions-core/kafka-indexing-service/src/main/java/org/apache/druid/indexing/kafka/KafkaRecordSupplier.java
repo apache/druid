@@ -45,6 +45,7 @@ import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -78,21 +79,23 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
       Map<String, Object> consumerProperties,
       ObjectMapper sortingMapper,
       KafkaConfigOverrides configOverrides,
-      boolean multiTopic
+      boolean multiTopic,
+      @Nullable String datasource
   )
   {
-    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic);
+    this(getKafkaConsumer(sortingMapper, consumerProperties, configOverrides), multiTopic, datasource);
   }
 
   @VisibleForTesting
   public KafkaRecordSupplier(
       KafkaConsumer<byte[], byte[]> consumer,
-      boolean multiTopic
+      boolean multiTopic,
+      @Nullable String datasource
   )
   {
     this.consumer = consumer;
     this.multiTopic = multiTopic;
-    this.monitor = new KafkaConsumerMonitor(consumer);
+    this.monitor = new KafkaConsumerMonitor(consumer, datasource);
   }
 
   @Override

@@ -73,6 +73,7 @@ public class KafkaRecordSupplierTest
   private static KafkaTopicPartition PARTITION_1 = new KafkaTopicPartition(false, null, 1);
 
   private static String TOPIC = "topic";
+  private static String STREAM = "stream";
   private static int TOPIC_POS_FIX = 0;
   private static TestingCluster ZK_SERVER;
   private static TestBroker KAFKA_SERVER;
@@ -239,7 +240,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false);
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, STREAM);
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
 
@@ -264,7 +265,7 @@ public class KafkaRecordSupplierTest
     insertData();
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, true);
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, true, STREAM);
 
     String stream = Pattern.quote(TOPIC) + "|" + Pattern.quote(otherTopic);
     Set<KafkaTopicPartition> partitions = recordSupplier.getPartitionIds(stream);
@@ -300,7 +301,8 @@ public class KafkaRecordSupplierTest
         properties,
         OBJECT_MAPPER,
         null,
-        false
+        false,
+        STREAM
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty());
@@ -328,7 +330,8 @@ public class KafkaRecordSupplierTest
             properties,
             OBJECT_MAPPER,
             null,
-            false
+            false,
+            STREAM
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty()); //just test recordSupplier is initiated
@@ -347,7 +350,8 @@ public class KafkaRecordSupplierTest
             properties,
             OBJECT_MAPPER,
             null,
-            false
+            false,
+            STREAM
     );
 
     Assert.assertTrue(recordSupplier.getAssignment().isEmpty()); //just test recordSupplier is initiated
@@ -374,7 +378,8 @@ public class KafkaRecordSupplierTest
         properties,
         OBJECT_MAPPER,
         null,
-        false
+        false,
+        STREAM
     );
 
     recordSupplier.assign(partitions);
@@ -412,7 +417,8 @@ public class KafkaRecordSupplierTest
         KAFKA_SERVER.consumerProperties(),
         OBJECT_MAPPER,
         null,
-        false
+        false,
+        STREAM
     );
 
     final Monitor monitor = recordSupplier.monitor();
@@ -463,7 +469,7 @@ public class KafkaRecordSupplierTest
 
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false);
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, STREAM);
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
 
@@ -533,7 +539,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false);
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, STREAM);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -576,7 +582,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false);
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, STREAM);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -609,7 +615,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false);
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, STREAM);
 
     recordSupplier.assign(partitions);
 
@@ -635,7 +641,7 @@ public class KafkaRecordSupplierTest
     );
 
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false);
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, STREAM);
 
     recordSupplier.assign(partitions);
     recordSupplier.seekToEarliest(partitions);
@@ -670,7 +676,7 @@ public class KafkaRecordSupplierTest
   public void getLatestSequenceNumberWhenPartitionIsEmptyAndUseEarliestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false);
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, STREAM);
     StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(TOPIC, PARTITION_0);
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -682,7 +688,7 @@ public class KafkaRecordSupplierTest
   public void getEarliestSequenceNumberWhenPartitionIsEmptyAndUseEarliestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false);
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, STREAM);
     StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(TOPIC, PARTITION_0);
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -694,7 +700,7 @@ public class KafkaRecordSupplierTest
   public void getLatestSequenceNumberWhenPartitionIsEmptyAndUseLatestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false);
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, STREAM);
     StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(TOPIC, PARTITION_0);
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);
@@ -706,7 +712,7 @@ public class KafkaRecordSupplierTest
   public void getEarliestSequenceNumberWhenPartitionIsEmptyAndUseLatestOffsetShouldReturnsValidNonNull()
   {
     KafkaRecordSupplier recordSupplier = new KafkaRecordSupplier(
-        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false);
+        KAFKA_SERVER.consumerProperties(), OBJECT_MAPPER, null, false, STREAM);
     StreamPartition<KafkaTopicPartition> streamPartition = StreamPartition.of(TOPIC, PARTITION_0);
     Set<StreamPartition<KafkaTopicPartition>> partitions = ImmutableSet.of(streamPartition);
     recordSupplier.assign(partitions);

@@ -137,7 +137,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         spec.getIoConfig().getConsumerProperties(),
         sortingMapper,
         spec.getIoConfig().getConfigOverrides(),
-        spec.getIoConfig().isMultiTopic()
+        spec.getIoConfig().isMultiTopic(),
+        spec.getId()
     );
   }
 
