@@ -1389,7 +1389,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           ),
           rows
       );
-      Assert.assertEquals(rows, rows);
     }
   }
 
