@@ -140,6 +140,11 @@
             <artifactId>hamcrest-core</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>nl.jqno.equalsverifier</groupId>
+            <artifactId>equalsverifier</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- explicitly declare mockito-core dependency to make anaylize-dependencies happy when running with Java 8 -->
         <dependency>
             <groupId>org.mockito</groupId>

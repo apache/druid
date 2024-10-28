@@ -29,6 +29,7 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.QueryContext;
 
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -57,12 +58,12 @@ public class SqlQuery
   @JsonCreator
   public SqlQuery(
       @JsonProperty("query") final String query,
-      @JsonProperty("resultFormat") final ResultFormat resultFormat,
+      @JsonProperty("resultFormat") @Nullable final ResultFormat resultFormat,
       @JsonProperty("header") final boolean header,
       @JsonProperty("typesHeader") final boolean typesHeader,
       @JsonProperty("sqlTypesHeader") final boolean sqlTypesHeader,
-      @JsonProperty("context") final Map<String, Object> context,
-      @JsonProperty("parameters") final List<SqlParameter> parameters
+      @JsonProperty("context") @Nullable final Map<String, Object> context,
+      @JsonProperty("parameters") @Nullable final List<SqlParameter> parameters
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
