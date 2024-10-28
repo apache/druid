@@ -74,13 +74,21 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
   }
 
   /**
-   * Enter state {@link LeadershipState#HALF_LEADER}.
+   * Enter state {@link LeadershipState#HALF_LEADER}, from any state.
    */
   public void becomeHalfLeader(TaskRunner taskRunner, TaskQueue taskQueue)
   {
     this.taskRunner = taskRunner;
     this.taskQueue = taskQueue;
     leadershipState.set(LeadershipState.HALF_LEADER);
+  }
+
+  /**
+   * Enter state {@link LeadershipState#HALF_LEADER}, from {@link LeadershipState#FULL_LEADER}.
+   */
+  public void downgradeToHalfLeader()
+  {
+    leadershipState.compareAndSet(LeadershipState.FULL_LEADER, LeadershipState.HALF_LEADER);
   }
 
   /**

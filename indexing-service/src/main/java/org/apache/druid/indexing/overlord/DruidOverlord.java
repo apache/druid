@@ -172,7 +172,7 @@ public class DruidOverlord
                 {
                   serviceAnnouncer.unannounce(node);
                   compactionScheduler.stop();
-                  taskMaster.stopBeingLeader();
+                  taskMaster.downgradeToHalfLeader();
                 }
               }
           );
