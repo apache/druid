@@ -299,7 +299,7 @@ There are new query context flags that have been added to aid in experimentation
 
 - `useProjection` accepts a specific projection name and instructs the query engine that it must use that projection, and will fail the query if the projection does not match the query
 - `forceProjections` accepts true or false and instructs the query engine that it must use a projection, and will fail the query if it cannot find a matching projection
-- `noProjections` accpets true or false and instructs the query engines to not use any projections
+- `noProjections` accepts true or false and instructs the query engines to not use any projections
 
  [#17214](https://github.com/apache/druid/pull/17214)
 
