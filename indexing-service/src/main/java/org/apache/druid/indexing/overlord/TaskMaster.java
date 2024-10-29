@@ -32,7 +32,7 @@ import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Encapsulates various Overlord classes that allow querying and updating the
@@ -40,12 +40,28 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsProvider
 {
+  enum LeadershipState
+  {
+    NOT_LEADER,
+
+    /**
+     * Leader of essential services only: task queue, task action client, and task runner. We enter this state after
+     * the queue and runner are initialized, but before the supervisor manager is not yet initialized.
+     */
+    HALF_LEADER,
+
+    /**
+     * Leader of all services. We enter this state after the supervisor manager is initialized.
+     */
+    FULL_LEADER
+  }
+
   private final TaskActionClientFactory taskActionClientFactory;
   private final SupervisorManager supervisorManager;
   private volatile TaskRunner taskRunner;
   private volatile TaskQueue taskQueue;
 
-  private final AtomicBoolean isLeader = new AtomicBoolean(false);
+  private final AtomicReference<LeadershipState> leadershipState = new AtomicReference<>(LeadershipState.NOT_LEADER);
 
   @Inject
   public TaskMaster(
@@ -57,28 +73,45 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
     this.supervisorManager = supervisorManager;
   }
 
-  public void becomeLeader(TaskRunner taskRunner, TaskQueue taskQueue)
+  /**
+   * Enter state {@link LeadershipState#HALF_LEADER}, from any state.
+   */
+  public void becomeHalfLeader(TaskRunner taskRunner, TaskQueue taskQueue)
   {
     this.taskRunner = taskRunner;
     this.taskQueue = taskQueue;
-    isLeader.set(true);
+    leadershipState.set(LeadershipState.HALF_LEADER);
   }
 
+  /**
+   * Enter state {@link LeadershipState#HALF_LEADER}, from {@link LeadershipState#FULL_LEADER}.
+   */
+  public void downgradeToHalfLeader()
+  {
+    leadershipState.compareAndSet(LeadershipState.FULL_LEADER, LeadershipState.HALF_LEADER);
+  }
+
+  /**
+   * Enter state {@link LeadershipState#FULL_LEADER}.
+   */
+  public void becomeFullLeader()
+  {
+    leadershipState.set(LeadershipState.FULL_LEADER);
+  }
+
+  /**
+   * Enter state {@link LeadershipState#NOT_LEADER}.
+   */
   public void stopBeingLeader()
   {
-    isLeader.set(false);
+    leadershipState.set(LeadershipState.NOT_LEADER);
     this.taskQueue = null;
     this.taskRunner = null;
   }
 
-  private boolean isLeader()
-  {
-    return isLeader.get();
-  }
-
   public Optional<TaskRunner> getTaskRunner()
   {
-    if (isLeader()) {
+    if (isHalfOrFullLeader()) {
       return Optional.of(taskRunner);
     } else {
       return Optional.absent();
@@ -87,7 +120,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<TaskQueue> getTaskQueue()
   {
-    if (isLeader()) {
+    if (isHalfOrFullLeader()) {
       return Optional.of(taskQueue);
     } else {
       return Optional.absent();
@@ -96,7 +129,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<TaskActionClient> getTaskActionClient(Task task)
   {
-    if (isLeader()) {
+    if (isHalfOrFullLeader()) {
       return Optional.of(taskActionClientFactory.create(task));
     } else {
       return Optional.absent();
@@ -105,7 +138,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<ScalingStats> getScalingStats()
   {
-    if (isLeader()) {
+    if (isHalfOrFullLeader()) {
       return taskRunner.getScalingStats();
     } else {
       return Optional.absent();
@@ -114,7 +147,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<SupervisorManager> getSupervisorManager()
   {
-    if (isLeader()) {
+    if (isFullLeader()) {
       return Optional.of(supervisorManager);
     } else {
       return Optional.absent();
@@ -245,5 +278,16 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
     } else {
       return null;
     }
+  }
+
+  public boolean isHalfOrFullLeader()
+  {
+    final LeadershipState state = leadershipState.get();
+    return state == LeadershipState.HALF_LEADER || state == LeadershipState.FULL_LEADER;
+  }
+
+  public boolean isFullLeader()
+  {
+    return leadershipState.get() == LeadershipState.FULL_LEADER;
   }
 }

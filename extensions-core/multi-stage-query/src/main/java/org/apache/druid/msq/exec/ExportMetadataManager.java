@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConnector;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -42,15 +43,17 @@ public class ExportMetadataManager
   public static final int MANIFEST_FILE_VERSION = 1;
   private static final Logger log = new Logger(ExportMetadataManager.class);
   private final ExportStorageProvider exportStorageProvider;
+  private final File tmpDir;
 
-  public ExportMetadataManager(final ExportStorageProvider exportStorageProvider)
+  public ExportMetadataManager(final ExportStorageProvider exportStorageProvider, final File tmpDir)
   {
     this.exportStorageProvider = exportStorageProvider;
+    this.tmpDir = tmpDir;
   }
 
   public void writeMetadata(List<String> exportedFiles) throws IOException
   {
-    final StorageConnector storageConnector = exportStorageProvider.get();
+    final StorageConnector storageConnector = exportStorageProvider.createStorageConnector(tmpDir);
     log.info("Writing manifest file at location [%s]", exportStorageProvider.getBasePath());
 
     if (storageConnector.pathExists(MANIFEST_FILE) || storageConnector.pathExists(META_FILE)) {

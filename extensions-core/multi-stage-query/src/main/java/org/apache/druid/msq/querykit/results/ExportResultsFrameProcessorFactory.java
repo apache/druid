@@ -160,7 +160,7 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
             readableInput.getChannel(),
             exportFormat,
             readableInput.getChannelFrameReader(),
-            exportStorageProvider.get(),
+            exportStorageProvider.createStorageConnector(frameContext.tempDir()),
             frameContext.jsonMapper(),
             channelCounter,
             getExportFilePath(queryId, workerNumber, readableInput.getStagePartition().getPartitionNumber(), exportFormat),

@@ -55,11 +55,6 @@ This product bundles Java Servlet API version 2.5, copyright Oracle and/or its a
   * https://github.com/javaee/servlet-spec
   * javax.servlet:javax.servlet-api
 
-This product bundles JAXB version 2.2.2, copyright Oracle and/or its affiliates.,
- which is available under the CDDL 1.1. For details, see licenses/bin/javax.CDDL11
-  * https://github.com/javaee/jaxb-v2
-  * javax.xml.bind:jaxb-api
-
 This product bundles stax-api version 1.0-2, copyright Oracle and/or its affiliates.,
  which is available under the CDDL 1.1. For details, see licenses/bin/javax.CDDL11
   * https://github.com/javaee/

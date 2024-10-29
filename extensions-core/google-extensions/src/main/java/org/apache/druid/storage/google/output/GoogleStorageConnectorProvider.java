@@ -47,7 +47,7 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
   public GoogleStorageConnectorProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
       @JsonProperty(value = "prefix", required = true) String prefix,
-      @JsonProperty(value = "tempDir", required = true) File tempDir,
+      @JsonProperty(value = "tempDir") @Nullable File tempDir,
       @JsonProperty(value = "chunkSize") @Nullable HumanReadableBytes chunkSize,
       @JsonProperty(value = "maxRetry") @Nullable Integer maxRetry
   )
@@ -56,8 +56,9 @@ public class GoogleStorageConnectorProvider extends GoogleOutputConfig implement
   }
 
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File defaultTempDir)
   {
-    return new GoogleStorageConnector(this, googleStorage, googleInputDataConfig);
+    GoogleOutputConfig config = this.getTempDir() == null ? this.withTempDir(defaultTempDir) : this;
+    return new GoogleStorageConnector(config, googleStorage, googleInputDataConfig);
   }
 }

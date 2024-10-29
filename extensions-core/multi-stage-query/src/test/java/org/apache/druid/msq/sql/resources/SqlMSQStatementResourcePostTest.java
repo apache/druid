@@ -54,7 +54,6 @@ import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -76,7 +75,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         sqlStatementFactory,
         objectMapper,
         indexingServiceClient,
-        localFileStorageConnector,
+        s -> localFileStorageConnector,
         authorizerMapper
     );
   }
@@ -330,7 +329,7 @@ public class SqlMSQStatementResourcePostTest extends MSQTestBase
         sqlStatementFactory,
         objectMapper,
         indexingServiceClient,
-        NilStorageConnector.getInstance(),
+        s -> NilStorageConnector.getInstance(),
         authorizerMapper
     );
 
