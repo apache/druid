@@ -20,7 +20,6 @@
 package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -32,7 +31,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
@@ -179,11 +177,6 @@ public class KubernetesPeonLifecycle
   protected synchronized TaskStatus join(long timeout) throws IllegalStateException
   {
     try {
-      /* It's okay to store taskLocation because podIP only changes on pod restart, and we have to set restartPolicy to Never
-        since Druid doesn't support retrying tasks from a external system (K8s). We can explore adding a fabric8 watcher
-        if we decide we need to change this later.
-      **/
-      taskLocation = getTaskLocationFromK8s();
       updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
 
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
@@ -261,8 +254,24 @@ public class KubernetesPeonLifecycle
     if we decide we need to change this later.
     **/
     if (taskLocation == null) {
-      log.warn("Unknown task location for [%s]", taskId);
-      return TaskLocation.unknown();
+      Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
+      if (!maybePod.isPresent()) {
+        return TaskLocation.unknown();
+      }
+
+      Pod pod = maybePod.get();
+      PodStatus podStatus = pod.getStatus();
+
+      if (podStatus == null || podStatus.getPodIP() == null) {
+        return TaskLocation.unknown();
+      }
+      taskLocation = TaskLocation.create(
+          podStatus.getPodIP(),
+          DruidK8sConstants.PORT,
+          DruidK8sConstants.TLS_PORT,
+          Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")),
+          pod.getMetadata() != null ? pod.getMetadata().getName() : ""
+      );
     }
 
     return taskLocation;
@@ -368,29 +377,5 @@ public class KubernetesPeonLifecycle
         targetState
     );
     stateListener.stateChanged(state.get(), taskId.getOriginalTaskId());
-  }
-
-  @VisibleForTesting
-  protected TaskLocation getTaskLocationFromK8s()
-  {
-    Pod pod = kubernetesClient.getPeonPodWithRetries(taskId.getK8sJobName());
-    PodStatus podStatus = pod.getStatus();
-
-    if (podStatus == null || podStatus.getPodIP() == null) {
-      throw new ISE("Could not find location of running task [%s]", taskId);
-    }
-
-    return TaskLocation.create(
-        podStatus.getPodIP(),
-        DruidK8sConstants.PORT,
-        DruidK8sConstants.TLS_PORT,
-        Boolean.parseBoolean(
-            pod.getMetadata() != null && pod.getMetadata().getAnnotations() != null ?
-                pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false") :
-                "false"
-        ),
-        pod.getMetadata() != null ? pod.getMetadata().getName() : ""
-    );
-
   }
 }
