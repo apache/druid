@@ -318,9 +318,9 @@ public class KubernetesPeonLifecycle
   protected void saveLogs()
   {
     try {
-      Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
-      InputStream logStream;
+      final Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
       try {
+        final InputStream logStream;
         if (logWatch != null) {
           logStream = logWatch.getOutput();
         } else {
