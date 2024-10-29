@@ -43,8 +43,8 @@ import org.apache.druid.msq.input.stage.StageInputSlice;
 import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
-import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.operator.OperatorFactory;
+import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
@@ -56,26 +56,26 @@ import java.util.function.Consumer;
 @JsonTypeName("window")
 public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessorFactory
 {
-  private final QueryContext queryContext;
+  private final WindowOperatorQuery query;
   private final List<OperatorFactory> operatorList;
   private final RowSignature stageRowSignature;
 
   @JsonCreator
   public WindowOperatorQueryFrameProcessorFactory(
-      @JsonProperty("queryContext") QueryContext queryContext,
+      @JsonProperty("query") WindowOperatorQuery query,
       @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
       @JsonProperty("stageRowSignature") RowSignature stageRowSignature
   )
   {
-    this.queryContext = Preconditions.checkNotNull(queryContext, "query");
+    this.query = Preconditions.checkNotNull(query, "query");
     this.operatorList = Preconditions.checkNotNull(operatorFactoryList, "bad operator");
     this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
   }
 
-  @JsonProperty("queryContext")
-  public QueryContext getQueryContext()
+  @JsonProperty("query")
+  public WindowOperatorQuery getQuery()
   {
-    return queryContext;
+    return query;
   }
 
   @JsonProperty("operatorList")
@@ -132,7 +132,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
               outputChannels.get(readableInput.getStagePartition().getPartitionNumber());
 
           return new WindowOperatorQueryFrameProcessor(
-              queryContext,
+              query.context(),
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
               stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes),
@@ -165,7 +165,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       return false;
     }
     WindowOperatorQueryFrameProcessorFactory that = (WindowOperatorQueryFrameProcessorFactory) o;
-    return Objects.equals(queryContext, that.queryContext)
+    return Objects.equals(query, that.query)
            && Objects.equals(operatorList, that.operatorList)
            && Objects.equals(stageRowSignature, that.stageRowSignature);
   }
@@ -173,6 +173,6 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   @Override
   public int hashCode()
   {
-    return Objects.hash(queryContext, operatorList, stageRowSignature);
+    return Objects.hash(query, operatorList, stageRowSignature);
   }
 }

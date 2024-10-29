@@ -173,7 +173,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                          .maxWorkerCount(queryKitSpec.getMaxNonLeafWorkerCount())
                          .shuffleSpec(nextShuffleSpec)
                          .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
-                             queryToRun.context(),
+                             queryToRun,
                              getOperatorFactoryListForStageDefinition(operatorList.get(i), maxRowsMaterialized),
                              stageRowSignature
                          ))
