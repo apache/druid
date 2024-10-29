@@ -925,6 +925,87 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
+  public SegmentIdWithShardSpec findOrInsertPendingSegmentRecord(
+      final String datasource,
+      final Interval interval,
+      final String committedVersion,
+      final String version,
+      final int maxId,
+      final int numCorePartitions,
+      final PartialShardSpec partialShardSpec,
+      final String sequenceName,
+      final String previousSegmentId,
+      final boolean skipLineageCheck,
+      final String taskAllocatorId
+  )
+  {
+    return connector.retryWithHandle(
+        handle -> {
+          final String previousSegmentIdNotNull = previousSegmentId == null ? "" : previousSegmentId;
+          final Query<Map<String, Object>> query;
+          if (skipLineageCheck) {
+            final String sql = StringUtils.format(
+                "SELECT payload FROM %s WHERE "
+                + "dataSource = :dataSource AND "
+                + "sequence_name = :sequence_name AND "
+                + "start = :start AND "
+                + "%2$send%2$s = :end",
+                dbTables.getPendingSegmentsTable(),
+                connector.getQuoteString()
+            );
+            query = handle.createQuery(sql)
+                          .bind("dataSource", datasource)
+                          .bind("sequence_name", sequenceName)
+                          .bind("start", interval.getStart().toString())
+                          .bind("end", interval.getEnd().toString());
+
+          } else {
+            final String sql = StringUtils.format(
+                "SELECT payload FROM %s WHERE "
+                + "dataSource = :dataSource AND "
+                + "sequence_name = :sequence_name AND "
+                + "sequence_prev_id = :sequence_prev_id",
+                dbTables.getPendingSegmentsTable()
+            );
+
+            query = handle.createQuery(sql)
+                          .bind("dataSource", datasource)
+                          .bind("sequence_name", sequenceName)
+                          .bind("sequence_prev_id", previousSegmentIdNotNull);
+
+          }
+          final CheckExistingSegmentIdResult result = findExistingPendingSegment(
+              query,
+              interval,
+              sequenceName,
+              previousSegmentIdNotNull,
+              committedVersion
+          );
+
+          if (result.found) {
+            // The found existing segment identifier can be null if its interval doesn't match with the given interval
+            return result.segmentIdentifier;
+          }
+
+          PendingSegmentRecord newId = new PendingSegmentRecord(
+              new SegmentIdWithShardSpec(
+                  datasource,
+                  interval,
+                  version,
+                  partialShardSpec.complete(jsonMapper, maxId + 1, numCorePartitions)
+              ),
+              sequenceName,
+              previousSegmentIdNotNull,
+              null,
+              taskAllocatorId
+          );
+
+          insertPendingSegmentsIntoMetastore(handle, Collections.singletonList(newId), datasource, skipLineageCheck);
+          return newId.getId();
+        }
+    );
+  }
+
   @Nullable
   private SegmentIdWithShardSpec allocatePendingSegmentWithSegmentLineageCheck(
       final Handle handle,
@@ -2967,7 +3048,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
     if (!retrievedIds.equals(segmentIdsToRetrieve)) {
       throw DruidException.defensive(
-          "Cannot create DataSegments for segment allocations."
+          "Cannot create DataSegments for segment allocations. "
           + "The used segments may have changed for dataSource[%s] and interval[%s].",
           dataSource, interval
       );

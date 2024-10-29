@@ -27,6 +27,7 @@ import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -85,7 +86,8 @@ public class TaskLockBoxConcurrencyTest
             derbyConnector,
             segmentSchemaManager,
             CentralizedDatasourceSchemaConfig.create()
-        )
+        ),
+        new TaskLockConfig()
     );
     service = Execs.multiThreaded(2, "TaskLockBoxConcurrencyTest-%d");
   }

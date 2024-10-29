@@ -70,7 +70,7 @@ public class SegmentAllocationQueue
   private static final Logger log = new Logger(SegmentAllocationQueue.class);
 
   private static final int MAX_QUEUE_SIZE = 2000;
-  private static final int MAX_BATCH_SIZE = 500;
+  private static final int MAX_BATCH_SIZE = 5;
 
   private final long maxWaitTimeMillis;
 

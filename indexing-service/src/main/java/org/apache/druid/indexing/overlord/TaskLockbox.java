@@ -41,19 +41,29 @@ import org.apache.druid.indexing.common.actions.SegmentAllocateResult;
 import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
+import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.LockFilterPolicy;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.timeline.SegmentTimeline;
+import org.apache.druid.timeline.TimelineObjectHolder;
+import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.chrono.ISOChronology;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -116,14 +126,18 @@ public class TaskLockbox
   @GuardedBy("giant")
   private final Map<String, Set<String>> activeAllocatorIdToTaskIds = new HashMap<>();
 
+  private final boolean segmentAllocationReduceMetadataIO;
+
   @Inject
   public TaskLockbox(
       TaskStorage taskStorage,
-      IndexerMetadataStorageCoordinator metadataStorageCoordinator
+      IndexerMetadataStorageCoordinator metadataStorageCoordinator,
+      TaskLockConfig taskLockConfig
   )
   {
     this.taskStorage = taskStorage;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
+    this.segmentAllocationReduceMetadataIO = taskLockConfig.isSegmentAllocationReduceMetadataIO();
   }
 
   /**
@@ -180,8 +194,8 @@ public class TaskLockbox
         // Create a new taskLock if it doesn't have a proper priority,
         // so that every taskLock in memory has the priority.
         final TaskLock savedTaskLockWithPriority = savedTaskLock.getPriority() == null
-                                      ? savedTaskLock.withPriority(task.getPriority())
-                                      : savedTaskLock;
+                                                   ? savedTaskLock.withPriority(task.getPriority())
+                                                   : savedTaskLock;
 
         final TaskLockPosse taskLockPosse = verifyAndCreateOrFindLockPosse(
             task,
@@ -334,7 +348,6 @@ public class TaskLockbox
    *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
    * {@link LockResult#revoked} flag.
-   *
    * @throws InterruptedException if the current thread is interrupted
    */
   public LockResult lock(final Task task, final LockRequest request) throws InterruptedException
@@ -360,7 +373,6 @@ public class TaskLockbox
    *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
    * {@link LockResult#revoked} flag.
-   *
    * @throws InterruptedException if the current thread is interrupted
    */
   public LockResult lock(final Task task, final LockRequest request, long timeoutMs) throws InterruptedException
@@ -388,7 +400,6 @@ public class TaskLockbox
    *
    * @return {@link LockResult} containing a new or an existing lock if succeeded. Otherwise, {@link LockResult} with a
    * {@link LockResult#revoked} flag.
-   *
    * @throws IllegalStateException if the task is not a valid active task
    */
   public LockResult tryLock(final Task task, final LockRequest request)
@@ -446,6 +457,232 @@ public class TaskLockbox
         }
         return LockResult.fail();
       }
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  public void cacheSegmentPublishResults(Task task, Collection<DataSegment> segments)
+  {
+    if (!segmentAllocationReduceMetadataIO) {
+      return;
+    }
+    Map<Interval, DataSegment> intervalToMaxSegment = new HashMap<>();
+    for (DataSegment segment : segments) {
+      final Interval interval = segment.getInterval();
+      if (intervalToMaxSegment.get(interval) == null
+          || intervalToMaxSegment.get(interval).getId().getPartitionNum() < segment.getId().getPartitionNum()) {
+        intervalToMaxSegment.put(interval, segment);
+      }
+    }
+    for (Map.Entry<Interval, DataSegment> entry : intervalToMaxSegment.entrySet()) {
+      final Interval interval = entry.getKey();
+      for (TaskLockPosse posse : findLockPossesOverlapsInterval(task.getDataSource(), interval)) {
+        if (posse.containsTask(task)) {
+          if (posse.getTaskLock().getInterval().equals(interval) && posse.visibleSegmentState != null) {
+            posse.visibleSegmentState.updateMaxSegment(entry.getValue());
+          }
+        }
+      }
+    }
+  }
+
+  public boolean canAllocateSegmentWithReducedMetadataIO(final LockGranularity granularity, final TaskLockType lockType)
+  {
+    return segmentAllocationReduceMetadataIO
+           && granularity == LockGranularity.TIME_CHUNK
+           && (lockType == TaskLockType.EXCLUSIVE || lockType == TaskLockType.SHARED);
+  }
+
+  public LockResult allocateSegmentWithReducedMetadataIO(
+      final Task task,
+      final TaskLockType lockType,
+      final DateTime timestamp,
+      final Granularity queryGranularity,
+      final Granularity preferredSegmentGranularity,
+      final String sequenceName,
+      final String previousSegmentId,
+      final boolean skipSegmentLineageCheck,
+      final PartialShardSpec partialShardSpec
+  )
+  {
+    giant.lock();
+
+    try {
+      final Interval rowInterval = queryGranularity.bucket(timestamp).withChronology(ISOChronology.getInstanceUTC());
+
+      for (Granularity segmentGranularity : Granularity.granularitiesFinerThan(preferredSegmentGranularity)) {
+        final Interval segmentInterval = segmentGranularity.bucket(timestamp)
+                                                           .withChronology(ISOChronology.getInstanceUTC());
+        if (!segmentInterval.contains(rowInterval)) {
+          break;
+        }
+        final VisibleSegmentState visibleSegmentState = determineVisibleSegmentState(task, segmentInterval);
+        if (visibleSegmentState == null) {
+          continue;
+        }
+
+        if (!visibleSegmentState.interval.contains(rowInterval)) {
+          continue;
+        }
+
+        if (visibleSegmentState.committedVersion == null && !visibleSegmentState.interval.equals(segmentInterval)) {
+          continue;
+        }
+
+        final TimeChunkLockRequest lockRequest
+            = new TimeChunkLockRequest(lockType, task, visibleSegmentState.interval, null);
+
+        final TaskLockPosse lockPosse = createOrFindLockPosse(lockRequest, task, true);
+
+        if (lockPosse.getTaskLock().isRevoked()) {
+          log.warn("Lock[%s] is revoked.", lockPosse.getTaskLock());
+          return LockResult.revoked(lockPosse.getTaskLock());
+        }
+
+        if (!lockPosse.getTaskLock().getInterval().equals(visibleSegmentState.interval)) {
+          log.warn(
+              "Interval[%s] of existing segments for datasource[%s] does not match the lock interval[%s]",
+              visibleSegmentState.interval, task.getDataSource(), lockPosse.taskLock.getInterval()
+          );
+          unlock(task, lockPosse.getTaskLock().getInterval());
+          continue;
+        }
+
+        if (lockPosse.visibleSegmentState == null) {
+          lockPosse.visibleSegmentState = visibleSegmentState;
+        } else if (!lockPosse.visibleSegmentState.equals(visibleSegmentState)) {
+          throw DruidException.defensive("VisibleSegmentState mismatch for lock[%s]", lockPosse.getTaskLock());
+        }
+
+        final String allocatorId = ((PendingSegmentAllocatingTask) task).getTaskAllocatorId();
+        SegmentIdWithShardSpec allocatedId = ((IndexerSQLMetadataStorageCoordinator) metadataStorageCoordinator)
+            .findOrInsertPendingSegmentRecord(
+                task.getDataSource(),
+                visibleSegmentState.interval,
+                visibleSegmentState.committedVersion,
+                visibleSegmentState.getVersion(lockPosse.taskLock.getVersion()),
+                visibleSegmentState.getMaxId(),
+                visibleSegmentState.numCorePartitions,
+                partialShardSpec,
+                sequenceName,
+                previousSegmentId,
+                skipSegmentLineageCheck,
+                allocatorId
+            );
+
+        if (allocatedId != null) {
+          visibleSegmentState.addPendingSegment(
+              new PendingSegmentRecord(allocatedId, sequenceName, previousSegmentId, null, allocatorId)
+          );
+        }
+        log.info("Found or Allocated pendingSegment[%s].", allocatedId.asSegmentId());
+        return LockResult.ok(lockPosse.getTaskLock(), allocatedId);
+      }
+      return LockResult.fail();
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  private VisibleSegmentState determineVisibleSegmentState(Task task, Interval interval)
+  {
+    VisibleSegmentState state = null;
+    final String datasource = task.getDataSource();
+    final List<TaskLockPosse> conflictPosses = findConflictPosses(datasource, interval);
+    for (TaskLockPosse lockPosse : conflictPosses) {
+      if (!lockPosse.getTaskLock().isRevoked()) {
+        if (state == null) {
+          state = lockPosse.visibleSegmentState;
+        } else if (lockPosse.visibleSegmentState != null && !state.equals(lockPosse.visibleSegmentState)) {
+          throw DruidException.defensive(
+              "VisibleSegmentState mismatch for datasource[%s] and interval[%s] with conflicting lock[%s].",
+              datasource, interval, lockPosse.getTaskLock()
+          );
+        }
+      }
+    }
+    if (state != null) {
+      return state;
+    }
+
+    final SegmentTimeline timeline =
+        metadataStorageCoordinator.getSegmentTimelineForAllocation(datasource, interval, true);
+
+    final List<TimelineObjectHolder<String, DataSegment>> existingChunks = timeline.lookup(interval);
+    if (existingChunks.size() > 1) {
+      // Not possible to expand more than one chunk with a single segment.
+      log.warn(
+          "Cannot allocate new segment for dataSource[%s], interval[%s] as it already has [%,d] versions.",
+          datasource, interval, existingChunks.size()
+      );
+      return null;
+    }
+    DataSegment maxSegment = null;
+    if (!existingChunks.isEmpty()) {
+      for (DataSegment segment : existingChunks.get(0).getObject().payloads()) {
+        if (maxSegment == null
+            || maxSegment.getShardSpec().getPartitionNum() < segment.getShardSpec().getPartitionNum()) {
+          maxSegment = segment;
+        }
+      }
+    }
+
+    final Interval visibleInterval = maxSegment == null ? interval : maxSegment.getInterval();
+
+    final List<PendingSegmentRecord> overlappingPendingSegments =
+        metadataStorageCoordinator.getPendingSegments(datasource, visibleInterval);
+
+    String pendingSegmentVersionToUse;
+    if (maxSegment != null) {
+      pendingSegmentVersionToUse = maxSegment.getVersion();
+    } else {
+      pendingSegmentVersionToUse = "";
+      for (PendingSegmentRecord pendingSegment : overlappingPendingSegments) {
+        if (pendingSegmentVersionToUse.compareTo(pendingSegment.getId().getVersion()) < 0) {
+          pendingSegmentVersionToUse = pendingSegment.getId().getVersion();
+        }
+      }
+    }
+
+    List<PendingSegmentRecord> pendingSegments = new ArrayList<>();
+    for (PendingSegmentRecord pendingSegment : pendingSegments) {
+      if (pendingSegment.getId().getVersion().equals(pendingSegmentVersionToUse)) {
+        if (pendingSegment.getId().getInterval().equals(visibleInterval)) {
+          pendingSegments.add(pendingSegment);
+        } else {
+          log.warn(
+              "Cannot allocate new segment for dataSource[%s], interval[%s] as it has a conflicting pendingSegment[%s].",
+              datasource, interval, pendingSegment.getId().asSegmentId()
+          );
+          return null;
+        }
+      }
+    }
+
+    return new VisibleSegmentState(visibleInterval, maxSegment, pendingSegments);
+  }
+
+  private List<TaskLockPosse> findConflictPosses(String datasource, Interval interval)
+  {
+    giant.lock();
+
+    try {
+      final List<TaskLockPosse> foundPosses = findLockPossesOverlapsInterval(
+          datasource,
+          interval
+      );
+      for (TaskLockPosse posse : foundPosses) {
+        if (posse.getTaskLock().getGranularity() == LockGranularity.SEGMENT) {
+          throw DruidException.defensive(
+              "TimeChunk lock request for datasource[%s], interval[%s] has a conflicting segment lock.",
+              datasource, interval
+          );
+        }
+      }
+      return foundPosses;
     }
     finally {
       giant.unlock();
@@ -795,6 +1032,7 @@ public class TaskLockbox
 
     try {
       lockPosse.taskIds.forEach(taskId -> revokeLock(taskId, lockPosse.getTaskLock()));
+      lockPosse.visibleSegmentState = null;
     }
     finally {
       giant.unlock();
@@ -1194,6 +1432,12 @@ public class TaskLockbox
             ? ((SegmentLock) taskLockPosse.taskLock).getPartitionId()
             : null
         );
+        if (task instanceof PendingSegmentAllocatingTask) {
+          final String allocatorId = ((PendingSegmentAllocatingTask) task).getTaskAllocatorId();
+          if (taskLockPosse.visibleSegmentState != null && !activeAllocatorIdToTaskIds.containsKey(allocatorId)) {
+            taskLockPosse.visibleSegmentState.removePendingSegmentsForAllocator(allocatorId);
+          }
+        }
       }
     }
     finally {
@@ -1580,6 +1824,123 @@ public class TaskLockbox
     return true;
   }
 
+  static class VisibleSegmentState
+  {
+    // Fixed as the segment interval cannot change once committed or allocated
+    private final Interval interval;
+    // Fixed as the numCorePartitions cannot be altered by appending jobs
+    private final int numCorePartitions;
+    // Can be null or set once after used segments have been committed for the first time for the interval
+    private String committedVersion = null;
+    // Can be null or set once after used segments have been committed for the first time for the interval
+    private String allocatedVersion = null;
+    // Can be altered when new segments are committed
+    private int maxCommittedId = -1;
+    // Max pending segment id that cannot be cleaned up automatically by the TaskLockbox i.e with null taskAllocatorId
+    private int maxNonReusableId = -1;
+    private final Map<String, Set<SegmentId>> allocatorToActiveIds = new HashMap<>();
+
+    VisibleSegmentState(Interval interval, @Nullable DataSegment maxSegment, List<PendingSegmentRecord> pendingSegments)
+    {
+      this.interval = interval;
+      if (maxSegment == null) {
+        numCorePartitions = 0;
+      } else {
+        numCorePartitions = maxSegment.getShardSpec().getNumCorePartitions();
+        updateMaxSegment(maxSegment);
+      }
+      for (PendingSegmentRecord pendingSegment : pendingSegments) {
+        addPendingSegment(pendingSegment);
+      }
+    }
+
+    int getMaxId()
+    {
+      int maxId = Math.max(maxCommittedId, maxNonReusableId);
+      for (Set<SegmentId> pendingSegmentIds : allocatorToActiveIds.values()) {
+        for (SegmentId pendingSegmentId : pendingSegmentIds) {
+          maxId = Math.max(maxId, pendingSegmentId.getPartitionNum());
+        }
+      }
+      return maxId;
+    }
+
+    String getVersion(String preferredVersion)
+    {
+      if (committedVersion != null) {
+        return committedVersion;
+      } else if (allocatedVersion != null) {
+        return allocatedVersion;
+      } else {
+        return preferredVersion;
+      }
+    }
+
+    void updateMaxSegment(DataSegment segment)
+    {
+      if (!interval.equals(segment.getInterval())) {
+        throw DruidException.defensive(
+            "Interval[%s] mismatch for segment[%s] with interval[%s].",
+            interval, segment.getId(), segment.getInterval()
+        );
+      }
+      if (numCorePartitions != segment.getShardSpec().getNumCorePartitions()) {
+        throw DruidException.defensive(
+            "numCorePartitions[%s] mismatch for segment[%s] with numCorePartitions[%d].",
+            numCorePartitions, segment.getId(), segment.getShardSpec().getNumCorePartitions()
+        );
+      }
+
+      if (committedVersion == null) {
+        committedVersion = segment.getVersion();
+      } else if (!committedVersion.equals(segment.getVersion())) {
+        throw DruidException.defensive(
+            "segment[%s] does not have the expected version[%s].",
+            segment.getId(), committedVersion
+        );
+      }
+
+      maxCommittedId = Math.max(maxCommittedId, segment.getShardSpec().getPartitionNum());
+    }
+
+    void addPendingSegment(PendingSegmentRecord pendingSegment)
+    {
+      SegmentId id = pendingSegment.getId().asSegmentId();
+      if (committedVersion != null && !committedVersion.equals(id.getVersion())) {
+        throw DruidException.defensive(
+            "pendingSegment[%s] does not have the expected version[%s].",
+            id, committedVersion
+        );
+      }
+
+      if (allocatedVersion == null) {
+        allocatedVersion = id.getVersion();
+      } else if (!allocatedVersion.equals(id.getVersion())) {
+        throw DruidException.defensive(
+            "pendingSegment[%s] does not have the expected version[%s].",
+            id, allocatedVersion
+        );
+      }
+
+      String allocator = pendingSegment.getTaskAllocatorId();
+      if (allocator == null) {
+        maxNonReusableId = Math.max(maxNonReusableId, id.getPartitionNum());
+      } else {
+        allocatorToActiveIds.computeIfAbsent(allocator, k -> new HashSet<>())
+                            .add(id);
+      }
+    }
+
+    void removePendingSegmentsForAllocator(String allocatorId)
+    {
+      allocatorToActiveIds.remove(allocatorId);
+      // If all pending segments have been cleaned up, we can have a different allocated version in the future
+      if (allocatorToActiveIds.isEmpty() && maxNonReusableId == 0) {
+        allocatedVersion = null;
+      }
+    }
+  }
+
   /**
    * Task locks for tasks of the same groupId
    */
@@ -1587,6 +1948,7 @@ public class TaskLockbox
   {
     private final TaskLock taskLock;
     private final Set<String> taskIds;
+    private VisibleSegmentState visibleSegmentState;
 
     TaskLockPosse(TaskLock taskLock)
     {

@@ -179,7 +179,7 @@ public class OverlordTest
 
     IndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
 
-    taskLockbox = new TaskLockbox(taskStorage, mdc);
+    taskLockbox = new TaskLockbox(taskStorage, mdc, new TaskLockConfig());
 
     task0 = NoopTask.create();
     taskId0 = task0.getId();

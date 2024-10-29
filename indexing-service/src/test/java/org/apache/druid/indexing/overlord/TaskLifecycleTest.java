@@ -242,7 +242,6 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   private QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate;
   private MonitorScheduler monitorScheduler;
   private ServiceEmitter emitter;
-  private TaskLockConfig lockConfig;
   private TaskQueueConfig tqc;
   private TaskConfig taskConfig;
   private DataSegmentPusher dataSegmentPusher;
@@ -547,7 +546,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
 
-    taskLockbox = new TaskLockbox(taskStorage, mdc);
+    taskLockbox = new TaskLockbox(taskStorage, mdc, new TaskLockConfig());
     tac = new LocalTaskActionClientFactory(
         new TaskActionToolbox(
             taskLockbox,
@@ -636,7 +635,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
     Preconditions.checkNotNull(tac);
     Preconditions.checkNotNull(emitter);
 
-    lockConfig = new TaskLockConfig();
+    TaskLockConfig lockConfig = new TaskLockConfig();
     tqc = mapper.readValue(
         "{\"startDelay\":\"PT0S\", \"restartDelay\":\"PT1S\", \"storageSyncRate\":\"PT0.5S\"}",
         TaskQueueConfig.class

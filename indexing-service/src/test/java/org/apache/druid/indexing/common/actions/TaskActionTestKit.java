@@ -56,7 +56,6 @@ public class TaskActionTestKit extends ExternalResource
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskActionToolbox taskActionToolbox;
   private SegmentSchemaManager segmentSchemaManager;
-  private SegmentSchemaCache segmentSchemaCache;
 
   private boolean skipSegmentPayloadFetchForAllocation = new TaskLockConfig().isSegmentAllocationReduceMetadataIO();
 
@@ -109,17 +108,6 @@ public class TaskActionTestKit extends ExternalResource
         return 2;
       }
     };
-    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
-    segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
-    segmentsMetadataManager = new SqlSegmentsMetadataManager(
-        objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig()),
-        Suppliers.ofInstance(metadataStorageTablesConfig),
-        testDerbyConnector,
-        segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create(),
-        NoopServiceEmitter.instance()
-    );
     final TaskLockConfig taskLockConfig = new TaskLockConfig()
     {
       @Override
@@ -141,6 +129,17 @@ public class TaskActionTestKit extends ExternalResource
       }
     };
 
+    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
+    SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
+    segmentsMetadataManager = new SqlSegmentsMetadataManager(
+        objectMapper,
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig()),
+        Suppliers.ofInstance(metadataStorageTablesConfig),
+        testDerbyConnector,
+        segmentSchemaCache,
+        CentralizedDatasourceSchemaConfig.create(),
+        NoopServiceEmitter.instance()
+    );
     taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         taskStorage,

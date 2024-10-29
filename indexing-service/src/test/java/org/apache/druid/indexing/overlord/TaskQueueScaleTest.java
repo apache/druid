@@ -120,14 +120,15 @@ public class TaskQueueScaleTest
           }
         };
 
+    final TaskLockConfig taskLockConfig = new TaskLockConfig();
     taskQueue = new TaskQueue(
-        new TaskLockConfig(),
+        taskLockConfig,
         new TaskQueueConfig(null, Period.millis(1), null, null, null, null),
         new DefaultTaskConfig(),
         taskStorage,
         taskRunner,
         unsupportedTaskActionFactory, // Not used for anything serious
-        new TaskLockbox(taskStorage, storageCoordinator),
+        new TaskLockbox(taskStorage, storageCoordinator, taskLockConfig),
         new NoopServiceEmitter(),
         jsonMapper,
         new NoopTaskContextEnricher()

@@ -24,6 +24,7 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.Futures;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
@@ -39,8 +40,9 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedPartialShardSpec;
@@ -51,8 +53,9 @@ import org.apache.druid.timeline.partition.NumberedPartialShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.apache.druid.timeline.partition.ShardSpec;
-import org.easymock.EasyMock;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -81,6 +84,8 @@ import java.util.stream.Collectors;
 @RunWith(Parameterized.class)
 public class SegmentAllocateActionTest
 {
+  private static final Logger log = new Logger(SegmentAllocateActionTest.class);
+
   @Rule
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
@@ -92,6 +97,7 @@ public class SegmentAllocateActionTest
   private final LockGranularity lockGranularity;
 
   private SegmentAllocationQueue allocationQueue;
+  private StubServiceEmitter emitter;
 
   @Parameterized.Parameters(name = "granularity = {0}, useBatch = {1}, skipSegmentPayloadFetchForAllocation = {2}")
   public static Iterable<Object[]> constructorFeeder()
@@ -101,6 +107,7 @@ public class SegmentAllocateActionTest
         new Object[]{LockGranularity.SEGMENT, true, false},
         new Object[]{LockGranularity.SEGMENT, false, false},
         new Object[]{LockGranularity.TIME_CHUNK, true, true},
+        new Object[]{LockGranularity.TIME_CHUNK, false, true},
         new Object[]{LockGranularity.TIME_CHUNK, true, false},
         new Object[]{LockGranularity.TIME_CHUNK, false, false}
     );
@@ -120,9 +127,6 @@ public class SegmentAllocateActionTest
   @Before
   public void setUp()
   {
-    ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
-    EmittingLogger.registerEmitter(emitter);
-    EasyMock.replay(emitter);
     allocationQueue = taskActionTestKit.getTaskActionToolbox().getSegmentAllocationQueue();
     if (allocationQueue != null) {
       allocationQueue.start();
@@ -193,6 +197,103 @@ public class SegmentAllocateActionTest
       );
     }
     Assert.assertEquals(expectedIds, allocatedIds);
+  }
+
+  //@Ignore
+  @Test
+  public void testBenchmark() throws Exception
+  {
+    if (lockGranularity == LockGranularity.SEGMENT) {
+      return;
+    }
+
+    final Task task = NoopTask.create();
+    taskActionTestKit.getTaskLockbox().add(task);
+
+    final Interval startInterval = Intervals.of("2024-01-01/PT1H");
+    final long hourToMillis = 1000L * 60L * 60L;
+    final long numHours = 24;
+    List<Interval> intervals = new ArrayList<>();
+    for (long hour = 0; hour < numHours; hour++) {
+      intervals.add(
+          new Interval(
+              startInterval.getStartMillis() + hourToMillis * hour,
+              startInterval.getStartMillis() + hourToMillis * hour + hourToMillis,
+              DateTimeZone.UTC
+          )
+      );
+    }
+
+    final IndexerSQLMetadataStorageCoordinator coordinator =
+        (IndexerSQLMetadataStorageCoordinator) taskActionTestKit.getMetadataStorageCoordinator();
+
+    final List<String> dimensions = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      dimensions.add("dimension_" + i);
+    }
+    final Set<DataSegment> segments = new HashSet<>();
+    final int numUsedSegmentsPerInterval = 2000;
+    int version = 0;
+    for (Interval interval : intervals) {
+      for (int i = 0; i < numUsedSegmentsPerInterval; i++) {
+        segments.add(
+            DataSegment.builder()
+                       .dataSource(task.getDataSource())
+                       .interval(interval)
+                       .version("version" + version)
+                       .shardSpec(new NumberedShardSpec(i, numUsedSegmentsPerInterval))
+                       .dimensions(dimensions)
+                       .size(100)
+                       .build()
+        );
+      }
+      coordinator.commitSegments(segments, null);
+      segments.clear();
+      version = (version + 1) % 10;
+    }
+
+    final long start = System.nanoTime();
+
+    final int numAllocations = 128;
+    final long replicas = 2;
+    Map<String, List<Future<SegmentIdWithShardSpec>>> sequenceNameAndPrevIdToFutures = new HashMap<>();
+    for (int i = 0; i < numAllocations; i++) {
+      for (int j = 0; j < numHours; j++) {
+        final long id = numUsedSegmentsPerInterval + i / replicas;
+        final String sequenceId = j + "-sequence" + id;
+        final String prevSequenceId = j + "-sequence" + (id - 1);
+        sequenceNameAndPrevIdToFutures.computeIfAbsent(
+            sequenceId + "|" + prevSequenceId,
+            k -> new ArrayList<>()
+        ).add(
+            allocate(
+                task,
+                intervals.get(j).getStart(),
+                Granularities.HOUR,
+                sequenceId,
+                prevSequenceId
+            )
+        );
+      }
+    }
+
+    final Set<SegmentIdWithShardSpec> allocatedIds = new HashSet<>();
+    for (List<Future<SegmentIdWithShardSpec>> sameIds : sequenceNameAndPrevIdToFutures.values()) {
+      if (sameIds.isEmpty()) {
+        return;
+      }
+      final SegmentIdWithShardSpec id = sameIds.get(0).get();
+      Assert.assertNotNull(id);
+      for (int i = 1; i < sameIds.size(); i++) {
+        Assert.assertEquals(id, sameIds.get(i).get());
+      }
+      Assert.assertFalse(allocatedIds.contains(id));
+      allocatedIds.add(id);
+    }
+    Assert.assertEquals(numHours * numAllocations, allocatedIds.size() * replicas);
+
+    final long totalTime = (System.nanoTime() - start) / 1_000_000;
+    log.info("Total time taken for [%d] allocations is [%d] ms.", (numHours * numAllocations), totalTime);
   }
 
   @Test
@@ -479,7 +580,8 @@ public class SegmentAllocateActionTest
   public void testSegmentIsAllocatedForLatestUsedSegmentVersion()
   {
     final Task task = NoopTask.create();
-    taskActionTestKit.getTaskLockbox().add(task);
+    final TaskLockbox lockbox = taskActionTestKit.getTaskLockbox();
+    lockbox.add(task);
 
     final String sequenceName = "sequence_1";
 
@@ -491,6 +593,7 @@ public class SegmentAllocateActionTest
 
     assertSameIdentifier(pendingSegmentV01, pendingSegmentV02);
 
+    lockbox.unlockAll(task);
     // Commit a segment for version V1
     final DataSegment segmentV1
         = DataSegment.builder()
@@ -515,6 +618,7 @@ public class SegmentAllocateActionTest
 
     Assert.assertNotEquals(pendingSegmentV01, pendingSegmentV11);
 
+    lockbox.unlockAll(task);
     // Commit a segment for version V2 to overshadow V1
     final DataSegment segmentV2
         = DataSegment.builder()
@@ -1263,6 +1367,34 @@ public class SegmentAllocateActionTest
     }
     catch (Exception e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private Future<SegmentIdWithShardSpec> allocate(
+      final Task task,
+      final DateTime timestamp,
+      final Granularity preferredSegmentGranularity,
+      final String sequenceName,
+      final String sequencePreviousId
+  )
+  {
+    final SegmentAllocateAction action = new SegmentAllocateAction(
+        DATA_SOURCE,
+        timestamp,
+        Granularities.NONE,
+        preferredSegmentGranularity,
+        sequenceName,
+        sequencePreviousId,
+        false,
+        NumberedPartialShardSpec.instance(),
+        lockGranularity,
+        null
+    );
+
+    if (useBatch) {
+      return action.performAsync(task, taskActionTestKit.getTaskActionToolbox());
+    } else {
+      return Futures.immediateFuture(action.perform(task, taskActionTestKit.getTaskActionToolbox()));
     }
   }
 
