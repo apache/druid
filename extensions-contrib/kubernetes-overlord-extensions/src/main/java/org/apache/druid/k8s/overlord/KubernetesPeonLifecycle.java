@@ -184,8 +184,8 @@ public class KubernetesPeonLifecycle
         since Druid doesn't support retrying tasks from a external system (K8s). We can explore adding a fabric8 watcher
         if we decide we need to change this later.
       **/
-      taskLocation.set(getTaskLocationFromK8s());
       updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
+      taskLocation.set(getTaskLocationFromK8s());
 
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
           taskId,
@@ -401,10 +401,5 @@ public class KubernetesPeonLifecycle
         pod.getMetadata() != null ? pod.getMetadata().getName() : ""
     );
 
-  }
-
-  public ListenableFuture<?> locatedFuture()
-  {
-    return taskLocation;
   }
 }
