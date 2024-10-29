@@ -232,6 +232,12 @@ public class DefaultSearchQueryMetrics implements SearchQueryMetrics
   }
 
   @Override
+  public QueryMetrics reportRowsScannedCount(long rowsScannedCount)
+  {
+    return delegateQueryMetrics.reportRowsScannedCount(rowsScannedCount);
+  }
+
+  @Override
   public QueryMetrics reportNodeTimeToFirstByte(long timeNs)
   {
     return delegateQueryMetrics.reportNodeTimeToFirstByte(timeNs);

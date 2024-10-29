@@ -78,7 +78,9 @@ import java.util.concurrent.TimeUnit;
  * <li>Initialization ({@link #initialize(Query)})</li>
  * <li>Authorization ({@link #authorize(HttpServletRequest)}</li>
  * <li>Execution ({@link #execute()}</li>
- * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)}</li>
+ * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long, long)}</li>
+ * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String)}</li>
+ * <li>Logging ({@link #emitLogsAndMetrics(Throwable)}</li>
  * </ol>
  *
  * This object is not thread-safe.
@@ -164,7 +166,7 @@ public class QueryLifecycle
       results = queryResponse.getResults();
     }
     catch (Throwable e) {
-      emitLogsAndMetrics(e, null, -1);
+      emitLogsAndMetrics(e);
       throw e;
     }
 
@@ -182,7 +184,7 @@ public class QueryLifecycle
               @Override
               public void after(final boolean isDone, final Throwable thrown)
               {
-                emitLogsAndMetrics(thrown, null, -1);
+                emitLogsAndMetrics(thrown);
               }
             }
         ),
@@ -269,7 +271,7 @@ public class QueryLifecycle
   /**
    * Execute the query. Can only be called if the query has been authorized. Note that query logs and metrics will
    * not be emitted automatically when the Sequence is fully iterated. It is the caller's responsibility to call
-   * {@link #emitLogsAndMetrics(Throwable, String, long)} to emit logs and metrics.
+   * {@link #emitLogsAndMetrics(Throwable, String, long, long)} to emit logs and metrics.
    *
    * @return result sequence and response context
    */
@@ -292,13 +294,30 @@ public class QueryLifecycle
    *
    * @param e             exception that occurred while processing this query
    * @param remoteAddress remote address, for logging; or null if unknown
+   */
+  @SuppressWarnings("unchecked")
+  public void emitLogsAndMetrics(
+          @Nullable final Throwable e,
+          @Nullable final String remoteAddress
+  )
+  {
+    this.emitLogsAndMetrics(e, remoteAddress, -1, -1);
+  }
+
+  /**
+   * Emit logs and metrics for this query.
+   *
+   * @param e             exception that occurred while processing this query
+   * @param remoteAddress remote address, for logging; or null if unknown
    * @param bytesWritten  number of bytes written; will become a query/bytes metric if >= 0
+   * @param rowsScanned  number of rows scanned; will become a query/rows/scanned metric if >= 0
    */
   @SuppressWarnings("unchecked")
   public void emitLogsAndMetrics(
       @Nullable final Throwable e,
       @Nullable final String remoteAddress,
-      final long bytesWritten
+      final long bytesWritten,
+      final long rowsScanned
   )
   {
     if (baseQuery == null) {
@@ -328,6 +347,9 @@ public class QueryLifecycle
 
       if (bytesWritten >= 0) {
         queryMetrics.reportQueryBytes(bytesWritten);
+      }
+      if (rowsScanned >= 0) {
+        queryMetrics.reportRowsScannedCount(rowsScanned);
       }
 
       if (authenticationResult != null) {
@@ -393,6 +415,18 @@ public class QueryLifecycle
         baseQuery.getDataSource().getTableNames(),
         getQueryId()
     );
+  }
+
+  /**
+   * Emit logs and metrics for this query.
+   *
+   * @param e             exception that occurred while processing this query
+   */
+  private void emitLogsAndMetrics(
+          @Nullable final Throwable e
+  )
+  {
+    this.emitLogsAndMetrics(e, null, -1, -1);
   }
 
   private boolean isSerializeDateTimeAsLong()

@@ -336,6 +336,11 @@ public interface QueryMetrics<QueryType extends Query<?>>
   QueryMetrics<QueryType> reportCpuTime(long timeNs);
 
   /**
+   * Registers "rows scanned count" metric.
+   */
+  QueryMetrics<QueryType> reportRowsScannedCount(long rowsScannedCount);
+
+  /**
    * Registers "time to first byte" metric.
    */
   QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs);

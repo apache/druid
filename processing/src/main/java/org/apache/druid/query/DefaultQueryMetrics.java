@@ -271,6 +271,12 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
+  public QueryMetrics<QueryType> reportRowsScannedCount(long rowsScannedCount)
+  {
+    return reportMetric("query/rows/scanned", rowsScannedCount);
+  }
+
+  @Override
   public QueryMetrics<QueryType> reportNodeTimeToFirstByte(long timeNs)
   {
     return reportMillisTimeMetric("query/node/ttfb", timeNs);

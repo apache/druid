@@ -55,6 +55,7 @@ Metrics may have additional dimensions beyond those listed above.
 |`query/node/bytes`|Number of bytes returned from querying individual historical/realtime processes.|`id`, `status`, `server`| |
 |`query/node/ttfb`|Time to first byte. Milliseconds elapsed until Broker starts receiving the response from individual historical/realtime processes.|`id`, `status`, `server`|< 1s|
 |`query/node/backpressure`|Milliseconds that the channel to this process has spent suspended due to backpressure.|`id`, `status`, `server`.| |
+|`query/rows/scanned`|Number of rows scanned by the Data nodes to address the query.|`id`, `status`, `server`.| |
 |`query/count`|Number of total queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 |`query/success/count`|Number of queries successfully processed.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |
 |`query/failed/count`|Number of failed queries.|This metric is only available if the `QueryCountStatsMonitor` module is included.| |

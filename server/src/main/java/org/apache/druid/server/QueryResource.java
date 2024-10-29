@@ -212,7 +212,7 @@ public class QueryResource implements QueryCountStatsProvider
       final String prevEtag = getPreviousEtag(req);
 
       if (prevEtag != null && prevEtag.equals(responseContext.getEntityTag())) {
-        queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr(), -1);
+        queryLifecycle.emitLogsAndMetrics(null, req.getRemoteAddr());
         successfulQueryCount.incrementAndGet();
         return Response.notModified().build();
       }
@@ -249,7 +249,7 @@ public class QueryResource implements QueryCountStatsProvider
                     finally {
                       Thread.currentThread().setName(currThreadName);
 
-                      queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), os.getCount());
+                      queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), os.getCount(), rowsScanned);
 
                       if (e == null) {
                         successfulQueryCount.incrementAndGet();
@@ -296,27 +296,27 @@ public class QueryResource implements QueryCountStatsProvider
     }
     catch (QueryInterruptedException e) {
       interruptedQueryCount.incrementAndGet();
-      queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
+      queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr());
       return ioReaderWriter.getResponseWriter().gotError(e);
     }
     catch (QueryTimeoutException timeout) {
       timedOutQueryCount.incrementAndGet();
-      queryLifecycle.emitLogsAndMetrics(timeout, req.getRemoteAddr(), -1);
+      queryLifecycle.emitLogsAndMetrics(timeout, req.getRemoteAddr());
       return ioReaderWriter.getResponseWriter().gotTimeout(timeout);
     }
     catch (QueryCapacityExceededException cap) {
       failedQueryCount.incrementAndGet();
-      queryLifecycle.emitLogsAndMetrics(cap, req.getRemoteAddr(), -1);
+      queryLifecycle.emitLogsAndMetrics(cap, req.getRemoteAddr());
       return ioReaderWriter.getResponseWriter().gotLimited(cap);
     }
     catch (QueryUnsupportedException unsupported) {
       failedQueryCount.incrementAndGet();
-      queryLifecycle.emitLogsAndMetrics(unsupported, req.getRemoteAddr(), -1);
+      queryLifecycle.emitLogsAndMetrics(unsupported, req.getRemoteAddr());
       return ioReaderWriter.getResponseWriter().gotUnsupported(unsupported);
     }
     catch (BadQueryException e) {
       interruptedQueryCount.incrementAndGet();
-      queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
+      queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr());
       return ioReaderWriter.getResponseWriter().gotBadQuery(e);
     }
     catch (ForbiddenException e) {
@@ -326,7 +326,7 @@ public class QueryResource implements QueryCountStatsProvider
     }
     catch (Exception e) {
       failedQueryCount.incrementAndGet();
-      queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), -1);
+      queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr());
 
       log.noStackTrace()
          .makeAlert(e, "Exception handling request")
