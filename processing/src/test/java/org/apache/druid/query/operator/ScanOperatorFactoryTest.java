@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableSet;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -58,24 +59,7 @@ public class ScanOperatorFactoryTest
   @Test
   public void testEquals()
   {
-    final Builder bob = new Builder();
-    bob.timeRange = Intervals.utc(0, 6);
-    bob.filter = DimFilters.dimEquals("abc", "b");
-    bob.offsetLimit = OffsetLimit.limit(48);
-    bob.projectedColumns = Arrays.asList("a", "b");
-    bob.virtualColumns = VirtualColumns.EMPTY;
-    bob.ordering = Collections.singletonList(ColumnWithDirection.ascending("a"));
-    ScanOperatorFactory factory = bob.build();
-
-    Assert.assertEquals(factory, factory);
-    Assert.assertNotEquals(factory, new Object());
-
-    Assert.assertNotEquals(factory, bob.copy().setTimeRange(null).build());
-    Assert.assertNotEquals(factory, bob.copy().setFilter(null).build());
-    Assert.assertNotEquals(factory, bob.copy().setOffsetLimit(null).build());
-    Assert.assertNotEquals(factory, bob.copy().setProjectedColumns(null).build());
-    Assert.assertNotEquals(factory, bob.copy().setVirtualColumns(null).build());
-    Assert.assertNotEquals(factory, bob.copy().setOrdering(null).build());
+    EqualsVerifier.forClass(ScanOperatorFactory.class).usingGetClass().verify();
   }
 
   @Test
