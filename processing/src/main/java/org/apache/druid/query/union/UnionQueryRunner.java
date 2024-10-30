@@ -19,8 +19,6 @@
 
 package org.apache.druid.query.union;
 
-import org.apache.druid.error.DruidException;
-import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Query;
@@ -29,8 +27,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.context.ResponseContext;
 
 import java.util.ArrayList;
@@ -41,8 +37,6 @@ class UnionQueryRunner implements QueryRunner<Object>
   private final QuerySegmentWalker walker;
   private final List<QueryRunner> runners;
   private QueryRunnerFactoryConglomerate conglomerate;
-  private ResultSerializationMode serializationMode;
-  private boolean useNestedForUnknownTypeInSubquery;
 
   public UnionQueryRunner(
       UnionQuery query,
@@ -51,11 +45,6 @@ class UnionQueryRunner implements QueryRunner<Object>
   {
     this.walker = walker;
     this.conglomerate = conglomerate;
-
-    serializationMode = getResultSerializationMode(query);
-    // FIXME: this was more complicated; it dependend on ServerConfig from the
-    // server module
-    useNestedForUnknownTypeInSubquery = query.context().isUseNestedForUnknownTypeInSubquery(false);
     this.runners = makeSubQueryRunners(query);
   }
 
@@ -91,54 +80,10 @@ class UnionQueryRunner implements QueryRunner<Object>
     List<Sequence<Object>> seqs = new ArrayList<>();
     for (int i = 0; i < runners.size(); i++) {
       Query<?> q = unionQuery.queries.get(i);
-      QueryRunner r = runners.get(i);
-      if(false) {
-        seqs.add(makeResultSeq(r, queryPlus.withQuery(q), responseContext, serializationMode));
-      } else {
-        seqs.add(r.run(queryPlus.withQuery(q), responseContext));
-      }
+      QueryRunner runner = runners.get(i);
+      Sequence run = runner.run(queryPlus.withQuery(q), responseContext);
+      seqs.add(run);
     }
     return Sequences.concat(seqs);
-  }
-
-  private ResultSerializationMode getResultSerializationMode(Query<Object> query)
-  {
-    ResultSerializationMode serializationMode = query.context().getEnum(
-        ResultSerializationMode.CTX_SERIALIZATION_PARAMETER,
-        ResultSerializationMode.class,
-        null
-    );
-    if (serializationMode == null) {
-      throw DruidException.defensive(
-          "Serialization mode [%s] is not setup correctly!", ResultSerializationMode.CTX_SERIALIZATION_PARAMETER
-      );
-    }
-    return serializationMode;
-  }
-
-  private <T> Sequence<Object> makeResultSeq(QueryRunner runner, QueryPlus<T> withQuery,
-      ResponseContext responseContext, ResultSerializationMode serializationMode)
-  {
-    Query<T> query = withQuery.getQuery();
-    QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
-    Sequence<T> seq = runner.run(withQuery, responseContext);
-    Sequence<?> resultSeq;
-    switch (serializationMode)
-    {
-      case ROWS:
-        resultSeq = toolChest.resultsAsArrays(query, seq);
-        break;
-      case FRAMES:
-        resultSeq = toolChest.resultsAsFrames(
-            query,
-            seq,
-            ArenaMemoryAllocatorFactory.makeDefault(),
-            useNestedForUnknownTypeInSubquery
-        ).orElseThrow(() -> DruidException.defensive("Unable to materialize the results as frames."));
-        break;
-      default:
-        throw DruidException.defensive("Not supported serializationMode [%s].", serializationMode);
-    }
-    return (Sequence<Object>) resultSeq;
   }
 }

@@ -50,14 +50,12 @@ public class ToolChestBasedQueryLogic<T> implements QueryLogic
   {
     private final QueryRunner<T> runner;
     private final QueryToolChest<T, Query<T>> toolChest;
-    private final boolean useNestedForUnknownTypeInSubquery;
 
     public ToolChestBasedQueryRunner(Query<T> query, QuerySegmentWalker walker,
         QueryToolChest<T, Query<T>> toolChest)
     {
       this.runner = query.getRunner(walker);
       this.toolChest = toolChest;
-      this.useNestedForUnknownTypeInSubquery = false;
     }
 
     @Override
@@ -65,6 +63,10 @@ public class ToolChestBasedQueryLogic<T> implements QueryLogic
     {
       Query<T> query = queryPlus.getQuery();
       Sequence<T> seq = runner.run(queryPlus, responseContext);
+
+      // FIXME: this was more complicated; it dependend on ServerConfig from the
+      // server module
+      boolean useNestedForUnknownTypeInSubquery = query.context().isUseNestedForUnknownTypeInSubquery(false);
 
       ResultSerializationMode serializationMode = getResultSerializationMode(query);
       Sequence<?> resultSeq;
