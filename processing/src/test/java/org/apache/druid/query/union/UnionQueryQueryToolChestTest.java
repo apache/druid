@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryLogicExecutionContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -189,7 +190,8 @@ public class UnionQueryQueryToolChestTest
     Mockito.when(walker.getQueryRunnerForIntervals(argThat(scan2::matchQuery), any()))
         .thenReturn((q, ctx) -> (Sequence) scan2.makeResultSequence());
 
-    QueryRunner<Object> unionRunner = toolChest.entryPoint(query, walker);
+    QueryLogicExecutionContext context = new QueryLogicExecutionContext(walker, false);
+    QueryRunner<Object> unionRunner = toolChest.entryPoint(query, context);
     Sequence<?> results = unionRunner.run(QueryPlus.wrap(query), null);
     QueryToolChestTestHelper.assertArrayResultsEquals(
         Sequences.concat(

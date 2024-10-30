@@ -22,6 +22,7 @@ package org.apache.druid.query.union;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -29,9 +30,10 @@ import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryLogic;
+import org.apache.druid.query.QueryLogicExecutionContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.segment.column.RowSignature;
@@ -42,10 +44,18 @@ import java.util.Optional;
 public class UnionQueryQueryToolChest extends QueryToolChest<Object, UnionQuery>
     implements QueryLogic
 {
-  @Override
-  public <T> QueryRunner<Object> entryPoint(Query<T> query, QuerySegmentWalker clientQuerySegmentWalker)
+  protected QueryRunnerFactoryConglomerate conglomerate;
+
+  @Inject
+  public void initialize(QueryRunnerFactoryConglomerate conglomerate)
   {
-    return new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker, conglomerate);
+    this.conglomerate = conglomerate;
+  }
+
+  @Override
+  public <T> QueryRunner<Object> entryPoint(Query<T> query, QueryLogicExecutionContext context)
+  {
+    return new UnionQueryRunner((UnionQuery) query, conglomerate, context);
   }
 
   @Override

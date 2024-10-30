@@ -19,19 +19,15 @@
 
 package org.apache.druid.query;
 
-/**
- * Provides facilities to executes the given query type by utilizing the
- * {@link QuerySegmentWalker} to run subqueries if necessary.
- *
- */
-public interface QueryLogic
+public class QueryLogicExecutionContext
 {
-  /**
-   * Builds a {@link QueryRunner} for the given query and walker.
-   *
-   * The returned runner must respect {@link ResultSerializationMode}.
-   */
-  <T> QueryRunner<Object> entryPoint(
-      Query<T> query,
-      QueryLogicExecutionContext context);
+  public final QuerySegmentWalker walker;
+  public final boolean isUseNestedForUnknownTypeInSubquery;
+
+  public QueryLogicExecutionContext(QuerySegmentWalker walker, boolean isUseNestedForUnknownTypeInSubquery)
+  {
+    this.walker = walker;
+    this.isUseNestedForUnknownTypeInSubquery = isUseNestedForUnknownTypeInSubquery;
+  }
+
 }

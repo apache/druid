@@ -23,10 +23,10 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryLogic;
+import org.apache.druid.query.QueryLogicExecutionContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.context.ResponseContext;
 
 import java.util.ArrayList;
@@ -34,17 +34,17 @@ import java.util.List;
 
 class UnionQueryRunner implements QueryRunner<Object>
 {
-  private final QuerySegmentWalker walker;
+  private final QueryRunnerFactoryConglomerate conglomerate;
+  private final QueryLogicExecutionContext context;
   private final List<QueryRunner> runners;
-  private QueryRunnerFactoryConglomerate conglomerate;
 
   public UnionQueryRunner(
       UnionQuery query,
-      QuerySegmentWalker walker,
-      QueryRunnerFactoryConglomerate conglomerate)
+      QueryRunnerFactoryConglomerate conglomerate,
+      QueryLogicExecutionContext context)
   {
-    this.walker = walker;
     this.conglomerate = conglomerate;
+    this.context = context;
     this.runners = makeSubQueryRunners(query);
   }
 
@@ -60,7 +60,7 @@ class UnionQueryRunner implements QueryRunner<Object>
   private QueryRunner<?> buildRunnerFor(Query<?> query)
   {
     QueryLogic queryLogic = getQueryLogicFor(query);
-    return queryLogic.entryPoint(query, walker);
+    return queryLogic.entryPoint(query, context);
   }
 
   private QueryLogic getQueryLogicFor(Query<?> query)

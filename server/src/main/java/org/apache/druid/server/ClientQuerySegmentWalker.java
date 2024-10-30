@@ -50,6 +50,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryLogic;
+import org.apache.druid.query.QueryLogicExecutionContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -178,9 +179,16 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
+    final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
+    final String maxSubqueryMemoryString = query.context()
+                                                .getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryBytes());
+    final long maxSubqueryMemory = subqueryGuardrailHelper.convertSubqueryLimitStringToLong(maxSubqueryMemoryString);
+    final boolean useNestedForUnknownTypeInSubquery = query.context()
+                                                           .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
+
     final QueryLogic queryExecutor = conglomerate.getQueryLogic(query);
     if (queryExecutor != null) {
-      return (QueryRunner<T>) queryExecutor.entryPoint(query, this);
+      return (QueryRunner<T>) queryExecutor.entryPoint(query, new QueryLogicExecutionContext(this, useNestedForUnknownTypeInSubquery));
     }
 
     final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
@@ -198,15 +206,8 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     newQuery = ResourceIdPopulatingQueryRunner.populateResourceId(newQuery);
 
     final DataSource freeTradeDataSource = globalizeIfPossible(newQuery.getDataSource());
+
     // do an inlining dry run to see if any inlining is necessary, without actually running the queries.
-    final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
-    final String maxSubqueryMemoryString = query.context()
-                                                .getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryBytes());
-    final long maxSubqueryMemory = subqueryGuardrailHelper.convertSubqueryLimitStringToLong(maxSubqueryMemoryString);
-    final boolean useNestedForUnknownTypeInSubquery = query.context()
-                                                           .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
-
-
     final DataSource inlineDryRun = inlineIfNecessary(
         freeTradeDataSource,
         toolChest,
@@ -396,7 +397,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               )
           );
           queryResults = subQueryLogic
-              .entryPoint(subQueryWithSerialization, this)
+              .entryPoint(subQueryWithSerialization, new QueryLogicExecutionContext(this, useNestedForUnknownTypeInSubquery))
               .run(QueryPlus.wrap(subQueryWithSerialization), DirectDruidClient.makeResponseContextForQuery());
         }
 

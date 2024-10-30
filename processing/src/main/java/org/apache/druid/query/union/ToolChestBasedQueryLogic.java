@@ -24,9 +24,9 @@ import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryLogic;
+import org.apache.druid.query.QueryLogicExecutionContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.context.ResponseContext;
@@ -44,20 +44,22 @@ public class ToolChestBasedQueryLogic<T> implements QueryLogic
   }
 
   @Override
-  public <T> QueryRunner<Object> entryPoint(Query<T> query, QuerySegmentWalker walker)
+  public <T> QueryRunner<Object> entryPoint(Query<T> query, QueryLogicExecutionContext context)
   {
-    return new ToolChestBasedQueryRunner(query, walker, toolChest);
+    return new ToolChestBasedQueryRunner(query, context, toolChest);
   }
 
   private static class ToolChestBasedQueryRunner<T> implements QueryRunner<T>
   {
     private final QueryRunner<T> runner;
     private final QueryToolChest<T, Query<T>> toolChest;
+    private final QueryLogicExecutionContext context;
 
-    public ToolChestBasedQueryRunner(Query<T> query, QuerySegmentWalker walker,
+    public ToolChestBasedQueryRunner(Query<T> query, QueryLogicExecutionContext context,
         QueryToolChest<T, Query<T>> toolChest)
     {
-      this.runner = query.getRunner(walker);
+      this.context = context;
+      this.runner = query.getRunner(context.walker);
       this.toolChest = toolChest;
     }
 
@@ -68,9 +70,8 @@ public class ToolChestBasedQueryLogic<T> implements QueryLogic
       Query<T> query = queryPlus.getQuery();
       Sequence<T> seq = runner.run(queryPlus, responseContext);
 
-      // FIXME: this was more complicated; it dependend on ServerConfig from the
-      // server module
-      boolean useNestedForUnknownTypeInSubquery = query.context().isUseNestedForUnknownTypeInSubquery(false);
+      boolean useNestedForUnknownTypeInSubquery = query.context()
+          .isUseNestedForUnknownTypeInSubquery(context.isUseNestedForUnknownTypeInSubquery);
 
       ResultSerializationMode serializationMode = getResultSerializationMode(query);
       Sequence<?> resultSeq;
