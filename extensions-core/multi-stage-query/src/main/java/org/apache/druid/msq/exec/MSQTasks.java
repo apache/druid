@@ -114,7 +114,13 @@ public class MSQTasks
       // be a long at execution time. So a nice user-friendly message isn't needed here: it would only happen
       // if the SQL layer is bypassed. Nice, friendly users wouldn't do that :)
       final UnknownFault fault =
-          UnknownFault.forMessage(StringUtils.format("Incorrect type for [%s]", ColumnHolder.TIME_COLUMN_NAME));
+          UnknownFault.forMessage(
+              StringUtils.format(
+                  "Incorrect type for column [%s]. Expected LONG but got type [%s]. Please ensure that the value is cast to LONG.",
+                  ColumnHolder.TIME_COLUMN_NAME,
+                  timestamp.getClass().getSimpleName()
+              )
+          );
       throw new MSQException(fault);
     }
   }

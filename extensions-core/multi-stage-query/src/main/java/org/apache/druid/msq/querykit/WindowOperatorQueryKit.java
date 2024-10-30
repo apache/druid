@@ -38,9 +38,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.operator.AbstractPartitioningOperatorFactory;
 import org.apache.druid.query.operator.AbstractSortOperatorFactory;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.operator.GlueingPartitioningOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
-import org.apache.druid.query.operator.PartitionSortOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.segment.column.ColumnType;
@@ -80,7 +78,11 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         minStageNumber,
         false
     );
-    final RowSignature signatureFromInput = dataSourcePlan.getSubQueryDefBuilder().get().build().getFinalStageDefinition().getSignature();
+    final RowSignature signatureFromInput = dataSourcePlan.getSubQueryDefBuilder()
+                                                          .get()
+                                                          .build()
+                                                          .getFinalStageDefinition()
+                                                          .getSignature();
 
     final WindowStages windowStages = new WindowStages(
         originalQuery,
@@ -91,8 +93,14 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         signatureFromInput
     );
 
-    final ShuffleSpec nextShuffleSpec = windowStages.getStages().get(0).findShuffleSpec(queryKitSpec.getNumPartitionsForShuffle());
-    final QueryDefinitionBuilder queryDefBuilder = makeQueryDefinitionBuilder(queryKitSpec.getQueryId(), dataSourcePlan, nextShuffleSpec);
+    final ShuffleSpec nextShuffleSpec = windowStages.getStages()
+                                                    .get(0)
+                                                    .findShuffleSpec(queryKitSpec.getNumPartitionsForShuffle());
+    final QueryDefinitionBuilder queryDefBuilder = makeQueryDefinitionBuilder(
+        queryKitSpec.getQueryId(),
+        dataSourcePlan,
+        nextShuffleSpec
+    );
     final int firstWindowStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
 
     log.info("Row signature received from last stage is [%s].", signatureFromInput);
@@ -106,15 +114,24 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
   /**
    * Override the shuffle spec of the last stage based on the shuffling required by the first window stage.
+   *
    * @param queryId
    * @param dataSourcePlan
    * @param shuffleSpec
    * @return
    */
-  private QueryDefinitionBuilder makeQueryDefinitionBuilder(String queryId, DataSourcePlan dataSourcePlan, ShuffleSpec shuffleSpec)
+  private QueryDefinitionBuilder makeQueryDefinitionBuilder(
+      String queryId,
+      DataSourcePlan dataSourcePlan,
+      ShuffleSpec shuffleSpec
+  )
   {
     final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
-    int previousStageNumber = dataSourcePlan.getSubQueryDefBuilder().get().build().getFinalStageDefinition().getStageNumber();
+    int previousStageNumber = dataSourcePlan.getSubQueryDefBuilder()
+                                            .get()
+                                            .build()
+                                            .getFinalStageDefinition()
+                                            .getStageNumber();
     for (final StageDefinition stageDef : dataSourcePlan.getSubQueryDefBuilder().get().build().getStageDefinitions()) {
       if (stageDef.getStageNumber() == previousStageNumber) {
         RowSignature rowSignature = QueryKitUtils.sortableSignature(
@@ -157,10 +174,20 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       this.numPartitionsForShuffle = numPartitionsForShuffle;
       this.maxNonLeafWorkerCount = maxNonLeafWorkerCount;
 
-      final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, query.getContext());
+      final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
+          jsonMapper,
+          query.getContext()
+      );
       final ClusterBy finalWindowClusterBy = computeClusterByForFinalWindowStage(segmentGranularity);
-      this.finalWindowStageShuffleSpec = computeShuffleSpecForFinalWindowStage(resultShuffleSpecFactory, finalWindowClusterBy);
-      this.finalWindowStageRowSignature = computeSignatureForFinalWindowStage(query.getRowSignature(), finalWindowClusterBy, segmentGranularity);
+      this.finalWindowStageShuffleSpec = computeShuffleSpecForFinalWindowStage(
+          resultShuffleSpecFactory,
+          finalWindowClusterBy
+      );
+      this.finalWindowStageRowSignature = computeSignatureForFinalWindowStage(
+          query.getRowSignature(),
+          finalWindowClusterBy,
+          segmentGranularity
+      );
 
       this.rowSignatureBuilder = RowSignature.builder().addAll(signatureFromInput);
       populateStages();
@@ -238,7 +265,9 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                             .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
                                 query,
                                 stage.getOperatorFactories(),
-                                stageRowSignature
+                                stageRowSignature,
+                                getMaxRowsMaterialized(),
+                                stage.getPartitionColumns()
                             ));
     }
 
@@ -248,7 +277,10 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
      */
     private ClusterBy computeClusterByForFinalWindowStage(Granularity segmentGranularity)
     {
-      final List<KeyColumn> clusterByColumns = Collections.singletonList(new KeyColumn(QueryKitUtils.PARTITION_BOOST_COLUMN, KeyOrder.ASCENDING));
+      final List<KeyColumn> clusterByColumns = Collections.singletonList(new KeyColumn(
+          QueryKitUtils.PARTITION_BOOST_COLUMN,
+          KeyOrder.ASCENDING
+      ));
       return QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);
     }
 
@@ -256,18 +288,31 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
      * Computes the signature for the final window stage. The finalWindowClusterBy will always have the
      * partition boost column as computed in {@link #computeClusterByForFinalWindowStage(Granularity)}.
      */
-    private RowSignature computeSignatureForFinalWindowStage(RowSignature rowSignature, ClusterBy finalWindowClusterBy, Granularity segmentGranularity)
+    private RowSignature computeSignatureForFinalWindowStage(
+        RowSignature rowSignature,
+        ClusterBy finalWindowClusterBy,
+        Granularity segmentGranularity
+    )
     {
       final RowSignature.Builder finalWindowStageRowSignatureBuilder = RowSignature.builder()
                                                                                    .addAll(rowSignature)
-                                                                                   .add(QueryKitUtils.PARTITION_BOOST_COLUMN, ColumnType.LONG);
+                                                                                   .add(
+                                                                                       QueryKitUtils.PARTITION_BOOST_COLUMN,
+                                                                                       ColumnType.LONG
+                                                                                   );
       return QueryKitUtils.sortableSignature(
-          QueryKitUtils.signatureWithSegmentGranularity(finalWindowStageRowSignatureBuilder.build(), segmentGranularity),
+          QueryKitUtils.signatureWithSegmentGranularity(
+              finalWindowStageRowSignatureBuilder.build(),
+              segmentGranularity
+          ),
           finalWindowClusterBy.getColumns()
       );
     }
 
-    private ShuffleSpec computeShuffleSpecForFinalWindowStage(ShuffleSpecFactory resultShuffleSpecFactory, ClusterBy finalWindowClusterBy)
+    private ShuffleSpec computeShuffleSpecForFinalWindowStage(
+        ShuffleSpecFactory resultShuffleSpecFactory,
+        ClusterBy finalWindowClusterBy
+    )
     {
       return resultShuffleSpecFactory.build(finalWindowClusterBy, false);
     }
@@ -277,7 +322,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       return MultiStageQueryContext.getMaxRowsMaterializedInWindow(query.context());
     }
   }
-  
+
   /**
    * Represents a window stage in a query execution.
    * Each stage can contain a sort operator, a partition operator, and multiple window operators.
@@ -309,11 +354,11 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     private List<OperatorFactory> getOperatorFactories()
     {
       List<OperatorFactory> operatorFactories = new ArrayList<>();
-      if (partitioningOperatorFactory != null) {
-        operatorFactories.add(new GlueingPartitioningOperatorFactory(partitioningOperatorFactory.getPartitionColumns(), maxRowsMaterialized));
-      }
       if (sortOperatorFactory != null) {
-        operatorFactories.add(new PartitionSortOperatorFactory(sortOperatorFactory.getSortColumns()));
+        operatorFactories.add(sortOperatorFactory);
+      }
+      if (partitioningOperatorFactory != null) {
+        operatorFactories.add(partitioningOperatorFactory);
       }
       operatorFactories.addAll(windowOperatorFactories);
       return operatorFactories;
@@ -347,7 +392,9 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       for (String partitionColumn : partitioningOperatorFactory.getPartitionColumns()) {
         KeyColumn kc = new KeyColumn(
             partitionColumn,
-            sortColumnsMap.get(partitionColumn) == ColumnWithDirection.Direction.DESC ? KeyOrder.DESCENDING : KeyOrder.ASCENDING
+            sortColumnsMap.get(partitionColumn) == ColumnWithDirection.Direction.DESC
+            ? KeyOrder.DESCENDING
+            : KeyOrder.ASCENDING
         );
         keyColsOfWindow.add(kc);
       }
@@ -371,7 +418,12 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       }
       throw new ISE("Encountered unexpected operatorFactory type: [%s]", operatorFactory.getClass().getName());
     }
-    
+
+    private List<String> getPartitionColumns()
+    {
+      return partitioningOperatorFactory == null ? new ArrayList<>() : partitioningOperatorFactory.getPartitionColumns();
+    }
+
     @Override
     public String toString()
     {
