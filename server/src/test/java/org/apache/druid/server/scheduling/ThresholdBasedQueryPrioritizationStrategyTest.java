@@ -274,7 +274,7 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
     DateTime startDate = DateTimes.nowUtc().minusDays(20);
     DateTime endDate = DateTimes.nowUtc();
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
-            .dataSource("generalDatasource")
+            .dataSource("exemptDatasource")
             .granularity(Granularities.HOUR)
             .context(ImmutableMap.of())
             .build();
