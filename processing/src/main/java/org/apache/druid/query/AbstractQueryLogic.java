@@ -19,12 +19,18 @@
 
 package org.apache.druid.query;
 
+import com.google.inject.Inject;
+
 /**
  * Executes the query by utilizing the given walker.
  */
-public interface QueryLogic<T>
+public abstract class AbstractQueryLogic<T> implements QueryLogic<T>
 {
-  QueryRunner<T> entryPoint(
-      Query<T> query,
-      QuerySegmentWalker walker);
+  protected QueryRunnerFactoryConglomerate conglomerate;
+
+  @Inject
+  public void initialize(QueryRunnerFactoryConglomerate conglomerate)
+  {
+    this.conglomerate = conglomerate;
+  }
 }
