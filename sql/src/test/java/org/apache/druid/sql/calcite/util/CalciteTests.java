@@ -130,6 +130,7 @@ public class CalciteTests
   public static final String ALL_TYPES_UNIQ_PARQUET = "allTypsUniq.parquet";
   public static final String FEW_ROWS_ALL_DATA_PARQUET = "fewRowsAllData.parquet";
   public static final String T_ALL_TYPE_PARQUET = "t_alltype.parquet";
+  public static final String BENCHMARK_DATASOURCE = "benchmark_ds";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
