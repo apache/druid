@@ -44,7 +44,6 @@ import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
@@ -54,7 +53,7 @@ import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.union.UnionQuery;
-import org.apache.druid.query.union.UnionQueryLogic;
+import org.apache.druid.query.union.UnionQueryQueryToolChest;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -453,6 +452,7 @@ public class SqlTestFramework
     public Map<? extends Class<? extends Query>, ? extends QueryToolChest> makeToolChests(Injector injector)
     {
       return ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
+          .put(UnionQuery.class, injector.getInstance(UnionQueryQueryToolChest.class))
           .build();
     }
   }
@@ -736,16 +736,6 @@ public class SqlTestFramework
           .build();
     }
 
-    @Provides
-    @LazySingleton
-    public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryLogic> makeQueryLogics(
-        UnionQueryLogic unionQueryLogic)
-    {
-      return ImmutableMap.<Class<? extends Query>, QueryLogic>builder()
-          .put(UnionQuery.class, unionQueryLogic)
-          .build();
-    }
-
     /*
      * Ideally this should not have a Named annotation, but it clashes with {@link DruidProcessingModule}.
      */
@@ -775,11 +765,9 @@ public class SqlTestFramework
     @LazySingleton
     public QueryRunnerFactoryConglomerate conglomerate(
         @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> factories,
-        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryToolChest> toolchests,
-        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryLogic> querylogics
-        )
+        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryToolChest> toolchests)
     {
-      QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(factories, toolchests, querylogics);
+      QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(factories, toolchests);
       return componentSupplier.wrapConglomerate(conglomerate, resourceCloser);
     }
 

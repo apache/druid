@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
+import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
 import org.apache.druid.guice.annotations.ExtensionPoint;
@@ -47,6 +48,7 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
 {
   private final JavaType baseResultType;
   private final JavaType bySegmentResultType;
+  protected QueryRunnerFactoryConglomerate conglomerate;
 
   protected QueryToolChest()
   {
@@ -69,6 +71,12 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
       baseResultType = null;
       bySegmentResultType = null;
     }
+  }
+
+  @Inject
+  public void initialize(QueryRunnerFactoryConglomerate conglomerate)
+  {
+    this.conglomerate = conglomerate;
   }
 
   public final JavaType getBaseResultType()

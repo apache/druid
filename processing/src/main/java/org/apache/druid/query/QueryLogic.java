@@ -26,5 +26,6 @@ public interface QueryLogic<T>
 {
   QueryRunner<T> entryPoint(
       Query<T> query,
-      QuerySegmentWalker walker);
+      QuerySegmentWalker walker
+  );
 }

@@ -62,6 +62,9 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryMetricsFactory;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
+import org.apache.druid.query.union.UnionQuery;
+import org.apache.druid.query.union.UnionQueryQueryToolChest;
+
 import java.util.Map;
 
 /**
@@ -85,6 +88,7 @@ public class QueryToolChestModule implements Module
                   .put(TimeseriesQuery.class, TimeseriesQueryQueryToolChest.class)
                   .put(TopNQuery.class, TopNQueryQueryToolChest.class)
                   .put(WindowOperatorQuery.class, WindowOperatorQueryQueryToolChest.class)
+                  .put(UnionQuery.class, UnionQueryQueryToolChest.class)
                   .build();
 
   @Override

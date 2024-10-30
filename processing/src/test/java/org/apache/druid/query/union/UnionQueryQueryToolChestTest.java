@@ -63,21 +63,20 @@ public class UnionQueryQueryToolChestTest
     NullHandling.initializeForTests();
   }
 
-  final UnionQueryLogic queryLogic;
+  final UnionQueryQueryToolChest toolChest;
   private ScanQueryQueryToolChest scanToolChest;
 
   public UnionQueryQueryToolChestTest()
   {
-    queryLogic = new UnionQueryLogic();
+    toolChest = new UnionQueryQueryToolChest();
     scanToolChest = ScanQueryQueryToolChestTest.makeTestScanQueryToolChest();
     DefaultQueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         Collections.emptyMap(),
         ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
             .put(ScanQuery.class, scanToolChest)
-            .build(),
-        Collections.emptyMap()
+            .build()
     );
-    queryLogic.initialize(conglomerate);
+    toolChest.initialize(conglomerate);
   }
 
   @Test
@@ -102,10 +101,9 @@ public class UnionQueryQueryToolChestTest
 
     UnionQuery query = new UnionQuery(queries);
 
-
     Assert.assertEquals(
         sig,
-        query.getResultRowSignature()
+        toolChest.resultArraySignature(query)
     );
   }
 
@@ -191,7 +189,7 @@ public class UnionQueryQueryToolChestTest
     Mockito.when(walker.getQueryRunnerForIntervals(argThat(scan2::matchQuery), any()))
         .thenReturn((q, ctx) -> (Sequence) scan2.makeResultSequence());
 
-    QueryRunner<Object> unionRunner = queryLogic.entryPoint(query, walker);
+    QueryRunner<Object> unionRunner = toolChest.entryPoint(query, walker);
     Sequence<Object> results = unionRunner.run(QueryPlus.wrap(query), null);
 
     QueryToolChestTestHelper.assertArrayResultsEquals(
