@@ -28,8 +28,10 @@ public interface QueryLogic
 {
   /**
    * Builds a {@link QueryRunner} for the given query and walker.
+   *
+   * The returned runner must respect {@link ResultSerializationMode}.
    */
-  <T> QueryRunner<T> entryPoint(
+  <T> QueryRunner<Object> entryPoint(
       Query<T> query,
       QuerySegmentWalker walker);
 }

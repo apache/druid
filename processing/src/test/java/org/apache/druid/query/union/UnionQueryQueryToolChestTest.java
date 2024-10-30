@@ -115,7 +115,7 @@ public class UnionQueryQueryToolChestTest
     public TestScanQuery(String sourceName, RowSignature signature)
     {
       this.query = Druids.newScanQueryBuilder()
-          .dataSource("bar")
+          .dataSource(sourceName)
           .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.of("2000/3000"))))
           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
           .columns(signature.getColumnNames())
@@ -190,17 +190,13 @@ public class UnionQueryQueryToolChestTest
         .thenReturn((q, ctx) -> (Sequence) scan2.makeResultSequence());
 
     QueryRunner<Object> unionRunner = toolChest.entryPoint(query, walker);
-    Sequence<Object> results = unionRunner.run(QueryPlus.wrap(query), null);
-
+    Sequence<?> results = unionRunner.run(QueryPlus.wrap(query), null);
     QueryToolChestTestHelper.assertArrayResultsEquals(
-        ImmutableList.<Object[]>builder()
-            .addAll(scan1.results)
-            .addAll(scan2.results)
-            .build(),
-            Sequences.concat(
-                scan1.makeResultsAsArrays(),
-                scan2.makeResultsAsArrays()
-        )
+        Sequences.concat(
+            scan1.makeResultsAsArrays(),
+            scan2.makeResultsAsArrays()
+        ).toList(),
+        (Sequence<Object[]>) results
     );
   }
 

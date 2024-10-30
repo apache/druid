@@ -43,9 +43,9 @@ public class UnionQueryQueryToolChest extends QueryToolChest<Object, UnionQuery>
     implements QueryLogic
 {
   @Override
-  public <T> QueryRunner<T> entryPoint(Query<T> query, QuerySegmentWalker clientQuerySegmentWalker)
+  public <T> QueryRunner<Object> entryPoint(Query<T> query, QuerySegmentWalker clientQuerySegmentWalker)
   {
-    return (QueryRunner<T>) new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker, conglomerate);
+    return new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker, conglomerate);
   }
 
   @Override

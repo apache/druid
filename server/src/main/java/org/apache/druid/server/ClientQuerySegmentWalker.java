@@ -180,7 +180,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   {
     final QueryLogic queryExecutor = conglomerate.getQueryLogic(query);
     if (queryExecutor != null) {
-      return queryExecutor.entryPoint(query, this);
+      return (QueryRunner<T>) queryExecutor.entryPoint(query, this);
     }
 
     final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);

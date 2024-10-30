@@ -31,6 +31,9 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.context.ResponseContext;
 
+/**
+ * Provides {@link QueryLogic} based on {@link QueryToolChest} functions.
+ */
 public class ToolChestBasedQueryLogic<T> implements QueryLogic
 {
   private QueryToolChest<T, Query<T>> toolChest;
@@ -41,12 +44,12 @@ public class ToolChestBasedQueryLogic<T> implements QueryLogic
   }
 
   @Override
-  public <T> QueryRunner<T> entryPoint(Query<T> query, QuerySegmentWalker walker)
+  public <T> QueryRunner<Object> entryPoint(Query<T> query, QuerySegmentWalker walker)
   {
     return new ToolChestBasedQueryRunner(query, walker, toolChest);
   }
 
-  static class ToolChestBasedQueryRunner<T> implements QueryRunner<T>
+  private static class ToolChestBasedQueryRunner<T> implements QueryRunner<T>
   {
     private final QueryRunner<T> runner;
     private final QueryToolChest<T, Query<T>> toolChest;
@@ -58,6 +61,7 @@ public class ToolChestBasedQueryLogic<T> implements QueryLogic
       this.toolChest = toolChest;
     }
 
+    // note: returns a Sequence<Object> and not Sequenct<T>
     @Override
     public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
     {
