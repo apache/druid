@@ -403,18 +403,10 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
    * @param shuffleSpec
    * @return
    */
-  private QueryDefinitionBuilder makeQueryDefinitionBuilder(
-      String queryId,
-      DataSourcePlan dataSourcePlan,
-      ShuffleSpec shuffleSpec
-  )
+  private QueryDefinitionBuilder makeQueryDefinitionBuilder(String queryId, DataSourcePlan dataSourcePlan, ShuffleSpec shuffleSpec)
   {
     final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
-    int previousStageNumber = dataSourcePlan.getSubQueryDefBuilder()
-                                            .get()
-                                            .build()
-                                            .getFinalStageDefinition()
-                                            .getStageNumber();
+    int previousStageNumber = dataSourcePlan.getSubQueryDefBuilder().get().build().getFinalStageDefinition().getStageNumber();
     for (final StageDefinition stageDef : dataSourcePlan.getSubQueryDefBuilder().get().build().getStageDefinitions()) {
       if (stageDef.getStageNumber() == previousStageNumber) {
         RowSignature rowSignature = QueryKitUtils.sortableSignature(
