@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectSortedMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.frame.processor.OutputChannel;
 import org.apache.druid.frame.processor.OutputChannelFactory;
@@ -59,17 +60,28 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   private final WindowOperatorQuery query;
   private final List<OperatorFactory> operatorList;
   private final RowSignature stageRowSignature;
+  private final int maxRowsMaterializedInWindow;
+  private final List<String> partitionColumnNames;
 
   @JsonCreator
   public WindowOperatorQueryFrameProcessorFactory(
       @JsonProperty("query") WindowOperatorQuery query,
       @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
-      @JsonProperty("stageRowSignature") RowSignature stageRowSignature
+      @JsonProperty("stageRowSignature") RowSignature stageRowSignature,
+      @Deprecated @JsonProperty("maxRowsMaterializedInWindow") int maxRowsMaterializedInWindow,
+      @Deprecated @JsonProperty("partitionColumnNames") List<String> partitionColumnNames
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
     this.operatorList = Preconditions.checkNotNull(operatorFactoryList, "bad operator");
     this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
+
+    this.maxRowsMaterializedInWindow = maxRowsMaterializedInWindow;
+
+    if (partitionColumnNames == null) {
+      throw DruidException.defensive("List of partition column names encountered as null.");
+    }
+    this.partitionColumnNames = partitionColumnNames;
   }
 
   @JsonProperty("query")
@@ -88,6 +100,18 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
   public RowSignature getSignature()
   {
     return stageRowSignature;
+  }
+
+  @JsonProperty("partitionColumnNames")
+  public List<String> getPartitionColumnNames()
+  {
+    return partitionColumnNames;
+  }
+
+  @JsonProperty("maxRowsMaterializedInWindow")
+  public int getMaxRowsMaterializedInWindow()
+  {
+    return maxRowsMaterializedInWindow;
   }
 
   @Override
@@ -165,14 +189,16 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       return false;
     }
     WindowOperatorQueryFrameProcessorFactory that = (WindowOperatorQueryFrameProcessorFactory) o;
-    return Objects.equals(query, that.query)
+    return maxRowsMaterializedInWindow == that.maxRowsMaterializedInWindow
+           && Objects.equals(query, that.query)
            && Objects.equals(operatorList, that.operatorList)
-           && Objects.equals(stageRowSignature, that.stageRowSignature);
+           && Objects.equals(stageRowSignature, that.stageRowSignature)
+           && Objects.equals(partitionColumnNames, that.partitionColumnNames);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, operatorList, stageRowSignature);
+    return Objects.hash(query, operatorList, stageRowSignature, maxRowsMaterializedInWindow, partitionColumnNames);
   }
 }

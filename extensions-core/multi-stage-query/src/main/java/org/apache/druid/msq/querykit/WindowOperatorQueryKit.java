@@ -37,9 +37,7 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.operator.AbstractPartitioningOperatorFactory;
 import org.apache.druid.query.operator.AbstractSortOperatorFactory;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.operator.GlueingPartitioningOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
-import org.apache.druid.query.operator.PartitionSortOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.segment.column.ColumnType;
@@ -50,6 +48,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 {
@@ -166,6 +165,14 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
       log.info("Using row signature [%s] for window stage.", stageRowSignature);
 
+      final List<String> partitionColumnNames = operatorList.get(i)
+                                                            .stream()
+                                                            .filter(of -> of instanceof AbstractPartitioningOperatorFactory)
+                                                            .map(of -> (AbstractPartitioningOperatorFactory) of)
+                                                            .flatMap(of -> of.getPartitionColumns().stream())
+                                                            .collect(Collectors.toList());
+
+
       queryDefBuilder.add(
           StageDefinition.builder(firstStageNumber + i)
                          .inputs(new StageInputSpec(firstStageNumber + i - 1))
@@ -174,8 +181,10 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                          .shuffleSpec(nextShuffleSpec)
                          .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
                              queryToRun,
-                             getOperatorFactoryListForStageDefinition(operatorList.get(i), maxRowsMaterialized),
-                             stageRowSignature
+                             operatorList.get(i),
+                             stageRowSignature,
+                             maxRowsMaterialized,
+                             partitionColumnNames
                          ))
       );
     }
@@ -315,38 +324,5 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         QueryKitUtils.signatureWithSegmentGranularity(finalWindowStageRowSignatureBuilder.build(), segmentGranularity),
         finalWindowClusterBy.getColumns()
     );
-  }
-
-  /**
-   * This method converts the operator chain received from native plan into MSQ plan.
-   * (NaiveSortOperator -> Naive/GlueingPartitioningOperator -> WindowOperator) is converted into (GlueingPartitioningOperator -> PartitionSortOperator -> WindowOperator).
-   * We rely on MSQ's shuffling to do the clustering on partitioning keys for us at every stage.
-   * This conversion allows us to blindly read N rows from input channel and push them into the operator chain, and repeat until the input channel isn't finished.
-   * @param operatorFactoryListFromQuery
-   * @param maxRowsMaterializedInWindow
-   * @return
-   */
-  private List<OperatorFactory> getOperatorFactoryListForStageDefinition(List<OperatorFactory> operatorFactoryListFromQuery, int maxRowsMaterializedInWindow)
-  {
-    final List<OperatorFactory> operatorFactoryList = new ArrayList<>();
-    final List<OperatorFactory> sortOperatorFactoryList = new ArrayList<>();
-    for (OperatorFactory operatorFactory : operatorFactoryListFromQuery) {
-      if (operatorFactory instanceof AbstractPartitioningOperatorFactory) {
-        AbstractPartitioningOperatorFactory partition = (AbstractPartitioningOperatorFactory) operatorFactory;
-        operatorFactoryList.add(new GlueingPartitioningOperatorFactory(partition.getPartitionColumns(), maxRowsMaterializedInWindow));
-      } else if (operatorFactory instanceof AbstractSortOperatorFactory) {
-        AbstractSortOperatorFactory sortOperatorFactory = (AbstractSortOperatorFactory) operatorFactory;
-        sortOperatorFactoryList.add(new PartitionSortOperatorFactory(sortOperatorFactory.getSortColumns()));
-      } else {
-        // Add all the PartitionSortOperator(s) before every window operator.
-        operatorFactoryList.addAll(sortOperatorFactoryList);
-        sortOperatorFactoryList.clear();
-        operatorFactoryList.add(operatorFactory);
-      }
-    }
-
-    operatorFactoryList.addAll(sortOperatorFactoryList);
-    sortOperatorFactoryList.clear();
-    return operatorFactoryList;
   }
 }
