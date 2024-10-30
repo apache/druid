@@ -40,13 +40,12 @@ import org.apache.druid.segment.column.RowSignature.Finalization;
 import java.util.Optional;
 
 public class UnionQueryQueryToolChest extends QueryToolChest<Object, UnionQuery>
-    implements QueryLogic<Object>
+    implements QueryLogic
 {
   @Override
-  public QueryRunner<Object> entryPoint(Query<Object> query,
-      QuerySegmentWalker clientQuerySegmentWalker)
+  public <T> QueryRunner<T> entryPoint(Query<T> query, QuerySegmentWalker clientQuerySegmentWalker)
   {
-    return new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker, conglomerate);
+    return (QueryRunner<T>) new UnionQueryRunner((UnionQuery) query, clientQuerySegmentWalker, conglomerate);
   }
 
   @Override

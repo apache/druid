@@ -20,12 +20,16 @@
 package org.apache.druid.query;
 
 /**
- * Executes the query by utilizing the given walker.
+ * Provides facilities to executes the given query type by utilizing the
+ * {@link QuerySegmentWalker} to run subqueries if necessary.
+ *
  */
-public interface QueryLogic<T>
+public interface QueryLogic
 {
-  QueryRunner<T> entryPoint(
+  /**
+   * Builds a {@link QueryRunner} for the given query and walker.
+   */
+  <T> QueryRunner<T> entryPoint(
       Query<T> query,
-      QuerySegmentWalker walker
-  );
+      QuerySegmentWalker walker);
 }
