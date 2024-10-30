@@ -93,14 +93,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         signatureFromInput
     );
 
-    final ShuffleSpec nextShuffleSpec = windowStages.getStages()
-                                                    .get(0)
-                                                    .findShuffleSpec(queryKitSpec.getNumPartitionsForShuffle());
-    final QueryDefinitionBuilder queryDefBuilder = makeQueryDefinitionBuilder(
-        queryKitSpec.getQueryId(),
-        dataSourcePlan,
-        nextShuffleSpec
-    );
+    final ShuffleSpec nextShuffleSpec = windowStages.getStages().get(0).findShuffleSpec(queryKitSpec.getNumPartitionsForShuffle());
+    final QueryDefinitionBuilder queryDefBuilder = makeQueryDefinitionBuilder(queryKitSpec.getQueryId(), dataSourcePlan, nextShuffleSpec);
     final int firstWindowStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
 
     log.info("Row signature received from last stage is [%s].", signatureFromInput);
@@ -110,40 +104,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       queryDefBuilder.add(windowStages.getStageDefinitionBuilder(firstWindowStageNumber + i, i));
     }
     return queryDefBuilder.build();
-  }
-
-  /**
-   * Override the shuffle spec of the last stage based on the shuffling required by the first window stage.
-   *
-   * @param queryId
-   * @param dataSourcePlan
-   * @param shuffleSpec
-   * @return
-   */
-  private QueryDefinitionBuilder makeQueryDefinitionBuilder(
-      String queryId,
-      DataSourcePlan dataSourcePlan,
-      ShuffleSpec shuffleSpec
-  )
-  {
-    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
-    int previousStageNumber = dataSourcePlan.getSubQueryDefBuilder()
-                                            .get()
-                                            .build()
-                                            .getFinalStageDefinition()
-                                            .getStageNumber();
-    for (final StageDefinition stageDef : dataSourcePlan.getSubQueryDefBuilder().get().build().getStageDefinitions()) {
-      if (stageDef.getStageNumber() == previousStageNumber) {
-        RowSignature rowSignature = QueryKitUtils.sortableSignature(
-            stageDef.getSignature(),
-            shuffleSpec.clusterBy().getColumns()
-        );
-        queryDefBuilder.add(StageDefinition.builder(stageDef).shuffleSpec(shuffleSpec).signature(rowSignature));
-      } else {
-        queryDefBuilder.add(StageDefinition.builder(stageDef));
-      }
-    }
-    return queryDefBuilder;
   }
 
   /**
@@ -433,5 +393,39 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
              ", windowOperatorFactories=" + windowOperatorFactories +
              '}';
     }
+  }
+
+  /**
+   * Override the shuffle spec of the last stage based on the shuffling required by the first window stage.
+   *
+   * @param queryId
+   * @param dataSourcePlan
+   * @param shuffleSpec
+   * @return
+   */
+  private QueryDefinitionBuilder makeQueryDefinitionBuilder(
+      String queryId,
+      DataSourcePlan dataSourcePlan,
+      ShuffleSpec shuffleSpec
+  )
+  {
+    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
+    int previousStageNumber = dataSourcePlan.getSubQueryDefBuilder()
+                                            .get()
+                                            .build()
+                                            .getFinalStageDefinition()
+                                            .getStageNumber();
+    for (final StageDefinition stageDef : dataSourcePlan.getSubQueryDefBuilder().get().build().getStageDefinitions()) {
+      if (stageDef.getStageNumber() == previousStageNumber) {
+        RowSignature rowSignature = QueryKitUtils.sortableSignature(
+            stageDef.getSignature(),
+            shuffleSpec.clusterBy().getColumns()
+        );
+        queryDefBuilder.add(StageDefinition.builder(stageDef).shuffleSpec(shuffleSpec).signature(rowSignature));
+      } else {
+        queryDefBuilder.add(StageDefinition.builder(stageDef));
+      }
+    }
+    return queryDefBuilder;
   }
 }
