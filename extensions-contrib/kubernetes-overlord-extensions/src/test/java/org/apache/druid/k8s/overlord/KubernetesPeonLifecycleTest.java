@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
-import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
@@ -490,9 +489,6 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     EasyMock.expectLastCall().once();
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
-    EasyMock.expect(kubernetesClient.getPeonPodWithRetries(k8sTaskId.getK8sJobName())).andReturn(
-        new PodBuilder().editOrNewStatusLike(getPodStatusWithIP()).endStatus().build()
-    );
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
     replayAll();
@@ -542,9 +538,6 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     EasyMock.expectLastCall().once();
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
-    EasyMock.expect(kubernetesClient.getPeonPodWithRetries(k8sTaskId.getK8sJobName())).andReturn(
-        new PodBuilder().editOrNewStatusLike(getPodStatusWithIP()).endStatus().build()
-    );
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
@@ -583,9 +576,6 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     EasyMock.expectLastCall().once();
     stateListener.stateChanged(KubernetesPeonLifecycle.State.STOPPED, ID);
     EasyMock.expectLastCall().once();
-    EasyMock.expect(kubernetesClient.getPeonPodWithRetries(k8sTaskId.getK8sJobName())).andReturn(
-        new PodBuilder().editOrNewStatusLike(getPodStatusWithIP()).endStatus().build()
-    );
 
     Assert.assertEquals(KubernetesPeonLifecycle.State.NOT_STARTED, peonLifecycle.getState());
 
@@ -952,12 +942,5 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     Field stateField = peonLifecycle.getClass().getDeclaredField("state");
     stateField.setAccessible(true);
     stateField.set(peonLifecycle, new AtomicReference<>(state));
-  }
-
-  private PodStatus getPodStatusWithIP()
-  {
-    PodStatus podStatus = new PodStatus();
-    podStatus.setPodIP(IP);
-    return podStatus;
   }
 }
