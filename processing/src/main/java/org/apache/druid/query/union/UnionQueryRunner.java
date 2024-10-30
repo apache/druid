@@ -112,7 +112,7 @@ class UnionQueryRunner implements QueryRunner<Object>
             query,
             seq,
             ArenaMemoryAllocatorFactory.makeDefault(),
-            false
+            useNestedForUnknownTypeInSubquery
         ).orElseThrow(() -> DruidException.defensive("Unable to materialize the results as frames."));
         break;
       default:
