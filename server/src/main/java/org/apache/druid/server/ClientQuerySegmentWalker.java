@@ -187,7 +187,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                                                            .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
 
     query = query.withOverriddenContext(
-        ImmutableMap.<String, Object>of(
+        ImmutableMap.of(
             QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY,
             useNestedForUnknownTypeInSubquery
         )

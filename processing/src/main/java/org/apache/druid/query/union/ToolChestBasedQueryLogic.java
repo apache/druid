@@ -34,11 +34,11 @@ import org.apache.druid.query.context.ResponseContext;
 /**
  * Provides {@link QueryLogic} based on {@link QueryToolChest} functions.
  */
-public class ToolChestBasedQueryLogic<T> implements QueryLogic
+public class ToolChestBasedQueryLogic implements QueryLogic
 {
-  private QueryToolChest<T, Query<T>> toolChest;
+  private QueryToolChest toolChest;
 
-  public ToolChestBasedQueryLogic(QueryToolChest<T, Query<T>> toolChest)
+  public ToolChestBasedQueryLogic(QueryToolChest toolChest)
   {
     this.toolChest = toolChest;
   }
