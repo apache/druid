@@ -690,7 +690,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     if (testBuilder().isDecoupledMode()) {
       return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "invalidInput");
     } else {
-      return new DruidExceptionMatcher(Persona.ADMIN, Category.INVALID_INPUT, "general");
+      return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "general");
     }
   }
 
