@@ -22,7 +22,6 @@ package org.apache.druid.query.union;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
-import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
@@ -41,6 +40,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Finalization;
 
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class UnionQueryQueryToolChest extends QueryToolChest<Object, UnionQuery>
     implements QueryLogic
@@ -97,7 +97,7 @@ public class UnionQueryQueryToolChest extends QueryToolChest<Object, UnionQuery>
     }
     throw DruidException.defensive(
         "None of the subqueries [%s] could provide row signature.",
-        FluentIterable.from(query.queries).transform(q -> q.getClass().getSimpleName()).toSet()
+        query.queries.stream().map(q -> q.getClass().getSimpleName()).collect(Collectors.toSet())
     );
   }
 
