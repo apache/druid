@@ -33,5 +33,5 @@ public interface QueryLogic
    */
   <T> QueryRunner<Object> entryPoint(
       Query<T> query,
-      QueryLogicExecutionContext context);
+      QuerySegmentWalker context);
 }

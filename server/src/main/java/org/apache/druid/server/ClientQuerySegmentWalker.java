@@ -50,7 +50,6 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryLogic;
-import org.apache.druid.query.QueryLogicExecutionContext;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -188,7 +187,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
 
     final QueryLogic queryExecutor = conglomerate.getQueryLogic(query);
     if (queryExecutor != null) {
-      return (QueryRunner<T>) queryExecutor.entryPoint(query, new QueryLogicExecutionContext(this, useNestedForUnknownTypeInSubquery));
+      return (QueryRunner<T>) queryExecutor.entryPoint(query, this);
     }
 
     final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
@@ -397,7 +396,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
               )
           );
           queryResults = subQueryLogic
-              .entryPoint(subQueryWithSerialization, new QueryLogicExecutionContext(this, useNestedForUnknownTypeInSubquery))
+              .entryPoint(subQueryWithSerialization, this)
               .run(QueryPlus.wrap(subQueryWithSerialization), DirectDruidClient.makeResponseContextForQuery());
         }
 

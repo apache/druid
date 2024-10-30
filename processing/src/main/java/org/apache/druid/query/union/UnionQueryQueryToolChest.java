@@ -30,16 +30,18 @@ import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryLogic;
-import org.apache.druid.query.QueryLogicExecutionContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Finalization;
 
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 public class UnionQueryQueryToolChest extends QueryToolChest<Object, UnionQuery>
     implements QueryLogic
@@ -53,9 +55,9 @@ public class UnionQueryQueryToolChest extends QueryToolChest<Object, UnionQuery>
   }
 
   @Override
-  public <T> QueryRunner<Object> entryPoint(Query<T> query, QueryLogicExecutionContext context)
+  public <T> QueryRunner<Object> entryPoint(Query<T> query, QuerySegmentWalker walker)
   {
-    return new UnionQueryRunner((UnionQuery) query, conglomerate, context);
+    return new UnionQueryRunner((UnionQuery) query, conglomerate, walker);
   }
 
   @Override
@@ -94,7 +96,11 @@ public class UnionQueryQueryToolChest extends QueryToolChest<Object, UnionQuery>
         return sig;
       }
     }
-    throw DruidException.defensive("None of the subqueries have a valid row signature");
+    Set<String> queryTypes = new HashSet<>();
+    for (Query<?> q : query.queries) {
+      q.getClass().getSimpleName();
+    }
+    throw DruidException.defensive("None of the subqueries [%s] could provide row signature.", queryTypes);
   }
 
   @Override
