@@ -75,8 +75,7 @@ public class ToolChestBasedQueryLogic<T> implements QueryLogic
 
       ResultSerializationMode serializationMode = getResultSerializationMode(query);
       Sequence<?> resultSeq;
-      switch (serializationMode)
-      {
+      switch (serializationMode) {
         case ROWS:
           resultSeq = toolChest.resultsAsArrays(query, seq);
           break;
@@ -91,8 +90,7 @@ public class ToolChestBasedQueryLogic<T> implements QueryLogic
         default:
           throw DruidException.defensive("Not supported serializationMode [%s].", serializationMode);
       }
-      // this case is not valid; however QueryRunner<T> makes most of the
-      // template usage okay.
+      // this cast is not valid; however QueryRunner<T> makes most of the template usage okay.
       return (Sequence<T>) resultSeq;
     }
 
