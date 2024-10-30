@@ -186,15 +186,14 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final boolean useNestedForUnknownTypeInSubquery = query.context()
                                                            .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
 
-    query = query.withOverriddenContext(
-        ImmutableMap.of(
-            QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY,
-            useNestedForUnknownTypeInSubquery
-        )
-    );
-
     final QueryLogic queryExecutor = conglomerate.getQueryLogic(query);
     if (queryExecutor != null) {
+      query = query.withOverriddenContext(
+          ImmutableMap.of(
+              QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY,
+              useNestedForUnknownTypeInSubquery
+          )
+      );
       return (QueryRunner<T>) queryExecutor.entryPoint(query, this);
     }
 
