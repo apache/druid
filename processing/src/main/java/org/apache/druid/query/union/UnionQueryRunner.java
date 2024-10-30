@@ -24,6 +24,7 @@ import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -52,7 +53,8 @@ class UnionQueryRunner implements QueryRunner<Object>
     this.conglomerate = conglomerate;
 
     serializationMode = getResultSerializationMode(query);
-    // FIXME: this was more complicated; it dependend on ServerConfig from the server module
+    // FIXME: this was more complicated; it dependend on ServerConfig from the
+    // server module
     useNestedForUnknownTypeInSubquery = query.context().isUseNestedForUnknownTypeInSubquery(false);
     this.runners = makeSubQueryRunners(query);
   }
@@ -61,10 +63,24 @@ class UnionQueryRunner implements QueryRunner<Object>
   {
     List<QueryRunner> runners = new ArrayList<>();
     for (Query<?> query : unionQuery.queries) {
-      runners.add(query.getRunner(walker));
+      runners.add(buildRunnerFor(query));
     }
     return runners;
+  }
 
+  private QueryRunner<?> buildRunnerFor(Query<?> query)
+  {
+    QueryLogic queryLogic = getQueryLogicFor(query);
+    return queryLogic.entryPoint(query, walker);
+  }
+
+  private QueryLogic getQueryLogicFor(Query<?> query)
+  {
+    QueryLogic queryLogic = conglomerate.getQueryLogic(query);
+    if (queryLogic != null) {
+      return queryLogic;
+    }
+    return new ToolChestBasedQueryLogic(conglomerate.getToolChest(query));
   }
 
   @Override
@@ -76,7 +92,11 @@ class UnionQueryRunner implements QueryRunner<Object>
     for (int i = 0; i < runners.size(); i++) {
       Query<?> q = unionQuery.queries.get(i);
       QueryRunner r = runners.get(i);
-      seqs.add(makeResultSeq(r, queryPlus.withQuery(q), responseContext, serializationMode));
+      if(false) {
+        seqs.add(makeResultSeq(r, queryPlus.withQuery(q), responseContext, serializationMode));
+      } else {
+        seqs.add(r.run(queryPlus.withQuery(q), responseContext));
+      }
     }
     return Sequences.concat(seqs);
   }
@@ -103,7 +123,8 @@ class UnionQueryRunner implements QueryRunner<Object>
     QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
     Sequence<T> seq = runner.run(withQuery, responseContext);
     Sequence<?> resultSeq;
-    switch (serializationMode) {
+    switch (serializationMode)
+    {
       case ROWS:
         resultSeq = toolChest.resultsAsArrays(query, seq);
         break;
