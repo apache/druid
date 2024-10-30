@@ -331,7 +331,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.20.0
+version: 2.35.1
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -3285,7 +3285,7 @@ name: Checker Qual
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.5.7
+version: 3.48.1
 copyright: the Checker Framework developers
 license_file_path: licenses/bin/checker-qual.MIT
 libraries:
@@ -3721,30 +3721,6 @@ copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/javax.CDDL11
 libraries:
   - javax.servlet: javax.servlet-api
-
----
-
-name: JAXB
-license_category: binary
-module: hadoop-client
-license_name: CDDL 1.1
-version: 2.2.2
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.xml.bind: jaxb-api
-
----
-
-name: JAXB
-license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 2.3.1
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.xml.bind: jaxb-api
 
 ---
 
@@ -5005,6 +4981,23 @@ version: 1.2.1
 libraries:
   - com.sun.activation: jakarta.activation
 
+---
+name: jakarta.activation-api
+license_category: binary
+module: core
+license_name: Eclipse Distribution License 1.0
+version: 1.2.2
+libraries:
+  - jakarta.activation: jakarta.activation-api
+
+---
+name: jakarta.xml.bind-api
+license_category: binary
+module: core
+license_name: Eclipse Distribution License 1.0
+version: 2.3.3
+libraries:
+  - jakarta.xml.bind: jakarta.xml.bind-api
 ---
 
 # Web console modules start

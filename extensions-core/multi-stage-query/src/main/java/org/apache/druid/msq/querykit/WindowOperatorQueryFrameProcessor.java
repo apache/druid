@@ -43,6 +43,10 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.operator.Operator;
 import org.apache.druid.query.operator.OperatorFactory;
+import org.apache.druid.query.operator.AbstractPartitioningOperatorFactory;
+import org.apache.druid.query.operator.AbstractSortOperatorFactory;
+import org.apache.druid.query.operator.GlueingPartitioningOperatorFactory;
+import org.apache.druid.query.operator.PartitionSortOperatorFactory;
 import org.apache.druid.query.rowsandcols.ConcatRowsAndColumns;
 import org.apache.druid.query.rowsandcols.LazilyDecoratedRowsAndColumns;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
@@ -95,9 +99,9 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
     this.inputChannel = inputChannel;
     this.outputChannel = outputChannel;
     this.frameWriterFactory = frameWriterFactory;
-    this.operatorFactoryList = operatorFactoryList;
     this.resultRowAndCols = new ArrayList<>();
     this.maxRowsMaterialized = MultiStageQueryContext.getMaxRowsMaterializedInWindow(queryContext);
+    this.operatorFactoryList = getOperatorFactoryListForStageDefinition(operatorFactoryList);
     this.frameRowsAndColsBuilder = new RowsAndColumnsBuilder(this.maxRowsMaterialized);
 
     this.frameReader = frameReader;
@@ -398,5 +402,37 @@ public class WindowOperatorQueryFrameProcessor implements FrameProcessor<Object>
   {
     resultRowAndCols.clear();
     rowId.set(0);
+  }
+
+  /**
+   * This method converts the operator chain received from native plan into MSQ plan.
+   * (NaiveSortOperator -> Naive/GlueingPartitioningOperator -> WindowOperator) is converted into (GlueingPartitioningOperator -> PartitionSortOperator -> WindowOperator).
+   * We rely on MSQ's shuffling to do the clustering on partitioning keys for us at every stage.
+   * This conversion allows us to blindly read N rows from input channel and push them into the operator chain, and repeat until the input channel isn't finished.
+   * @param operatorFactoryListFromQuery
+   * @return
+   */
+  private List<OperatorFactory> getOperatorFactoryListForStageDefinition(List<OperatorFactory> operatorFactoryListFromQuery)
+  {
+    final List<OperatorFactory> operatorFactoryList = new ArrayList<>();
+    final List<OperatorFactory> sortOperatorFactoryList = new ArrayList<>();
+    for (OperatorFactory operatorFactory : operatorFactoryListFromQuery) {
+      if (operatorFactory instanceof AbstractPartitioningOperatorFactory) {
+        AbstractPartitioningOperatorFactory partition = (AbstractPartitioningOperatorFactory) operatorFactory;
+        operatorFactoryList.add(new GlueingPartitioningOperatorFactory(partition.getPartitionColumns(), this.maxRowsMaterialized));
+      } else if (operatorFactory instanceof AbstractSortOperatorFactory) {
+        AbstractSortOperatorFactory sortOperatorFactory = (AbstractSortOperatorFactory) operatorFactory;
+        sortOperatorFactoryList.add(new PartitionSortOperatorFactory(sortOperatorFactory.getSortColumns()));
+      } else {
+        // Add all the PartitionSortOperator(s) before every window operator.
+        operatorFactoryList.addAll(sortOperatorFactoryList);
+        sortOperatorFactoryList.clear();
+        operatorFactoryList.add(operatorFactory);
+      }
+    }
+
+    operatorFactoryList.addAll(sortOperatorFactoryList);
+    sortOperatorFactoryList.clear();
+    return operatorFactoryList;
   }
 }
