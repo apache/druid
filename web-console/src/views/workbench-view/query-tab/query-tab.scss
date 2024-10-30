@@ -19,6 +19,7 @@
 @import '../../../variables';
 
 $vertical-gap: 6px;
+$visible-splitter-size: 3px;
 
 .query-tab {
   position: relative;
@@ -27,14 +28,26 @@ $vertical-gap: 6px;
     background: $dark-gray2;
   }
 
-  .splitter-layout {
-    position: absolute;
-    width: 100%;
+  .splitter-layout.splitter-layout-vertical {
     height: 100%;
 
-    &.splitter-layout-vertical > .layout-splitter {
-      height: 3px;
-      background-color: $gray1;
+    & > .layout-splitter {
+      height: 3px + $vertical-gap * 2;
+      position: relative;
+
+      &::after {
+        content: '';
+        background-color: $gray1;
+        position: absolute;
+        top: $vertical-gap;
+        width: 100%;
+        height: $visible-splitter-size;
+        border-radius: 2px;
+      }
+
+      &:hover::after {
+        background-color: $gray2;
+      }
     }
   }
 
@@ -42,7 +55,7 @@ $vertical-gap: 6px;
     position: absolute;
     width: 100%;
     top: 0;
-    bottom: $vertical-gap;
+    bottom: 0;
 
     .query-section {
       position: absolute;
@@ -84,7 +97,7 @@ $vertical-gap: 6px;
   .output-section {
     position: absolute;
     width: 100%;
-    top: $vertical-gap;
+    top: 0;
     bottom: 0;
     @include card-like;
 
