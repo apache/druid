@@ -41,7 +41,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
@@ -60,6 +59,7 @@ import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -97,7 +97,6 @@ public class SegmentAllocateActionTest
   private final LockGranularity lockGranularity;
 
   private SegmentAllocationQueue allocationQueue;
-  private StubServiceEmitter emitter;
 
   @Parameterized.Parameters(name = "granularity = {0}, useBatch = {1}, skipSegmentPayloadFetchForAllocation = {2}")
   public static Iterable<Object[]> constructorFeeder()
@@ -199,7 +198,7 @@ public class SegmentAllocateActionTest
     Assert.assertEquals(expectedIds, allocatedIds);
   }
 
-  //@Ignore
+  @Ignore
   @Test
   public void testBenchmark() throws Exception
   {

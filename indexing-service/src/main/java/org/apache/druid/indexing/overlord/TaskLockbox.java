@@ -576,8 +576,8 @@ public class TaskLockbox
           visibleSegmentState.addPendingSegment(
               new PendingSegmentRecord(allocatedId, sequenceName, previousSegmentId, null, allocatorId)
           );
+          log.info("Found or Allocated pendingSegment[%s].", allocatedId.asSegmentId());
         }
-        log.info("Found or Allocated pendingSegment[%s].", allocatedId.asSegmentId());
         return LockResult.ok(lockPosse.getTaskLock(), allocatedId);
       }
       return LockResult.fail();
