@@ -178,7 +178,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    final QueryLogic<T> queryExecutor = conglomerate.getQueryExecutor(query);
+    final QueryLogic<T> queryExecutor = conglomerate.getQueryLogic(query);
     if (queryExecutor != null) {
       return queryExecutor.entryPoint(query, this);
     }
@@ -379,7 +379,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       // This datasource is a subquery.
       final Query subQuery = ((QueryDataSource) dataSource).getQuery();
       final QueryToolChest toolChest = conglomerate.getToolChest(subQuery);
-      final QueryLogic<Object> subQueryLogic = conglomerate.getQueryExecutor(subQuery);
+      final QueryLogic<Object> subQueryLogic = conglomerate.getQueryLogic(subQuery);
 
       if (subQueryLogic != null) {
         final Sequence<?> queryResults;

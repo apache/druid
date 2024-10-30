@@ -59,7 +59,7 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
 
   @Override
   @SuppressWarnings("unchecked")
-  public <T, QueryType extends Query<T>> QueryLogic<T> getQueryExecutor(QueryType query)
+  public <T, QueryType extends Query<T>> QueryLogic<T> getQueryLogic(QueryType query)
   {
     QueryToolChest<T, QueryType> toolchest = getToolChest(query);
     if (toolchest instanceof QueryLogic) {
