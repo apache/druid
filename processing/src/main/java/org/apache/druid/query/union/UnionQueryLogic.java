@@ -17,21 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.query.union;
 
-/**
- * Provides facilities to executes the given query type by utilizing the
- * {@link QuerySegmentWalker} to run subqueries if necessary.
- *
- */
-public interface QueryLogic
+import org.apache.druid.query.AbstractQueryLogic;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QuerySegmentWalker;
+
+public class UnionQueryLogic extends AbstractQueryLogic
 {
-  /**
-   * Builds a {@link QueryRunner} for the given query and walker.
-   *
-   * The returned runner must respect {@link ResultSerializationMode}.
-   */
-  <T> QueryRunner<Object> entryPoint(
-      Query<T> query,
-      QuerySegmentWalker walker);
+  @Override
+  public <T> QueryRunner<Object> entryPoint(Query<T> query, QuerySegmentWalker walker)
+  {
+    return new UnionQueryRunner((UnionQuery) query, conglomerate, walker);
+  }
 }

@@ -21,6 +21,8 @@ package org.apache.druid.query;
 
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Map;
 
@@ -28,20 +30,27 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
 {
   private final Map<Class<? extends Query>, QueryRunnerFactory> factories;
   private final Map<Class<? extends Query>, QueryToolChest> toolchests;
+  private final Map<Class<? extends Query>, QueryLogic> querylogics;
 
   public static DefaultQueryRunnerFactoryConglomerate buildFromQueryRunnerFactories(
       Map<Class<? extends Query>, QueryRunnerFactory> factories)
   {
-    return new DefaultQueryRunnerFactoryConglomerate(factories, Maps.transformValues(factories, f -> f.getToolchest()));
+    return new DefaultQueryRunnerFactoryConglomerate(
+        factories,
+        Maps.transformValues(factories, f -> f.getToolchest()),
+        Collections.emptyMap()
+    );
   }
 
   @Inject
   public DefaultQueryRunnerFactoryConglomerate(
       Map<Class<? extends Query>, QueryRunnerFactory> factories,
-      Map<Class<? extends Query>, QueryToolChest> toolchests)
+      Map<Class<? extends Query>, QueryToolChest> toolchests,
+      Map<Class<? extends Query>, QueryLogic> querylogics)
   {
     this.factories = new IdentityHashMap<>(factories);
     this.toolchests = new IdentityHashMap<>(toolchests);
+    this.querylogics = new IdentityHashMap<>(querylogics);
   }
 
   @Override
@@ -62,10 +71,6 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
   @SuppressWarnings("unchecked")
   public <T, QueryType extends Query<T>> QueryLogic getQueryLogic(QueryType query)
   {
-    QueryToolChest<T, QueryType> toolchest = getToolChest(query);
-    if (toolchest instanceof QueryLogic) {
-      return (QueryLogic) toolchest;
-    }
-    return null;
+    return querylogics.get(query.getClass());
   }
 }

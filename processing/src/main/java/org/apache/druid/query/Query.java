@@ -45,6 +45,7 @@ import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Finalization;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -294,6 +295,12 @@ public interface Query<T>
   default DataSourceAnalysis getDataSourceAnalysis()
   {
     return getDataSource().getAnalysis().maybeWithBaseQuery(this);
+  }
+
+
+  default RowSignature getResultRowSignature()
+  {
+    return getResultRowSignature(Finalization.UNKNOWN);
   }
 
   default RowSignature getResultRowSignature(RowSignature.Finalization finalization)

@@ -19,19 +19,18 @@
 
 package org.apache.druid.query;
 
+import com.google.inject.Inject;
+
 /**
- * Provides facilities to executes the given query type by utilizing the
- * {@link QuerySegmentWalker} to run subqueries if necessary.
- *
+ * Executes the query by utilizing the given walker.
  */
-public interface QueryLogic
+public abstract class AbstractQueryLogic implements QueryLogic
 {
-  /**
-   * Builds a {@link QueryRunner} for the given query and walker.
-   *
-   * The returned runner must respect {@link ResultSerializationMode}.
-   */
-  <T> QueryRunner<Object> entryPoint(
-      Query<T> query,
-      QuerySegmentWalker walker);
+  protected QueryRunnerFactoryConglomerate conglomerate;
+
+  @Inject
+  public void initialize(QueryRunnerFactoryConglomerate conglomerate)
+  {
+    this.conglomerate = conglomerate;
+  }
 }
