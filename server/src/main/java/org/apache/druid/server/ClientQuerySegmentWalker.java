@@ -21,6 +21,7 @@ package org.apache.druid.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.StringUtils;
@@ -176,7 +177,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   }
 
   @Override
-  public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
+  public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, final Iterable<Interval> intervals)
   {
     final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
     final String maxSubqueryMemoryString = query.context()
@@ -184,6 +185,13 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final long maxSubqueryMemory = subqueryGuardrailHelper.convertSubqueryLimitStringToLong(maxSubqueryMemoryString);
     final boolean useNestedForUnknownTypeInSubquery = query.context()
                                                            .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
+
+    query = query.withOverriddenContext(
+        ImmutableMap.<String, Object>of(
+            QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY,
+            useNestedForUnknownTypeInSubquery
+        )
+    );
 
     final QueryLogic queryExecutor = conglomerate.getQueryLogic(query);
     if (queryExecutor != null) {
