@@ -397,7 +397,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
   /**
    * Override the shuffle spec of the last stage based on the shuffling required by the first window stage.
-   *
    * @param queryId
    * @param dataSourcePlan
    * @param shuffleSpec
