@@ -26,7 +26,6 @@ import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.datasourcemetadata.DataSourceMetadataQuery;
