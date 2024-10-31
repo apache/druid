@@ -330,6 +330,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return subtotalsSpec;
   }
 
+  @Override
   public RowSignature getResultRowSignature()
   {
     return resultRowSignature;
