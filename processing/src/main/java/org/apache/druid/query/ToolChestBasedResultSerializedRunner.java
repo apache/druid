@@ -22,18 +22,14 @@ package org.apache.druid.query;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryPlus;
-import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.ResultSerializationMode;
 import org.apache.druid.query.context.ResponseContext;
 
 /**
- * Implements a QueryRunner that takes {@link ResultSerializationMode} into account.
+ * Implements a QueryRunner that takes {@link ResultSerializationMode} into
+ * account.
  *
- * It uses the toolchest service methods to provide the appropriate serialization.
+ * It uses the toolchest service methods to provide the appropriate
+ * serialization.
  */
 public class ToolChestBasedResultSerializedRunner<T> implements QueryRunner<T>
 {
@@ -75,7 +71,8 @@ public class ToolChestBasedResultSerializedRunner<T> implements QueryRunner<T>
       default:
         throw DruidException.defensive("Not supported serializationMode [%s].", serializationMode);
     }
-    // this cast is not valid; however QueryRunner<T> makes most of the template usage okay.
+    // this cast is not valid; however QueryRunner<T> makes most of the template
+    // usage okay.
     return (Sequence<T>) resultSeq;
   }
 
