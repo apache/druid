@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 
 import { mapRecord, mapRecordIfChanged } from '../../../utils';
 

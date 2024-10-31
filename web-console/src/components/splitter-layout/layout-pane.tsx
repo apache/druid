@@ -16,26 +16,33 @@
  * limitations under the License.
  */
 
-module.exports = {
-  env: {
-    browser: true,
-  },
-  extends: ['@awesome-code-style', '@awesome-code-style/eslint-config/react'],
-  parserOptions: {
-    project: 'tsconfig.json',
-  },
-  settings: {
-    react: {
-      version: 'detect',
-    },
-  },
-  rules: {
-    '@typescript-eslint/consistent-type-imports': ['warn', { prefer: 'type-imports' }],
-    'header/header': [
-      2,
-      'block',
-      { pattern: 'Licensed to the Apache Software Foundation \\(ASF\\).+' },
-    ],
-    'react/jsx-no-bind': [2, { allowArrowFunctions: true, allowFunctions: true }],
-  },
-};
+import classNames from 'classnames';
+import type { ReactNode } from 'react';
+
+export interface LayoutPaneProps {
+  vertical?: boolean;
+  size: number | undefined;
+  percentage?: boolean;
+  children: ReactNode;
+}
+
+export function LayoutPane(props: LayoutPaneProps) {
+  return (
+    <div
+      className={classNames('layout-pane', {
+        'layout-pane-primary': typeof props.size === 'undefined',
+      })}
+      style={
+        typeof props.size === 'number'
+          ? {
+              [props.vertical ? 'height' : 'width']: `${props.size}${
+                props.percentage ? '%' : 'px'
+              }`,
+            }
+          : undefined
+      }
+    >
+      {props.children}
+    </div>
+  );
+}

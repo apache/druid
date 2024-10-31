@@ -355,6 +355,7 @@ export class FlexibleQueryInput extends React.PureComponent<
                   ),
                   'sub-query-highlight',
                   'text',
+                  false,
                 );
               this.highlightFoundQuery = { row, marker };
             }}

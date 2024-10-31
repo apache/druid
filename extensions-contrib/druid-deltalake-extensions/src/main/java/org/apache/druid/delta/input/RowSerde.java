@@ -32,6 +32,7 @@ import io.delta.kernel.types.BooleanType;
 import io.delta.kernel.types.ByteType;
 import io.delta.kernel.types.DataType;
 import io.delta.kernel.types.DateType;
+import io.delta.kernel.types.DecimalType;
 import io.delta.kernel.types.DoubleType;
 import io.delta.kernel.types.FloatType;
 import io.delta.kernel.types.IntegerType;
@@ -126,6 +127,8 @@ public class RowSerde
         value = row.getFloat(fieldId);
       } else if (fieldType instanceof DoubleType) {
         value = row.getDouble(fieldId);
+      } else if (fieldType instanceof DecimalType) {
+        value = row.getDecimal(fieldId);
       } else if (fieldType instanceof DateType) {
         value = DeltaTimeUtils.getSecondsFromDate(row.getInt(fieldId));
       } else if (fieldType instanceof TimestampType) {

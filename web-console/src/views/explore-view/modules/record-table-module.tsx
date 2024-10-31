@@ -18,7 +18,7 @@
 
 import { IconNames } from '@blueprintjs/icons';
 import { C, SqlQuery } from '@druid-toolkit/query';
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 
 import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';

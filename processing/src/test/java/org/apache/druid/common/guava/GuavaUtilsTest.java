@@ -75,46 +75,53 @@ public class GuavaUtilsTest
     int tasks = 3;
     ExecutorService service = Execs.multiThreaded(tasks, "GuavaUtilsTest-%d");
     ListeningExecutorService exc = MoreExecutors.listeningDecorator(service);
-    //a flag what time to throw exception.
-    AtomicBoolean someoneFailed = new AtomicBoolean(false);
-    List<CountDownLatch> latches = new ArrayList<>(tasks);
-    Function<Integer, List<ListenableFuture<Object>>> function = (taskCount) -> {
-      List<ListenableFuture<Object>> futures = new ArrayList<>();
-      for (int i = 0; i < taskCount; i++) {
-        final CountDownLatch latch = new CountDownLatch(1);
-        latches.add(latch);
-        ListenableFuture<Object> future = exc.submit(new Callable<Object>() {
-          @Override
-          public Object call() throws RuntimeException, InterruptedException
+    try {
+      //a flag what time to throw exception.
+      AtomicBoolean someoneFailed = new AtomicBoolean(false);
+      List<CountDownLatch> latches = new ArrayList<>(tasks);
+      Function<Integer, List<ListenableFuture<Object>>> function = (taskCount) -> {
+        List<ListenableFuture<Object>> futures = new ArrayList<>();
+        for (int i = 0; i < taskCount; i++) {
+          final CountDownLatch latch = new CountDownLatch(1);
+          latches.add(latch);
+          ListenableFuture<Object> future = exc.submit(new Callable<Object>()
           {
-            latch.await(60, TimeUnit.SECONDS);
-            if (someoneFailed.compareAndSet(false, true)) {
-              throw new RuntimeException("This exception simulates an error");
+            @Override
+            public Object call() throws RuntimeException, InterruptedException
+            {
+              latch.await(60, TimeUnit.SECONDS);
+              if (someoneFailed.compareAndSet(false, true)) {
+                throw new RuntimeException("This exception simulates an error");
+              }
+              return null;
             }
-            return null;
-          }
-        });
-        futures.add(future);
+          });
+          futures.add(future);
+        }
+        return futures;
+      };
+
+      List<ListenableFuture<Object>> futures = function.apply(tasks);
+      Assert.assertEquals(tasks, futures.stream().filter(f -> !f.isDone()).count());
+      // "release" the last tasks, which will cause it to fail as someoneFailed will still be false
+      latches.get(tasks - 1).countDown();
+
+      ListenableFuture<List<Object>> future = Futures.allAsList(futures);
+
+      ExecutionException thrown = Assert.assertThrows(
+          ExecutionException.class,
+          future::get
+      );
+      Assert.assertEquals("This exception simulates an error", thrown.getCause().getMessage());
+      GuavaUtils.cancelAll(true, future, futures);
+      Assert.assertEquals(0, futures.stream().filter(f -> !f.isDone()).count());
+      for (CountDownLatch latch : latches) {
+        latch.countDown();
       }
-      return futures;
-    };
-
-    List<ListenableFuture<Object>> futures = function.apply(tasks);
-    Assert.assertEquals(tasks, futures.stream().filter(f -> !f.isDone()).count());
-    // "release" the last tasks, which will cause it to fail as someoneFailed will still be false
-    latches.get(tasks - 1).countDown();
-
-    ListenableFuture<List<Object>> future = Futures.allAsList(futures);
-
-    ExecutionException thrown = Assert.assertThrows(
-        ExecutionException.class,
-        future::get
-    );
-    Assert.assertEquals("This exception simulates an error", thrown.getCause().getMessage());
-    GuavaUtils.cancelAll(true, future, futures);
-    Assert.assertEquals(0, futures.stream().filter(f -> !f.isDone()).count());
-    for (CountDownLatch latch : latches) {
-      latch.countDown();
+    }
+    finally {
+      exc.shutdownNow();
+      service.shutdownNow();
     }
   }
 }
