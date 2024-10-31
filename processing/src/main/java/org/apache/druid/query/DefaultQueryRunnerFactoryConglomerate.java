@@ -36,7 +36,8 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
   }
 
   @Inject
-  public DefaultQueryRunnerFactoryConglomerate(Map<Class<? extends Query>, QueryRunnerFactory> factories,
+  public DefaultQueryRunnerFactoryConglomerate(
+      Map<Class<? extends Query>, QueryRunnerFactory> factories,
       Map<Class<? extends Query>, QueryToolChest> toolchests)
   {
     this.factories = new IdentityHashMap<>(factories);
