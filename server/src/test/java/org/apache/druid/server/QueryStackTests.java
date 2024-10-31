@@ -344,15 +344,17 @@ public class QueryStackTests
       final TestGroupByBuffers groupByBuffers)
   {
     ImmutableMap<Class<? extends Query>, QueryRunnerFactory> factories = makeDefaultQueryRunnerFactories(
-        processingConfig, minTopNThreshold, jsonMapper, testBufferPool, groupByBuffers
+        processingConfig,
+        minTopNThreshold,
+        jsonMapper,
+        testBufferPool,
+        groupByBuffers
     );
     UnionQueryLogic unionQueryLogic = new UnionQueryLogic();
     final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
         factories,
         Maps.transformValues(factories, f -> f.getToolchest()),
-        ImmutableMap.of(
-            UnionQuery.class, unionQueryLogic
-        )
+        ImmutableMap.of(UnionQuery.class, unionQueryLogic)
     );
     unionQueryLogic.initialize(conglomerate);
 
