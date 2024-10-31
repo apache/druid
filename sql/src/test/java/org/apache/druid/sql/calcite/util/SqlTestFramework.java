@@ -776,8 +776,7 @@ public class SqlTestFramework
     public QueryRunnerFactoryConglomerate conglomerate(
         @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> factories,
         @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryToolChest> toolchests,
-        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryLogic> querylogics
-        )
+        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryLogic> querylogics)
     {
       QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(factories, toolchests, querylogics);
       return componentSupplier.wrapConglomerate(conglomerate, resourceCloser);
