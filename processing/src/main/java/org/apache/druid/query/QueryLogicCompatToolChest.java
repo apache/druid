@@ -31,12 +31,17 @@ import java.util.Optional;
 
 public class QueryLogicCompatToolChest extends QueryToolChest<Object, Query<Object>>
 {
-  public static final QueryToolChest<Object, Query<Object>> INSTANCE = new QueryLogicCompatToolChest();
+  private RowSignature resultRowSignature;
+
+  public QueryLogicCompatToolChest(RowSignature resultRowSignature)
+  {
+    this.resultRowSignature = resultRowSignature;
+  }
 
   @Override
   public RowSignature resultArraySignature(Query<Object> query)
   {
-    return query.getResultRowSignature();
+    return resultRowSignature;
   }
 
   @Override

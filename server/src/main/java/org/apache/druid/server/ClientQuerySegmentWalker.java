@@ -51,6 +51,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryLogic;
+import org.apache.druid.query.QueryLogicCompatToolChest;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -408,7 +409,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         return toInlineDataSource(
             subQuery,
             queryResults,
-            toolChest,
+            (QueryToolChest) new QueryLogicCompatToolChest(subQuery.getResultRowSignature()),
             subqueryRowLimitAccumulator,
             subqueryMemoryLimitAccumulator,
             cannotMaterializeToFrames,
