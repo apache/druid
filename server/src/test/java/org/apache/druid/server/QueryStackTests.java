@@ -20,6 +20,7 @@
 package org.apache.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
@@ -65,6 +66,11 @@ import org.apache.druid.query.scan.ScanQueryConfig;
 import org.apache.druid.query.scan.ScanQueryEngine;
 import org.apache.druid.query.scan.ScanQueryQueryToolChest;
 import org.apache.druid.query.scan.ScanQueryRunnerFactory;
+import org.apache.druid.query.search.SearchQuery;
+import org.apache.druid.query.search.SearchQueryConfig;
+import org.apache.druid.query.search.SearchQueryQueryToolChest;
+import org.apache.druid.query.search.SearchQueryRunnerFactory;
+import org.apache.druid.query.search.SearchStrategySelector;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -328,6 +334,14 @@ public class QueryStackTests
                 new SegmentMetadataQueryQueryToolChest(
                     new SegmentMetadataQueryConfig("P1W")
                 ),
+                QueryRunnerTestHelper.NOOP_QUERYWATCHER
+            )
+        )
+        .put(
+            SearchQuery.class,
+            new SearchQueryRunnerFactory(
+                new SearchStrategySelector(Suppliers.ofInstance(new SearchQueryConfig())),
+                new SearchQueryQueryToolChest(new SearchQueryConfig()),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         )
