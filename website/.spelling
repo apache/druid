@@ -242,6 +242,7 @@ TLS
 tls
 TopN
 TopNs
+tryParseNumbers
 UI
 UIs
 UPSERT
@@ -276,6 +277,7 @@ averager
 averagers
 backend
 backfills
+backfilled
 backpressure
 base64
 big-endian
@@ -298,6 +300,7 @@ colocation
 colocating
 compactable
 compactionTask
+complexMetricCompression
 config
 configs
 consumerProperties
@@ -324,6 +327,7 @@ deserializes
 downtimes
 druid
 druid–kubernetes-extensions
+druid.table
 e.g.
 encodings
 endian
@@ -381,6 +385,7 @@ json_paths
 json_query
 json_query_array
 json_value
+json_merge
 karlkfi
 kbps
 kerberos
@@ -407,6 +412,7 @@ maxNumSegments
 max_map_count
 memcached
 mergeable
+mergeability
 metadata
 metastores
 millis
@@ -2414,3 +2420,4 @@ percentilesSpectatorHistogram
 quantilesFromDDSketch
 quantileFromDDSketch
 collapsingLowestDense
+snapshotVersion

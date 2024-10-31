@@ -118,4 +118,21 @@ public class ArrayOfDoublesSketchAggregatorFactoryTest
     Assert.assertEquals(factory, factory.withName("name"));
     Assert.assertEquals("newTest", factory.withName("newTest").getName());
   }
+
+  @Test
+  public void testCanSubstitute()
+  {
+    AggregatorFactory sketch = new ArrayOfDoublesSketchAggregatorFactory("sketch", "x", null, null, null);
+    AggregatorFactory sketch2 = new ArrayOfDoublesSketchAggregatorFactory("sketch2", "x", null, null, null);
+    AggregatorFactory other = new ArrayOfDoublesSketchAggregatorFactory("other", "x", 8192, null, null);
+    AggregatorFactory incompatible = new ArrayOfDoublesSketchAggregatorFactory("incompatible", "x", 2048, null, null);
+    AggregatorFactory incompatible2 = new ArrayOfDoublesSketchAggregatorFactory("sketch", "y", null, null, null);
+    Assert.assertNotNull(sketch.substituteCombiningFactory(other));
+    Assert.assertNotNull(sketch.substituteCombiningFactory(sketch2));
+    Assert.assertNull(sketch.substituteCombiningFactory(incompatible));
+    Assert.assertNotNull(sketch.substituteCombiningFactory(sketch));
+    Assert.assertNull(other.substituteCombiningFactory(sketch));
+    Assert.assertNull(sketch.substituteCombiningFactory(incompatible2));
+    Assert.assertNull(other.substituteCombiningFactory(incompatible2));
+  }
 }

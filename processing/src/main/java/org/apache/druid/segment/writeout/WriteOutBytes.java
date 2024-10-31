@@ -30,7 +30,7 @@ import java.nio.channels.WritableByteChannel;
  * WritableByteChannel} and {@link #writeInt(int)} append to the sequence. Methods {@link
  * #writeTo(WritableByteChannel)} and {@link #asInputStream()} allow to write the sequence somewhere else. {@link
  * #readFully} allows to access the sequence randomly.
- *
+ * <p>
  * WriteOutBytes is a resource that is managed by {@link SegmentWriteOutMedium}, so it's own {@link #close()} method
  * does nothing. However WriteOutBytes should appear closed, i. e. {@link #isOpen()} returns false, after the parental
  * SegmentWriteOutMedium is closed.
@@ -46,6 +46,12 @@ public abstract class WriteOutBytes extends OutputStream implements WritableByte
    * Returns the number of bytes written to this WriteOutBytes so far.
    */
   public abstract long size();
+
+  @Override
+  public void write(byte[] b, int off, int len) throws IOException
+  {
+    write(ByteBuffer.wrap(b, off, len));
+  }
 
   /**
    * Takes all bytes that are written to this WriteOutBytes so far and writes them into the given channel.

@@ -17,7 +17,6 @@
  */
 
 import { SqlQuery } from '@druid-toolkit/query';
-import React from 'react';
 
 import type { ColumnMetadata } from '../../../utils';
 import { shallow } from '../../../utils/shallow-renderer';
@@ -32,7 +31,7 @@ describe('ColumnTree', () => {
           return SqlQuery.parse(`SELECT channel, count(*) as cnt FROM wikipedia GROUP BY 1`);
         }}
         defaultSchema="druid"
-        defaultTable="wikipedia"
+        defaultTables={['wikipedia']}
         columnMetadataLoading={false}
         columnMetadata={
           [

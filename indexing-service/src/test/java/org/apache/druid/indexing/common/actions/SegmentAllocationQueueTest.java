@@ -27,6 +27,7 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
@@ -47,9 +48,6 @@ public class SegmentAllocationQueueTest
 {
   @Rule
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
-
-  private static final String DS_WIKI = "wiki";
-  private static final String DS_KOALA = "koala";
 
   private SegmentAllocationQueue allocationQueue;
 
@@ -105,14 +103,14 @@ public class SegmentAllocationQueueTest
   public void testBatchWithMultipleTimestamps()
   {
     verifyAllocationWithBatching(
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .forTimestamp("2022-01-01T01:00:00")
                          .withSegmentGranularity(Granularities.DAY)
                          .withQueryGranularity(Granularities.SECOND)
                          .withLockGranularity(LockGranularity.TIME_CHUNK)
                          .withSequenceName("seq_1")
                          .build(),
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .forTimestamp("2022-01-01T02:00:00")
                          .withSegmentGranularity(Granularities.DAY)
                          .withQueryGranularity(Granularities.SECOND)
@@ -127,9 +125,9 @@ public class SegmentAllocationQueueTest
   public void testBatchWithExclusiveLocks()
   {
     verifyAllocationWithBatching(
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .withTaskLockType(TaskLockType.EXCLUSIVE).build(),
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .withTaskLockType(TaskLockType.EXCLUSIVE).build(),
         true
     );
@@ -139,9 +137,9 @@ public class SegmentAllocationQueueTest
   public void testBatchWithSharedLocks()
   {
     verifyAllocationWithBatching(
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .withTaskLockType(TaskLockType.SHARED).build(),
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .withTaskLockType(TaskLockType.SHARED).build(),
         true
     );
@@ -151,9 +149,9 @@ public class SegmentAllocationQueueTest
   public void testBatchWithMultipleQueryGranularities()
   {
     verifyAllocationWithBatching(
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .withQueryGranularity(Granularities.SECOND).build(),
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .withQueryGranularity(Granularities.MINUTE).build(),
         true
     );
@@ -163,8 +161,8 @@ public class SegmentAllocationQueueTest
   public void testMultipleDatasourcesCannotBatch()
   {
     verifyAllocationWithBatching(
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1")).build(),
-        allocateRequest().forTask(createTask(DS_KOALA, "group_1")).build(),
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1")).build(),
+        allocateRequest().forTask(createTask(TestDataSource.KOALA, "group_1")).build(),
         false
     );
   }
@@ -173,8 +171,8 @@ public class SegmentAllocationQueueTest
   public void testMultipleGroupIdsCannotBatch()
   {
     verifyAllocationWithBatching(
-        allocateRequest().forTask(createTask(DS_WIKI, "group_2")).build(),
-        allocateRequest().forTask(createTask(DS_WIKI, "group_3")).build(),
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_2")).build(),
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_3")).build(),
         false
     );
   }
@@ -183,9 +181,9 @@ public class SegmentAllocationQueueTest
   public void testMultipleLockGranularitiesCannotBatch()
   {
     verifyAllocationWithBatching(
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .withLockGranularity(LockGranularity.TIME_CHUNK).build(),
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .withLockGranularity(LockGranularity.SEGMENT).build(),
         false
     );
@@ -195,10 +193,10 @@ public class SegmentAllocationQueueTest
   public void testMultipleAllocateIntervalsCannotBatch()
   {
     verifyAllocationWithBatching(
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .forTimestamp("2022-01-01")
                          .withSegmentGranularity(Granularities.DAY).build(),
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .forTimestamp("2022-01-02")
                          .withSegmentGranularity(Granularities.DAY).build(),
         false
@@ -209,13 +207,13 @@ public class SegmentAllocationQueueTest
   public void testConflictingPendingSegment()
   {
     SegmentAllocateRequest hourSegmentRequest =
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .withSegmentGranularity(Granularities.HOUR)
                          .build();
     Future<SegmentIdWithShardSpec> hourSegmentFuture = allocationQueue.add(hourSegmentRequest);
 
     SegmentAllocateRequest halfHourSegmentRequest =
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1"))
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1"))
                          .withSegmentGranularity(Granularities.THIRTY_MINUTE)
                          .build();
     Future<SegmentIdWithShardSpec> halfHourSegmentFuture = allocationQueue.add(halfHourSegmentRequest);
@@ -231,12 +229,12 @@ public class SegmentAllocationQueueTest
   {
     for (int i = 0; i < 2000; ++i) {
       SegmentAllocateRequest request =
-          allocateRequest().forTask(createTask(DS_WIKI, "group_" + i)).build();
+          allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_" + i)).build();
       allocationQueue.add(request);
     }
 
     SegmentAllocateRequest request =
-        allocateRequest().forTask(createTask(DS_WIKI, "next_group")).build();
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "next_group")).build();
     Future<SegmentIdWithShardSpec> future = allocationQueue.add(request);
 
     // Verify that the future is already complete and segment allocation has failed
@@ -253,14 +251,14 @@ public class SegmentAllocationQueueTest
   {
     for (int i = 0; i < 500; ++i) {
       SegmentAllocateRequest request =
-          allocateRequest().forTask(createTask(DS_WIKI, "group_1")).build();
+          allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1")).build();
       allocationQueue.add(request);
     }
 
     // Verify that next request is added to a new batch
     Assert.assertEquals(1, allocationQueue.size());
     SegmentAllocateRequest request =
-        allocateRequest().forTask(createTask(DS_WIKI, "group_1")).build();
+        allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_1")).build();
     allocationQueue.add(request);
     Assert.assertEquals(2, allocationQueue.size());
   }
@@ -271,7 +269,7 @@ public class SegmentAllocationQueueTest
     final List<Future<SegmentIdWithShardSpec>> segmentFutures = new ArrayList<>();
     for (int i = 0; i < 10; ++i) {
       SegmentAllocateRequest request =
-          allocateRequest().forTask(createTask(DS_WIKI, "group_" + i))
+          allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_" + i))
                            .withSequenceName("sequence_1")
                            .withPreviousSegmentId("segment_1")
                            .build();
@@ -299,7 +297,7 @@ public class SegmentAllocationQueueTest
     final List<Future<SegmentIdWithShardSpec>> segmentFutures = new ArrayList<>();
     for (int i = 0; i < 10; ++i) {
       SegmentAllocateRequest request =
-          allocateRequest().forTask(createTask(DS_WIKI, "group_" + i)).build();
+          allocateRequest().forTask(createTask(TestDataSource.WIKI, "group_" + i)).build();
       segmentFutures.add(allocationQueue.add(request));
     }
 
@@ -348,7 +346,7 @@ public class SegmentAllocationQueueTest
   private SegmentAllocateActionBuilder allocateRequest()
   {
     return new SegmentAllocateActionBuilder()
-        .forDatasource(DS_WIKI)
+        .forDatasource(TestDataSource.WIKI)
         .forTimestamp("2022-01-01")
         .withLockGranularity(LockGranularity.TIME_CHUNK)
         .withTaskLockType(TaskLockType.SHARED)

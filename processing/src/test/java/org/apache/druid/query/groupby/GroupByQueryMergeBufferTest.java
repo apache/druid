@@ -130,7 +130,6 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
     final GroupingEngine groupingEngine = new GroupingEngine(
         PROCESSING_CONFIG,
         configSupplier,
-        BUFFER_POOL,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         mapper,
@@ -140,7 +139,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         groupingEngine,
         groupByResourcesReservationPool
     );
-    return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest, BUFFER_POOL);
   }
 
   private static final CloseableStupidPool<ByteBuffer> BUFFER_POOL = new CloseableStupidPool<>(
@@ -173,7 +172,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> args = new ArrayList<>();
-    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY, true)) {
       args.add(new Object[]{runner});
     }
     return args;

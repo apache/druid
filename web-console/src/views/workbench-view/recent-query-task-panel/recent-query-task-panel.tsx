@@ -69,17 +69,6 @@ interface RecentQueryEntry {
   errorMessage?: string;
 }
 
-function formatDetail(entry: RecentQueryEntry): string | undefined {
-  const lines: string[] = [];
-  if (entry.datasource !== Execution.INLINE_DATASOURCE_MARKER) {
-    lines.push(`Datasource: ${entry.datasource}`);
-  }
-  if (entry.errorMessage) {
-    lines.push(entry.errorMessage);
-  }
-  return lines.length ? lines.join('\n\n') : undefined;
-}
-
 export interface RecentQueryTaskPanelProps {
   onClose(): void;
   onExecutionDetails(id: string): void;
@@ -101,9 +90,10 @@ export const RecentQueryTaskPanel = React.memo(function RecentQueryTaskPanel(
 
   const [queryTaskHistoryState, queryManager] = useQueryManager<number, RecentQueryEntry[]>({
     query: workStateVersion,
-    processQuery: async _ => {
-      return await queryDruidSql<RecentQueryEntry>({
-        query: `SELECT
+    processQuery: async (_, cancelToken) => {
+      return await queryDruidSql<RecentQueryEntry>(
+        {
+          query: `SELECT
   CASE WHEN ${TASK_CANCELED_PREDICATE} THEN 'CANCELED' ELSE "status" END AS "taskStatus",
   "task_id" AS "taskId",
   "datasource",
@@ -114,7 +104,9 @@ FROM sys.tasks
 WHERE "type" = 'query_controller'
 ORDER BY "created_time" DESC
 LIMIT 100`,
-      });
+        },
+        cancelToken,
+      );
     },
   });
 
@@ -227,12 +219,18 @@ LIMIT 100`,
             const [icon, color] = statusToIconAndColor(w.taskStatus);
             return (
               <Popover className="work-entry" key={w.taskId} position="left" content={menu}>
-                <div title={formatDetail(w)} onDoubleClick={() => onExecutionDetails(w.taskId)}>
+                <div
+                  data-tooltip={
+                    `ID: ${w.taskId}` + (w.errorMessage ? `\n\nError:\n${w.errorMessage}` : '')
+                  }
+                  onDoubleClick={() => onExecutionDetails(w.taskId)}
+                >
                   <div className="line1">
                     <Icon
                       className={'status-icon ' + w.taskStatus.toLowerCase()}
                       icon={icon}
                       style={{ color }}
+                      data-tooltip={`Task status: ${w.taskStatus}`}
                     />
                     <div className="timing">
                       {prettyFormatIsoDate(w.createdTime) +

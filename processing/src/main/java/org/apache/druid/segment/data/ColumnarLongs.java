@@ -47,8 +47,13 @@ public interface ColumnarLongs extends Closeable
 
   default void get(long[] out, int start, int length)
   {
+    get(out, 0, start, length);
+  }
+
+  default void get(long[] out, int offset, int start, int length)
+  {
     for (int i = 0; i < length; i++) {
-      out[i] = get(i + start);
+      out[offset + i] = get(i + start);
     }
   }
 
@@ -61,6 +66,12 @@ public interface ColumnarLongs extends Closeable
 
   @Override
   void close();
+
+  @Nullable
+  default <T> T as(Class<? extends T> clazz)
+  {
+    return null;
+  }
 
   default ColumnValueSelector<Long> makeColumnValueSelector(ReadableOffset offset, ImmutableBitmap nullValueBitmap)
   {

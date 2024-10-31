@@ -18,17 +18,15 @@
 
 import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult } from '@druid-toolkit/query';
-import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
+import { QueryResult, QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
-import type { ComponentProps, JSX } from 'react';
+import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import SplitterLayout from 'react-splitter-layout';
 import { useStore } from 'zustand';
 
-import { Loader, QueryErrorPane } from '../../../components';
+import { Loader, QueryErrorPane, SplitterLayout } from '../../../components';
 import type { CapacityInfo, DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
-import { Execution, WorkbenchQuery } from '../../../druid-models';
+import { DEFAULT_SERVER_QUERY_CONTEXT, Execution, WorkbenchQuery } from '../../../druid-models';
 import {
   executionBackgroundStatusCheck,
   reattachTaskExecution,
@@ -42,11 +40,12 @@ import type { WorkbenchRunningPromise } from '../../../singletons/workbench-runn
 import { WorkbenchRunningPromises } from '../../../singletons/workbench-running-promises';
 import type { ColumnMetadata, QueryAction, QuerySlice, RowColumn } from '../../../utils';
 import {
+  deepGet,
   DruidError,
   findAllSqlQueriesInText,
-  localStorageGet,
+  localStorageGetJson,
   LocalStorageKeys,
-  localStorageSet,
+  localStorageSetJson,
   QueryManager,
 } from '../../../utils';
 import { CapacityAlert } from '../capacity-alert/capacity-alert';
@@ -60,6 +59,7 @@ import { FlexibleQueryInput } from '../flexible-query-input/flexible-query-input
 import { IngestSuccessPane } from '../ingest-success-pane/ingest-success-pane';
 import { metadataStateStore } from '../metadata-state-store';
 import { ResultTablePane } from '../result-table-pane/result-table-pane';
+import type { RunPanelProps } from '../run-panel/run-panel';
 import { RunPanel } from '../run-panel/run-panel';
 import { workStateStore } from '../work-state-store';
 
@@ -69,22 +69,34 @@ const queryRunner = new QueryRunner({
   inflateDateStrategy: 'none',
 });
 
-export interface QueryTabProps {
+function handleSecondaryPaneSizeChange(secondaryPaneSize: number) {
+  localStorageSetJson(LocalStorageKeys.WORKBENCH_PANE_SIZE, secondaryPaneSize);
+}
+
+export interface QueryTabProps
+  extends Pick<
+    RunPanelProps,
+    | 'maxTasksMenuHeader'
+    | 'enginesLabelFn'
+    | 'maxTasksLabelFn'
+    | 'fullClusterCapacityLabelFn'
+    | 'maxTasksOptions'
+    | 'hiddenOptions'
+  > {
   query: WorkbenchQuery;
   id: string;
   mandatoryQueryContext: QueryContext | undefined;
+  baseQueryContext: QueryContext | undefined;
+  serverQueryContext: QueryContext;
   columnMetadata: readonly ColumnMetadata[] | undefined;
   onQueryChange(newQuery: WorkbenchQuery): void;
   onQueryTab(newQuery: WorkbenchQuery, tabName?: string): void;
-  onDetails(id: string, initTab?: ExecutionDetailsTab): void;
+  onDetails(execution: Execution, initTab?: ExecutionDetailsTab): void;
   queryEngines: DruidEngine[];
   runMoreMenu: JSX.Element;
   clusterCapacity: number | undefined;
   goToTask(taskId: string): void;
   getClusterCapacity: (() => Promise<CapacityInfo | undefined>) | undefined;
-  maxTaskMenuHeader?: JSX.Element;
-  enginesLabelFn?: ComponentProps<typeof RunPanel>['enginesLabelFn'];
-  maxTaskLabelFn?: ComponentProps<typeof RunPanel>['maxTaskLabelFn'];
 }
 
 export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
@@ -93,6 +105,8 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     id,
     columnMetadata,
     mandatoryQueryContext,
+    baseQueryContext,
+    serverQueryContext = DEFAULT_SERVER_QUERY_CONTEXT,
     onQueryChange,
     onQueryTab,
     onDetails,
@@ -101,9 +115,12 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     clusterCapacity,
     goToTask,
     getClusterCapacity,
-    maxTaskMenuHeader,
+    maxTasksMenuHeader,
     enginesLabelFn,
-    maxTaskLabelFn,
+    maxTasksLabelFn,
+    maxTasksOptions,
+    fullClusterCapacityLabelFn,
+    hiddenOptions,
   } = props;
   const [alertElement, setAlertElement] = useState<JSX.Element | undefined>();
 
@@ -166,14 +183,11 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   );
 
   function shouldAutoRun(): boolean {
-    if (query.getEffectiveEngine() !== 'sql-native') return false;
+    const effectiveEngine = query.getEffectiveEngine();
+    if (effectiveEngine !== 'sql-native' && effectiveEngine !== 'sql-msq-dart') return false;
     const queryDuration = executionState.data?.result?.queryDuration;
     return Boolean(queryDuration && queryDuration < 10000);
   }
-
-  const handleSecondaryPaneSizeChange = useCallback((secondaryPaneSize: number) => {
-    localStorageSet(LocalStorageKeys.WORKBENCH_PANE_SIZE, String(secondaryPaneSize));
-  }, []);
 
   const queryInputRef = useRef<FlexibleQueryInput | null>(null);
 
@@ -192,10 +206,13 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
         ExecutionStateCache.deleteState(id);
         const { engine, query, prefixLines, cancelQueryId } = q.getApiQuery();
 
+        const startTime = new Date();
         switch (engine) {
           case 'sql-msq-task':
             return await submitTaskQuery({
               query,
+              context: mandatoryQueryContext,
+              baseQueryContext,
               prefixLines,
               cancelToken,
               preserveOnTermination: true,
@@ -221,43 +238,105 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
 
             onQueryChange(props.query.changeLastExecution(undefined));
 
-            const startTime = new Date();
-            let result: QueryResult;
-            try {
-              const resultPromise = queryRunner.runQuery({
+            const executionPromise = queryRunner
+              .runQuery({
                 query,
                 extraQueryContext: mandatoryQueryContext,
+                defaultQueryContext: baseQueryContext,
                 cancelToken: new axios.CancelToken(cancelFn => {
                   nativeQueryCancelFnRef.current = cancelFn;
                 }),
-              });
-              WorkbenchRunningPromises.storePromise(id, {
-                promise: resultPromise,
-                prefixLines,
-                startTime,
-              });
+              })
+              .then(
+                queryResult => Execution.fromResult(engine, queryResult),
+                e => {
+                  const druidError = new DruidError(e, prefixLines);
+                  druidError.queryDuration = Date.now() - startTime.valueOf();
+                  throw druidError;
+                },
+              );
 
-              result = await resultPromise;
+            WorkbenchRunningPromises.storePromise(id, {
+              executionPromise,
+              startTime,
+            });
+
+            let execution: Execution;
+            try {
+              execution = await executionPromise;
               nativeQueryCancelFnRef.current = undefined;
             } catch (e) {
               nativeQueryCancelFnRef.current = undefined;
-              const druidError = new DruidError(e, prefixLines);
-              druidError.queryDuration = Date.now() - startTime.valueOf();
-              throw druidError;
+              throw e;
             }
 
-            return Execution.fromResult(engine, result);
+            return execution;
+          }
+
+          case 'sql-msq-dart': {
+            if (cancelQueryId) {
+              void cancelToken.promise
+                .then(cancel => {
+                  if (cancel.message === QueryManager.TERMINATION_MESSAGE) return;
+                  return Api.instance.delete(`/druid/v2/sql/dart/${Api.encodePath(cancelQueryId)}`);
+                })
+                .catch(() => {});
+            }
+
+            onQueryChange(props.query.changeLastExecution(undefined));
+
+            const executionPromise = Api.instance
+              .post(`/druid/v2/sql/dart`, query, {
+                cancelToken: new axios.CancelToken(cancelFn => {
+                  nativeQueryCancelFnRef.current = cancelFn;
+                }),
+              })
+              .then(
+                ({ data: dartResponse }) => {
+                  if (deepGet(query, 'context.fullReport') && dartResponse[0][0] === 'fullReport') {
+                    const dartReport = dartResponse[dartResponse.length - 1][0];
+
+                    return Execution.fromDartReport(dartReport).changeSqlQuery(
+                      query.query,
+                      query.context,
+                    );
+                  } else {
+                    return Execution.fromResult(
+                      engine,
+                      QueryResult.fromRawResult(
+                        dartResponse,
+                        false,
+                        query.header,
+                        query.typesHeader,
+                        query.sqlTypesHeader,
+                      ).changeQueryDuration(Date.now() - startTime.valueOf()),
+                    ).changeSqlQuery(query.query, query.context);
+                  }
+                },
+                e => {
+                  throw new DruidError(e, prefixLines);
+                },
+              );
+
+            WorkbenchRunningPromises.storePromise(id, {
+              executionPromise,
+              startTime,
+            });
+
+            let execution: Execution;
+            try {
+              execution = await executionPromise;
+              nativeQueryCancelFnRef.current = undefined;
+            } catch (e) {
+              nativeQueryCancelFnRef.current = undefined;
+              throw e;
+            }
+
+            return execution;
           }
         }
       } else if (WorkbenchRunningPromises.isWorkbenchRunningPromise(q)) {
-        let result: QueryResult;
-        try {
-          result = await q.promise;
-        } catch (e) {
-          throw new DruidError(e, q.prefixLines);
-        }
-
-        return Execution.fromResult('sql-native', result);
+        return await q.executionPromise;
       } else {
         switch (q.engine) {
           case 'sql-msq-task':
@@ -280,6 +359,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     if (!executionState.data && !executionState.error) return;
     WorkbenchRunningPromises.deletePromise(id);
     ExecutionStateCache.storeState(id, executionState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.data, executionState.error]);
 
   const incrementWorkVersion = useStore(
@@ -292,6 +372,16 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   }, [executionState.loading, Boolean(executionState.intermediate)]);
 
   const execution = executionState.data;
+
+  // This is the execution that would be shown in the output pane, it is either the actual execution or a result
+  // execution that will be shown under the loader
+  const executionToShow =
+    execution ||
+    (() => {
+      if (executionState.intermediate) return;
+      const e = executionState.getSomeData();
+      return e?.result ? e : undefined;
+    })();
 
   const incrementMetadataVersion = useStore(
     metadataStateStore,
@@ -367,8 +457,6 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     queryManager.runQuery(effectiveQuery);
   });
 
-  const statsTaskId: string | undefined = execution?.id;
-
   const onUserCancel = (message?: string) => {
     queryManager.cancelCurrent(message);
     nativeQueryCancelFnRef.current?.();
@@ -379,7 +467,9 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
       <SplitterLayout
         vertical
         percentage
-        secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.WORKBENCH_PANE_SIZE)!) || 40}
+        secondaryInitialSize={
+          Number(localStorageGetJson(LocalStorageKeys.WORKBENCH_PANE_SIZE)) || 40
+        }
         primaryMinSize={20}
         secondaryMinSize={20}
         onSecondaryPaneSizeChange={handleSecondaryPaneSizeChange}
@@ -404,10 +494,14 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               running={executionState.loading}
               queryEngines={queryEngines}
               clusterCapacity={clusterCapacity}
+              defaultQueryContext={{ ...serverQueryContext, ...baseQueryContext }}
               moreMenu={runMoreMenu}
-              maxTaskMenuHeader={maxTaskMenuHeader}
+              maxTasksMenuHeader={maxTasksMenuHeader}
               enginesLabelFn={enginesLabelFn}
-              maxTaskLabelFn={maxTaskLabelFn}
+              maxTasksLabelFn={maxTasksLabelFn}
+              maxTasksOptions={maxTasksOptions}
+              fullClusterCapacityLabelFn={fullClusterCapacityLabelFn}
+              hiddenOptions={hiddenOptions}
             />
             {executionState.isLoading() && (
               <ExecutionTimerPanel
@@ -420,7 +514,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               <ExecutionSummaryPanel
                 execution={execution}
                 queryErrorDuration={executionState.error?.queryDuration}
-                onExecutionDetail={() => onDetails(statsTaskId!)}
+                onExecutionDetail={() => onDetails(execution!)}
                 onReset={() => {
                   queryManager.reset();
                   onQueryChange(props.query.changeLastExecution(undefined));
@@ -444,40 +538,40 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               )}
             </div>
           )}
-          {execution &&
-            (execution.result ? (
-              <ResultTablePane
-                runeMode={execution.engine === 'native'}
-                queryResult={execution.result}
-                onQueryAction={handleQueryAction}
-              />
-            ) : execution.error ? (
+          {executionToShow &&
+            (executionToShow.error ? (
               <div className="error-container">
-                <ExecutionErrorPane execution={execution} />
-                {execution.stages && (
+                <ExecutionErrorPane execution={executionToShow} />
+                {executionToShow.stages && (
                   <ExecutionStagesPane
-                    execution={execution}
-                    onErrorClick={() => onDetails(statsTaskId!, 'error')}
-                    onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
+                    execution={executionToShow}
+                    onErrorClick={() => onDetails(executionToShow, 'error')}
+                    onWarningClick={() => onDetails(executionToShow, 'warnings')}
                     goToTask={goToTask}
                   />
                 )}
               </div>
-            ) : execution.isSuccessfulIngest() ? (
+            ) : executionToShow.result ? (
+              <ResultTablePane
+                runeMode={executionToShow.engine === 'native'}
+                queryResult={executionToShow.result}
+                onQueryAction={handleQueryAction}
+              />
+            ) : executionToShow.isSuccessfulIngest() ? (
               <IngestSuccessPane
-                execution={execution}
+                execution={executionToShow}
                 onDetails={onDetails}
                 onQueryTab={onQueryTab}
               />
             ) : (
               <div className="generic-status-container">
                 <div className="generic-status-container-info">
-                  {`Execution completed with status: ${execution.status}`}
+                  {`Execution completed with status: ${executionToShow.status}`}
                 </div>
                 <ExecutionStagesPane
-                  execution={execution}
-                  onErrorClick={() => onDetails(statsTaskId!, 'error')}
-                  onWarningClick={() => onDetails(statsTaskId!, 'warnings')}
+                  execution={executionToShow}
+                  onErrorClick={() => onDetails(executionToShow, 'error')}
+                  onWarningClick={() => onDetails(executionToShow, 'warnings')}
                   goToTask={goToTask}
                 />
               </div>

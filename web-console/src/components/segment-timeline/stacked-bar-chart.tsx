@@ -153,22 +153,20 @@ export const StackedBarChart = React.forwardRef(function StackedBarChart(
   return (
     <div className="stacked-bar-chart" ref={ref as any}>
       {hoverOn && (
-        <>
-          <div className="bar-chart-tooltip">
-            <div>Datasource: {hoverOn.datasource}</div>
-            <div>Time: {hoverOn.xValue}</div>
-            <div>
-              {`${
-                activeDataType === 'countData' ? 'Daily total count:' : 'Daily total size:'
-              } ${formatTick(hoverOn.dailySize!)}`}
-            </div>
-            <div>
-              {`${activeDataType === 'countData' ? 'Count:' : 'Size:'} ${formatTick(
-                hoverOn.yValue!,
-              )}`}
-            </div>
+        <div className="bar-chart-tooltip">
+          <div>Datasource: {hoverOn.datasource}</div>
+          <div>Time: {hoverOn.xValue}</div>
+          <div>
+            {`${
+              activeDataType === 'countData' ? 'Daily total count:' : 'Daily total size:'
+            } ${formatTick(hoverOn.dailySize!)}`}
           </div>
-        </>
+          <div>
+            {`${activeDataType === 'countData' ? 'Count:' : 'Size:'} ${formatTick(
+              hoverOn.yValue!,
+            )}`}
+          </div>
+        </div>
       )}
       {renderBarChart()}
     </div>

@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>31.0.0-SNAPSHOT</version>
+        <version>32.0.0-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -138,6 +138,11 @@
         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>nl.jqno.equalsverifier</groupId>
+            <artifactId>equalsverifier</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- explicitly declare mockito-core dependency to make anaylize-dependencies happy when running with Java 8 -->

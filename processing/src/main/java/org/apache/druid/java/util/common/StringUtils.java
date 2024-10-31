@@ -824,4 +824,13 @@ public class StringUtils
       throw new ISE(e, "Cannot load resource: [%s]", resource);
     }
   }
+
+  /**
+   This method is removed from commons lang3.
+   https://commons.apache.org/proper/commons-lang/article3_0.html
+   */
+  public static String escapeSql(String str)
+  {
+    return str == null ? null : StringUtils.replace(str, "'", "''");
+  }
 }

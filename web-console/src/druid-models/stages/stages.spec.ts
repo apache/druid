@@ -16,7 +16,51 @@
  * limitations under the License.
  */
 
+import { aggregateSortProgressCounters } from './stages';
 import { STAGES } from './stages.mock';
+
+describe('aggregateSortProgressCounters', () => {
+  it('works', () => {
+    expect(
+      aggregateSortProgressCounters([
+        {
+          type: 'sortProgress',
+          totalMergingLevels: 2,
+          levelToTotalBatches: { 0: 3, 1: 4, 2: 4 },
+          levelToMergedBatches: { 0: 3, 1: 4, 2: 4 },
+          totalMergersForUltimateLevel: 1,
+        },
+        {
+          type: 'sortProgress',
+          totalMergingLevels: -1,
+          levelToTotalBatches: { 0: 2, 1: 4, 2: 6, 3: 5 },
+          levelToMergedBatches: { 0: 2, 1: 4, 2: 6, 3: 5 },
+          totalMergersForUltimateLevel: 1,
+        },
+      ]),
+    ).toEqual({
+      totalMergingLevels: {
+        '2': 1,
+      },
+      levelToBatches: {
+        '0': {
+          '2': 1,
+          '3': 1,
+        },
+        '1': {
+          '4': 2,
+        },
+        '2': {
+          '4': 1,
+          '6': 1,
+        },
+        '3': {
+          '5': 1,
+        },
+      },
+    });
+  });
+});
 
 describe('Stages', () => {
   describe('#overallProgress', () => {
@@ -286,6 +330,53 @@ describe('Stages', () => {
               "totalFiles": 0,
             },
           },
+        ]
+      `);
+    });
+  });
+
+  describe('#getGraphInfos', () => {
+    it('works for mock', () => {
+      expect(STAGES.getGraphInfos()).toMatchInlineSnapshot(`
+        [
+          [
+            {
+              "fromLanes": [],
+              "hasOut": true,
+              "stageNumber": 0,
+              "type": "stage",
+            },
+          ],
+          [
+            {
+              "fromLanes": [
+                0,
+              ],
+              "hasOut": true,
+              "stageNumber": 1,
+              "type": "stage",
+            },
+          ],
+          [
+            {
+              "fromLanes": [
+                0,
+              ],
+              "hasOut": true,
+              "stageNumber": 2,
+              "type": "stage",
+            },
+          ],
+          [
+            {
+              "fromLanes": [
+                0,
+              ],
+              "hasOut": false,
+              "stageNumber": 3,
+              "type": "stage",
+            },
+          ],
         ]
       `);
     });

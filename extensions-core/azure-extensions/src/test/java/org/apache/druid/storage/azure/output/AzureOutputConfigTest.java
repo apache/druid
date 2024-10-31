@@ -57,10 +57,9 @@ public class AzureOutputConfigTest
       throw new ISE("Unable to change the permission of temp folder for %s", this.getClass().getName());
     }
 
-    //noinspection ResultOfObjectAllocationIgnored
     assertThrows(
         DruidException.class,
-        () -> new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, MAX_RETRY_COUNT)
+        () -> new AzureOutputConfig(CONTAINER, PREFIX, tempDir, null, MAX_RETRY_COUNT).validateTempDirectory()
     );
   }
 

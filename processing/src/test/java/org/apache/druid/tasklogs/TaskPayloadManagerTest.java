@@ -19,7 +19,7 @@
 
 package org.apache.druid.tasklogs;
 
-import org.apache.commons.lang.NotImplementedException;
+import org.apache.commons.lang3.NotImplementedException;
 import org.junit.Assert;
 import org.junit.Test;
 

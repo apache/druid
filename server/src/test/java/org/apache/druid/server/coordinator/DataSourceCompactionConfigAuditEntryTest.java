@@ -20,8 +20,8 @@
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.audit.AuditInfo;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.segment.TestDataSource;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,12 +30,11 @@ import org.mockito.junit.MockitoJUnitRunner;
 @RunWith(MockitoJUnitRunner.class)
 public class DataSourceCompactionConfigAuditEntryTest
 {
-  private static final String DS_WIKI = "wiki";
   private final AuditInfo auditInfo = new AuditInfo("author", "identity", "comment", "ip");
   
   private final DataSourceCompactionConfigAuditEntry firstEntry = new DataSourceCompactionConfigAuditEntry(
-      new ClusterCompactionConfig(0.1, 9, true, CompactionEngine.MSQ),
-      DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+      new ClusterCompactionConfig(0.1, 9, true, null),
+      DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
       auditInfo,
       DateTimes.nowUtc()
   );
@@ -44,8 +43,8 @@ public class DataSourceCompactionConfigAuditEntryTest
   public void testhasSameConfigWithSameBaseConfigIsTrue()
   {
     final DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, true, CompactionEngine.MSQ),
-        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        new ClusterCompactionConfig(0.1, 9, true, null),
+        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -57,8 +56,8 @@ public class DataSourceCompactionConfigAuditEntryTest
   public void testhasSameConfigWithDifferentClusterConfigIsFalse()
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, false, CompactionEngine.MSQ),
-        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        new ClusterCompactionConfig(0.2, 9, false, null),
+        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -66,8 +65,8 @@ public class DataSourceCompactionConfigAuditEntryTest
     Assert.assertFalse(secondEntry.hasSameConfig(firstEntry));
 
     secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, true, CompactionEngine.NATIVE),
-        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        new ClusterCompactionConfig(0.1, 10, true, null),
+        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.WIKI).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -79,8 +78,8 @@ public class DataSourceCompactionConfigAuditEntryTest
   public void testhasSameConfigWithDifferentDatasourceConfigIsFalse()
   {
     DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, true, CompactionEngine.NATIVE),
-        DataSourceCompactionConfig.builder().forDataSource(DS_WIKI).build(),
+        new ClusterCompactionConfig(0.1, 9, true, null),
+        DataSourceCompactionConfig.builder().forDataSource(TestDataSource.KOALA).build(),
         auditInfo,
         DateTimes.nowUtc()
     );
@@ -92,7 +91,7 @@ public class DataSourceCompactionConfigAuditEntryTest
   public void testhasSameConfigWithNullDatasourceConfigIsFalse()
   {
     final DataSourceCompactionConfigAuditEntry secondEntry = new DataSourceCompactionConfigAuditEntry(
-        new ClusterCompactionConfig(0.1, 9, true, CompactionEngine.NATIVE),
+        new ClusterCompactionConfig(0.1, 9, true, null),
         null,
         auditInfo,
         DateTimes.nowUtc()

@@ -65,7 +65,6 @@ import org.apache.druid.segment.loading.DataSegmentPusher;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
-import org.apache.druid.segment.realtime.sink.Sink;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
@@ -353,12 +352,9 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
     {
       this.taskAppenderatorMap = new HashMap<>();
 
-      VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
-          String.CASE_INSENSITIVE_ORDER
-      );
       this.walker = new SinkQuerySegmentWalker(
           dataSource,
-          sinkTimeline,
+          new VersionedIntervalTimeline<>(String.CASE_INSENSITIVE_ORDER),
           objectMapper,
           serviceEmitter,
           queryRunnerFactoryConglomerateProvider.get(),

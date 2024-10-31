@@ -157,7 +157,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
             .dataSource(
                 new ExternalDataSource(
                     new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
-                    new CsvInputFormat(null, null, null, true, 0),
+                    new CsvInputFormat(null, null, null, true, 0, null),
                     RowSignature.builder()
                                 .add("timestamp", ColumnType.STRING)
                                 .add("agent_category", ColumnType.STRING)
@@ -225,7 +225,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
                         new ColumnMapping("v1", "agent_category")
                     )
                 ))
-                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null))
+                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
@@ -255,7 +255,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
             .dataSource(
                 new ExternalDataSource(
                     new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
-                    new CsvInputFormat(null, null, null, true, 0),
+                    new CsvInputFormat(null, null, null, true, 0, null),
                     RowSignature.builder()
                                 .add("timestamp", ColumnType.STRING)
                                 .add("agent_category", ColumnType.STRING)
@@ -318,7 +318,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
                         new ColumnMapping("agent_category", "agent_category")
                     )
                 ))
-                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null))
+                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
         .setQueryContext(runtimeContext)

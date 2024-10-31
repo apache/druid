@@ -118,6 +118,12 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
   }
 
   @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
+
+  @Override
   public ProcessorsAndChannels<Object, Object> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
@@ -154,7 +160,7 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
             readableInput.getChannel(),
             exportFormat,
             readableInput.getChannelFrameReader(),
-            exportStorageProvider.get(),
+            exportStorageProvider.createStorageConnector(frameContext.tempDir()),
             frameContext.jsonMapper(),
             channelCounter,
             getExportFilePath(queryId, workerNumber, readableInput.getStagePartition().getPartitionNumber(), exportFormat),

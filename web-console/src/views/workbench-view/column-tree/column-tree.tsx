@@ -104,7 +104,7 @@ type SearchMode = 'tables-and-columns' | 'tables-only' | 'columns-only';
 
 const SEARCH_MODES: SearchMode[] = ['tables-and-columns', 'tables-only', 'columns-only'];
 
-const SEARCH_MDOE_TITLE: Record<SearchMode, string> = {
+const SEARCH_MODE_TITLE: Record<SearchMode, string> = {
   'tables-and-columns': 'Tables and columns',
   'tables-only': 'Tables only',
   'columns-only': 'Columns only',
@@ -167,7 +167,7 @@ export interface ColumnTreeProps {
   defaultWhere?: SqlExpression;
   onQueryChange: (query: SqlQuery, run?: boolean) => void;
   defaultSchema?: string;
-  defaultTable?: string;
+  defaultTables?: string[];
   highlightTable?: string;
 }
 
@@ -180,7 +180,7 @@ export interface ColumnTreeState {
   searchMode: SearchMode;
   prevSearchHash?: string;
   expandedTables: Map<string, boolean>;
-  prevExpandedTables: Map<string, boolean>;
+  prevExpandedTables?: Map<string, boolean>;
 }
 
 function computeSearchHash(searchString: string, searchMode: SearchMode): string {
@@ -212,14 +212,7 @@ export function getJoinColumns(parsedQuery: SqlQuery, _table: string) {
 
 export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeState> {
   static getDerivedStateFromProps(props: ColumnTreeProps, state: ColumnTreeState) {
-    const {
-      columnMetadata,
-      defaultSchema,
-      defaultTable,
-      defaultWhere,
-      onQueryChange,
-      highlightTable,
-    } = props;
+    const { columnMetadata, defaultSchema, defaultWhere, onQueryChange, highlightTable } = props;
     const { searchString, searchMode, expandedTables, prevExpandedTables } = state;
     const searchHash = computeSearchHash(searchString, searchMode);
 
@@ -227,7 +220,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       columnMetadata &&
       (columnMetadata !== state.prevColumnMetadata ||
         searchHash !== state.prevSearchHash ||
-        expandedTables.size !== prevExpandedTables.size)
+        expandedTables !== prevExpandedTables)
     ) {
       const lowerSearchString = searchString.toLowerCase();
       const isSearching = Boolean(lowerSearchString);
@@ -476,7 +469,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                       icon={dataTypeToIcon(columnData.DATA_TYPE)}
                       aria-hidden
                       tabIndex={-1}
-                      title={columnData.DATA_TYPE}
+                      data-tooltip={columnData.DATA_TYPE}
                     />
                   ),
                   label: (
@@ -569,30 +562,16 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       );
 
       let selectedTreeIndex = -1;
-      let expandedNode = -1;
       if (defaultSchema && columnTree) {
         selectedTreeIndex = columnTree.findIndex(x => {
           return x.id === defaultSchema;
         });
       }
 
-      if (selectedTreeIndex > -1) {
-        const treeNodes = columnTree[selectedTreeIndex].childNodes;
-        if (treeNodes && defaultTable) {
-          expandedNode = treeNodes.findIndex(node => {
-            return node.id === defaultTable;
-          });
-        }
-      }
-
       if (!columnTree) return null;
       const currentSchemaSubtree =
         columnTree[selectedTreeIndex > -1 ? selectedTreeIndex : 0].childNodes;
       if (!currentSchemaSubtree) return null;
-
-      if (expandedNode > -1) {
-        currentSchemaSubtree[expandedNode].isExpanded = true;
-      }
 
       return {
         prevColumnMetadata: columnMetadata,
@@ -612,8 +591,7 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
       selectedTreeIndex: -1,
       searchString: '',
       searchMode: 'tables-and-columns',
-      expandedTables: new Map(),
-      prevExpandedTables: new Map(),
+      expandedTables: new Map((props.defaultTables || []).map(t => [t, true])),
     };
   }
 
@@ -663,14 +641,14 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
                     <MenuItem
                       key={mode}
                       icon={tickIcon(mode === searchMode)}
-                      text={SEARCH_MDOE_TITLE[mode]}
+                      text={SEARCH_MODE_TITLE[mode]}
                       onClick={() => this.setState({ searchMode: mode })}
                     />
                   ))}
                 </Menu>
               }
             >
-              <Button icon={IconNames.SETTINGS} />
+              <Button icon={IconNames.SETTINGS} data-tooltip="Search settings" />
             </Popover>
           </ButtonGroup>
         }
@@ -710,10 +688,10 @@ export class ColumnTree extends React.PureComponent<ColumnTreeProps, ColumnTreeS
   };
 
   render() {
-    const { columnMetadataLoading } = this.props;
+    const { columnMetadata, columnMetadataLoading } = this.props;
     const { currentSchemaSubtree, searchString } = this.state;
 
-    if (columnMetadataLoading) {
+    if (columnMetadataLoading && !columnMetadata) {
       return (
         <div className="column-tree">
           <Loader />

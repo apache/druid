@@ -21,7 +21,7 @@ package org.apache.druid.msq.querykit;
 
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.msq.counters.ChannelCounters;
-import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.timeline.SegmentId;
 
 import java.util.function.Supplier;
@@ -32,10 +32,16 @@ public interface DataSegmentProvider
    * Returns a supplier that fetches the segment corresponding to the provided segmentId from deep storage. The segment
    * is not actually fetched until you call {@link Supplier#get()}. Once you call this, make sure to also call
    * {@link ResourceHolder#close()}.
-   * <br>
+   *
    * It is not necessary to call {@link ResourceHolder#close()} if you never call {@link Supplier#get()}.
+   *
+   * @param segmentId       segment ID to fetch
+   * @param channelCounters counters to increment when the segment is closed
+   * @param isReindex       true if this is a DML command (INSERT or REPLACE) writing into the same table it is
+   *                        reading from; false otherwise. When true, implementations must only allow reading from
+   *                        segments that are currently-used according to the Coordinator.
    */
-  Supplier<ResourceHolder<Segment>> fetchSegment(
+  Supplier<ResourceHolder<CompleteSegment>> fetchSegment(
       SegmentId segmentId,
       ChannelCounters channelCounters,
       boolean isReindex

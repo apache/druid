@@ -816,7 +816,7 @@ public class BatchAppenderator implements Appenderator
       try {
         for (FireHydrant fireHydrant : sink) {
           Pair<ReferenceCountingSegment, Closeable> segmentAndCloseable = fireHydrant.getAndIncrementSegment();
-          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.asQueryableIndex();
+          final QueryableIndex queryableIndex = segmentAndCloseable.lhs.as(QueryableIndex.class);
           if (queryableIndex != null) {
             rowsinMergedSegment += queryableIndex.getNumRows();
           }
@@ -1172,7 +1172,7 @@ public class BatchAppenderator implements Appenderator
 
     try {
       final long startTime = System.nanoTime();
-      int numRows = indexToPersist.getIndex().size();
+      int numRows = indexToPersist.getIndex().numRows();
 
       // since the sink may have been persisted before it may have lost its
       // hydrant count, we remember that value in the sinks' metadata, so we have

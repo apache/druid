@@ -33,21 +33,24 @@ public class CollectedReadablePartitionsTest
   @Test
   public void testPartitionToWorkerMap()
   {
-    final CollectedReadablePartitions partitions = ReadablePartitions.collected(1, ImmutableMap.of(0, 1, 1, 2, 2, 1));
+    final CollectedReadablePartitions partitions =
+        (CollectedReadablePartitions) ReadablePartitions.collected(1, ImmutableMap.of(0, 1, 1, 2, 2, 1));
     Assert.assertEquals(ImmutableMap.of(0, 1, 1, 2, 2, 1), partitions.getPartitionToWorkerMap());
   }
 
   @Test
   public void testStageNumber()
   {
-    final CollectedReadablePartitions partitions = ReadablePartitions.collected(1, ImmutableMap.of(0, 1, 1, 2, 2, 1));
+    final CollectedReadablePartitions partitions =
+        (CollectedReadablePartitions) ReadablePartitions.collected(1, ImmutableMap.of(0, 1, 1, 2, 2, 1));
     Assert.assertEquals(1, partitions.getStageNumber());
   }
 
   @Test
   public void testSplit()
   {
-    final CollectedReadablePartitions partitions = ReadablePartitions.collected(1, ImmutableMap.of(0, 1, 1, 2, 2, 1));
+    final CollectedReadablePartitions partitions =
+        (CollectedReadablePartitions) ReadablePartitions.collected(1, ImmutableMap.of(0, 1, 1, 2, 2, 1));
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -64,7 +67,8 @@ public class CollectedReadablePartitionsTest
     final ObjectMapper mapper = TestHelper.makeJsonMapper()
                                           .registerModules(new MSQIndexingModule().getJacksonModules());
 
-    final CollectedReadablePartitions partitions = ReadablePartitions.collected(1, ImmutableMap.of(0, 1, 1, 2, 2, 1));
+    final CollectedReadablePartitions partitions =
+        (CollectedReadablePartitions) ReadablePartitions.collected(1, ImmutableMap.of(0, 1, 1, 2, 2, 1));
 
     Assert.assertEquals(
         partitions,

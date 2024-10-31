@@ -34,8 +34,8 @@ import java.util.regex.Pattern;
  */
 public class Cpu
 {
+  public static final String CGROUP = "cpu";
   private static final Logger LOG = new Logger(Cpu.class);
-  private static final String CGROUP = "cpu";
   private static final String CPUACCT_STAT_FILE = "cpuacct.stat";
   private static final String CPU_SHARES_FILE = "cpu.shares";
   private static final String CPU_QUOTA_FILE = "cpu.cfs_quota_us";

@@ -121,12 +121,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-@Fork(value = 2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Fork(value = 1)
+@Warmup(iterations = 5)
+@Measurement(iterations = 15)
 public class GroupByBenchmark
 {
-  @Param({"2", "4"})
+  @Param({"4"})
   private int numProcessingThreads;
 
   @Param({"-1"})
@@ -141,7 +141,7 @@ public class GroupByBenchmark
   @Param({"all", "day"})
   private String queryGranularity;
 
-  @Param({"force", "false"})
+  @Param({"false", "force"})
   private String vectorize;
 
   private static final Logger log = new Logger(GroupByBenchmark.class);
@@ -495,7 +495,6 @@ public class GroupByBenchmark
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
@@ -504,7 +503,8 @@ public class GroupByBenchmark
 
     factory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool)
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool),
+        bufferPool
     );
   }
 
@@ -514,7 +514,7 @@ public class GroupByBenchmark
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
-    @Param({"onheap", "offheap"})
+    @Param({"onheap"})
     private String indexType;
 
     IncrementalIndex incIndex;

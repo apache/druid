@@ -331,7 +331,7 @@ name: Error Prone Annotations
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.20.0
+version: 2.35.1
 libraries:
   - com.google.errorprone: error_prone_annotations
 
@@ -546,13 +546,13 @@ name: Apache Commons IO
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 2.11.0
+version: 2.17.0
 libraries:
   - commons-io: commons-io
 notices:
   - commons-io: |
       Apache Commons IO
-      Copyright 2002-2021 The Apache Software Foundation
+      Copyright 2002-2024 The Apache Software Foundation
 
 ---
 
@@ -809,7 +809,7 @@ name: com.nimbusds nimbus-jose-jwt
 license_category: binary
 module: extensions/druid-pac4j
 license_name: Apache License version 2.0
-version: 9.37.2
+version: 8.22.1
 libraries:
   - com.nimbusds: nimbus-jose-jwt
 
@@ -1837,33 +1837,38 @@ name: Apache Maven
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 3.1.1
+version: 3.6.0
 libraries:
-  - org.apache.maven: maven-aether-provider
-  - org.apache.maven: maven-model
-  - org.apache.maven: maven-model-builder
   - org.apache.maven: maven-repository-metadata
-  - org.apache.maven: maven-settings
-  - org.apache.maven: maven-settings-builder
+  - org.apache.maven: maven-builder-support
 notices:
-  - maven-aether-provider: |
-      Maven Aether Provider
-      Copyright 2001-2013 The Apache Software Foundation
-  - maven-model: |
-      Maven Model
-      Copyright 2001-2013 The Apache Software Foundation
-  - maven-model-builder: |
-      Maven Model Builder
-      Copyright 2001-2013 The Apache Software Foundation
   - maven-repository-metadata: |
       Maven Repository Metadata Model
-      Copyright 2001-2013 The Apache Software Foundation
-  - maven-settings: |
-      Maven Settings
-      Copyright 2001-2013 The Apache Software Foundation
-  - maven-settings-builder: |
-      Maven Settings Builder
-      Copyright 2001-2013 The Apache Software Foundation
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-builder-support: |
+      Maven Builder Support
+      Copyright 2001-2018 The Apache Software Foundation
+---
+
+name: Maven Artifact Resolver Provider
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 3.6.0
+libraries:
+  - org.apache.maven: maven-resolver-provider
+  - org.apache.maven: maven-model
+  - org.apache.maven: maven-model-builder
+notices:
+  - maven-resolver-provider: |
+      Maven Artifact Resolver Provider
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-model: |
+      Maven Model
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-model-builder: |
+      Maven Model Builder
+      Copyright 2001-2018 The Apache Software Foundation
 ---
 
 name: Apache Maven Artifact
@@ -1877,6 +1882,67 @@ notices:
   - maven-artifact: |
       Maven Artifact
       Copyright 2001-2018 The Apache Software Foundation
+---
+
+name: Maven Artifact Resolver Connector Basic
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3.1
+libraries:
+  - org.apache.maven.resolver: maven-resolver-connector-basic
+  - org.apache.maven.resolver: maven-resolver-spi
+  - org.apache.maven.resolver: maven-resolver-api
+  - org.apache.maven.resolver: maven-resolver-util
+notices:
+  - maven-resolver-connector-basic: |
+      Maven Artifact Resolver Connector Basic
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-resolver-spi: |
+      Maven Artifact Resolver SPI
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-resolver-api: |
+      Maven Artifact Resolver API
+      Copyright 2001-2018 The Apache Software Foundation
+  - maven-resolver-util: |
+      Maven Artifact Resolver Utilities
+      Copyright 2001-2018 The Apache Software Foundation
+---
+
+name: Maven Artifact Resolver Transport HTTP
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3.1
+libraries:
+  - org.apache.maven.resolver: maven-resolver-transport-http
+notices:
+  - maven-resolver-transport-http: |
+      Maven Artifact Resolver Transport HTTP
+      Copyright 2001-2018 The Apache Software Foundation
+
+---
+
+name: Maven Artifact Resolver Implementation
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.3.1
+libraries:
+  - org.apache.maven.resolver: maven-resolver-impl
+notices:
+  - maven-resolver-impl: |
+      Maven Artifact Resolver Implementation
+      Copyright 2001-2018 The Apache Software Foundation
+---
+
+name: Plexus Component Annotations
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 1.7.1
+libraries:
+  - org.codehaus.plexus: plexus-component-annotations
 ---
 
 name: Apache Maven Wagon API
@@ -1967,7 +2033,7 @@ name: Plexus Interpolation API
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 1.19
+version: 1.25
 libraries:
   - org.codehaus.plexus: plexus-interpolation
 
@@ -2455,20 +2521,6 @@ notices:
 
 ---
 
-name: Apache Commons IO
-license_category: binary
-module: hadoop-client
-license_name: Apache License version 2.0
-version: 2.4
-libraries:
-  - commons-io: commons-io
-notices:
-  - commons-io: |
-      Apache Commons IO
-      Copyright 2002-2012 The Apache Software Foundation
-
----
-
 name: Apache Commons Logging
 license_category: binary
 module: hadoop-client
@@ -2953,7 +3005,7 @@ name: Apache Avro
 license_category: binary
 module: extensions/druid-avro-extensions
 license_name: Apache License version 2.0
-version: 1.11.3
+version: 1.11.4
 libraries:
   - org.apache.avro: avro
   - org.apache.avro: avro-mapred
@@ -3233,7 +3285,7 @@ name: Checker Qual
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.5.7
+version: 3.48.1
 copyright: the Checker Framework developers
 license_file_path: licenses/bin/checker-qual.MIT
 libraries:
@@ -3245,7 +3297,7 @@ name: JCodings
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 1.0.43
+version: 1.0.50
 copyright: JRuby Team
 license_file_path: licenses/bin/jcodings.MIT
 libraries:
@@ -3257,7 +3309,7 @@ name: Joni
 license_category: binary
 module: java-core
 license_name: MIT License
-version: 2.1.27
+version: 2.1.34
 copyright: JRuby Team
 license_file_path: licenses/bin/joni.MIT
 libraries:
@@ -3327,7 +3379,7 @@ name: Protocol Buffers
 license_category: binary
 module: java-core
 license_name: BSD-3-Clause License
-version: 3.24.0
+version: 3.25.5
 copyright: Google, Inc.
 license_file_path:
   - licenses/bin/protobuf-java.BSD3
@@ -3493,7 +3545,7 @@ name: Protocol Buffers
 license_category: binary
 module: extensions/druid-protobuf-extensions
 license_name: BSD-3-Clause License
-version: 3.24.0
+version: 3.25.5
 copyright: Google, Inc.
 license_file_path: licenses/bin/protobuf-java.BSD3
 libraries:
@@ -3669,30 +3721,6 @@ copyright: Oracle and/or its affiliates.
 license_file_path: licenses/bin/javax.CDDL11
 libraries:
   - javax.servlet: javax.servlet-api
-
----
-
-name: JAXB
-license_category: binary
-module: hadoop-client
-license_name: CDDL 1.1
-version: 2.2.2
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.xml.bind: jaxb-api
-
----
-
-name: JAXB
-license_category: binary
-module: java-core
-license_name: CDDL 1.1
-version: 2.3.1
-copyright: Oracle and/or its affiliates.
-license_file_path: licenses/bin/javax.CDDL11
-libraries:
-  - javax.xml.bind: jaxb-api
 
 ---
 
@@ -4954,6 +4982,23 @@ libraries:
   - com.sun.activation: jakarta.activation
 
 ---
+name: jakarta.activation-api
+license_category: binary
+module: core
+license_name: Eclipse Distribution License 1.0
+version: 1.2.2
+libraries:
+  - jakarta.activation: jakarta.activation-api
+
+---
+name: jakarta.xml.bind-api
+license_category: binary
+module: core
+license_name: Eclipse Distribution License 1.0
+version: 2.3.3
+libraries:
+  - jakarta.xml.bind: jakarta.xml.bind-api
+---
 
 # Web console modules start
 name: "@babel/code-frame"
@@ -5031,7 +5076,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.1.1
+version: 5.1.2
 
 ---
 
@@ -5040,7 +5085,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.10.5
+version: 5.13.1
 
 ---
 
@@ -5049,7 +5094,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 2.3.7
+version: 2.3.11
 
 ---
 
@@ -5058,7 +5103,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.3.7
+version: 5.3.11
 
 ---
 
@@ -5067,7 +5112,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.10.0
+version: 5.13.0
 
 ---
 
@@ -5076,7 +5121,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.2.1
+version: 5.2.5
 
 ---
 
@@ -5085,25 +5130,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 0.22.20
-
----
-
-name: "@druid-toolkit/visuals-core"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Imply Data
-version: 0.3.3
-
----
-
-name: "@druid-toolkit/visuals-react"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Imply Data
-version: 0.3.3
+version: 0.22.23
 
 ---
 
@@ -5202,17 +5229,8 @@ license_category: binary
 module: web-console
 license_name: SIL Open Font License 1.1
 copyright: Google Inc.
-version: 5.0.28
+version: 5.1.0
 license_file_path: licenses/bin/@fontsource-open-sans.OFL
-
----
-
-name: "@juggle/resize-observer"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Juggle
-version: 3.4.0
 
 ---
 
@@ -5246,23 +5264,23 @@ license_file_path: licenses/bin/@types-prop-types.MIT
 
 ---
 
+name: "@types/react-table"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Microsoft Corporation.
+version: 6.8.5
+license_file_path: licenses/bin/@types-react-table.MIT
+
+---
+
 name: "@types/react"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Microsoft Corporation.
-version: 18.2.42
+version: 18.3.11
 license_file_path: licenses/bin/@types-react.MIT
-
----
-
-name: "@types/scheduler"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Microsoft Corporation.
-version: 0.16.8
-license_file_path: licenses/bin/@types-scheduler.MIT
 
 ---
 
@@ -5271,7 +5289,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Ajax.org B.V.
-version: 1.4.14
+version: 1.5.3
 license_file_path: licenses/bin/ace-builds.BSD3
 
 ---
@@ -5301,7 +5319,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Matt Zabriskie
-version: 1.6.7
+version: 1.7.7
 license_file_path: licenses/bin/axios.MIT
 
 ---
@@ -5440,7 +5458,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: TJ Holowaychuk
-version: 2.20.0
+version: 7.2.0
 license_file_path: licenses/bin/commander.MIT
 
 ---
@@ -5470,18 +5488,8 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: sudodoki
-version: 3.2.0
+version: 3.3.3
 license_file_path: licenses/bin/copy-to-clipboard.MIT
-
----
-
-name: "core-js"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Denis Pushkarev
-version: 3.10.1
-license_file_path: licenses/bin/core-js.MIT
 
 ---
 
@@ -5528,30 +5536,30 @@ license_file_path: licenses/bin/d3-array.BSD3
 name: "d3-axis"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 2.1.0
-license_file_path: licenses/bin/d3-axis.BSD3
+version: 3.0.0
+license_file_path: licenses/bin/d3-axis.ISC
 
 ---
 
 name: "d3-color"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 2.0.0
-license_file_path: licenses/bin/d3-color.BSD3
+version: 3.1.0
+license_file_path: licenses/bin/d3-color.ISC
 
 ---
 
 name: "d3-dsv"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 2.0.0
-license_file_path: licenses/bin/d3-dsv.BSD3
+version: 3.0.1
+license_file_path: licenses/bin/d3-dsv.ISC
 
 ---
 
@@ -5568,30 +5576,40 @@ license_file_path: licenses/bin/d3-format.BSD3
 name: "d3-interpolate"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 2.0.1
-license_file_path: licenses/bin/d3-interpolate.BSD3
+version: 3.0.1
+license_file_path: licenses/bin/d3-interpolate.ISC
+
+---
+
+name: "d3-scale-chromatic"
+license_category: binary
+module: web-console
+license_name: ISC License
+copyright: Mike Bostock
+version: 3.1.0
+license_file_path: licenses/bin/d3-scale-chromatic.ISC
 
 ---
 
 name: "d3-scale"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 3.3.0
-license_file_path: licenses/bin/d3-scale.BSD3
+version: 4.0.2
+license_file_path: licenses/bin/d3-scale.ISC
 
 ---
 
 name: "d3-selection"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 2.0.0
-license_file_path: licenses/bin/d3-selection.BSD3
+version: 3.0.0
+license_file_path: licenses/bin/d3-selection.ISC
 
 ---
 
@@ -5689,7 +5707,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Apache Software Foundation
-version: 5.4.3
+version: 5.5.1
 
 ---
 
@@ -5768,7 +5786,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Raynos
-version: 1.1.1
+version: 1.1.2
 license_file_path: licenses/bin/function-bind.MIT
 
 ---
@@ -5793,13 +5811,13 @@ license_file_path: licenses/bin/has-own-prop.MIT
 
 ---
 
-name: "has"
+name: "hasown"
 license_category: binary
 module: web-console
 license_name: MIT License
-copyright: Thiago de Arruda
-version: 1.0.3
-license_file_path: licenses/bin/has.MIT
+copyright: Jordan Harband
+version: 2.0.2
+license_file_path: licenses/bin/hasown.MIT
 
 ---
 
@@ -5848,7 +5866,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Alexander Shtuchkin
-version: 0.4.24
+version: 0.6.3
 license_file_path: licenses/bin/iconv-lite.MIT
 
 ---
@@ -5897,7 +5915,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Jordan Harband
-version: 2.10.0
+version: 2.15.1
 license_file_path: licenses/bin/is-core-module.MIT
 
 ---
@@ -6017,7 +6035,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Alex Reardon
-version: 5.1.1
+version: 5.2.1
 license_file_path: licenses/bin/memoize-one.MIT
 
 ---
@@ -6176,7 +6194,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Blake Embrey (hello@blakeembrey.com)
-version: 1.7.0
+version: 1.9.0
 license_file_path: licenses/bin/path-to-regexp.MIT
 
 ---
@@ -6196,7 +6214,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc.
-version: 15.7.2
+version: 15.8.1
 license_file_path: licenses/bin/prop-types.MIT
 
 ---
@@ -6246,7 +6264,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 18.2.0
+version: 18.3.1
 license_file_path: licenses/bin/react-dom.MIT
 
 ---
@@ -6276,7 +6294,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 16.8.6
+version: 16.13.1
 license_file_path: licenses/bin/react-is.MIT
 
 ---
@@ -6311,22 +6329,12 @@ license_file_path: licenses/bin/react-router.MIT
 
 ---
 
-name: "react-splitter-layout"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Yang Liu
-version: 4.0.0
-license_file_path: licenses/bin/react-splitter-layout.MIT
-
----
-
 name: "react-table"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Tanner Linsley
-version: 6.10.3
+version: 6.11.5
 license_file_path: licenses/bin/react-table.MIT
 
 ---
@@ -6356,7 +6364,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 18.2.0
+version: 18.3.1
 license_file_path: licenses/bin/react.MIT
 
 ---
@@ -6436,7 +6444,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 0.23.0
+version: 0.23.2
 license_file_path: licenses/bin/scheduler.MIT
 
 ---
@@ -6561,22 +6569,12 @@ license_file_path: licenses/bin/upper-case.MIT
 
 ---
 
-name: "use-resize-observer"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Viktor Hubert
-version: 9.1.0
-license_file_path: licenses/bin/use-resize-observer.MIT
-
----
-
 name: "use-sync-external-store"
 license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Facebook, Inc. and its affiliates.
-version: 1.2.0
+version: 1.2.2
 license_file_path: licenses/bin/use-sync-external-store.MIT
 
 ---
@@ -6586,7 +6584,7 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Robert Kieffer and other contributors
-version: 7.0.2
+version: 7.0.3
 license_file_path: licenses/bin/uuid.MIT
 
 ---
@@ -6626,7 +6624,7 @@ license_category: binary
 module: web-console
 license_name: BSD-3-Clause License
 copyright: Baidu Inc.
-version: 5.4.4
+version: 5.6.0
 license_file_path: licenses/bin/zrender.BSD3
 
 ---
@@ -6636,6 +6634,6 @@ license_category: binary
 module: web-console
 license_name: MIT License
 copyright: Paul Henschel
-version: 4.3.2
+version: 4.5.5
 license_file_path: licenses/bin/zustand.MIT
 # Web console modules end

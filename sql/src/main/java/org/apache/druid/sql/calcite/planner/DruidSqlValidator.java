@@ -133,6 +133,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         throw Util.unexpected(windowOrId.getKind());
     }
 
+    updateBoundsIfNeeded(targetWindow);
+
     @Nullable
     SqlNode lowerBound = targetWindow.getLowerBound();
     @Nullable
@@ -142,17 +144,6 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
           "Window frames with expression based lower/upper bounds are not supported.",
           windowOrId
       );
-    }
-
-    if (lowerBound != null && upperBound == null) {
-      if (lowerBound.getKind() == SqlKind.FOLLOWING || SqlWindow.isUnboundedFollowing(lowerBound)) {
-        upperBound = lowerBound;
-        lowerBound = SqlWindow.createCurrentRow(SqlParserPos.ZERO);
-      } else {
-        upperBound = SqlWindow.createCurrentRow(SqlParserPos.ZERO);
-      }
-      targetWindow.setLowerBound(lowerBound);
-      targetWindow.setUpperBound(upperBound);
     }
 
     boolean hasBounds = lowerBound != null || upperBound != null;
@@ -758,6 +749,28 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
         || SqlWindow.isUnboundedPreceding(bound);
   }
 
+  /**
+   * Checks if any bound is null and updates with CURRENT ROW
+   */
+  private void updateBoundsIfNeeded(SqlWindow window)
+  {
+    @Nullable
+    SqlNode lowerBound = window.getLowerBound();
+    @Nullable
+    SqlNode upperBound = window.getUpperBound();
+
+    if (lowerBound != null && upperBound == null) {
+      if (lowerBound.getKind() == SqlKind.FOLLOWING || SqlWindow.isUnboundedFollowing(lowerBound)) {
+        upperBound = lowerBound;
+        lowerBound = SqlWindow.createCurrentRow(SqlParserPos.ZERO);
+      } else {
+        upperBound = SqlWindow.createCurrentRow(SqlParserPos.ZERO);
+      }
+      window.setLowerBound(lowerBound);
+      window.setUpperBound(upperBound);
+    }
+  }
+
   @Override
   public void validateCall(SqlCall call, SqlValidatorScope scope)
   {
@@ -765,8 +778,8 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
       if (!plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
         throw buildCalciteContextException(
             StringUtils.format(
-                "The query contains window functions; To run these window functions, specify [%s] in query context.",
-                PlannerContext.CTX_ENABLE_WINDOW_FNS
+                "The query contains window functions; They are not supported on engine[%s].",
+                plannerContext.getEngine().name()
             ),
             call
         );
@@ -811,6 +824,10 @@ public class DruidSqlValidator extends BaseDruidSqlValidator
             + "Try providing window definition directly without alias",
             sqlNode
         );
+      }
+      if (sqlNode instanceof SqlWindow) {
+        SqlWindow window = (SqlWindow) sqlNode;
+        updateBoundsIfNeeded(window);
       }
     }
     super.validateWindowClause(select);

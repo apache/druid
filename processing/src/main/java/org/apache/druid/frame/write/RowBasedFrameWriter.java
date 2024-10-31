@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.AppendableMemory;
@@ -313,10 +314,22 @@ public class RowBasedFrameWriter implements FrameWriter
         // Reset to beginning of loop.
         i = -1;
 
+        final int priorAllocation = BASE_DATA_ALLOCATION_SIZE * reserveMultiple;
+
         // Try again with a bigger allocation.
         reserveMultiple *= 2;
 
-        if (!dataMemory.reserveAdditional(Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple))) {
+        final int nextAllocation = Math.min(
+            dataMemory.availableToReserve(),
+            Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple)
+        );
+
+        if (nextAllocation > priorAllocation) {
+          if (!dataMemory.reserveAdditional(nextAllocation)) {
+            // Shouldn't see this unless availableToReserve lied to us.
+            throw DruidException.defensive("Unexpected failure of dataMemory.reserveAdditional");
+          }
+        } else {
           return false;
         }
 

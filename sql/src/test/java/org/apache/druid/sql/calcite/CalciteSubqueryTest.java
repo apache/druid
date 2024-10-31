@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -455,6 +456,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
       cannotVectorize();
     }
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT TIME_FORMAT(\"date\", 'yyyy-MM'), SUM(x)\n"
         + "FROM (\n"
@@ -1310,7 +1312,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .offset(6L)
                                 .limit(1L)
-                                .order(ScanQuery.Order.DESCENDING)
+                                .order(Order.DESCENDING)
                                 .columns("__time", "channel")
                                 .context(QUERY_CONTEXT_DEFAULT)
                                 .build()
@@ -1610,6 +1612,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testScalarInArrayToUseHavingFilter(String testName, Map<String, Object> queryContext)
   {
+    cannotVectorizeUnlessFallback();
     DimFilter filter = NullHandling.replaceWithDefault()
                        ? new InDimFilter("v0", new HashSet<>(Arrays.asList("1", "17")))
                        : new TypedInFilter("v0", ColumnType.LONG, null, ImmutableList.of(1, 17), null);

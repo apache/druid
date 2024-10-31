@@ -81,6 +81,10 @@ export class FlexibleQueryInput extends React.PureComponent<
     // Local completions
     {
       getCompletions: (_state, session, pos, prefix, callback) => {
+        if (/^\d+$/.test(prefix)) {
+          callback(null, []); // Don't start completing if the user is typing a number
+          return;
+        }
         const charBeforePrefix = session.getLine(pos.row)[pos.column - prefix.length - 1];
         callback(
           null,
@@ -351,6 +355,7 @@ export class FlexibleQueryInput extends React.PureComponent<
                   ),
                   'sub-query-highlight',
                   'text',
+                  false,
                 );
               this.highlightFoundQuery = { row, marker };
             }}

@@ -27,7 +27,6 @@ import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
-import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
@@ -36,7 +35,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -206,17 +204,15 @@ public class Queries
    *
    * @param virtualColumns    virtual columns whose inputs should be included.
    * @param filter            optional filter whose inputs should be included.
-   * @param dimensions        dimension specs whose inputs should be included.
-   * @param aggregators       aggregators whose inputs should be included.
-   * @param additionalColumns additional columns to include. Each of these will be added to the returned set, unless it
+   * @param columns           additional columns to include. Each of these will be added to the returned set, unless it
    *                          refers to a virtual column, in which case the virtual column inputs will be added instead.
+   * @param aggregators       aggregators whose inputs should be included.
    */
   public static Set<String> computeRequiredColumns(
       final VirtualColumns virtualColumns,
       @Nullable final DimFilter filter,
-      final List<DimensionSpec> dimensions,
-      final List<AggregatorFactory> aggregators,
-      final List<String> additionalColumns
+      final List<String> columns,
+      final List<AggregatorFactory> aggregators
   )
   {
     final Set<String> requiredColumns = new HashSet<>();
@@ -240,9 +236,9 @@ public class Queries
       }
     }
 
-    for (DimensionSpec dimensionSpec : dimensions) {
-      if (!virtualColumns.exists(dimensionSpec.getDimension())) {
-        requiredColumns.add(dimensionSpec.getDimension());
+    for (String column : columns) {
+      if (!virtualColumns.exists(column)) {
+        requiredColumns.add(column);
       }
     }
 
@@ -251,12 +247,6 @@ public class Queries
         if (!virtualColumns.exists(column)) {
           requiredColumns.add(column);
         }
-      }
-    }
-
-    for (String column : additionalColumns) {
-      if (!virtualColumns.exists(column)) {
-        requiredColumns.add(column);
       }
     }
 

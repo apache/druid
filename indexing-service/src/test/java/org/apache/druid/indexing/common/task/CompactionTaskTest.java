@@ -55,6 +55,7 @@ import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -116,6 +117,7 @@ import org.apache.druid.segment.data.ListIndexed;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.BatchIOConfig;
+import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -128,6 +130,7 @@ import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -737,7 +740,7 @@ public class CompactionTaskTest
     );
     provider.checkSegments(LockGranularity.TIME_CHUNK, ImmutableList.of());
   }
-  
+
   @Test
   public void testCreateIngestionSchema() throws IOException
   {
@@ -750,7 +753,7 @@ public class CompactionTaskTest
         null,
         null,
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -812,7 +815,7 @@ public class CompactionTaskTest
         null,
         null,
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -875,7 +878,7 @@ public class CompactionTaskTest
         null,
         null,
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -939,7 +942,7 @@ public class CompactionTaskTest
         null,
         null,
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1010,7 +1013,7 @@ public class CompactionTaskTest
         null,
         null,
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1061,7 +1064,7 @@ public class CompactionTaskTest
         customMetricsSpec,
         null,
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1105,7 +1108,7 @@ public class CompactionTaskTest
         null,
         null,
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1156,7 +1159,7 @@ public class CompactionTaskTest
         null,
         null,
         METRIC_BUILDER,
-        null
+        false
     );
 
     NativeCompactionRunner.createIngestionSpecs(
@@ -1187,7 +1190,7 @@ public class CompactionTaskTest
         null,
         null,
         METRIC_BUILDER,
-        null
+        false
     );
 
     NativeCompactionRunner.createIngestionSpecs(
@@ -1229,7 +1232,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(new PeriodGranularity(Period.months(3), null, null), null, null),
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1274,7 +1277,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, new PeriodGranularity(Period.months(3), null, null), null),
         METRIC_BUILDER,
-        null
+        false
     );
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
         dataSchemasForIntervals,
@@ -1320,7 +1323,7 @@ public class CompactionTaskTest
             null
         ),
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1368,7 +1371,7 @@ public class CompactionTaskTest
         null,
         null,
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1414,7 +1417,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1460,7 +1463,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, true),
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1491,7 +1494,7 @@ public class CompactionTaskTest
         null,
         new ClientCompactionTaskGranularitySpec(null, null, null),
         METRIC_BUILDER,
-        null
+        false
     );
 
     final List<ParallelIndexIngestionSpec> ingestionSpecs = NativeCompactionRunner.createIngestionSpecs(
@@ -1509,6 +1512,110 @@ public class CompactionTaskTest
       //Expect false since rollup value in metadata of existing segments are null
       Assert.assertFalse(indexIngestionSpec.getDataSchema().getGranularitySpec().isRollup());
     }
+  }
+
+  @Test
+  public void testMultiValuedDimensionsProcessing()
+      throws IOException
+  {
+    final Map<Interval, DataSchema> dataSchemasForIntervals = CompactionTask.createDataSchemasForIntervals(
+        toolbox,
+        LockGranularity.TIME_CHUNK,
+        new SegmentProvider(DATA_SOURCE, new CompactionIntervalSpec(COMPACTION_INTERVAL, null)),
+        null,
+        null,
+        null,
+        new ClientCompactionTaskGranularitySpec(null, null, null),
+        METRIC_BUILDER,
+        true
+    );
+    for (DataSchema dataSchema : dataSchemasForIntervals.values()) {
+      Assert.assertTrue(dataSchema instanceof CombinedDataSchema);
+      Assert.assertTrue(((CombinedDataSchema) dataSchema).getMultiValuedDimensions().isEmpty());
+    }
+  }
+
+  @Test
+  public void testMSQRollupWithNoDimensionsSpecNeedsMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.compactionRunner(new TestMSQCompactionRunner());
+    final CompactionTask compactionTask = builder.build();
+    // granularitySpec=null should assume a possible rollup
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
+  public void testMSQRangePartitionWithNoDimensionsSpecNeedsMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.compactionRunner(new TestMSQCompactionRunner());
+    builder.tuningConfig(TuningConfigBuilder.forCompactionTask()
+                                            .withForceGuaranteedRollup(true)
+                                            .withPartitionsSpec(
+                                                new DimensionRangePartitionsSpec(
+                                                    3,
+                                                    null,
+                                                    ImmutableList.of(
+                                                        "string_dim_1"),
+                                                    false
+                                                ))
+                                            .build());
+    final CompactionTask compactionTask = builder.build();
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
+  public void testMSQRollupOnStringNeedsMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.compactionRunner(new TestMSQCompactionRunner());
+    builder.granularitySpec(new ClientCompactionTaskGranularitySpec(null, null, true));
+
+    DimensionSchema stringDim = new StringDimensionSchema("string_dim_1", null, null);
+    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    final CompactionTask compactionTask = builder.build();
+    // A string dimension with rollup=true should need MVD info
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
+  }
+
+  @Test
+  public void testMSQRangePartitionOnStringNeedsMVDInfo()
+  {
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+    builder.inputSpec(new CompactionIntervalSpec(COMPACTION_INTERVAL, SegmentUtils.hashIds(SEGMENTS)));
+    builder.compactionRunner(new TestMSQCompactionRunner());
+
+    DimensionSchema stringDim = new StringDimensionSchema("string_dim_1", null, null);
+    builder.tuningConfig(TuningConfigBuilder.forCompactionTask()
+                                            .withForceGuaranteedRollup(true)
+                                            .withPartitionsSpec(
+                                                new DimensionRangePartitionsSpec(
+                                                    3,
+                                                    null,
+                                                    ImmutableList.of(
+                                                        stringDim.getName()),
+                                                    false
+                                                ))
+                                            .build());
+    builder.dimensionsSpec(new DimensionsSpec(ImmutableList.of(stringDim)));
+    CompactionTask compactionTask = builder.build();
+    Assert.assertTrue(compactionTask.identifyMultiValuedDimensions());
   }
 
   @Test
@@ -1597,10 +1704,10 @@ public class CompactionTaskTest
   private static List<DimensionsSpec> getExpectedDimensionsSpecForAutoGeneration()
   {
     return ImmutableList.of(
-        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double"))),
-        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double"))),
-        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double"))),
-        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double"))),
+        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
+        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
+        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
+        new DimensionsSpec(getDimensionSchema(new StringDimensionSchema("string_to_double", DimensionSchema.MultiValueHandling.ARRAY, null))),
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double"))),
         new DimensionsSpec(getDimensionSchema(new DoubleDimensionSchema("string_to_double")))
     );
@@ -1610,27 +1717,27 @@ public class CompactionTaskTest
   {
     return Lists.newArrayList(
         new LongDimensionSchema("timestamp"),
-        new StringDimensionSchema("string_dim_4"),
+        new StringDimensionSchema("string_dim_4", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_4"),
         new FloatDimensionSchema("float_dim_4"),
         new DoubleDimensionSchema("double_dim_4"),
-        new StringDimensionSchema("string_dim_0"),
+        new StringDimensionSchema("string_dim_0", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_0"),
         new FloatDimensionSchema("float_dim_0"),
         new DoubleDimensionSchema("double_dim_0"),
-        new StringDimensionSchema("string_dim_1"),
+        new StringDimensionSchema("string_dim_1", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_1"),
         new FloatDimensionSchema("float_dim_1"),
         new DoubleDimensionSchema("double_dim_1"),
-        new StringDimensionSchema("string_dim_2"),
+        new StringDimensionSchema("string_dim_2", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_2"),
         new FloatDimensionSchema("float_dim_2"),
         new DoubleDimensionSchema("double_dim_2"),
-        new StringDimensionSchema("string_dim_3"),
+        new StringDimensionSchema("string_dim_3", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_3"),
         new FloatDimensionSchema("float_dim_3"),
         new DoubleDimensionSchema("double_dim_3"),
-        new StringDimensionSchema("string_dim_5"),
+        new StringDimensionSchema("string_dim_5", DimensionSchema.MultiValueHandling.ARRAY, null),
         new LongDimensionSchema("long_dim_5"),
         new FloatDimensionSchema("float_dim_5"),
         new DoubleDimensionSchema("double_dim_5"),
@@ -1871,14 +1978,6 @@ public class CompactionTaskTest
           }
         }
 
-        final Metadata metadata = new Metadata(
-            null,
-            aggregatorFactories.toArray(new AggregatorFactory[0]),
-            null,
-            null,
-            null
-        );
-
         queryableIndexMap.put(
             entry.getValue(),
             new SimpleQueryableIndex(
@@ -1887,9 +1986,23 @@ public class CompactionTaskTest
                 null,
                 columnMap,
                 null,
-                metadata,
                 false
             )
+            {
+              @Override
+              public Metadata getMetadata()
+              {
+                return new Metadata(
+                    null,
+                    aggregatorFactories.toArray(new AggregatorFactory[0]),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+                );
+              }
+            }
         );
       }
     }
@@ -1912,10 +2025,15 @@ public class CompactionTaskTest
                 index.getBitmapFactoryForDimensions(),
                 index.getColumns(),
                 index.getFileMapper(),
-                null,
                 false
             )
-        );
+            {
+              @Override
+              public Metadata getMetadata()
+              {
+                return null;
+              }
+            });
       }
     }
 
@@ -1980,6 +2098,38 @@ public class CompactionTaskTest
       return null;
     }
 
+  }
+
+  /**
+   * A class to mimic validations with MSQCompactionRunner behaviour, since the actual class resides in the MSQ extn.
+   * Since validations just depend on the type of runner, all overrideen functions just return null.
+   */
+  private static class TestMSQCompactionRunner implements CompactionRunner
+  {
+    @Override
+    public TaskStatus runCompactionTasks(
+        CompactionTask compactionTask,
+        Map<Interval, DataSchema> intervalDataSchemaMap,
+        TaskToolbox taskToolbox
+    )
+    {
+      return null;
+    }
+
+    @Override
+    public CurrentSubTaskHolder getCurrentSubTaskHolder()
+    {
+      return null;
+    }
+
+    @Override
+    public CompactionConfigValidationResult validateCompactionTask(
+        CompactionTask compactionTask,
+        Map<Interval, DataSchema> intervalToDataSchemaMap
+    )
+    {
+      return null;
+    }
   }
 
   /**

@@ -68,13 +68,14 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
       @JsonProperty("query") WindowOperatorQuery query,
       @JsonProperty("operatorList") List<OperatorFactory> operatorFactoryList,
       @JsonProperty("stageRowSignature") RowSignature stageRowSignature,
-      @JsonProperty("maxRowsMaterializedInWindow") int maxRowsMaterializedInWindow,
-      @JsonProperty("partitionColumnNames") List<String> partitionColumnNames
+      @Deprecated @JsonProperty("maxRowsMaterializedInWindow") int maxRowsMaterializedInWindow,
+      @Deprecated @JsonProperty("partitionColumnNames") List<String> partitionColumnNames
   )
   {
     this.query = Preconditions.checkNotNull(query, "query");
     this.operatorList = Preconditions.checkNotNull(operatorFactoryList, "bad operator");
     this.stageRowSignature = Preconditions.checkNotNull(stageRowSignature, "stageSignature");
+
     this.maxRowsMaterializedInWindow = maxRowsMaterializedInWindow;
 
     if (partitionColumnNames == null) {
@@ -95,16 +96,16 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
     return operatorList;
   }
 
-  @JsonProperty("partitionColumnNames")
-  public List<String> getPartitionColumnNames()
-  {
-    return partitionColumnNames;
-  }
-
   @JsonProperty("stageRowSignature")
   public RowSignature getSignature()
   {
     return stageRowSignature;
+  }
+
+  @JsonProperty("partitionColumnNames")
+  public List<String> getPartitionColumnNames()
+  {
+    return partitionColumnNames;
   }
 
   @JsonProperty("maxRowsMaterializedInWindow")
@@ -153,6 +154,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
         readableInput -> {
           final OutputChannel outputChannel =
               outputChannels.get(readableInput.getStagePartition().getPartitionNumber());
+
           return new WindowOperatorQueryFrameProcessor(
               query,
               readableInput.getChannel(),
@@ -160,10 +162,7 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
               stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes),
               readableInput.getChannelFrameReader(),
               frameContext.jsonMapper(),
-              operatorList,
-              stageRowSignature,
-              maxRowsMaterializedInWindow,
-              partitionColumnNames
+              operatorList
           );
         }
     );
@@ -174,6 +173,11 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
     );
   }
 
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
 
   @Override
   public boolean equals(Object o)
@@ -188,13 +192,13 @@ public class WindowOperatorQueryFrameProcessorFactory extends BaseFrameProcessor
     return maxRowsMaterializedInWindow == that.maxRowsMaterializedInWindow
            && Objects.equals(query, that.query)
            && Objects.equals(operatorList, that.operatorList)
-           && Objects.equals(partitionColumnNames, that.partitionColumnNames)
-           && Objects.equals(stageRowSignature, that.stageRowSignature);
+           && Objects.equals(stageRowSignature, that.stageRowSignature)
+           && Objects.equals(partitionColumnNames, that.partitionColumnNames);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(query, operatorList, partitionColumnNames, stageRowSignature, maxRowsMaterializedInWindow);
+    return Objects.hash(query, operatorList, stageRowSignature, maxRowsMaterializedInWindow, partitionColumnNames);
   }
 }

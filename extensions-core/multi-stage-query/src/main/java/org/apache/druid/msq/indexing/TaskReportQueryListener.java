@@ -71,6 +71,7 @@ public class TaskReportQueryListener implements QueryListener
   private JsonGenerator jg;
   private long numResults;
   private MSQStatusReport statusReport;
+  private boolean resultsCurrentlyOpen;
 
   public TaskReportQueryListener(
       final MSQDestination destination,
@@ -99,6 +100,7 @@ public class TaskReportQueryListener implements QueryListener
   {
     try {
       openGenerator();
+      resultsCurrentlyOpen = true;
 
       jg.writeObjectFieldStart(FIELD_RESULTS);
       writeObjectField(FIELD_RESULTS_SIGNATURE, signature);
@@ -118,15 +120,7 @@ public class TaskReportQueryListener implements QueryListener
     try {
       JacksonUtils.writeObjectUsingSerializerProvider(jg, serializers, row);
       numResults++;
-
-      if (rowsInTaskReport == MSQDestination.UNLIMITED || numResults < rowsInTaskReport) {
-        return true;
-      } else {
-        jg.writeEndArray();
-        jg.writeBooleanField(FIELD_RESULTS_TRUNCATED, true);
-        jg.writeEndObject();
-        return false;
-      }
+      return rowsInTaskReport == MSQDestination.UNLIMITED || numResults < rowsInTaskReport;
     }
     catch (IOException e) {
       throw new RuntimeException(e);
@@ -137,6 +131,8 @@ public class TaskReportQueryListener implements QueryListener
   public void onResultsComplete()
   {
     try {
+      resultsCurrentlyOpen = false;
+
       jg.writeEndArray();
       jg.writeBooleanField(FIELD_RESULTS_TRUNCATED, false);
       jg.writeEndObject();
@@ -150,7 +146,14 @@ public class TaskReportQueryListener implements QueryListener
   public void onQueryComplete(MSQTaskReportPayload report)
   {
     try {
-      openGenerator();
+      if (resultsCurrentlyOpen) {
+        jg.writeEndArray();
+        jg.writeBooleanField(FIELD_RESULTS_TRUNCATED, true);
+        jg.writeEndObject();
+      } else {
+        openGenerator();
+      }
+
       statusReport = report.getStatus();
       writeObjectField(FIELD_STATUS, report.getStatus());
 

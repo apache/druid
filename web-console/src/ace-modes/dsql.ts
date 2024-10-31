@@ -24,8 +24,13 @@
 import type { Ace } from 'ace-builds';
 import ace from 'ace-builds/src-noconflict/ace';
 
-import * as druidKeywords from '../../lib/keywords';
-import * as druidFunctions from '../../lib/sql-docs';
+import {
+  SQL_CONSTANTS,
+  SQL_DYNAMICS,
+  SQL_EXPRESSION_PARTS,
+  SQL_KEYWORDS,
+} from '../../lib/keywords';
+import { SQL_DATA_TYPES, SQL_FUNCTIONS } from '../../lib/sql-docs';
 
 import type { ItemDescription } from './make-doc-html';
 import { makeDocHtml } from './make-doc-html';
@@ -41,20 +46,16 @@ ace.define(
 
     const SqlHighlightRules = function (this: any) {
       // Stuff like: 'with|select|from|where|and|or|group|by|order|limit|having|as|case|'
-      const keywords = druidKeywords.SQL_KEYWORDS.concat(druidKeywords.SQL_EXPRESSION_PARTS)
-        .join('|')
-        .replace(/\s/g, '|');
+      const keywords = SQL_KEYWORDS.concat(SQL_EXPRESSION_PARTS).join('|').replace(/\s/g, '|');
 
       // Stuff like: 'true|false'
-      const builtinConstants = druidKeywords.SQL_CONSTANTS.join('|');
+      const builtinConstants = SQL_CONSTANTS.join('|');
 
       // Stuff like: 'avg|count|first|last|max|min'
-      const builtinFunctions = druidKeywords.SQL_DYNAMICS.concat(
-        Object.keys(druidFunctions.SQL_FUNCTIONS),
-      ).join('|');
+      const builtinFunctions = SQL_DYNAMICS.concat(Object.keys(SQL_FUNCTIONS)).join('|');
 
       // Stuff like: 'int|numeric|decimal|date|varchar|char|bigint|float|double|bit|binary|text|set|timestamp'
-      const dataTypes = Object.keys(druidFunctions.SQL_DATA_TYPES).join('|');
+      const dataTypes = Object.keys(SQL_DATA_TYPES).join('|');
 
       const keywordMapper = this.createKeywordMapper(
         {
@@ -136,16 +137,16 @@ ace.define(
     const SqlHighlightRules = acequire('./dsql_highlight_rules').SqlHighlightRules;
 
     const completions = ([] as Ace.Completion[]).concat(
-      druidKeywords.SQL_KEYWORDS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
-      druidKeywords.SQL_EXPRESSION_PARTS.map(v => ({
+      SQL_KEYWORDS.map(v => ({ name: v, value: v, score: 0, meta: 'keyword' })),
+      SQL_EXPRESSION_PARTS.map(v => ({
         name: v,
         value: v,
         score: 0,
         meta: 'keyword',
       })),
-      druidKeywords.SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
-      druidKeywords.SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
-      Object.entries(druidFunctions.SQL_DATA_TYPES).map(([name, [runtime, description]]) => {
+      SQL_CONSTANTS.map(v => ({ name: v, value: v, score: 0, meta: 'constant' })),
+      SQL_DYNAMICS.map(v => ({ name: v, value: v, score: 0, meta: 'dynamic' })),
+      Object.entries(SQL_DATA_TYPES).map(([name, [runtime, description]]) => {
         const item: ItemDescription = {
           name,
           description,
@@ -160,7 +161,7 @@ ace.define(
           docText: description,
         };
       }),
-      Object.entries(druidFunctions.SQL_FUNCTIONS).flatMap(([name, versions]) => {
+      Object.entries(SQL_FUNCTIONS).flatMap(([name, versions]) => {
         return versions.map(([args, description]) => {
           const item = { name, description, syntax: `${name}(${args})` };
           return {
@@ -186,7 +187,10 @@ ace.define(
       this.$id = 'ace/mode/dsql';
 
       this.lineCommentStart = '--';
-      this.getCompletions = () => completions;
+      this.getCompletions = (_state: any, _session: any, _pos: any, prefix: string) => {
+        if (/^\d+$/.test(prefix)) return; // Don't start completing if the user is typing a number
+        return completions;
+      };
     };
     oop.inherits(Mode, TextMode);
 

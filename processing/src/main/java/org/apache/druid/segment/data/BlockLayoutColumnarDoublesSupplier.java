@@ -112,7 +112,7 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
     }
 
     @Override
-    public void get(final double[] out, final int start, final int length)
+    public void get(final double[] out, int offset, final int start, final int length)
     {
       // division + remainder is optimized by the compiler so keep those together
       int bufferNum = start / sizePer;
@@ -129,7 +129,7 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
         final int oldPosition = doubleBuffer.position();
         try {
           doubleBuffer.position(bufferIndex);
-          doubleBuffer.get(out, p, limit);
+          doubleBuffer.get(out, offset + p, limit);
         }
         finally {
           doubleBuffer.position(oldPosition);

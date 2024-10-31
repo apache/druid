@@ -21,20 +21,26 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 
 /**
@@ -101,17 +107,20 @@ public class ClientCompactionRunnerInfo
    * Checks if the provided compaction config is supported by MSQ. The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
+   * <li>'range' partitionsSpec with multi-valued or non-string partition dimensions.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>rollup set to false in granularitySpec when metricsSpec is specified. Null is treated as true.</li>
-   * <li>queryGranularity set to ALL in granularitySpec.</li>
-   * <li>Each metric has output column name same as the input name.</li>
+   * <li>Rollup without metricsSpec being specified or vice-versa.</li>
+   * <li>Any aggregatorFactory {@code A} s.t. {@code A != A.combiningFactory()}.</li>
    * </ul>
    */
   private static CompactionConfigValidationResult compactionConfigSupportedByMSQEngine(DataSourceCompactionConfig newConfig)
   {
     List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
     if (newConfig.getTuningConfig() != null) {
-      validationResults.add(validatePartitionsSpecForMSQ(newConfig.getTuningConfig().getPartitionsSpec()));
+      validationResults.add(validatePartitionsSpecForMSQ(
+          newConfig.getTuningConfig().getPartitionsSpec(),
+          newConfig.getDimensionsSpec() == null ? null : newConfig.getDimensionsSpec().getDimensions()
+      ));
     }
     if (newConfig.getGranularitySpec() != null) {
       validationResults.add(validateRollupForMSQ(
@@ -120,6 +129,7 @@ public class ClientCompactionRunnerInfo
       ));
     }
     validationResults.add(validateMaxNumTasksForMSQ(newConfig.getTaskContext()));
+    validationResults.add(validateMetricsSpecForMSQ(newConfig.getMetricsSpec()));
     return validationResults.stream()
                             .filter(result -> !result.isValid())
                             .findFirst()
@@ -127,10 +137,19 @@ public class ClientCompactionRunnerInfo
   }
 
   /**
-   * Validate that partitionSpec is either 'dynamic` or 'range', and if 'dynamic', ensure 'maxTotalRows' is null.
+   * Validate that partitionSpec is either 'dynamic` or 'range'. If 'dynamic', ensure 'maxTotalRows' is null. If range
+   * ensure all partition columns are of type string.
    */
-  public static CompactionConfigValidationResult validatePartitionsSpecForMSQ(PartitionsSpec partitionsSpec)
+  public static CompactionConfigValidationResult validatePartitionsSpecForMSQ(
+      @Nullable PartitionsSpec partitionsSpec,
+      @Nullable List<DimensionSchema> dimensionSchemas
+  )
   {
+    if (partitionsSpec == null) {
+      return CompactionConfigValidationResult.failure(
+          "MSQ: tuningConfig.partitionsSpec must be specified"
+      );
+    }
     if (!(partitionsSpec instanceof DimensionRangePartitionsSpec
           || partitionsSpec instanceof DynamicPartitionsSpec)) {
       return CompactionConfigValidationResult.failure(
@@ -145,20 +164,39 @@ public class ClientCompactionRunnerInfo
           "MSQ: 'maxTotalRows' not supported with 'dynamic' partitioning"
       );
     }
+    if (partitionsSpec instanceof DimensionRangePartitionsSpec && dimensionSchemas != null) {
+      Map<String, DimensionSchema> dimensionSchemaMap = dimensionSchemas.stream().collect(
+          Collectors.toMap(DimensionSchema::getName, Function.identity())
+      );
+      Optional<String> nonStringDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
+          .getPartitionDimensions()
+          .stream()
+          .filter(dim -> !ColumnType.STRING.equals(dimensionSchemaMap.get(dim).getColumnType()))
+          .findAny();
+      if (nonStringDimension.isPresent()) {
+        return CompactionConfigValidationResult.failure(
+            "MSQ: Non-string partition dimension[%s] of type[%s] not supported with 'range' partition spec",
+            nonStringDimension.get(),
+            dimensionSchemaMap.get(nonStringDimension.get()).getTypeName()
+        );
+      }
+    }
     return CompactionConfigValidationResult.success();
   }
 
   /**
-   * Validate rollup is set to false in granularitySpec when metricsSpec is specified.
+   * Validate rollup in granularitySpec is set to true iff metricsSpec is specified.
+   * If rollup set to null, all existing segments are analyzed, and it's set to true iff all segments have rollup
+   * set to true.
    */
   public static CompactionConfigValidationResult validateRollupForMSQ(
       AggregatorFactory[] metricsSpec,
       @Nullable Boolean isRollup
   )
   {
-    if (metricsSpec != null && isRollup != null && !isRollup) {
+    if ((metricsSpec != null && metricsSpec.length > 0) != Boolean.TRUE.equals(isRollup)) {
       return CompactionConfigValidationResult.failure(
-          "MSQ: 'granularitySpec.rollup' must be true if 'metricsSpec' is specified"
+          "MSQ: 'granularitySpec.rollup' must be true if and only if 'metricsSpec' is specified"
       );
     }
     return CompactionConfigValidationResult.success();
@@ -180,5 +218,24 @@ public class ClientCompactionRunnerInfo
       }
     }
     return CompactionConfigValidationResult.success();
+  }
+
+  /**
+   * Validate each metric defines some aggregatorFactory 'A' s.t. 'A = A.combiningFactory()'.
+   */
+  public static CompactionConfigValidationResult validateMetricsSpecForMSQ(AggregatorFactory[] metricsSpec)
+  {
+    if (metricsSpec == null) {
+      return CompactionConfigValidationResult.success();
+    }
+    return Arrays.stream(metricsSpec)
+                 .filter(aggregatorFactory -> !aggregatorFactory.equals(aggregatorFactory.getCombiningFactory()))
+                 .findFirst()
+                 .map(aggregatorFactory ->
+                          CompactionConfigValidationResult.failure(
+                              "MSQ: Aggregator[%s] not supported in 'metricsSpec'",
+                              aggregatorFactory.getName()
+                          )
+                 ).orElse(CompactionConfigValidationResult.success());
   }
 }

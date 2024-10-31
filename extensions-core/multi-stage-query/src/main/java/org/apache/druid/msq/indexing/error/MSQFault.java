@@ -20,6 +20,7 @@
 package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.error.DruidException;
 
 import javax.annotation.Nullable;
 
@@ -36,4 +37,17 @@ public interface MSQFault
   @Nullable
   String getErrorMessage();
 
+  /**
+   * Returns a {@link DruidException} corresponding to this fault.
+   *
+   * The default is a {@link DruidException.Category#RUNTIME_FAILURE} targeting {@link DruidException.Persona#USER}.
+   * Faults with different personas and categories should override this method.
+   */
+  default DruidException toDruidException()
+  {
+    return DruidException.forPersona(DruidException.Persona.USER)
+                         .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                         .withErrorCode(getErrorCode())
+                         .build(MSQFaultUtils.generateMessageWithErrorCode(this));
+  }
 }

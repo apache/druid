@@ -22,6 +22,8 @@ package org.apache.druid.msq.exec;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.dart.controller.http.DartSqlResource;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
@@ -42,6 +44,7 @@ public interface Controller
    * Unique task/query ID for the batch query run by this controller.
    *
    * Controller IDs must be globally unique. For tasks, this is the task ID from {@link MSQControllerTask#getId()}.
+   * For Dart, this is {@link DartSqlEngine#CTX_DART_QUERY_ID}, set by {@link DartSqlResource}.
    */
   String queryId();
 
@@ -84,7 +87,7 @@ public interface Controller
    * taskId, not by query/stage/worker, because system errors are associated
    * with a task rather than a specific query/stage/worker execution context.
    *
-   * @see ControllerClient#postWorkerError(String, MSQErrorReport)
+   * @see ControllerClient#postWorkerError(MSQErrorReport)
    */
   void workerError(MSQErrorReport errorReport);
 
@@ -120,6 +123,11 @@ public interface Controller
    * Returns the current list of worker IDs, ordered by worker number. The Nth worker has worker number N.
    */
   List<String> getWorkerIds();
+
+  /**
+   * Returns whether this controller has a worker with the given ID.
+   */
+  boolean hasWorker(String workerId);
 
   @Nullable
   TaskReport.ReportMap liveReports();

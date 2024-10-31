@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Dialog, Tab, Tabs, Tag } from '@blueprintjs/core';
+import { Button, Callout, Classes, Dialog, Tab, Tabs, TabsExpander, Tag } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
@@ -63,10 +63,11 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
   const [diffIndex, setDiffIndex] = useState(-1);
   const [historyState] = useQueryManager<string, CompactionHistoryEntry[]>({
     initQuery: datasource,
-    processQuery: async datasource => {
+    processQuery: async (datasource, cancelToken) => {
       try {
         const resp = await Api.instance.get(
           `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}/history?count=20`,
+          { cancelToken },
         );
         return resp.data;
       } catch (e) {
@@ -113,7 +114,7 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
                   }
                 />
               ))}
-              <Tabs.Expander />
+              <TabsExpander />
             </Tabs>
           ) : (
             <div>

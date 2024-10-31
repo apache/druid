@@ -26,13 +26,14 @@ import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;
+import java.util.Set;
 
 /**
  * Class representing the combined DataSchema of a set of segments, currently used only by Compaction.
  */
 public class CombinedDataSchema extends DataSchema
 {
-  private final boolean hasRolledUpSegments;
+  private final Set<String> multiValuedDimensions;
 
   public CombinedDataSchema(
       String dataSource,
@@ -41,7 +42,7 @@ public class CombinedDataSchema extends DataSchema
       AggregatorFactory[] aggregators,
       GranularitySpec granularitySpec,
       TransformSpec transformSpec,
-      @Nullable boolean hasRolledUpSegments
+      @Nullable Set<String> multiValuedDimensions
   )
   {
     super(
@@ -52,13 +53,16 @@ public class CombinedDataSchema extends DataSchema
         granularitySpec,
         transformSpec,
         null,
+        null,
         null
     );
-    this.hasRolledUpSegments = hasRolledUpSegments;
+    this.multiValuedDimensions = multiValuedDimensions;
   }
 
-  public boolean hasRolledUpSegments()
+  @Nullable
+  public Set<String> getMultiValuedDimensions()
   {
-    return hasRolledUpSegments;
+    return multiValuedDimensions;
   }
+
 }

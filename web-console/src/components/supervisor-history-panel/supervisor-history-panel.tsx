@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Tab, Tabs } from '@blueprintjs/core';
+import { Tab, Tabs, TabsExpander } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
@@ -48,9 +48,10 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
   const [diffIndex, setDiffIndex] = useState(-1);
   const [historyState] = useQueryManager<string, SupervisorHistoryEntry[]>({
     initQuery: supervisorId,
-    processQuery: async supervisorId => {
+    processQuery: async (supervisorId, cancelToken) => {
       const resp = await Api.instance.get(
         `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/history`,
+        { cancelToken },
       );
       return resp.data.map((vs: SupervisorHistoryEntry) => deepSet(vs, 'spec', cleanSpec(vs.spec)));
     },
@@ -68,7 +69,7 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
           <Tab
             id={i}
             key={i}
-            title={pastSupervisor.version}
+            data-tooltip={pastSupervisor.version}
             panelClassName="panel"
             panel={
               <ShowValue
@@ -79,7 +80,7 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
             }
           />
         ))}
-        <Tabs.Expander />
+        <TabsExpander />
       </Tabs>
       {diffIndex !== -1 && (
         <DiffDialog

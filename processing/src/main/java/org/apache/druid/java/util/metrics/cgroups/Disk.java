@@ -153,6 +153,26 @@ public class Disk
       return diskName;
     }
 
+    public void setReadCount(long readCount)
+    {
+      this.readCount = readCount;
+    }
+
+    public void setWriteCount(long writeCount)
+    {
+      this.writeCount = writeCount;
+    }
+
+    public void setReadBytes(long readBytes)
+    {
+      this.readBytes = readBytes;
+    }
+
+    public void setWriteBytes(long writeBytes)
+    {
+      this.writeBytes = writeBytes;
+    }
+
     @Override
     public boolean equals(Object o)
     {

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -54,6 +55,11 @@ public interface ColumnPartSerde
 
   interface Deserializer
   {
-    void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig);
+    void read(
+        ByteBuffer buffer,
+        ColumnBuilder builder,
+        ColumnConfig columnConfig,
+        @Nullable ColumnHolder parent
+    );
   }
 }

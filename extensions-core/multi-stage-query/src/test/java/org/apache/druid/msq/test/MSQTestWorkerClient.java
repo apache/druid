@@ -29,15 +29,18 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
   private final Map<String, Worker> inMemoryWorkers;
+  private final AtomicBoolean closed = new AtomicBoolean();
 
   public MSQTestWorkerClient(Map<String, Worker> inMemoryWorkers)
   {
@@ -54,7 +57,8 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerTaskId,
-      StageId stageId
+      StageId stageId,
+      SketchEncoding sketchEncoding
   )
   {
     return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshot(stageId));
@@ -64,7 +68,8 @@ public class MSQTestWorkerClient implements WorkerClient
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
       StageId stageId,
-      long timeChunk
+      long timeChunk,
+      SketchEncoding sketchEncoding
   )
   {
     return Futures.immediateFuture(
@@ -138,6 +143,8 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public void close()
   {
-    inMemoryWorkers.forEach((k, v) -> v.stop());
+    if (closed.compareAndSet(false, true)) {
+      inMemoryWorkers.forEach((k, v) -> v.stop());
+    }
   }
 }

@@ -32,7 +32,6 @@ import java.util.AbstractList;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.function.ToIntFunction;
 
 public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyType>
 {
@@ -126,12 +125,6 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
   public boolean isInitialized()
   {
     return initialized;
-  }
-
-  @Override
-  public ToIntFunction<KeyType> hashFunction()
-  {
-    return Groupers::hashObject;
   }
 
   @Override

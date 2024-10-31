@@ -231,8 +231,9 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     IncrementalIndex index = indexCreator.createIndex((Object) DEFAULT_AGGREGATOR_FACTORIES);
 
     populateIndex(timestamp, index);
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
-    Assert.assertEquals(2, index.size());
+    Assert.assertEquals(Arrays.asList("__time", "dim1", "dim2"), index.getDimensionNames(true));
+    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames(false));
+    Assert.assertEquals(2, index.numRows());
 
     final Iterator<Row> rows = index.iterator();
     Row row = rows.next();
@@ -286,7 +287,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(Arrays.asList("dim1", "dim2", "dim3"), index.getDimensionNames());
+    Assert.assertEquals(Arrays.asList("__time", "dim1", "dim2", "dim3"), index.getDimensionNames(true));
+    Assert.assertEquals(Arrays.asList("dim1", "dim2", "dim3"), index.getDimensionNames(false));
     Assert.assertEquals(
         Arrays.asList(
             "count",
@@ -297,7 +299,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         ),
         index.getMetricNames()
     );
-    Assert.assertEquals(2, index.size());
+    Assert.assertEquals(2, index.numRows());
 
     final Iterator<Row> rows = index.iterator();
     Row row = rows.next();
@@ -649,7 +651,8 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             .build()
     );
 
-    Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames());
+    Assert.assertEquals(Arrays.asList("__time", "dim0", "dim1"), incrementalIndex.getDimensionNames(true));
+    Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames(false));
   }
 
   @Test
@@ -684,7 +687,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(2, index.size());
+    Assert.assertEquals(2, index.numRows());
   }
 
   @Test
@@ -724,7 +727,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 4, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 4, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {
@@ -792,7 +795,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 4, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 4, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {
@@ -845,7 +848,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 2, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 2, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {
@@ -898,7 +901,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 2, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 2, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {
@@ -948,7 +951,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 2, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 2, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {
@@ -996,7 +999,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 2, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 2, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {

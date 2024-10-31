@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.SegmentSchemaMapping;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
@@ -310,15 +311,10 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   protected FingerprintGenerator fingerprintGenerator;
   protected SegmentSchemaTestUtils segmentSchemaTestUtils;
 
-  protected static class DS
-  {
-    static final String WIKI = "wiki";
-  }
-
   protected DataSegment createSegment(Interval interval, String version, ShardSpec shardSpec)
   {
     return DataSegment.builder()
-                      .dataSource(DS.WIKI)
+                      .dataSource(TestDataSource.WIKI)
                       .interval(interval)
                       .version(version)
                       .shardSpec(shardSpec)
@@ -365,7 +361,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                                                tablesConfig,
                                                mapper
                                            )
-                                           .retrieveUnusedSegments(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                                           .retrieveUnusedSegments(TestDataSource.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -384,13 +380,8 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     return derbyConnector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegmentPlus> iterator =
-                   SqlSegmentsMetadataQuery.forHandle(
-                                               handle,
-                                               derbyConnector,
-                                               tablesConfig,
-                                               mapper
-                                           )
-                                           .retrieveUnusedSegmentsPlus(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                   SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, tablesConfig, mapper)
+                                           .retrieveUnusedSegmentsPlus(TestDataSource.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
             return ImmutableList.copyOf(iterator);
           }
         }

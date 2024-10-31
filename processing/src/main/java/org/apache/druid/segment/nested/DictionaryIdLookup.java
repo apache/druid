@@ -34,6 +34,7 @@ import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -51,7 +52,7 @@ import java.util.EnumSet;
 
 /**
  * Value to dictionary id lookup, backed with memory mapped dictionaries populated lazily by the supplied
- * @link DictionaryWriter}.
+ * {@link DictionaryWriter}.
  */
 public final class DictionaryIdLookup implements Closeable
 {
@@ -97,6 +98,12 @@ public final class DictionaryIdLookup implements Closeable
     this.longDictionaryWriter = longDictionaryWriter;
     this.doubleDictionaryWriter = doubleDictionaryWriter;
     this.arrayDictionaryWriter = arrayDictionaryWriter;
+  }
+
+  public int[] getArrayValue(int id)
+  {
+    ensureArrayDictionaryLoaded();
+    return arrayDictionary.get(id - arrayOffset());
   }
 
   @Nullable
@@ -227,9 +234,9 @@ public final class DictionaryIdLookup implements Closeable
       // mapper so that we can have a mutable smoosh)
       File stringSmoosh = FileUtils.createTempDirInLocation(tempBasePath, StringUtils.urlEncode(name) + "__stringTempSmoosh");
       stringDictionaryFile = stringSmoosh.toPath();
-      final String fileName = NestedCommonFormatColumnSerializer.getInternalFileName(
+      final String fileName = ColumnSerializerUtils.getInternalFileName(
           name,
-          NestedCommonFormatColumnSerializer.STRING_DICTIONARY_FILE_NAME
+          ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
       );
 
       try (
@@ -259,7 +266,7 @@ public final class DictionaryIdLookup implements Closeable
   private void ensureLongDictionaryLoaded()
   {
     if (longDictionary == null) {
-      longDictionaryFile = makeTempFile(name + NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME);
+      longDictionaryFile = makeTempFile(name + ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
       longBuffer = mapWriter(longDictionaryFile, longDictionaryWriter);
       longDictionary = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES).get();
       // reset position
@@ -270,7 +277,7 @@ public final class DictionaryIdLookup implements Closeable
   private void ensureDoubleDictionaryLoaded()
   {
     if (doubleDictionary == null) {
-      doubleDictionaryFile = makeTempFile(name + NestedCommonFormatColumnSerializer.DOUBLE_DICTIONARY_FILE_NAME);
+      doubleDictionaryFile = makeTempFile(name + ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
       doubleBuffer = mapWriter(doubleDictionaryFile, doubleDictionaryWriter);
       doubleDictionary = FixedIndexed.read(
           doubleBuffer,
@@ -286,7 +293,7 @@ public final class DictionaryIdLookup implements Closeable
   private void ensureArrayDictionaryLoaded()
   {
     if (arrayDictionary == null && arrayDictionaryWriter != null) {
-      arrayDictionaryFile = makeTempFile(name + NestedCommonFormatColumnSerializer.ARRAY_DICTIONARY_FILE_NAME);
+      arrayDictionaryFile = makeTempFile(name + ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME);
       arrayBuffer = mapWriter(arrayDictionaryFile, arrayDictionaryWriter);
       arrayDictionary = FrontCodedIntArrayIndexed.read(arrayBuffer, ByteOrder.nativeOrder()).get();
       // reset position
@@ -399,5 +406,29 @@ public final class DictionaryIdLookup implements Closeable
         return Ints.checkedCast(numBytesWritten);
       }
     };
+  }
+
+  public int getStringCardinality()
+  {
+    ensureStringDictionaryLoaded();
+    return stringDictionary == null ? 0 : stringDictionary.size();
+  }
+
+  public int getLongCardinality()
+  {
+    ensureLongDictionaryLoaded();
+    return longDictionary == null ? 0 : longDictionary.size();
+  }
+
+  public int getDoubleCardinality()
+  {
+    ensureDoubleDictionaryLoaded();
+    return doubleDictionary == null ? 0 : doubleDictionary.size();
+  }
+
+  public int getArrayCardinality()
+  {
+    ensureArrayDictionaryLoaded();
+    return arrayDictionary == null ? 0 : arrayDictionary.size();
   }
 }

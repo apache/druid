@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.SegmentSchemaMapping;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
@@ -174,7 +175,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       pendingSegmentsForTask.add(
           new PendingSegmentRecord(
               new SegmentIdWithShardSpec(
-                  DS.WIKI,
+                  TestDataSource.WIKI,
                   Intervals.of("2023-01-01/2023-02-01"),
                   alreadyUpgradedVersion,
                   new NumberedShardSpec(i, 0)
@@ -209,7 +210,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       pendingSegmentsForTask.add(
           new PendingSegmentRecord(
               new SegmentIdWithShardSpec(
-                  DS.WIKI,
+                  TestDataSource.WIKI,
                   Intervals.of("2023-01-01/2023-02-01"),
                   alreadyUpgradedVersion,
                   new NumberedShardSpec(10 + i, 0)
@@ -243,7 +244,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       pendingSegmentsForTask.add(
           new PendingSegmentRecord(
               new SegmentIdWithShardSpec(
-                  DS.WIKI,
+                  TestDataSource.WIKI,
                   Intervals.of("2023-01-01/2023-02-01"),
                   alreadyUpgradedVersion,
                   new NumberedShardSpec(20 + i, 0)
@@ -257,7 +258,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     }
 
     derbyConnector.retryWithHandle(
-        handle -> coordinator.insertPendingSegmentsIntoMetastore(handle, pendingSegmentsForTask, DS.WIKI, false)
+        handle -> coordinator.insertPendingSegmentsIntoMetastore(handle, pendingSegmentsForTask, TestDataSource.WIKI, false)
     );
 
     final Map<DataSegment, ReplaceTaskLock> segmentToReplaceLock
@@ -272,7 +273,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Set<DataSegment> allCommittedSegments
         = new HashSet<>(retrieveUsedSegments(derbyConnectorRule.metadataTablesConfigSupplier().get()));
     Map<String, String> upgradedFromSegmentIdMap = coordinator.retrieveUpgradedFromSegmentIds(
-        DS.WIKI,
+        TestDataSource.WIKI,
         allCommittedSegments.stream().map(DataSegment::getId).map(SegmentId::toString).collect(Collectors.toSet())
     );
     // Verify the segments present in the metadata store
@@ -316,6 +317,73 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final Set<String> observedLockVersions = new HashSet<>(observedSegmentToLock.values());
     Assert.assertEquals(1, observedLockVersions.size());
     Assert.assertEquals(replaceLock.getVersion(), Iterables.getOnlyElement(observedLockVersions));
+  }
+
+  @Test
+  public void testCommitReplaceSegments_partiallyOverlappingPendingSegmentUnsupported()
+  {
+    final ReplaceTaskLock replaceLock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
+    final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
+    final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
+    final PendingSegmentRecord pendingSegmentForInterval = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec(
+            "foo",
+            Intervals.of("2023-01-01/2024-01-01"),
+            "2023-01-02",
+            new NumberedShardSpec(100, 0)
+        ),
+        "",
+        "",
+        null,
+        "append"
+    );
+    for (int i = 1; i < 9; i++) {
+      final DataSegment segment = new DataSegment(
+          "foo",
+          Intervals.of("2023-01-0" + i + "/2023-01-0" + (i + 1)),
+          "2023-01-0" + i,
+          ImmutableMap.of("path", "a-" + i),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new LinearShardSpec(0),
+          9,
+          100
+      );
+      segmentsAppendedWithReplaceLock.add(segment);
+      appendedSegmentToReplaceLockMap.put(segment, replaceLock);
+    }
+
+    segmentSchemaTestUtils.insertUsedSegments(segmentsAppendedWithReplaceLock, Collections.emptyMap());
+    derbyConnector.retryWithHandle(
+        handle -> coordinator.insertPendingSegmentsIntoMetastore(
+            handle,
+            ImmutableList.of(pendingSegmentForInterval),
+            "foo",
+            true
+        )
+    );
+    insertIntoUpgradeSegmentsTable(appendedSegmentToReplaceLockMap, derbyConnectorRule.metadataTablesConfigSupplier().get());
+
+    final Set<DataSegment> replacingSegments = new HashSet<>();
+    for (int i = 1; i < 9; i++) {
+      final DataSegment segment = new DataSegment(
+          "foo",
+          Intervals.of("2023-01-01/2023-02-01"),
+          "2023-02-01",
+          ImmutableMap.of("path", "b-" + i),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new NumberedShardSpec(i, 9),
+          9,
+          100
+      );
+      replacingSegments.add(segment);
+    }
+
+    Assert.assertFalse(
+        coordinator.commitReplaceSegments(replacingSegments, ImmutableSet.of(replaceLock), null)
+                   .isSuccess()
+    );
   }
 
   @Test
@@ -901,7 +969,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final List<Interval> intervals = segments.stream().map(DataSegment::getInterval).collect(Collectors.toList());
 
     final Collection<DataSegment> actualUsedSegments = coordinator.retrieveUsedSegmentsForIntervals(
-        DS.WIKI,
+        TestDataSource.WIKI,
         intervals,
         Segments.ONLY_VISIBLE
     );
@@ -920,7 +988,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
                               .anyMatch(segment -> !segment.getInterval().overlaps(outOfRangeInterval)));
 
     final Collection<DataSegment> actualUsedSegments = coordinator.retrieveUsedSegmentsForIntervals(
-        DS.WIKI,
+        TestDataSource.WIKI,
         ImmutableList.of(outOfRangeInterval),
         Segments.ONLY_VISIBLE
     );
@@ -934,7 +1002,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final List<DataSegment> segments = createAndGetUsedYearSegments(1900, 2133);
 
     final Collection<DataSegment> actualUsedSegments = coordinator.retrieveAllUsedSegments(
-        DS.WIKI,
+        TestDataSource.WIKI,
         Segments.ONLY_VISIBLE
     );
 
@@ -949,7 +1017,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     markAllSegmentsUnused(new HashSet<>(segments), DateTimes.nowUtc());
 
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
-        DS.WIKI,
+        TestDataSource.WIKI,
         Intervals.of("1900/3000"),
         null,
         null
@@ -967,7 +1035,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     final int requestedLimit = segments.size();
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
-        DS.WIKI,
+        TestDataSource.WIKI,
         Intervals.of("1900/3000"),
         requestedLimit,
         null
@@ -985,7 +1053,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     final int requestedLimit = segments.size() - 1;
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
-        DS.WIKI,
+        TestDataSource.WIKI,
         Intervals.of("1900/3000"),
         requestedLimit,
         null
@@ -1003,7 +1071,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     final int limit = segments.size() + 1;
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
-        DS.WIKI,
+        TestDataSource.WIKI,
         Intervals.of("1900/3000"),
         limit,
         null
@@ -1024,7 +1092,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final int limit = segments.size() + 1;
 
     final List<DataSegment> actualUnusedSegments = coordinator.retrieveUnusedSegmentsForInterval(
-        DS.WIKI,
+        TestDataSource.WIKI,
         outOfRangeInterval,
         limit,
         null
@@ -1540,7 +1608,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     for (DataSegment unusedSegment : unusedSegments) {
       Assertions.assertThat(
           coordinator.retrieveUnusedSegmentsForInterval(
-              DS.WIKI,
+              TestDataSource.WIKI,
               Intervals.of("2023-01-01/2023-01-04"),
               ImmutableList.of(unusedSegment.getVersion()),
               null,
@@ -1551,7 +1619,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Assertions.assertThat(
         coordinator.retrieveUnusedSegmentsForInterval(
-            DS.WIKI,
+            TestDataSource.WIKI,
             Intervals.of("2023-01-01/2023-01-04"),
             ImmutableList.of(v1, v2),
             null,
@@ -1561,7 +1629,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Assertions.assertThat(
         coordinator.retrieveUnusedSegmentsForInterval(
-            DS.WIKI,
+            TestDataSource.WIKI,
             Intervals.of("2023-01-01/2023-01-04"),
             null,
             null,
@@ -1571,7 +1639,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Assertions.assertThat(
         coordinator.retrieveUnusedSegmentsForInterval(
-            DS.WIKI,
+            TestDataSource.WIKI,
             Intervals.of("2023-01-01/2023-01-04"),
             ImmutableList.of("some-non-existent-version"),
               null,
@@ -3235,7 +3303,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     // Allocate and commit a data segment by appending to the same interval
     final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
-        DS.WIKI,
+        TestDataSource.WIKI,
         "seq",
         tombstoneSegment.getVersion(),
         interval,
@@ -3260,7 +3328,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     markAllSegmentsUnused(tombstones, DateTimes.nowUtc());
 
     final Collection<DataSegment> allUsedSegments = coordinator.retrieveAllUsedSegments(
-        DS.WIKI,
+        TestDataSource.WIKI,
         Segments.ONLY_VISIBLE
     );
 
@@ -3290,7 +3358,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     // Allocate and commit a data segment by appending to the same interval
     final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
-        DS.WIKI,
+        TestDataSource.WIKI,
         "seq",
         tombstoneSegment.getVersion(),
         interval,
@@ -3315,7 +3383,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     markAllSegmentsUnused(tombstones, DateTimes.nowUtc());
 
     final Collection<DataSegment> allUsedSegments = coordinator.retrieveAllUsedSegments(
-        DS.WIKI,
+        TestDataSource.WIKI,
         Segments.ONLY_VISIBLE
     );
 
@@ -3329,7 +3397,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   public void testSegmentIdShouldNotBeReallocated()
   {
     final SegmentIdWithShardSpec idWithNullTaskAllocator = coordinator.allocatePendingSegment(
-        DS.WIKI,
+        TestDataSource.WIKI,
         "seq",
         "0",
         Intervals.ETERNITY,
@@ -3345,7 +3413,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
 
     final SegmentIdWithShardSpec idWithValidTaskAllocator = coordinator.allocatePendingSegment(
-        DS.WIKI,
+        TestDataSource.WIKI,
         "seq",
         "1",
         Intervals.ETERNITY,
@@ -3363,12 +3431,12 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     // Insert pending segments
     coordinator.commitSegments(ImmutableSet.of(dataSegment0, dataSegment1), null);
     // Clean up pending segments corresponding to the valid task allocator id
-    coordinator.deletePendingSegmentsForTaskAllocatorId(DS.WIKI, "taskAllocatorId");
+    coordinator.deletePendingSegmentsForTaskAllocatorId(TestDataSource.WIKI, "taskAllocatorId");
     // Mark all segments as unused
-    coordinator.markSegmentsAsUnusedWithinInterval(DS.WIKI, Intervals.ETERNITY);
+    coordinator.markSegmentsAsUnusedWithinInterval(TestDataSource.WIKI, Intervals.ETERNITY);
 
     final SegmentIdWithShardSpec theId = coordinator.allocatePendingSegment(
-        DS.WIKI,
+        TestDataSource.WIKI,
         "seq",
         "2",
         Intervals.ETERNITY,
@@ -3406,7 +3474,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         ),
         null
     );
-    coordinator.markSegmentsAsUnusedWithinInterval(DS.WIKI, Intervals.ETERNITY);
+    coordinator.markSegmentsAsUnusedWithinInterval(TestDataSource.WIKI, Intervals.ETERNITY);
 
     DataSegment usedSegmentForExactIntervalAndVersion = createSegment(
         Intervals.of("2024/2025"),
@@ -3417,7 +3485,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
 
     List<String> unusedSegmentIdsForIntervalAndVersion =
-        coordinator.retrieveUnusedSegmentIdsForExactIntervalAndVersion(DS.WIKI, Intervals.of("2024/2025"), "v1");
+        coordinator.retrieveUnusedSegmentIdsForExactIntervalAndVersion(TestDataSource.WIKI, Intervals.of("2024/2025"), "v1");
     Assert.assertEquals(1, unusedSegmentIdsForIntervalAndVersion.size());
     Assert.assertEquals(
         unusedSegmentForExactIntervalAndVersion.getId().toString(),
