@@ -99,9 +99,11 @@ import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
+import org.junit.rules.ExternalResource;
 
 import javax.annotation.Nullable;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -111,6 +113,38 @@ import java.util.Set;
  */
 public class QueryStackTests
 {
+  public static class Junit4ConglomerateRule extends ExternalResource
+  {
+    private Closer closer;
+    private QueryRunnerFactoryConglomerate conglomerate;
+
+    @Override
+    protected void before() throws Throwable
+    {
+      closer = Closer.create();
+      conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
+    }
+
+    @Override
+    protected void after()
+    {
+      try {
+        closer.close();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      conglomerate = null;
+      closer = null;
+    }
+
+    public QueryRunnerFactoryConglomerate getConglomerate()
+    {
+      return conglomerate;
+    }
+  }
+
+
   public static final QueryScheduler DEFAULT_NOOP_SCHEDULER = new QueryScheduler(
       0,
       ManualQueryPrioritizationStrategy.INSTANCE,

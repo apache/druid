@@ -88,7 +88,6 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
 
   public QueryRunnerFactoryConglomerate conglomerate;
   public Closer resourceCloser;
-  public QueryToolChestWarehouse queryToolChestWarehouse;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -110,7 +109,6 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-    queryToolChestWarehouse = conglomerate;
   }
 
   public void setUpData() throws Exception
@@ -290,7 +288,7 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
   public QueryLifecycleFactory getQueryLifecycleFactory(QuerySegmentWalker walker)
   {
     return new QueryLifecycleFactory(
-        queryToolChestWarehouse,
+        conglomerate,
         walker,
         new DefaultGenericQueryMetricsFactory(),
         new NoopServiceEmitter(),

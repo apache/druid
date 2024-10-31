@@ -36,13 +36,11 @@ import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -56,15 +54,13 @@ import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -79,28 +75,14 @@ import java.util.concurrent.ForkJoinPool;
 public class CachingClusteredClientFunctionalityTest
 {
   private static final ObjectMapper OBJECT_MAPPER = CachingClusteredClientTestUtils.createObjectMapper();
-  private static QueryRunnerFactoryConglomerate CONGLOMERATE;
-  private static Closer RESOURCE_CLOSER;
 
   private CachingClusteredClient client;
   private VersionedIntervalTimeline<String, ServerSelector> timeline;
   private TimelineServerView serverView;
   private Cache cache;
 
-  @BeforeClass
-  public static void beforeClass() throws IOException
-  {
-    RESOURCE_CLOSER = Closer.create();
-    CONGLOMERATE = QueryStackTests.createQueryRunnerFactoryConglomerate(RESOURCE_CLOSER);
-  }
-
-  @AfterClass
-  public static void tearDownClass() throws IOException
-  {
-    RESOURCE_CLOSER.close();
-    RESOURCE_CLOSER = null;
-    CONGLOMERATE = null;
-  }
+  @ClassRule
+  public static QueryStackTests.Junit4ConglomerateRule conglomerateRule = new QueryStackTests.Junit4ConglomerateRule();
 
   @Before
   public void setUp()
@@ -249,7 +231,7 @@ public class CachingClusteredClientFunctionalityTest
   )
   {
     return new CachingClusteredClient(
-        CONGLOMERATE,
+        conglomerateRule.getConglomerate(),
         new TimelineServerView()
         {
           @Override

@@ -63,7 +63,6 @@ import org.apache.druid.java.util.common.guava.MergeIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.nary.TrinaryFn;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.Druids;
@@ -74,7 +73,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -139,16 +137,14 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -254,8 +250,9 @@ public class CachingClusteredClientTest
   private static final DateTimeZone TIMEZONE = DateTimes.inferTzFromString("America/Los_Angeles");
   private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
-  private static QueryRunnerFactoryConglomerate CONGLOMERATE;
-  private static Closer RESOURCE_CLOSER ;
+
+  @ClassRule
+  public static QueryStackTests.Junit4ConglomerateRule conglomerateRule = new QueryStackTests.Junit4ConglomerateRule();
 
   private final Random random;
 
@@ -285,21 +282,6 @@ public class CachingClusteredClientTest
           }
         }
     );
-  }
-
-  @BeforeClass
-  public static void beforeClass() throws IOException
-  {
-    RESOURCE_CLOSER = Closer.create();
-    CONGLOMERATE = QueryStackTests.createQueryRunnerFactoryConglomerate(RESOURCE_CLOSER);
-  }
-
-  @AfterClass
-  public static void tearDownClass() throws IOException
-  {
-    RESOURCE_CLOSER.close();
-    RESOURCE_CLOSER = null;
-    CONGLOMERATE = null;
   }
 
   @Before
@@ -2646,7 +2628,7 @@ public class CachingClusteredClientTest
   )
   {
     return new CachingClusteredClient(
-        CONGLOMERATE,
+        conglomerateRule.getConglomerate(),
         new TimelineServerView()
         {
           @Override

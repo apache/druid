@@ -68,7 +68,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
@@ -129,23 +128,6 @@ public class CachingClusteredClient implements QuerySegmentWalker
   private final ForkJoinPool pool;
   private final QueryScheduler scheduler;
   private final ServiceEmitter emitter;
-
-  public CachingClusteredClient(
-      QueryToolChestWarehouse warehouse,
-      TimelineServerView serverView,
-      Cache cache,
-      @Smile ObjectMapper objectMapper,
-      CachePopulator cachePopulator,
-      CacheConfig cacheConfig,
-      @Client DruidHttpClientConfig httpClientConfig,
-      BrokerParallelMergeConfig parallelMergeConfig,
-      @Merging ForkJoinPool pool,
-      QueryScheduler scheduler,
-      ServiceEmitter emitter
-  )
-  {
-    throw new RuntimeException();
-  }
 
   @Inject
   public CachingClusteredClient(
