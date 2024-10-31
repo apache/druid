@@ -32,8 +32,4 @@ public final class CachingClusteredClientTestUtils
     factory.setCodec(objectMapper);
     return objectMapper;
   }
-
-  private CachingClusteredClientTestUtils()
-  {
-  }
 }
