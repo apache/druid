@@ -152,6 +152,12 @@ public class ExternalDataSource implements DataSource
   }
 
   @Override
+  public boolean hasTimeFilter()
+  {
+    return false;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

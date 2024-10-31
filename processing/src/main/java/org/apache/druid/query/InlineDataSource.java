@@ -269,6 +269,12 @@ public class InlineDataSource implements DataSource
     return new DataSourceAnalysis(this, null, null, Collections.emptyList());
   }
 
+  @Override
+  public boolean hasTimeFilter()
+  {
+    return true;
+  }
+
   /**
    * Returns the row signature (map of column name to type) for this inline datasource. Note that types may
    * be null, meaning we know we have a column with a certain name, but we don't know what its type is.

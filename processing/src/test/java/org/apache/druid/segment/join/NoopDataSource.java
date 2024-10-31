@@ -97,4 +97,10 @@ public class NoopDataSource implements DataSource
   {
     return new DataSourceAnalysis(this, null, null, Collections.emptyList());
   }
+
+  @Override
+  public boolean hasTimeFilter()
+  {
+    return true;
+  }
 }
