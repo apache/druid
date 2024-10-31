@@ -48,6 +48,7 @@ import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryLogic;
@@ -180,12 +181,12 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, final Iterable<Interval> intervals)
   {
-    final int maxSubqueryRows = query.context().getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
-    final String maxSubqueryMemoryString = query.context()
-                                                .getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryBytes());
+    QueryContext context = query.context();
+    final int maxSubqueryRows = context.getMaxSubqueryRows(serverConfig.getMaxSubqueryRows());
+    final String maxSubqueryMemoryString = context.getMaxSubqueryMemoryBytes(serverConfig.getMaxSubqueryBytes());
     final long maxSubqueryMemory = subqueryGuardrailHelper.convertSubqueryLimitStringToLong(maxSubqueryMemoryString);
-    final boolean useNestedForUnknownTypeInSubquery = query.context()
-                                                           .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
+    final boolean useNestedForUnknownTypeInSubquery = context
+        .isUseNestedForUnknownTypeInSubquery(serverConfig.isuseNestedForUnknownTypeInSubquery());
 
     final QueryLogic queryExecutor = conglomerate.getQueryLogic(query);
     if (queryExecutor != null) {
