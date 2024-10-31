@@ -59,17 +59,11 @@ class UnionQueryRunner implements QueryRunner<Object>
 
   private QueryRunner<?> buildRunnerFor(Query<?> query)
   {
-    QueryLogic queryLogic = getQueryLogicFor(query);
-    return queryLogic.entryPoint(query, walker);
-  }
-
-  private QueryLogic getQueryLogicFor(Query<?> query)
-  {
     QueryLogic queryLogic = conglomerate.getQueryLogic(query);
     if (queryLogic != null) {
-      return queryLogic;
+      return queryLogic.entryPoint(query, walker);
     }
-    return new ToolChestBasedQueryLogic(conglomerate.getToolChest(query));
+    return new ToolChestBasedResultSerializedRunner(query, walker, conglomerate.getToolChest(query));
   }
 
   @Override
