@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.inject.Injector;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -81,6 +82,8 @@ import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNQueryRunnerFactory;
+import org.apache.druid.query.union.UnionQuery;
+import org.apache.druid.query.union.UnionQueryLogic;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestHelper;
@@ -119,7 +122,7 @@ public class QueryStackTests
     private QueryRunnerFactoryConglomerate conglomerate;
 
     @Override
-    protected void before() throws Throwable
+    protected void before()
     {
       closer = Closer.create();
       conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(closer);
@@ -340,7 +343,19 @@ public class QueryStackTests
       final TestBufferPool testBufferPool,
       final TestGroupByBuffers groupByBuffers)
   {
-    final QueryRunnerFactoryConglomerate conglomerate = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(makeDefaultQueryRunnerFactories(processingConfig, minTopNThreshold, jsonMapper, testBufferPool, groupByBuffers));
+    ImmutableMap<Class<? extends Query>, QueryRunnerFactory> factories = makeDefaultQueryRunnerFactories(
+        processingConfig, minTopNThreshold, jsonMapper, testBufferPool, groupByBuffers
+    );
+    UnionQueryLogic unionQueryLogic = new UnionQueryLogic();
+    final QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(
+        factories,
+        Maps.transformValues(factories, f -> f.getToolchest()),
+        ImmutableMap.of(
+            UnionQuery.class, unionQueryLogic
+        )
+    );
+    unionQueryLogic.initialize(conglomerate);
+
     return conglomerate;
   }
 
