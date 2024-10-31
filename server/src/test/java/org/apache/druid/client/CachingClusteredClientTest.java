@@ -116,6 +116,7 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -141,6 +142,7 @@ import org.joda.time.Period;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -252,10 +254,8 @@ public class CachingClusteredClientTest
   private static final DateTimeZone TIMEZONE = DateTimes.inferTzFromString("America/Los_Angeles");
   private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
-  private static final Pair<QueryRunnerFactoryConglomerate, Closer> WAREHOUSE_AND_CLOSER =
-      CachingClusteredClientTestUtils.createWarehouse();
-  private static final QueryRunnerFactoryConglomerate WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
-  private static final Closer RESOURCE_CLOSER = WAREHOUSE_AND_CLOSER.rhs;
+  private static QueryRunnerFactoryConglomerate CONGLOMERATE;
+  private static Closer RESOURCE_CLOSER ;
 
   private final Random random;
 
@@ -287,10 +287,19 @@ public class CachingClusteredClientTest
     );
   }
 
+  @BeforeClass
+  public static void beforeClass() throws IOException
+  {
+    RESOURCE_CLOSER = Closer.create();
+    CONGLOMERATE = QueryStackTests.createQueryRunnerFactoryConglomerate(RESOURCE_CLOSER);
+  }
+
   @AfterClass
   public static void tearDownClass() throws IOException
   {
     RESOURCE_CLOSER.close();
+    RESOURCE_CLOSER = null;
+    CONGLOMERATE = null;
   }
 
   @Before
@@ -2637,7 +2646,7 @@ public class CachingClusteredClientTest
   )
   {
     return new CachingClusteredClient(
-        WAREHOUSE,
+        CONGLOMERATE,
         new TimelineServerView()
         {
           @Override

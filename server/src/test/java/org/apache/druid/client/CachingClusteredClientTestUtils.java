@@ -22,25 +22,9 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.QueryToolChestWarehouse;
-import org.apache.druid.server.QueryStackTests;
 
 public final class CachingClusteredClientTestUtils
 {
-  /**
-   * Returns a new {@link QueryToolChestWarehouse} for unit tests and a resourceCloser which should be closed at the end
-   * of the test.
-   */
-  public static Pair<QueryRunnerFactoryConglomerate, Closer> createWarehouse()
-  {
-    final Closer resourceCloser = Closer.create();
-    QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-    return Pair.of(conglomerate, resourceCloser);
-  }
-
   public static ObjectMapper createObjectMapper()
   {
     final SmileFactory factory = new SmileFactory();
