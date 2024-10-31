@@ -25,5 +25,7 @@ public interface QueryRunnerFactoryConglomerate extends QueryToolChestWarehouse
 {
   <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query);
 
+  <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query);
+
   <T, QueryType extends Query<T>> QueryLogic getQueryLogic(QueryType query);
 }
