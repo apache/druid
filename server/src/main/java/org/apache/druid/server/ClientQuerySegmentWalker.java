@@ -231,8 +231,6 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       // Dry run didn't go well.
       throw new ISE("Cannot handle subquery structure for dataSource: %s", query.getDataSource());
     }
-    assert toolChest.canExecuteFully(query.withDataSource(inlineDryRun));
-
     // Now that we know the structure is workable, actually do the inlining (if necessary).
     AtomicLong memoryLimitAcc = new AtomicLong(0);
     DataSource maybeInlinedDataSource = inlineIfNecessary(
