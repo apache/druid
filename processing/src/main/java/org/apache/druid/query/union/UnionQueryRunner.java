@@ -27,6 +27,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.ToolChestBasedResultSerializedRunner;
 import org.apache.druid.query.context.ResponseContext;
 
 import java.util.ArrayList;

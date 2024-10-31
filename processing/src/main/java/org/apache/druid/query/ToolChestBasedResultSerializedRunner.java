@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.query.union;
+package org.apache.druid.query;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocatorFactory;
