@@ -25,6 +25,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.server.log.RequestLogger;
@@ -34,7 +35,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 @LazySingleton
 public class QueryLifecycleFactory
 {
-  private final QueryToolChestWarehouse warehouse;
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final QuerySegmentWalker texasRanger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
   private final ServiceEmitter emitter;
@@ -45,7 +46,7 @@ public class QueryLifecycleFactory
 
   @Inject
   public QueryLifecycleFactory(
-      final QueryToolChestWarehouse warehouse,
+      final QueryRunnerFactoryConglomerate conglomerate,
       final QuerySegmentWalker texasRanger,
       final GenericQueryMetricsFactory queryMetricsFactory,
       final ServiceEmitter emitter,
@@ -55,7 +56,7 @@ public class QueryLifecycleFactory
       final Supplier<DefaultQueryConfig> queryConfigSupplier
   )
   {
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.texasRanger = texasRanger;
     this.queryMetricsFactory = queryMetricsFactory;
     this.emitter = emitter;
@@ -68,7 +69,7 @@ public class QueryLifecycleFactory
   public QueryLifecycle factorize()
   {
     return new QueryLifecycle(
-        warehouse,
+        conglomerate,
         texasRanger,
         queryMetricsFactory,
         emitter,

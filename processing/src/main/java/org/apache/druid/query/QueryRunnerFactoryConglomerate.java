@@ -21,7 +21,7 @@ package org.apache.druid.query;
 
 /**
  */
-public interface QueryRunnerFactoryConglomerate extends QueryToolChestWarehouse
+public interface QueryRunnerFactoryConglomerate
 {
   <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query);
 

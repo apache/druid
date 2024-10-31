@@ -47,15 +47,16 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
 import org.apache.druid.query.context.ConcurrentResponseContext;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.utils.CloseableUtils;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -93,7 +94,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private static final Logger log = new Logger(DirectDruidClient.class);
   private static final int VAL_TO_REDUCE_REMAINING_RESPONSES = -1;
 
-  private final QueryToolChestWarehouse warehouse;
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final QueryWatcher queryWatcher;
   private final ObjectMapper objectMapper;
   private final HttpClient httpClient;
@@ -122,7 +123,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   }
 
   public DirectDruidClient(
-      QueryToolChestWarehouse warehouse,
+      QueryRunnerFactoryConglomerate conglomerate,
       QueryWatcher queryWatcher,
       ObjectMapper objectMapper,
       HttpClient httpClient,
@@ -132,7 +133,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       ScheduledExecutorService queryCancellationExecutor
   )
   {
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.queryWatcher = queryWatcher;
     this.objectMapper = objectMapper;
     this.httpClient = httpClient;
@@ -154,7 +155,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext context)
   {
     final Query<T> query = queryPlus.getQuery();
-    QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
     boolean isBySegment = query.context().isBySegment();
     final JavaType queryResultType = isBySegment ? toolChest.getBySegmentResultType() : toolChest.getBaseResultType();
 
