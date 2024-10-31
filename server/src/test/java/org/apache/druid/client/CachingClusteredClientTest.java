@@ -74,7 +74,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -252,9 +252,9 @@ public class CachingClusteredClientTest
   private static final DateTimeZone TIMEZONE = DateTimes.inferTzFromString("America/Los_Angeles");
   private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
-  private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER =
+  private static final Pair<QueryRunnerFactoryConglomerate, Closer> WAREHOUSE_AND_CLOSER =
       CachingClusteredClientTestUtils.createWarehouse();
-  private static final QueryToolChestWarehouse WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
+  private static final QueryRunnerFactoryConglomerate WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
   private static final Closer RESOURCE_CLOSER = WAREHOUSE_AND_CLOSER.rhs;
 
   private final Random random;

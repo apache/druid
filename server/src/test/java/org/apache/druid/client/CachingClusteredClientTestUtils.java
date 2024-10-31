@@ -21,29 +21,12 @@ package org.apache.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.MapQueryToolChestWarehouse;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChestWarehouse;
-import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
-import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.query.search.SearchQuery;
-import org.apache.druid.query.search.SearchQueryConfig;
-import org.apache.druid.query.search.SearchQueryQueryToolChest;
-import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
-import org.apache.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
-import org.apache.druid.query.topn.TopNQuery;
-import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.query.topn.TopNQueryQueryToolChest;
+import org.apache.druid.server.QueryStackTests;
 
 public final class CachingClusteredClientTestUtils
 {
@@ -51,37 +34,11 @@ public final class CachingClusteredClientTestUtils
    * Returns a new {@link QueryToolChestWarehouse} for unit tests and a resourceCloser which should be closed at the end
    * of the test.
    */
-  public static Pair<QueryToolChestWarehouse, Closer> createWarehouse()
+  public static Pair<QueryRunnerFactoryConglomerate, Closer> createWarehouse()
   {
     final Closer resourceCloser = Closer.create();
-    final GroupByQueryRunnerFactory groupByQueryRunnerFactory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
-        new GroupByQueryConfig(),
-        resourceCloser.register(TestGroupByBuffers.createDefault())
-    );
-    return Pair.of(
-        new MapQueryToolChestWarehouse(
-            ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-                .put(
-                    TimeseriesQuery.class,
-                    new TimeseriesQueryQueryToolChest()
-                )
-                .put(
-                    TopNQuery.class,
-                    new TopNQueryQueryToolChest(new TopNQueryConfig())
-                )
-                .put(
-                    SearchQuery.class,
-                    new SearchQueryQueryToolChest(new SearchQueryConfig())
-                )
-                .put(
-                    GroupByQuery.class,
-                    groupByQueryRunnerFactory.getToolchest()
-                )
-                .put(TimeBoundaryQuery.class, new TimeBoundaryQueryQueryToolChest())
-                .build()
-        ),
-        resourceCloser
-    );
+    QueryRunnerFactoryConglomerate conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
+    return Pair.of(conglomerate, resourceCloser);
   }
 
   public static ObjectMapper createObjectMapper()

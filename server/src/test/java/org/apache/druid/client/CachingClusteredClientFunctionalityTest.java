@@ -43,7 +43,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -78,9 +78,9 @@ import java.util.concurrent.ForkJoinPool;
 public class CachingClusteredClientFunctionalityTest
 {
   private static final ObjectMapper OBJECT_MAPPER = CachingClusteredClientTestUtils.createObjectMapper();
-  private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER =
+  private static final Pair<QueryRunnerFactoryConglomerate, Closer> WAREHOUSE_AND_CLOSER =
       CachingClusteredClientTestUtils.createWarehouse();
-  private static final QueryToolChestWarehouse WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
+  private static final QueryRunnerFactoryConglomerate WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
   private static final Closer RESOURCE_CLOSER = WAREHOUSE_AND_CLOSER.rhs;
 
   private CachingClusteredClient client;
@@ -175,7 +175,7 @@ public class CachingClusteredClientFunctionalityTest
     for (String interval : intervals) {
       expectedList.add(Intervals.of(interval));
     }
-    Assert.assertEquals((Object) expectedList, context.getUncoveredIntervals());
+    Assert.assertEquals(expectedList, context.getUncoveredIntervals());
     Assert.assertEquals(uncoveredIntervalsOverflowed, context.get(ResponseContext.Keys.UNCOVERED_INTERVALS_OVERFLOWED));
   }
 
