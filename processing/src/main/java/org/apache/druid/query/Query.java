@@ -297,7 +297,6 @@ public interface Query<T>
     return getDataSource().getAnalysis().maybeWithBaseQuery(this);
   }
 
-
   default RowSignature getResultRowSignature()
   {
     return getResultRowSignature(Finalization.UNKNOWN);

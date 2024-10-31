@@ -38,6 +38,8 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Finalization;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -76,7 +78,7 @@ public class UnionQuery implements Query<Object>
   @Override
   public DataSource getDataSource()
   {
-    throw DruidException.defensive("This is not supported");
+    throw DruidException.defensive("This is not supported. Use getDataSources instead!");
   }
 
   public List<DataSource> getDataSources()
@@ -121,7 +123,7 @@ public class UnionQuery implements Query<Object>
   @Override
   public Duration getDuration()
   {
-    throw DruidException.methodNotSupported();
+    throw methodNotSupported();
   }
 
   @Override
@@ -133,7 +135,7 @@ public class UnionQuery implements Query<Object>
   @Override
   public DateTimeZone getTimezone()
   {
-    throw DruidException.methodNotSupported();
+    throw methodNotSupported();
   }
 
   @Override
@@ -145,7 +147,7 @@ public class UnionQuery implements Query<Object>
   @Override
   public Ordering<Object> getResultOrdering()
   {
-    throw DruidException.methodNotSupported();
+    throw methodNotSupported();
   }
 
   @Override
@@ -158,7 +160,7 @@ public class UnionQuery implements Query<Object>
   @Override
   public Query<Object> withQuerySegmentSpec(QuerySegmentSpec spec)
   {
-    throw DruidException.methodNotSupported();
+    throw methodNotSupported();
   }
 
   @Override
@@ -247,7 +249,7 @@ public class UnionQuery implements Query<Object>
     @Override
     public DataSource withChildren(List<DataSource> children)
     {
-      throw DruidException.methodNotSupported();
+      throw methodNotSupported();
     }
 
     @Override
@@ -271,13 +273,13 @@ public class UnionQuery implements Query<Object>
     @Override
     public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc)
     {
-      throw DruidException.methodNotSupported();
+      throw methodNotSupported();
     }
 
     @Override
     public DataSource withUpdatedDataSource(DataSource newSource)
     {
-      throw DruidException.methodNotSupported();
+      throw methodNotSupported();
     }
 
     @Override
@@ -289,7 +291,18 @@ public class UnionQuery implements Query<Object>
     @Override
     public DataSourceAnalysis getAnalysis()
     {
-      throw DruidException.methodNotSupported();
+      throw methodNotSupported();
     }
+  }
+
+  public static DruidException methodNotSupported()
+  {
+    return DruidException.defensive("Method not supported. This method is not expected to be called!");
+  }
+
+  @Override
+  public RowSignature getResultRowSignature(Finalization finalization)
+  {
+    return queries.get(0).getResultRowSignature(finalization);
   }
 }

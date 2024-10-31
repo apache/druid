@@ -64,6 +64,9 @@ public class DefaultQueryRunnerFactoryConglomerate implements QueryRunnerFactory
   @SuppressWarnings("unchecked")
   public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
   {
+    if (getQueryLogic(query) != null) {
+      return (QueryToolChest<T, QueryType>) QueryLogicCompatToolChest.INSTANCE;
+    }
     return toolchests.get(query.getClass());
   }
 
