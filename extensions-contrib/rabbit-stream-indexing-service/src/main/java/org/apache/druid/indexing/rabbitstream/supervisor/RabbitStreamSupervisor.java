@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableSortedMap;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.common.task.Task;
@@ -48,9 +50,11 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.common.StreamPartitionLagType;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -58,14 +62,13 @@ import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
@@ -161,7 +164,13 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
       boolean includeOffsets)
   {
     RabbitStreamSupervisorIOConfig ioConfig = spec.getIoConfig();
-    Map<String, Long> partitionLag = getRecordLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
+
+    ImmutableSortedMap<DateTime, Map<String, Long>> currentPartitionLagMap = ImmutableSortedMap.copyOf(historicalPartitionLagMap);
+    DateTime latestSequenceLastUpdated = MapUtils.isNotEmpty(currentPartitionLagMap) ?
+            currentPartitionLagMap.lastEntry().getKey() : null;
+    Map<String, Long> latestPartitionLag = MapUtils.isNotEmpty(currentPartitionLagMap) ?
+            currentPartitionLagMap.lastEntry().getValue() : Collections.emptyMap();
+
     return new RabbitStreamSupervisorReportPayload(
         spec.getDataSchema().getDataSource(),
         ioConfig.getStream(),
@@ -169,9 +178,9 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
         ioConfig.getReplicas(),
         ioConfig.getTaskDuration().getMillis() / 1000,
         includeOffsets ? latestSequenceFromStream : null,
-        includeOffsets ? partitionLag : null,
-        includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
-        includeOffsets ? sequenceLastUpdated : null,
+        includeOffsets ? latestPartitionLag : null,
+        includeOffsets ? latestPartitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
+        includeOffsets ? latestSequenceLastUpdated : null,
         spec.isSuspended(),
         stateManager.isHealthy(),
         stateManager.getSupervisorState().getBasicState(),
@@ -235,7 +244,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   }
 
   @Override
-  protected Map<String, Long> getPartitionRecordLag()
+  protected Pair<StreamPartitionLagType, Map<String, Long>> getPartitionLag()
   {
     Map<String, Long> highestCurrentOffsets = getHighestCurrentOffsets();
 
@@ -250,15 +259,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
           highestCurrentOffsets.keySet());
     }
 
-    return getRecordLagPerPartitionInLatestSequences(highestCurrentOffsets);
-  }
-
-  @Nullable
-  @Override
-  protected Map<String, Long> getPartitionTimeLag()
-  {
-    // time lag not currently support with rabbit
-    return null;
+    return Pair.of(StreamPartitionLagType.RECORD_LAG, getRecordLagPerPartitionInLatestSequences(highestCurrentOffsets));
   }
 
   // suppress use of CollectionUtils.mapValues() since the valueMapper function
@@ -289,13 +290,14 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   // dependent on map key here
   @SuppressWarnings("SSBasedInspection")
   // Used while generating Supervisor lag reports per task
-  protected Map<String, Long> getRecordLagPerPartition(Map<String, Long> currentOffsets)
+  protected Pair<StreamPartitionLagType, Map<String, Long>> getLagPerPartition(Map<String, Long> currentOffsets)
   {
     if (latestSequenceFromStream == null || currentOffsets == null) {
-      return Collections.emptyMap();
+      return Pair.of(StreamPartitionLagType.RECORD_LAG, Collections.emptyMap());
     }
 
-    return currentOffsets
+    return Pair.of(StreamPartitionLagType.RECORD_LAG,
+        currentOffsets
         .entrySet()
         .stream()
         .filter(e -> latestSequenceFromStream.get(e.getKey()) != null)
@@ -304,13 +306,8 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
                 Entry::getKey,
                 e -> e.getValue() != null
                     ? latestSequenceFromStream.get(e.getKey()) + 1 - e.getValue()
-                    : 0));
-  }
-
-  @Override
-  protected Map<String, Long> getTimeLagPerPartition(Map<String, Long> currentOffsets)
-  {
-    return null;
+                    : 0))
+    );
   }
 
   @Override
@@ -358,12 +355,12 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
   @Override
   public LagStats computeLagStats()
   {
-    Map<String, Long> partitionRecordLag = getPartitionRecordLag();
-    if (partitionRecordLag == null) {
+    Pair<StreamPartitionLagType, Map<String, Long>> partitionRecordLag = getPartitionLag();
+    if (Objects.isNull(partitionRecordLag) || Objects.isNull(partitionRecordLag.rhs)) {
       return new LagStats(0, 0, 0);
     }
 
-    return computeLags(partitionRecordLag);
+    return computeLags(partitionRecordLag.rhs);
   }
 
   @Override

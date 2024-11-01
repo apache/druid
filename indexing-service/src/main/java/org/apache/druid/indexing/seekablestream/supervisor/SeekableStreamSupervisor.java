@@ -76,6 +76,7 @@ import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
 import org.apache.druid.indexing.seekablestream.common.StreamPartition;
+import org.apache.druid.indexing.seekablestream.common.StreamPartitionLagType;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Either;
@@ -114,6 +115,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -160,6 +162,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private static final long MAX_RUN_FREQUENCY_MILLIS = 1000;
   private static final long MINIMUM_FUTURE_TIMEOUT_IN_SECONDS = 120;
   private static final int MAX_INITIALIZATION_RETRIES = 20;
+
+  private static final int MAX_HISTORICAL_PARTITION_LAG_ENTRIES = 30;
 
   private static final EmittingLogger log = new EmittingLogger(SeekableStreamSupervisor.class);
 
@@ -881,6 +885,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private long lastActiveTimeMillis;
   private final IdleConfig idleConfig;
 
+  protected final SortedMap<DateTime, Map<PartitionIdType, Long>> historicalPartitionLagMap = Collections.synchronizedSortedMap(new TreeMap<>());
+
   public SeekableStreamSupervisor(
       final String supervisorId,
       final TaskStorage taskStorage,
@@ -1336,6 +1342,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             remainingSeconds = TimeUnit.MILLISECONDS.toSeconds(remainingMillis);
           }
 
+          Pair<StreamPartitionLagType, Map<PartitionIdType, Long>> pair = getLagPerPartition(currentOffsets);
+
           taskReports.add(
               new TaskReportData<>(
                   taskId,
@@ -1344,8 +1352,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                   startTime,
                   remainingSeconds,
                   TaskReportData.TaskType.ACTIVE,
-                  includeOffsets ? getRecordLagPerPartition(currentOffsets) : null,
-                  includeOffsets ? getTimeLagPerPartition(currentOffsets) : null
+                  includeOffsets ? (Objects.nonNull(pair) && pair.lhs == StreamPartitionLagType.RECORD_LAG ? pair.rhs : null) : null,
+                  includeOffsets ? (Objects.nonNull(pair) && pair.lhs == StreamPartitionLagType.TIME_LAG ? pair.rhs : null) : null
               )
           );
         }
@@ -4078,6 +4086,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         updateCurrentOffsets();
         updatePartitionLagFromStream();
         sequenceLastUpdated = DateTimes.nowUtc();
+
+        // maintain historical partition lag by timestamp version, avoid negative lag metrics
+        appendHistoricalPartitionLag();
       }
       catch (Exception e) {
         log.warn(e, "Exception while getting current/latest sequences");
@@ -4112,19 +4123,28 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     coalesceAndAwait(futures);
   }
 
+  private void appendHistoricalPartitionLag()
+  {
+    if (Objects.nonNull(sequenceLastUpdated)) {
+      Pair<StreamPartitionLagType, Map<PartitionIdType, Long>> partitionLag = getPartitionLag();
+      if (Objects.nonNull(partitionLag) && MapUtils.isNotEmpty(partitionLag.rhs)) {
+        historicalPartitionLagMap.put(sequenceLastUpdated, partitionLag.rhs);
+        while (historicalPartitionLagMap.size() > MAX_HISTORICAL_PARTITION_LAG_ENTRIES) {
+          historicalPartitionLagMap.remove(historicalPartitionLagMap.firstKey());
+        }
+      }
+    }
+  }
+
   protected abstract void updatePartitionLagFromStream();
 
   /**
    * Gets 'lag' of currently processed offset behind latest offset as a measure of difference between offsets.
-   */
-  @Nullable
-  protected abstract Map<PartitionIdType, Long> getPartitionRecordLag();
-
-  /**
    * Gets 'lag' of currently processed offset behind latest offset as a measure of the difference in time inserted.
    */
+
   @Nullable
-  protected abstract Map<PartitionIdType, Long> getPartitionTimeLag();
+  protected abstract Pair<StreamPartitionLagType, Map<PartitionIdType, Long>> getPartitionLag();
 
   /**
    * Gets highest current offsets of all the tasks (actively reading and publishing) for all partitions of the stream.
@@ -4400,11 +4420,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    *
    * @return map of partition id -> lag
    */
-  protected abstract Map<PartitionIdType, Long> getRecordLagPerPartition(
-      Map<PartitionIdType, SequenceOffsetType> currentOffsets
-  );
-
-  protected abstract Map<PartitionIdType, Long> getTimeLagPerPartition(
+  protected abstract Pair<StreamPartitionLagType, Map<PartitionIdType, Long>> getLagPerPartition(
       Map<PartitionIdType, SequenceOffsetType> currentOffsets
   );
 
@@ -4507,31 +4523,17 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       return;
     }
     try {
-      Map<PartitionIdType, Long> partitionRecordLags = getPartitionRecordLag();
-      Map<PartitionIdType, Long> partitionTimeLags = getPartitionTimeLag();
+      Pair<StreamPartitionLagType, Map<PartitionIdType, Long>> partitionLagsPair = getPartitionLag();
 
-      if (partitionRecordLags == null && partitionTimeLags == null) {
-        throw new ISE("Latest offsets have not been fetched");
+      if (Objects.isNull(partitionLagsPair) || Objects.isNull(partitionLagsPair.rhs)) {
+        log.warn("Latest offsets have not been fetched");
+        return;
       }
+
       final String type = spec.getType();
 
       BiConsumer<Map<PartitionIdType, Long>, String> emitFn = (partitionLags, suffix) -> {
         if (partitionLags == null) {
-          return;
-        }
-
-        // Try emitting lag even with stale metrics provided that none of the partitions has negative lag
-        final long staleMillis = sequenceLastUpdated == null
-            ? 0
-            : DateTimes.nowUtc().getMillis()
-              - (tuningConfig.getOffsetFetchPeriod().getMillis() + sequenceLastUpdated.getMillis());
-        if (staleMillis > 0 && partitionLags.values().stream().anyMatch(x -> x < 0)) {
-          // Log at most once every twenty supervisor runs to reduce noise in the logs
-          if ((staleMillis / getIoConfig().getPeriod().getMillis()) % 20 == 0) {
-            log.warn("Lag is negative and will not be emitted because topic offsets have become stale. "
-                     + "This will not impact data processing. "
-                     + "Offsets may become stale because of connectivity issues.");
-          }
           return;
         }
 
@@ -4574,8 +4576,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       };
 
       // this should probably really be /count or /records or something.. but keeping like this for backwards compat
-      emitFn.accept(partitionRecordLags, "");
-      emitFn.accept(partitionTimeLags, "/time");
+      if (partitionLagsPair.lhs == StreamPartitionLagType.RECORD_LAG) {
+        emitFn.accept(partitionLagsPair.rhs, "");
+      } else if (partitionLagsPair.lhs == StreamPartitionLagType.TIME_LAG) {
+        emitFn.accept(partitionLagsPair.rhs, "/time");
+      }
     }
     catch (Exception e) {
       log.warn(e, "Unable to compute lag");
