@@ -785,6 +785,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
+            null,
             null
         )
     );
@@ -845,6 +846,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             DateTimes.of("2010"),
             INPUT_FORMAT,
             "awsEndpoint",
+            null,
             null,
             null,
             null
@@ -1946,6 +1948,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             "awsEndpoint",
             null,
             null,
+            null,
             null
         ),
         context
@@ -2106,6 +2109,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             "awsEndpoint",
+            null,
             null,
             null,
             null
@@ -2307,6 +2311,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             "awsEndpoint",
+            null,
             null,
             null,
             null

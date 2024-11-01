@@ -29,6 +29,7 @@ import org.apache.druid.indexing.kinesis.KinesisRegion;
 import org.apache.druid.indexing.seekablestream.supervisor.IdleConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.autoscaler.AutoScalerConfig;
+import org.apache.druid.utils.CompressionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
 
@@ -54,6 +55,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final String awsAssumedRoleArn;
   private final String awsExternalId;
   private final boolean deaggregate;
+  private final CompressionUtils.Format compressionFormat;
 
   @JsonCreator
   public KinesisSupervisorIOConfig(
@@ -76,7 +78,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
       @Nullable @JsonProperty("autoScalerConfig") AutoScalerConfig autoScalerConfig,
-      @JsonProperty("deaggregate") @Deprecated boolean deaggregate
+      @JsonProperty("deaggregate") @Deprecated boolean deaggregate,
+      @JsonProperty("compressionFormat") CompressionUtils.Format compressionFormat
   )
   {
     super(
@@ -107,6 +110,7 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     this.awsAssumedRoleArn = awsAssumedRoleArn;
     this.awsExternalId = awsExternalId;
     this.deaggregate = deaggregate;
+    this.compressionFormat = compressionFormat;
   }
 
   @JsonProperty
@@ -151,6 +155,13 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     return deaggregate;
   }
 
+  @Nullable
+  @JsonProperty
+  public CompressionUtils.Format getCompressionFormat()
+  {
+    return compressionFormat;
+  }
+
   @Override
   public String toString()
   {
@@ -172,7 +183,8 @@ public class KinesisSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
            ", fetchDelayMillis=" + fetchDelayMillis +
            ", awsAssumedRoleArn='" + awsAssumedRoleArn + '\'' +
            ", awsExternalId='" + awsExternalId + '\'' +
-           ", deaggregate=" + deaggregate +
+           ", deaggregate=" + deaggregate + '\'' +
+           ", compressionFormat=" + compressionFormat +
            '}';
   }
 }

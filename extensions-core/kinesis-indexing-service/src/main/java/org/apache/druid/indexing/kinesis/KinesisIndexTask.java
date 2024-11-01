@@ -145,7 +145,8 @@ public class KinesisIndexTask extends SeekableStreamIndexTask<String, String, Ki
         tuningConfig.getRecordBufferFullWait(),
         maxBytesPerPoll,
         false,
-        useListShards
+        useListShards,
+        ioConfig.getCompressionFormat()
     );
   }
 

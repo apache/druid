@@ -80,7 +80,8 @@ public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
         tuningConfig.getRecordBufferFullWait(),
         tuningConfig.getMaxBytesPerPollOrDefault(),
         ioConfig.isUseEarliestSequenceNumber(),
-        tuningConfig.isUseListShards()
+        tuningConfig.isUseListShards(),
+        ioConfig.getCompressionFormat()
     );
   }
 

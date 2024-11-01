@@ -27,6 +27,7 @@ import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.utils.CompressionUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -53,6 +54,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
 
   private final String awsAssumedRoleArn;
   private final String awsExternalId;
+  private final CompressionUtils.Format compressionFormat;
 
   @JsonCreator
   public KinesisIndexTaskIOConfig(
@@ -78,7 +80,8 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       @JsonProperty("endpoint") String endpoint,
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
-      @JsonProperty("awsExternalId") String awsExternalId
+      @JsonProperty("awsExternalId") String awsExternalId,
+      @JsonProperty("compressionFormat") CompressionUtils.Format compressionFormat
   )
   {
     super(
@@ -103,6 +106,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
     this.fetchDelayMillis = fetchDelayMillis != null ? fetchDelayMillis : DEFAULT_FETCH_DELAY_MILLIS;
     this.awsAssumedRoleArn = awsAssumedRoleArn;
     this.awsExternalId = awsExternalId;
+    this.compressionFormat = compressionFormat;
   }
 
   public KinesisIndexTaskIOConfig(
@@ -117,7 +121,8 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       String endpoint,
       Integer fetchDelayMillis,
       String awsAssumedRoleArn,
-      String awsExternalId
+      String awsExternalId,
+      CompressionUtils.Format compressionFormat
   )
   {
     this(
@@ -135,7 +140,8 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
         endpoint,
         fetchDelayMillis,
         awsAssumedRoleArn,
-        awsExternalId
+        awsExternalId,
+        compressionFormat
     );
   }
 
@@ -223,6 +229,13 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
   public String getAwsExternalId()
   {
     return awsExternalId;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public CompressionUtils.Format getCompressionFormat()
+  {
+    return compressionFormat;
   }
 
   @Override
