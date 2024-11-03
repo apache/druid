@@ -47,6 +47,7 @@ import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.server.BaseQueryCountResource;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SegmentManager;
@@ -119,7 +120,7 @@ public class CliHistorical extends ServerRunnable
 
           binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.HISTORICAL));
           binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
-          binder.bind(QueryCountStatsProvider.class).to(QueryResource.class);
+          binder.bind(QueryCountStatsProvider.class).to(BaseQueryCountResource.class);
           Jerseys.addResource(binder, QueryResource.class);
           Jerseys.addResource(binder, SegmentListerResource.class);
           Jerseys.addResource(binder, HistoricalResource.class);

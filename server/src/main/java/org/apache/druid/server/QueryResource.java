@@ -48,7 +48,6 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
-import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizationUtils;
@@ -76,11 +75,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.atomic.AtomicLong;
 
 @LazySingleton
 @Path("/druid/v2/")
-public class QueryResource implements QueryCountStatsProvider
+public class QueryResource
 {
   protected static final EmittingLogger log = new EmittingLogger(QueryResource.class);
   public static final EmittingLogger NO_STACK_LOGGER = log.noStackTrace();
@@ -109,11 +107,7 @@ public class QueryResource implements QueryCountStatsProvider
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
 
-  private final AtomicLong successfulQueryCount = new AtomicLong();
-  private final AtomicLong failedQueryCount = new AtomicLong();
-  private final AtomicLong interruptedQueryCount = new AtomicLong();
-  private final AtomicLong timedOutQueryCount = new AtomicLong();
-  private final QueryResourceQueryMetricCounter counter = new QueryResourceQueryMetricCounter();
+  final BaseQueryCountResource counter;
 
   @Inject
   public QueryResource(
@@ -124,7 +118,8 @@ public class QueryResource implements QueryCountStatsProvider
       AuthConfig authConfig,
       AuthorizerMapper authorizerMapper,
       ResponseContextConfig responseContextConfig,
-      @Self DruidNode selfNode
+      @Self DruidNode selfNode,
+      final BaseQueryCountResource counter
   )
   {
     this.queryLifecycleFactory = queryLifecycleFactory;
@@ -136,6 +131,7 @@ public class QueryResource implements QueryCountStatsProvider
     this.authorizerMapper = authorizerMapper;
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
+    this.counter = counter;
   }
 
   @DELETE
@@ -256,17 +252,6 @@ public class QueryResource implements QueryCountStatsProvider
     finally {
       Thread.currentThread().setName(currThreadName);
     }
-  }
-
-  public interface QueryMetricCounter
-  {
-    void incrementSuccess();
-
-    void incrementFailed();
-
-    void incrementInterrupted();
-
-    void incrementTimedOut();
   }
 
   private Query<?> readQuery(
@@ -416,63 +401,12 @@ public class QueryResource implements QueryCountStatsProvider
     }
   }
 
-  @Override
-  public long getSuccessfulQueryCount()
-  {
-    return successfulQueryCount.get();
-  }
-
-  @Override
-  public long getFailedQueryCount()
-  {
-    return failedQueryCount.get();
-  }
-
-  @Override
-  public long getInterruptedQueryCount()
-  {
-    return interruptedQueryCount.get();
-  }
-
-  @Override
-  public long getTimedOutQueryCount()
-  {
-    return timedOutQueryCount.get();
-  }
-
   @VisibleForTesting
   public static void transferEntityTag(ResponseContext context, Response.ResponseBuilder builder)
   {
     Object entityTag = context.remove(Keys.ETAG);
     if (entityTag != null) {
       builder.header(HEADER_ETAG, entityTag);
-    }
-  }
-
-  private class QueryResourceQueryMetricCounter implements QueryMetricCounter
-  {
-    @Override
-    public void incrementSuccess()
-    {
-      successfulQueryCount.incrementAndGet();
-    }
-
-    @Override
-    public void incrementFailed()
-    {
-      failedQueryCount.incrementAndGet();
-    }
-
-    @Override
-    public void incrementInterrupted()
-    {
-      interruptedQueryCount.incrementAndGet();
-    }
-
-    @Override
-    public void incrementTimedOut()
-    {
-      timedOutQueryCount.incrementAndGet();
     }
   }
 

@@ -63,7 +63,8 @@ public class BrokerQueryResource extends QueryResource
       AuthorizerMapper authorizerMapper,
       ResponseContextConfig responseContextConfig,
       @Self DruidNode selfNode,
-      TimelineServerView brokerServerView
+      TimelineServerView brokerServerView,
+      BaseQueryCountResource counter
   )
   {
     super(
@@ -74,7 +75,9 @@ public class BrokerQueryResource extends QueryResource
         authConfig,
         authorizerMapper,
         responseContextConfig,
-        selfNode
+        selfNode,
+        counter
+
     );
     this.brokerServerView = brokerServerView;
   }

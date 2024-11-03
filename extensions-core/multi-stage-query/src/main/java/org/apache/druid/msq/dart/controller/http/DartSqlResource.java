@@ -33,6 +33,7 @@ import org.apache.druid.msq.dart.controller.DartControllerRegistry;
 import org.apache.druid.msq.dart.controller.sql.DartSqlClients;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.query.DefaultQueryConfig;
+import org.apache.druid.server.BaseQueryCountResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -98,7 +99,8 @@ public class DartSqlResource extends SqlResource
       final ServerConfig serverConfig,
       final ResponseContextConfig responseContextConfig,
       @Self final DruidNode selfNode,
-      @Dart final DefaultQueryConfig dartQueryConfig
+      @Dart final DefaultQueryConfig dartQueryConfig,
+      final BaseQueryCountResource baseQueryResource
   )
   {
     super(
@@ -108,7 +110,8 @@ public class DartSqlResource extends SqlResource
         sqlLifecycleManager,
         serverConfig,
         responseContextConfig,
-        selfNode
+        selfNode,
+        baseQueryResource
     );
     this.controllerRegistry = controllerRegistry;
     this.sqlLifecycleManager = sqlLifecycleManager;

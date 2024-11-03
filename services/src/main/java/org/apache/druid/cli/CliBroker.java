@@ -56,6 +56,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.lookup.LookupModule;
+import org.apache.druid.server.BaseQueryCountResource;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.ClientQuerySegmentWalker;
@@ -154,7 +155,7 @@ public class CliBroker extends ServerRunnable
           binder.bind(BrokerQueryResource.class).in(LazySingleton.class);
           Jerseys.addResource(binder, BrokerQueryResource.class);
           binder.bind(SubqueryGuardrailHelper.class).toProvider(SubqueryGuardrailHelperProvider.class);
-          binder.bind(QueryCountStatsProvider.class).to(BrokerQueryResource.class).in(LazySingleton.class);
+          binder.bind(QueryCountStatsProvider.class).to(BaseQueryCountResource.class).in(LazySingleton.class);
           binder.bind(SubqueryCountStatsProvider.class).toInstance(new SubqueryCountStatsProvider());
           Jerseys.addResource(binder, BrokerResource.class);
           Jerseys.addResource(binder, ClientInfoResource.class);
