@@ -54,7 +54,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
       final DateTime minimumMessageTime,
       final DateTime maximumMessageTime,
       @Nullable final InputFormat inputFormat,
-      final Duration taskDuration
+      @Nullable final Duration taskDuration // can be null for backward compabitility
   )
   {
     this.taskGroupId = taskGroupId;

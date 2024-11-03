@@ -275,13 +275,15 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     minMessageTime = ioConfig.getMinimumMessageTime();
     maxMessageTime = ioConfig.getMaximumMessageTime();
 
-    Execs.scheduledSingleThreaded("RejectionPeriodUpdater-Exec--%d")
-         .scheduleWithFixedDelay(
-             this::addTaskDurationToMinMaxTimes,
-             ioConfig.getTaskDuration().getStandardMinutes(),
-             ioConfig.getTaskDuration().getStandardMinutes(),
-             TimeUnit.MINUTES
-      );
+    if (ioConfig.getTaskDuration() != null) {
+      Execs.scheduledSingleThreaded("RejectionPeriodUpdater-Exec--%d")
+           .scheduleWithFixedDelay(
+               this::addTaskDurationToMinMaxTimes,
+               ioConfig.getTaskDuration().getStandardMinutes(),
+               ioConfig.getTaskDuration().getStandardMinutes(),
+               TimeUnit.MINUTES
+        );
+    }
     resetNextCheckpointTime();
   }
 
