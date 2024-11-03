@@ -22,6 +22,7 @@ package org.apache.druid.indexing.rabbitstream.supervisor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -50,6 +51,7 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMockSupport;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -366,4 +368,47 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
     Assert.assertEquals(30 * 60, payload.getDurationSeconds());
   }
 
+  @Test
+  public void testCreateTaskIOConfig()
+  {
+    supervisor = getSupervisor(
+        1,
+        1,
+        false,
+        "PT30M",
+        null,
+        null,
+        RabbitStreamSupervisorTest.dataSchema,
+        tuningConfig
+    );
+
+    Assert.assertEquals(supervisor.createTaskIoConfig(
+        1,
+        ImmutableMap.of(),
+        ImmutableMap.of(),
+        "test",
+        null,
+        null,
+        ImmutableSet.of(),
+        new RabbitStreamSupervisorIOConfig(
+            STREAM, // stream
+            URI, // uri
+            INPUT_FORMAT, // inputFormat
+            1, // replicas
+            1, // taskCount
+            new Period("PT30M"), // taskDuration
+            null, // consumerProperties
+            null, // autoscalerConfig
+            400L, // poll timeout
+            new Period("P1D"), // start delat
+            new Period("PT30M"), // period
+            new Period("PT30S"), // completiontimeout
+            false, // useearliest
+            null, // latemessagerejection
+            null, // early message rejection
+            null, // latemessagerejectionstartdatetime
+            1
+        )
+    ).getTaskDuration(), Duration.standardMinutes(30));
+  }
 }

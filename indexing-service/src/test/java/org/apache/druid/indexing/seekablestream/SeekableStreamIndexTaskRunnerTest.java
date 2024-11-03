@@ -49,7 +49,6 @@ import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -184,7 +183,6 @@ public class SeekableStreamIndexTaskRunnerTest
     @Nullable
     @Override
     protected TreeMap<Integer, Map> getCheckPointsFromContext(TaskToolbox toolbox, String checkpointsString)
-        throws IOException
     {
       return null;
     }
@@ -203,7 +201,6 @@ public class SeekableStreamIndexTaskRunnerTest
 
     @Override
     protected List<OrderedPartitionableRecord> getRecords(RecordSupplier recordSupplier, TaskToolbox toolbox)
-        throws Exception
     {
       return null;
     }
