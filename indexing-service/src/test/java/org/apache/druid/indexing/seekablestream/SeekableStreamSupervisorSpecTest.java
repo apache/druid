@@ -196,7 +196,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           true,
           minimumMessageTime,
           maximumMessageTime,
-          ioConfig.getInputFormat()
+          ioConfig.getInputFormat(),
+          ioConfig.getTaskDuration()
       )
       {
       };

@@ -145,7 +145,8 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         ioConfig.getEndpoint(),
         ioConfig.getFetchDelayMillis(),
         ioConfig.getAwsAssumedRoleArn(),
-        ioConfig.getAwsExternalId()
+        ioConfig.getAwsExternalId(),
+        ioConfig.getTaskDuration()
     );
   }
 

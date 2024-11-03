@@ -59,7 +59,6 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -202,7 +201,9 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
         minimumMessageTime,
         maximumMessageTime,
         ioConfig.getInputFormat(),
-        rabbitConfig.getUri());
+        rabbitConfig.getUri(),
+        ioConfig.getTaskDuration()
+    );
   }
 
   @Override

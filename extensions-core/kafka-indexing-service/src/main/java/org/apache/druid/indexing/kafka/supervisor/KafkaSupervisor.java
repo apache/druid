@@ -219,7 +219,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         maximumMessageTime,
         ioConfig.getInputFormat(),
         kafkaIoConfig.getConfigOverrides(),
-        kafkaIoConfig.isMultiTopic()
+        kafkaIoConfig.isMultiTopic(),
+        ioConfig.getTaskDuration()
     );
   }
 

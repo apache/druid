@@ -30,6 +30,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -63,7 +64,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
       @JsonProperty("configOverrides") @Nullable KafkaConfigOverrides configOverrides,
-      @JsonProperty("multiTopic") @Nullable Boolean multiTopic
+      @JsonProperty("multiTopic") @Nullable Boolean multiTopic,
+      @JsonProperty("taskDuration") Duration taskDuration
   )
   {
     super(
@@ -76,7 +78,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
         useTransaction,
         minimumMessageTime,
         maximumMessageTime,
-        inputFormat
+        inputFormat,
+        taskDuration
     );
 
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -107,7 +110,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
       DateTime minimumMessageTime,
       DateTime maximumMessageTime,
       InputFormat inputFormat,
-      KafkaConfigOverrides configOverrides
+      KafkaConfigOverrides configOverrides,
+      Duration taskDuration
   )
   {
     this(
@@ -124,7 +128,8 @@ public class KafkaIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<Kafk
         maximumMessageTime,
         inputFormat,
         configOverrides,
-        KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC
+        KafkaSupervisorIOConfig.DEFAULT_IS_MULTI_TOPIC,
+        taskDuration
     );
   }
 

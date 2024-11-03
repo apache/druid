@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
@@ -76,6 +77,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -246,6 +248,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   private final Map<PartitionIdType, Long> partitionsThroughput = new HashMap<>();
 
+  private volatile Optional<DateTime> minMessageTime;
+  private volatile Optional<DateTime> maxMessageTime;
+
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
       @Nullable final InputRowParser<ByteBuffer> parser,
@@ -267,6 +272,16 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.ingestionState = IngestionState.NOT_STARTED;
     this.lockGranularityToUse = lockGranularityToUse;
 
+    minMessageTime = ioConfig.getMinimumMessageTime();
+    maxMessageTime = ioConfig.getMaximumMessageTime();
+
+    Execs.scheduledSingleThreaded("RejectionPeriodUpdater-Exec--%d")
+         .scheduleWithFixedDelay(
+             this::addTaskDurationToMinMaxTimes,
+             ioConfig.getTaskDuration().getStandardMinutes(),
+             ioConfig.getTaskDuration().getStandardMinutes(),
+             TimeUnit.MINUTES
+      );
     resetNextCheckpointTime();
   }
 
@@ -388,7 +403,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         inputRowSchema,
         task.getDataSchema().getTransformSpec(),
         toolbox.getIndexingTmpDir(),
-        row -> row != null && task.withinMinMaxRecordTime(row),
+        row -> row != null && withinMinMaxRecordTime(row),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -2092,4 +2107,47 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   protected abstract boolean isEndOffsetExclusive();
 
   protected abstract TypeReference<List<SequenceMetadata<PartitionIdType, SequenceOffsetType>>> getSequenceMetadataTypeReference();
+
+
+  private void addTaskDurationToMinMaxTimes()
+  {
+    if (minMessageTime.isPresent()) {
+      minMessageTime = Optional.of(minMessageTime.get()
+                                                 .plusMinutes(ioConfig.getTaskDuration()
+                                                                      .toStandardMinutes()
+                                                                      .getMinutes()));
+    }
+
+    if (maxMessageTime.isPresent()) {
+      maxMessageTime = Optional.of(maxMessageTime.get()
+                                                 .plusMinutes(ioConfig.getTaskDuration()
+                                                                      .toStandardMinutes()
+                                                                      .getMinutes()));
+    }
+  }
+
+  public boolean withinMinMaxRecordTime(final InputRow row)
+  {
+    final boolean beforeMinimumMessageTime = minMessageTime.isPresent() &&
+                                             minMessageTime.get().isAfter(row.getTimestamp());
+    final boolean afterMaximumMessageTime = maxMessageTime.isPresent() &&
+                                            maxMessageTime.get().isBefore(row.getTimestamp());
+
+    if (log.isDebugEnabled()) {
+      if (beforeMinimumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
+            row.getTimestamp(),
+            ioConfig.getMinimumMessageTime().get()
+        );
+      } else if (afterMaximumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
+            row.getTimestamp(),
+            ioConfig.getMaximumMessageTime().get()
+        );
+      }
+    }
+    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
+  }
 }

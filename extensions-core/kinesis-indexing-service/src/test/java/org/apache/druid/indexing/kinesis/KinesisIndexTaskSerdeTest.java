@@ -40,6 +40,7 @@ import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -94,7 +95,8 @@ public class KinesisIndexTaskSerdeTest
       "endpoint",
       null,
       null,
-      null
+      null,
+      Duration.standardHours(2)
   );
   private static final String ACCESS_KEY = "test-access-key";
   private static final String SECRET_KEY = "test-secret-key";
