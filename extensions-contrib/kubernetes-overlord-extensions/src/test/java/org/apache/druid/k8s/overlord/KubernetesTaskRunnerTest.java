@@ -113,7 +113,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     )
     {
       @Override
-      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      protected KubernetesWorkItem joinAsync(Task task)
       {
         return tasks.computeIfAbsent(
             task.getId(),
@@ -121,7 +121,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
                 task,
                 Futures.immediateFuture(TaskStatus.success(task.getId()))
             )
-        ).getResult();
+        );
       }
     };
 
@@ -157,10 +157,9 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     )
     {
       @Override
-      protected ListenableFuture<TaskStatus> joinAsync(Task task)
+      protected KubernetesWorkItem joinAsync(Task task)
       {
-        return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, null))
-                    .getResult();
+        return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, null));
       }
     };
 
@@ -282,12 +281,12 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   {
     TaskStatus taskStatus = TaskStatus.success(task.getId());
 
-    EasyMock.expect(kubernetesPeonLifecycle.join(EasyMock.anyLong())).andReturn(taskStatus);
+    EasyMock.expect(kubernetesPeonLifecycle.join(EasyMock.anyLong(), EasyMock.anyObject())).andReturn(taskStatus);
 
     replayAll();
 
-    ListenableFuture<TaskStatus> future = runner.joinAsync(task);
-    Assert.assertEquals(taskStatus, future.get());
+    KubernetesWorkItem workItem = runner.joinAsync(task);
+    Assert.assertEquals(taskStatus, workItem.getResult().get());
 
     verifyAll();
   }
@@ -306,13 +305,13 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   @Test
   public void test_join_whenExceptionThrown_throwsRuntimeException()
   {
-    EasyMock.expect(kubernetesPeonLifecycle.join(EasyMock.anyLong())).andThrow(new IllegalStateException());
+    EasyMock.expect(kubernetesPeonLifecycle.join(EasyMock.anyLong(), EasyMock.anyObject())).andThrow(new IllegalStateException());
 
     replayAll();
 
-    ListenableFuture<TaskStatus> future = runner.joinAsync(task);
+    KubernetesWorkItem workItem = runner.joinAsync(task);
 
-    Exception e = Assert.assertThrows(ExecutionException.class, future::get);
+    Exception e = Assert.assertThrows(ExecutionException.class, () -> workItem.getResult().get());
     Assert.assertTrue(e.getCause() instanceof RuntimeException);
 
     verifyAll();

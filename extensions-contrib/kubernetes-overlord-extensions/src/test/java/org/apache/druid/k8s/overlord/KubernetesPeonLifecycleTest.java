@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -90,7 +91,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     )
     {
       @Override
-      protected synchronized TaskStatus join(long timeout)
+      protected synchronized TaskStatus join(long timeout, SettableFuture<Boolean> taskActiveStatusFuture)
       {
         return TaskStatus.success(ID);
       }
@@ -135,7 +136,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     )
     {
       @Override
-      protected synchronized TaskStatus join(long timeout)
+      protected synchronized TaskStatus join(long timeout, SettableFuture<Boolean> taskActiveStatusFuture)
       {
         return TaskStatus.success(ID);
       }
@@ -179,7 +180,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     )
     {
       @Override
-      protected synchronized TaskStatus join(long timeout)
+      protected synchronized TaskStatus join(long timeout, SettableFuture<Boolean> taskActiveStatusFuture)
       {
         return TaskStatus.success(ID);
       }
@@ -228,7 +229,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     )
     {
       @Override
-      protected synchronized TaskStatus join(long timeout)
+      protected synchronized TaskStatus join(long timeout, SettableFuture<Boolean> taskActiveStatusFuture)
       {
         throw new IllegalStateException();
       }
@@ -288,7 +289,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L);
+    TaskStatus taskStatus = peonLifecycle.join(0L, null);
 
     verifyAll();
 
@@ -342,7 +343,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L);
+    TaskStatus taskStatus = peonLifecycle.join(0L, null);
 
     verifyAll();
 
@@ -396,12 +397,12 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L);
+    TaskStatus taskStatus = peonLifecycle.join(0L, null);
 
     Assert.assertThrows(
         "Task [id] failed to join: invalid peon lifecycle state transition [STOPPED]->[PENDING]",
         IllegalStateException.class,
-        () -> peonLifecycle.join(0L)
+        () -> peonLifecycle.join(0L, null)
     );
 
     verifyAll();
@@ -448,7 +449,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L);
+    TaskStatus taskStatus = peonLifecycle.join(0L, null);
 
     verifyAll();
 
@@ -498,7 +499,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L);
+    TaskStatus taskStatus = peonLifecycle.join(0L, null);
 
     verifyAll();
 
@@ -550,7 +551,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L);
+    TaskStatus taskStatus = peonLifecycle.join(0L, null);
 
     verifyAll();
 
@@ -590,7 +591,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    Assert.assertThrows(RuntimeException.class, () -> peonLifecycle.join(0L));
+    Assert.assertThrows(RuntimeException.class, () -> peonLifecycle.join(0L, null));
 
     verifyAll();
 

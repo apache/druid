@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -35,11 +36,13 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
 {
   private final Task task;
   private KubernetesPeonLifecycle kubernetesPeonLifecycle = null;
+  private final SettableFuture<Boolean> taskActiveStatusFuture;
 
   public KubernetesWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture)
   {
     super(task.getId(), statusFuture);
     this.task = task;
+    this.taskActiveStatusFuture = SettableFuture.create();
   }
 
   protected synchronized void setKubernetesPeonLifecycle(KubernetesPeonLifecycle kubernetesPeonLifecycle)
@@ -118,5 +121,10 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   public Task getTask()
   {
     return task;
+  }
+
+  public SettableFuture<Boolean> getTaskActiveStatusFuture()
+  {
+    return taskActiveStatusFuture;
   }
 }

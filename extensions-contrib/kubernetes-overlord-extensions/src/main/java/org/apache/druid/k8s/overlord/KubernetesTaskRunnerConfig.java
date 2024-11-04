@@ -87,6 +87,12 @@ public class KubernetesTaskRunnerConfig
 
   @JsonProperty
   @NotNull
+  // how long to wait to join peon k8s jobs on startup
+  private Period taskJoinTimeout = new Period("PT1M");
+
+
+  @JsonProperty
+  @NotNull
   // how long to wait for the peon k8s job to launch
   private Period k8sjobLaunchTimeout = new Period("PT1H");
 
@@ -140,7 +146,8 @@ public class KubernetesTaskRunnerConfig
       int cpuCoreInMicro,
       Map<String, String> labels,
       Map<String, String> annotations,
-      Integer capacity
+      Integer capacity,
+      Period taskJoinTimeout
   )
   {
     this.namespace = namespace;
@@ -180,6 +187,10 @@ public class KubernetesTaskRunnerConfig
     this.k8sjobLaunchTimeout = ObjectUtils.defaultIfNull(
         k8sjobLaunchTimeout,
         this.k8sjobLaunchTimeout
+    );
+    this.taskJoinTimeout = ObjectUtils.defaultIfNull(
+        taskJoinTimeout,
+        this.taskJoinTimeout
     );
     this.peonMonitors = ObjectUtils.defaultIfNull(
         peonMonitors,
@@ -247,6 +258,11 @@ public class KubernetesTaskRunnerConfig
   {
     return maxTaskDuration;
   }
+  public Period getTaskJoinTimeout()
+  {
+    return taskJoinTimeout;
+  }
+
 
   public Period getTaskCleanupDelay()
   {
@@ -317,6 +333,7 @@ public class KubernetesTaskRunnerConfig
     private Map<String, String> labels;
     private Map<String, String> annotations;
     private Integer capacity;
+    private Period taskJoinTimeout;
 
     public Builder()
     {
@@ -425,6 +442,12 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withTaskJoinTimeout(Period taskJoinTimeout)
+    {
+      this.taskJoinTimeout = taskJoinTimeout;
+      return this;
+    }
+
     public KubernetesTaskRunnerConfig build()
     {
       return new KubernetesTaskRunnerConfig(
@@ -444,7 +467,8 @@ public class KubernetesTaskRunnerConfig
           this.cpuCoreInMicro,
           this.labels,
           this.annotations,
-          this.capacity
+          this.capacity,
+          this.taskJoinTimeout
       );
     }
   }

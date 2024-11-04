@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -72,11 +73,11 @@ public class KubernetesPeonLifecycle
 
   protected enum State
   {
-    /** Lifecycle's state before {@link #run(Job, long, long, boolean)} or {@link #join(long)} is called. */
+    /** Lifecycle's state before {@link #run(Job, long, long, boolean)} or {@link #join(long, SettableFuture)} is called. */
     NOT_STARTED,
     /** Lifecycle's state since {@link #run(Job, long, long, boolean)} is called. */
     PENDING,
-    /** Lifecycle's state since {@link #join(long)} is called. */
+    /** Lifecycle's state since {@link #join(long, SettableFuture)} is called. */
     RUNNING,
     /** Lifecycle's state since the task has completed. */
     STOPPED
@@ -89,6 +90,7 @@ public class KubernetesPeonLifecycle
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
+
   @MonotonicNonNull
   private LogWatch logWatch;
 
@@ -137,7 +139,7 @@ public class KubernetesPeonLifecycle
           TimeUnit.MILLISECONDS
       );
 
-      return join(timeout);
+      return join(timeout, null);
     }
     catch (Exception e) {
       log.info("Failed to run task: %s", taskId.getOriginalTaskId());
@@ -174,11 +176,13 @@ public class KubernetesPeonLifecycle
    * @return
    * @throws IllegalStateException
    */
-  protected synchronized TaskStatus join(long timeout) throws IllegalStateException
+  protected synchronized TaskStatus join(long timeout, SettableFuture<Boolean> taskActiveStatusFuture) throws IllegalStateException
   {
     try {
       updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
-
+      if (taskActiveStatusFuture != null) {
+        taskActiveStatusFuture.set(true);
+      }
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
           taskId,
           timeout,
@@ -189,6 +193,9 @@ public class KubernetesPeonLifecycle
     }
     finally {
       try {
+        if (taskActiveStatusFuture != null) {
+          taskActiveStatusFuture.set(false);
+        }
         saveLogs();
       }
       catch (Exception e) {
@@ -245,7 +252,10 @@ public class KubernetesPeonLifecycle
   protected TaskLocation getTaskLocation()
   {
     if (State.PENDING.equals(state.get()) || State.NOT_STARTED.equals(state.get())) {
-      log.debug("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
+      /* This should not actually ever happen because KubernetesTaskRunner.start() should not return until all running tasks
+      have already gone into State.RUNNING, so getTaskLocation should not be called.
+       */
+      log.warn("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
       return TaskLocation.unknown();
     }
 
@@ -256,6 +266,10 @@ public class KubernetesPeonLifecycle
     if (taskLocation == null) {
       Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
       if (!maybePod.isPresent()) {
+        /* Arguably we should throw a exception here but leaving it as a warn log to prevent unexpected errors.
+         If there is strange behavior during overlord restarts the operator should look for this warn log.
+        */
+        log.warn("Could not get task location from k8s.");
         return TaskLocation.unknown();
       }
 
@@ -263,6 +277,7 @@ public class KubernetesPeonLifecycle
       PodStatus podStatus = pod.getStatus();
 
       if (podStatus == null || podStatus.getPodIP() == null) {
+        log.warn("Could not get task location from k8s.");
         return TaskLocation.unknown();
       }
       taskLocation = TaskLocation.create(
