@@ -38,8 +38,11 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
+import org.apache.calcite.rel.core.TableScan;
+import org.apache.calcite.rel.hint.HintPredicate;
 import org.apache.calcite.rel.hint.HintPredicates;
 import org.apache.calcite.rel.hint.HintStrategyTable;
+import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.metadata.CachingRelMetadataProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -62,12 +65,14 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
+import org.apache.calcite.util.Util;
 
 import javax.annotation.Nullable;
 import java.io.Reader;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
  * Calcite planner. Clone of Calcite's
@@ -519,10 +524,27 @@ public class CalcitePlanner implements Planner, ViewExpander
     private static HintStrategyTable createHintStrategies()
     {
       return HintStrategyTable.builder()
-                              .hintStrategy("no_hash_join", HintPredicates.JOIN)
-                              .hintStrategy("use_hash_join", HintPredicates.JOIN)
-                              .hintStrategy("use_merge_join", HintPredicates.JOIN)
+                              .hintStrategy("broadcast", HintPredicates.JOIN)
+                              .hintStrategy("sort_merge", HintPredicates.JOIN)
+                              //.hintStrategy("sort_merge", HintPredicates.and(HintPredicates.JOIN, joinWithFixedTableName()))
                               .build();
+    }
+
+    /** Returns a {@link HintPredicate} for join with specified table references. */
+    private static HintPredicate joinWithFixedTableName()
+    {
+      return (hint, rel) -> {
+        if (!(rel instanceof LogicalJoin)) {
+          return false;
+        }
+        LogicalJoin join = (LogicalJoin) rel;
+        final List<String> tableNames = hint.listOptions;
+        final List<String> inputTables = join.getInputs().stream()
+                                             .filter(input -> input instanceof TableScan)
+                                             .map(scan -> Util.last(scan.getTable().getQualifiedName()))
+                                             .collect(Collectors.toList());
+        return tableNames.equals(inputTables);
+      };
     }
   }
 }

@@ -28,21 +28,14 @@ import java.util.Arrays;
 
 public enum JoinHint
 {
-  USE_MERGE_JOIN("use_merge_join") {
+  SORT_MERGE("sort_merge") {
     @Override
     public JoinAlgorithm getJoinAlgorithm()
     {
       return JoinAlgorithm.SORT_MERGE;
     }
   },
-  NO_HASH_JOIN("no_hash_join") {
-    @Override
-    public JoinAlgorithm getJoinAlgorithm()
-    {
-      return JoinAlgorithm.SORT_MERGE;
-    }
-  },
-  USE_HASH_JOIN("use_hash_join") {
+  BROADCAST("broadcast") {
     @Override
     public JoinAlgorithm getJoinAlgorithm()
     {

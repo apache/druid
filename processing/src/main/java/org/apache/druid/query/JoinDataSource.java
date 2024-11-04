@@ -430,8 +430,7 @@ public class JoinDataSource implements DataSource
            Objects.equals(rightPrefix, that.rightPrefix) &&
            Objects.equals(conditionAnalysis, that.conditionAnalysis) &&
            Objects.equals(leftFilter, that.leftFilter) &&
-           joinType == that.joinType &&
-           preferredJoinAlgorithm == that.preferredJoinAlgorithm;
+           joinType == that.joinType;
   }
 
   @Override
@@ -450,7 +449,6 @@ public class JoinDataSource implements DataSource
            ", condition=" + conditionAnalysis +
            ", joinType=" + joinType +
            ", leftFilter=" + leftFilter +
-           ", preferredJoinAlgorithm=" + preferredJoinAlgorithm +
            '}';
   }
 

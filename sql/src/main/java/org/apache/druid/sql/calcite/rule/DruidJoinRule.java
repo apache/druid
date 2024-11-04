@@ -49,6 +49,7 @@ import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.QueryUtils;
@@ -131,7 +132,8 @@ public class DruidJoinRule extends RelOptRule
     plannerContext.setPlanningError(conditionAnalysis.errorStr);
     final boolean isLeftDirectAccessPossible = enableLeftScanDirect && (left instanceof DruidQueryRel);
 
-    if (!QueryUtils.getJoinAlgorithm(join, plannerContext).requiresSubquery()
+    final JoinAlgorithm joinAlgorithm = QueryUtils.getJoinAlgorithm(join, plannerContext);
+    if (!joinAlgorithm.requiresSubquery()
         && left.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
         && (isLeftDirectAccessPossible || left.getPartialDruidQuery().getWhereFilter() == null)) {
       // Swap the left-side projection above the join, so the left side is a simple scan or mapping. This helps us
@@ -154,7 +156,7 @@ public class DruidJoinRule extends RelOptRule
       leftFilter = null;
     }
 
-    if (!QueryUtils.getJoinAlgorithm(join, plannerContext).requiresSubquery()
+    if (!joinAlgorithm.requiresSubquery()
         && right.getPartialDruidQuery().stage() == PartialDruidQuery.Stage.SELECT_PROJECT
         && right.getPartialDruidQuery().getWhereFilter() == null
         && !right.getPartialDruidQuery().getSelectProject().isMapping()

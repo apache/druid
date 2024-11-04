@@ -152,7 +152,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     final DruidQuery leftQuery = Preconditions.checkNotNull(leftDruidRel.toDruidQuery(false), "leftQuery");
     final RowSignature leftSignature = leftQuery.getOutputRowSignature();
     final DataSource leftDataSource;
-    if (computeLeftRequiresSubquery(getPlannerContext(), leftDruidRel)) {
+    if (computeLeftRequiresSubquery(getPlannerContext(), leftDruidRel, joinRel)) {
       leftDataSource = new QueryDataSource(leftQuery.getQuery());
       if (leftFilter != null) {
         throw new ISE("Filter on left table is supposed to be null if left child is a query source");
@@ -362,7 +362,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
       joinCost *= CostEstimates.MULTIPLIER_OUTER_QUERY;
     } else {
       // Penalize subqueries if we don't have to do them.
-      if (computeLeftRequiresSubquery(getPlannerContext(), getSomeDruidChild(left))) {
+      if (computeLeftRequiresSubquery(getPlannerContext(), getSomeDruidChild(left), joinRel)) {
         joinCost += CostEstimates.COST_SUBQUERY;
       } else {
         if (joinRel.getJoinType() == JoinRelType.INNER && plannerConfig.isComputeInnerJoinCostAsFilter()) {
@@ -402,9 +402,9 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
     }
   }
 
-  public static boolean computeLeftRequiresSubquery(final PlannerContext plannerContext, final DruidRel<?> left)
+  public static boolean computeLeftRequiresSubquery(final PlannerContext plannerContext, final DruidRel<?> left, final Join joinRel)
   {
-    if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
+    if (QueryUtils.getJoinAlgorithm(joinRel, plannerContext).requiresSubquery()) {
       return true;
     }
 
