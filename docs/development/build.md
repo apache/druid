@@ -86,6 +86,8 @@ Should you want to further speed up the build, you can enable parallel building 
 mvn clean install -Pdist -T1C -DskipTests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -Denforcer.skip=true
 ```
 
+You will expect to find your distribution tar file under the `distribution/target` directory.
+
 ## Potential issues
 
 ### Missing `pyyaml`
