@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.MSQException;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.segment.VirtualColumn;
@@ -182,12 +181,6 @@ public class QueryKitUtils
     }
 
     return builder.build();
-  }
-
-  @Nullable
-  public static VirtualColumn makeSegmentGranularityVirtualColumn(final ObjectMapper jsonMapper, final Query<?> query)
-  {
-    return makeSegmentGranularityVirtualColumn(jsonMapper, query.context());
   }
 
   /**
