@@ -1386,7 +1386,7 @@ public class SqlResourceTest extends CalciteTestBase
     validateErrorResponse(
         exception,
         "general",
-        DruidException.Persona.ADMIN,
+        DruidException.Persona.USER,
         DruidException.Category.INVALID_INPUT,
         "Query could not be planned. A possible reason is "
         + "[SQL query requires ordering a table by non-time column [[dim1]], which is not supported.]"
