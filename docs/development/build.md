@@ -29,26 +29,26 @@ For building the latest code in master, follow the latest version of this page
 [here](https://github.com/apache/druid/blob/master/docs/development/build.md):
 make sure it has `/master/` in the URL.
 
-#### Prerequisites
+## Prerequisites
 
-##### Installing Java and Maven
+### Installing Java and Maven
 
 - See our [Java documentation](../operations/java.md) for information about obtaining a supported JDK
 - [Maven version 3.x](http://maven.apache.org/download.cgi)
 
-##### Other dependencies
+### Other Dependencies
 
 - Distribution builds require Python 3.x and the `pyyaml` module.
 - Integration tests require `pyyaml` version 5.1 or later.
 
-##### Downloading the source
+## Downloading the Source Code
 
 ```bash
 git clone git@github.com:apache/druid.git
 cd druid
 ```
 
-#### Building from source
+## Building from Source
 
 The basic command to build Druid from source is:
 
@@ -56,7 +56,7 @@ The basic command to build Druid from source is:
 mvn clean install
 ```
 
-This will run static analysis, unit tests, compile classes, and package the projects into JARs. It will _not_ generate the source or binary distribution tarball.
+This will run static analysis, unit tests, compile classes, and package the projects into JARs. It will _not_ generate the source or binary distribution tarball. Take note that this build will take up to an hour to complete.
 
 In addition to the basic stages, you may also want to add the following profiles and properties:
 
@@ -72,9 +72,23 @@ Putting these together, if you wish to build the source and binary distributions
 mvn clean install -Papache-release,dist,rat -DskipTests
 ```
 
-#### Potential issues
+### Building for Development
 
-##### Missing `pyyaml`
+If you are building the project only for development, you will not need the Apache release and Apache Rat profile. 
+
+```bash
+mvn clean install -Pdist -DskipTests
+```
+
+Should you want to further speed up the build, you can enable parallel building with the `-T1C` option, and exclude some static analysis checks to further speed up the build:
+
+```bash
+mvn clean install -Pdist -T1C -DskipTests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -Denforcer.skip=true
+```
+
+## Potential issues
+
+### Missing `pyyaml`
 
 You are building Druid from source following the instructions on this page but you get
 ```
