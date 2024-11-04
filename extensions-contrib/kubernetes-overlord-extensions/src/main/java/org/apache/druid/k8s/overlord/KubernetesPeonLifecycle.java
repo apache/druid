@@ -191,17 +191,19 @@ public class KubernetesPeonLifecycle
 
       return getTaskStatus(jobResponse.getJobDuration());
     }
+    catch (Exception e) {
+      if (taskActiveStatusFuture != null) {
+        taskActiveStatusFuture.set(false);
+      }
+      throw e;
+    }
     finally {
       try {
-        if (taskActiveStatusFuture != null) {
-          taskActiveStatusFuture.set(false);
-        }
         saveLogs();
       }
       catch (Exception e) {
         log.warn(e, "Log processing failed for task [%s]", taskId);
       }
-
       stopTask();
     }
   }
