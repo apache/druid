@@ -22,11 +22,8 @@ package org.apache.druid.iceberg.input;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.java.util.common.FileUtils;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.File;
 import java.util.HashMap;
 
 public class GlueIcebergCatalogTest  {
