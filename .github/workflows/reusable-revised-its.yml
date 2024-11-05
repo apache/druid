@@ -94,7 +94,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.build_jdk }}
-          distribution: 'zulu'
+          distribution: 'temurin'
 
       - name: Restore Maven repository
         id: maven-restore

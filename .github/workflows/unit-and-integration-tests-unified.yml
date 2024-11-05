@@ -89,7 +89,7 @@ jobs:
       # different cache key since we cannot reuse it across commits.
       - uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: ${{ matrix.jdk }}
 
       # the build step produces SNAPSHOT artifacts into the local maven repository,

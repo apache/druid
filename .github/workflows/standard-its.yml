@@ -155,7 +155,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           java-version: '8'
-          distribution: 'zulu'
+          distribution: 'temurin'
 
       # the build step produces SNAPSHOT artifacts into the local maven repository,
       # we include github.sha in the cache key to make it specific to that build/jdk
