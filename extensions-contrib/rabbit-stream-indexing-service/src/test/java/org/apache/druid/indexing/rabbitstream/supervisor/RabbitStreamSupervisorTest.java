@@ -412,6 +412,6 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         )
     );
 
-    Assert.assertEquals(ioConfig.getTaskDuration(), Duration.standardMinutes(30));
+    Assert.assertEquals(Duration.standardMinutes(30), ioConfig.getTaskDuration());
   }
 }

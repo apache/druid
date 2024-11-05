@@ -45,7 +45,6 @@ public class KafkaConsumerMonitor extends AbstractMonitor
                   .put("records-consumed-total", "kafka/consumer/recordsConsumed")
                   .build();
   private static final String TOPIC_TAG = "topic";
-  private static final String DATASOURCE_TAG = "datasource";
   private static final Set<String> TOPIC_METRIC_TAGS = ImmutableSet.of("client-id", TOPIC_TAG);
 
   private final KafkaConsumer<?, ?> consumer;

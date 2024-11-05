@@ -73,7 +73,6 @@ public class KafkaRecordSupplierTest
   private static KafkaTopicPartition PARTITION_1 = new KafkaTopicPartition(false, null, 1);
 
   private static String TOPIC = "topic";
-  private static String STREAM = "stream";
   private static int TOPIC_POS_FIX = 0;
   private static TestingCluster ZK_SERVER;
   private static TestBroker KAFKA_SERVER;
