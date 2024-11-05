@@ -30,7 +30,7 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 import { ClearableInput } from '../../../../components';
 import { caseInsensitiveContains, columnToIcon, filterMap } from '../../../../utils';

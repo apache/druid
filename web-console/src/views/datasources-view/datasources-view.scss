@@ -23,25 +23,30 @@
   width: 100%;
   overflow: auto;
 
-  .clickable-cell {
-    cursor: pointer;
-  }
-
-  .ReactTable {
+  .splitter-layout {
     position: absolute;
     top: $view-control-bar-height + $standard-padding;
     bottom: 0;
     width: 100%;
+
+    & > .layout-splitter:hover {
+      background: black;
+      opacity: 0.1;
+      border-radius: 2px;
+    }
   }
 
-  &.show-segment-timeline {
-    .segment-timeline {
-      height: calc(50% - 55px);
-      margin-top: 10px;
-    }
+  .segment-timeline {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
 
-    .ReactTable {
-      top: 50%;
+  .ReactTable {
+    @include pin-full;
+
+    .clickable-cell {
+      cursor: pointer;
     }
   }
 }

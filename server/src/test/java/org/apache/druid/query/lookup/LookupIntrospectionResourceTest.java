@@ -152,7 +152,7 @@ public class LookupIntrospectionResourceTest
                                  .accept(MediaType.APPLICATION_JSON)
                                  .get(ClientResponse.class);
     String s = resp.getEntity(String.class);
-    Assert.assertEquals("[key, key2]", s);
+    Assert.assertEquals("[\"key\",\"key2\"]", s);
     Assert.assertEquals(200, resp.getStatus());
   }
 
@@ -166,7 +166,7 @@ public class LookupIntrospectionResourceTest
                                  .accept(MediaType.APPLICATION_JSON)
                                  .get(ClientResponse.class);
     String s = resp.getEntity(String.class);
-    Assert.assertEquals("[value, value2]", s);
+    Assert.assertEquals("[\"value\",\"value2\"]", s);
     Assert.assertEquals(200, resp.getStatus());
   }
 

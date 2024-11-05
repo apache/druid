@@ -17,7 +17,6 @@
  */
 
 import * as JSONBig from 'json-bigint-native';
-import React from 'react';
 
 import { shallow } from '../../utils/shallow-renderer';
 

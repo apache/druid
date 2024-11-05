@@ -320,7 +320,7 @@ export const RollupAnalysisPane = React.memo(function RollupAnalysisPane(
           />
         </p>
       )}
-      {(singleDimensionSuggestions.length || pairDimensionSuggestions.length > 0) && (
+      {(!!singleDimensionSuggestions.length || pairDimensionSuggestions.length > 0) && (
         <>
           <p>Poor rollup is caused by:</p>
           <p>

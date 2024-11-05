@@ -20,7 +20,7 @@ import { IconNames } from '@blueprintjs/icons';
 import { C, F, L, SqlCase } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
@@ -407,6 +407,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
           replaceMerge: ['legend', 'series'],
         },
       );
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sourceDataState.data, snappyHighlight]);
 
     useEffect(() => {

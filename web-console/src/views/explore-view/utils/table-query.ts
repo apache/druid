@@ -199,6 +199,7 @@ interface DecodedOrderBy {
   orderedCompareDuration?: string;
   orderedCompareType?: CompareType;
 }
+
 function decodeTableOrderBy(
   orderBy: SqlOrderByExpression | undefined,
   hasCompare: boolean,
@@ -216,8 +217,8 @@ function decodeTableOrderBy(
   let orderedCompareDuration: Compare | undefined;
   let orderedCompareType: CompareType | undefined;
 
-  const m = orderByColumnName.match(
-    /^(.+):compare:(P[^:]+):(value|delta|absDelta|percent|absPercent)$/,
+  const m = /^(.+):compare:(P[^:]+):(value|delta|absDelta|percent|absPercent)$/.exec(
+    orderByColumnName,
   );
   if (m) {
     if (!hasCompare) return;
@@ -471,6 +472,7 @@ interface MakeNonCompareTableQueryAndHintsOptions {
 
   orderBy: SqlOrderByExpression | undefined;
 }
+
 function makeNonCompareTableQueryAndHints(
   options: MakeNonCompareTableQueryAndHintsOptions,
 ): QueryAndHints {
@@ -666,7 +668,7 @@ function makeJoinCompareTableQueryAndHints(
           : q
               .applyIf(orderByCompareDuration, q =>
                 q.changeOrderByExpression(
-                  decodedOrderBy!.orderedMeasure!.expression.toOrderByExpression('DESC'),
+                  decodedOrderBy.orderedMeasure!.expression.toOrderByExpression('DESC'),
                 ),
               )
               .changeLimitValue(safeSubQueryLimit),
@@ -699,7 +701,7 @@ function makeJoinCompareTableQueryAndHints(
               q =>
                 q
                   .changeOrderByExpression(
-                    effectiveOrderBy.changeExpression(C(decodedOrderBy!.orderedMeasure!.name)),
+                    effectiveOrderBy.changeExpression(C(decodedOrderBy.orderedMeasure!.name)),
                   )
                   .changeLimitValue(maxRows),
               q =>
@@ -714,7 +716,7 @@ function makeJoinCompareTableQueryAndHints(
                     )
                   : q
                       .changeOrderByExpression(
-                        C(decodedOrderBy!.orderedThing.name).toOrderByExpression('DESC'),
+                        C(decodedOrderBy.orderedThing.name).toOrderByExpression('DESC'),
                       )
                       .changeLimitValue(safeSubQueryLimit),
             ),

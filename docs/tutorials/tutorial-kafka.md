@@ -129,16 +129,7 @@ To use the console data loader:
 
    ![Data loader schema](../assets/tutorial-kafka-data-loader-05.png "Data loader schema")
 
-7. In the **Configure schema** step, you can select data types for the columns and configure [dimensions](../ingestion/schema-model.md#dimensions) and [metrics](../ingestion/schema-model.md#metrics) to ingest into Druid. The console does most of this for you, but you need to create JSON-type dimensions for the three nested columns in the data. 
-
-    Click **Add dimension** and enter the following information. You can only add one dimension at a time.
-    - Name: `event`, Type: `json`
-    - Name: `agent`, Type: `json`
-    - Name: `geo_ip`, Type: `json`
-  
-    After you create the dimensions, you can scroll to the right in the preview window to see the nested columns:
-
-    ![Nested columns schema](../assets/tutorial-kafka-data-loader-05b.png "Nested columns schema")
+7. In the **Configure schema** step, you can select data types for the columns and configure [dimensions](../ingestion/schema-model.md#dimensions) and [metrics](../ingestion/schema-model.md#metrics) to ingest into Druid. The console does most of this for you. Notice that the dimensions `event`, `agent` and `geo_ip` are of the type `json`. 
 
 8.  Click **Next: Partition** to configure how Druid partitions the data into segments.
 

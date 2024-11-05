@@ -51,6 +51,7 @@ export * from './segment-timeline/segment-timeline';
 export * from './show-json/show-json';
 export * from './show-log/show-log';
 export * from './show-value/show-value';
+export * from './splitter-layout/splitter-layout';
 export * from './suggestion-menu/suggestion-menu';
 export * from './supervisor-history-panel/supervisor-history-panel';
 export * from './table-cell/table-cell';
