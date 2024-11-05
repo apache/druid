@@ -1065,7 +1065,7 @@ The following is a sample spec for a S3 warehouse source:
 
 ### Catalog Object
 
-The catalog object supports `rest`, `hive` and `local` catalog types.
+The catalog object supports `rest`, `hive`, `glue` and `local` catalog types.
 
 The following table lists the properties of a `local` catalog:
 
@@ -1093,6 +1093,32 @@ The following table lists the properties of a `rest` catalog:
 |type|Set this value to `rest`.|None|yes|
 |catalogUri|The URI associated with the catalog's HTTP endpoint.|None|yes|
 |catalogProperties|Map of any additional properties that needs to be attached to the catalog.|None|no|
+
+The following table lists the properties of a `glue` catalog:
+
+|Property| Description                                                                                                                                          |Default| Required |
+|--------|------------------------------------------------------------------------------------------------------------------------------------------------------|-------|----------|
+|type| Set this value to `glue`.                                                                                                                            |None| yes      |
+|catalogProperties| Map of any additional properties that needs to be attached to the catalog. This expects all the config as per [Iceberg Catalog configuration docs](https://iceberg.apache.org/docs/latest/configuration/#catalog-properties) |None| Yes      |
+
+Sample: 
+
+```angular2html
+...
+"icebergCatalog":
+{ 
+    "type" : "glue", 
+    "catalogName": "some_catalog_name",
+    "catalogProperties" :
+    {
+        "type" : "glue",
+        "warehouse": "s3a://bucket/warehouse",
+        "io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
+    }
+}
+..
+```
+
 
 ### Iceberg filter object
 
