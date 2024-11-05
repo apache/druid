@@ -155,10 +155,6 @@
           <artifactId>guava</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>org.apache.avro</groupId>
-          <artifactId>avro</artifactId>
-        </exclusion>
-        <exclusion>
           <groupId>net.java.dev.jets3t</groupId>
           <artifactId>jets3t</artifactId>
         </exclusion>
@@ -283,12 +279,6 @@
       <artifactId>glue</artifactId>
       <version>${awssdk.version}</version>
     </dependency>
-    <!--  org/apache/avro/LogicalType load-->
-    <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro</artifactId>
-      <version>1.11.1</version> </dependency>
-
     <dependency>
       <groupId>org.apache.hive</groupId>
       <artifactId>hive-metastore</artifactId>
