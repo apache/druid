@@ -56,7 +56,7 @@ The basic command to build Druid from source is:
 mvn clean install
 ```
 
-This will run static analysis, unit tests, compile classes, and package the projects into JARs. It will _not_ generate the source or binary distribution tarball. Take note that this build will take up to an hour to complete.
+This will run static analysis, unit tests, compile classes, and package the projects into JARs. It will _not_ generate the source or binary distribution tarball. Note that this build may take some time to complete.
 
 In addition to the basic stages, you may also want to add the following profiles and properties:
 
