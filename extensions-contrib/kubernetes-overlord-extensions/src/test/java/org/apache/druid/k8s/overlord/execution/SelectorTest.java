@@ -30,11 +30,68 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 public class SelectorTest
 {
+  @Test
+  public void shouldReturnTrueWhenMatchTasksTagsAndEmptyDataSource()
+  {
+    Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
+    cxtTagsConditions.put("tag1", Sets.newHashSet("tag1Value"));
+
+    Task task = NoopTask.create();
+    task.addToContext(DruidMetrics.TAGS, ImmutableMap.of("tag1", "tag1Value"));
+
+    Selector selector = new Selector(
+        "TestSelector",
+        cxtTagsConditions,
+        Sets.newHashSet(NoopTask.TYPE),
+        new HashSet<>()
+    );
+
+    Assert.assertTrue(selector.evaluate(task));
+  }
+
+  @Test
+  public void shouldReturnTrueWhenMatchDataSourceTagsAndEmptyTasks()
+  {
+    String datasource = "table";
+    Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
+    cxtTagsConditions.put("tag1", Sets.newHashSet("tag1Value"));
+
+    Task task = NoopTask.forDatasource(datasource);
+    task.addToContext(DruidMetrics.TAGS, ImmutableMap.of("tag1", "tag1Value"));
+
+    Selector selector = new Selector(
+        "TestSelector",
+        cxtTagsConditions,
+        new HashSet<>(),
+        Sets.newHashSet(datasource)
+    );
+
+    Assert.assertTrue(selector.evaluate(task));
+  }
+
+  @Test
+  public void shouldReturnTrueWhenMatchDataSourceTasksAndEmptyTags()
+  {
+    String datasource = "table";
+    Map<String, Set<String>> cxtTagsConditions = new HashMap<>();
+
+    Task task = NoopTask.forDatasource(datasource);
+
+    Selector selector = new Selector(
+        "TestSelector",
+        cxtTagsConditions,
+        Sets.newHashSet(NoopTask.TYPE),
+        Sets.newHashSet(datasource)
+    );
+
+    Assert.assertTrue(selector.evaluate(task));
+  }
 
   @Test
   public void shouldReturnTrueWhenAllTagsAndTasksMatch()
