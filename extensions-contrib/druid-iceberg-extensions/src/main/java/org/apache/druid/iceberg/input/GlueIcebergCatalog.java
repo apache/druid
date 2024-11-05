@@ -32,7 +32,10 @@ import org.apache.iceberg.CatalogProperties;
 import org.apache.iceberg.CatalogUtil;
 import org.apache.iceberg.catalog.Catalog;
 import org.apache.iceberg.aws.glue.GlueCatalog;
+import org.apache.iceberg.util.PropertyUtil;
+
 import javax.annotation.Nullable;
+import java.util.Locale;
 import java.util.Map;
 
 public class GlueIcebergCatalog extends IcebergCatalog {
@@ -85,6 +88,7 @@ public class GlueIcebergCatalog extends IcebergCatalog {
 
     private Catalog setupGlueCatalog() {
         // We are not passing any hadoop config, third parameter is null
+        catalogProperties.put("type", TYPE_KEY);
         catalog = CatalogUtil.buildIcebergCatalog(CATALOG_NAME, catalogProperties, null);
         return catalog;
     }
