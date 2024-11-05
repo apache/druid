@@ -22,6 +22,7 @@ package org.apache.druid.iceberg.input;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
+
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -29,11 +30,13 @@ import org.junit.Test;
 /**
  * Test cases for GlueCatalog Iceberg extension.
  * */
-public class GlueIcebergCatalogTest {
+public class GlueIcebergCatalogTest
+{
   private final ObjectMapper mapper = new DefaultObjectMapper();
 
   @Test
-  public void testCatalogCreate() {
+  public void testCatalogCreate()
+  {
     GlueIcebergCatalog glueCatalog = new GlueIcebergCatalog(
         new HashMap<>(),
         true,
@@ -43,7 +46,8 @@ public class GlueIcebergCatalogTest {
   }
 
   @Test
-  public void testIsCaseSensitive() {
+  public void testIsCaseSensitive()
+  {
     GlueIcebergCatalog glueCatalog = new GlueIcebergCatalog(
         new HashMap<>(),
         true,
