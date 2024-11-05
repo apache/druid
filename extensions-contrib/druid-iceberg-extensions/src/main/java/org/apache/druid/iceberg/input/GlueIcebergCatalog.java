@@ -23,15 +23,14 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.utils.DynamicConfigProviderUtils;
+import org.apache.iceberg.CatalogUtil;
+import org.apache.iceberg.catalog.Catalog;
 
 import javax.annotation.Nullable;
 import java.util.Map;
-
-import org.apache.druid.utils.DynamicConfigProviderUtils;
-import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.iceberg.CatalogUtil;
-import org.apache.iceberg.catalog.Catalog;
-import org.apache.druid.guice.annotations.Json;
 
 /**
  * Glue specific implementation of iceberg catalog.

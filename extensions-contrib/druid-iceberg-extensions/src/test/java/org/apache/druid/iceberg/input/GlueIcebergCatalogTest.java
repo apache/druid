@@ -21,11 +21,11 @@ package org.apache.druid.iceberg.input;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.util.HashMap;
-
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.HashMap;
 
 /**
  * Test cases for GlueCatalog Iceberg extension.
