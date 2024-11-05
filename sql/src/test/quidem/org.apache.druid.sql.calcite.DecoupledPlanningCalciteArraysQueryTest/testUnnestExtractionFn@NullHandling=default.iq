@@ -1,5 +1,5 @@
-# testUnnestExtractionFn@NullHandling=default case-crc:404dc668
-# quidem testcase reason: UNNEST_DIFFERENT_RESULTSET
+# testUnnestExtractionFn@NullHandling=default case-crc:33ee4d88
+# quidem testcase reason: UNNEST_SUBSTRING_EMPTY
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
