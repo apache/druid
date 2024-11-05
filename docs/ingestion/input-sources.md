@@ -1107,8 +1107,7 @@ Sample:
 ...
 "icebergCatalog":
 { 
-    "type" : "glue", 
-    "catalogName": "some_catalog_name",
+    "type" : "glue",
     "catalogProperties" :
     {
         "warehouse": "s3a://bucket/warehouse",
