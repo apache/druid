@@ -1111,7 +1111,6 @@ Sample:
     "catalogName": "some_catalog_name",
     "catalogProperties" :
     {
-        "type" : "glue",
         "warehouse": "s3a://bucket/warehouse",
         "io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
     }
