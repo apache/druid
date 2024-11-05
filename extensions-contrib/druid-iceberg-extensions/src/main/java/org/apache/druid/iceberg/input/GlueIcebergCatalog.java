@@ -36,7 +36,8 @@ import org.apache.iceberg.catalog.Catalog;
  * It expects Catalog Properties key:value pair, which is iceberg compatible:
  * https://iceberg.apache.org/docs/latest/configuration/#catalog-properties
  */
-public class GlueIcebergCatalog extends IcebergCatalog {
+public class GlueIcebergCatalog extends IcebergCatalog
+{
   private static final String CATALOG_NAME = "glue";
   private Catalog catalog;
 
@@ -67,7 +68,8 @@ public class GlueIcebergCatalog extends IcebergCatalog {
       @JsonProperty("catalogProperties") @Nullable Map<String, Object> catalogProperties,
       @JsonProperty("caseSensitive") Boolean caseSensitive,
       @JacksonInject @Json ObjectMapper mapper
-  ) {
+  )
+  {
     this.catalogProperties = DynamicConfigProviderUtils.extraConfigAndSetStringMap(
         catalogProperties,
         DRUID_DYNAMIC_CONFIG_PROVIDER_KEY,
@@ -78,7 +80,8 @@ public class GlueIcebergCatalog extends IcebergCatalog {
   }
 
   @Override
-  public Catalog retrieveCatalog() {
+  public Catalog retrieveCatalog()
+  {
     if (catalog == null) {
       log.info("catalog is null, setting up default glue catalog.");
       catalog = setupGlueCatalog();
@@ -87,7 +90,8 @@ public class GlueIcebergCatalog extends IcebergCatalog {
     return catalog;
   }
 
-  private Catalog setupGlueCatalog() {
+  private Catalog setupGlueCatalog()
+  {
     // We are not passing any hadoop config, third parameter is null
     catalogProperties.put("type", TYPE_KEY);
     catalog = CatalogUtil.buildIcebergCatalog(CATALOG_NAME, catalogProperties, null);
@@ -95,7 +99,8 @@ public class GlueIcebergCatalog extends IcebergCatalog {
   }
 
   @Override
-  public boolean isCaseSensitive() {
+  public boolean isCaseSensitive()
+  {
     return caseSensitive;
   }
 }
