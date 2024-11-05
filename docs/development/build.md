@@ -74,7 +74,7 @@ mvn clean install -Papache-release,dist,rat -DskipTests
 
 ### Building for Development
 
-If you are building the project only for development, you will not need the Apache release and Apache Rat profile. 
+For development, use only the dist profile and skip the Apache release and Apache rat profiles.
 
 ```bash
 mvn clean install -Pdist -DskipTests
