@@ -272,12 +272,14 @@
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-aws</artifactId>
       <version>${iceberg.core.version}</version>
+      <scope>runtime</scope>
     </dependency>
 <!--    GlueCatalog class-->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>glue</artifactId>
       <version>${awssdk.version}</version>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hive</groupId>
