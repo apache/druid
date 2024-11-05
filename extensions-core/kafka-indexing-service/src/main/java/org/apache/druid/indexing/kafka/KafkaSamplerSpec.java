@@ -74,7 +74,7 @@ public class KafkaSamplerSpec extends SeekableStreamSamplerSpec
       KafkaSupervisorIOConfig kafkaSupervisorIOConfig = (KafkaSupervisorIOConfig) ioConfig;
 
       return new KafkaRecordSupplier(props, objectMapper, kafkaSupervisorIOConfig.getConfigOverrides(),
-                                     kafkaSupervisorIOConfig.isMultiTopic(), null
+                                     kafkaSupervisorIOConfig.isMultiTopic()
       );
     }
     finally {

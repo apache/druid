@@ -111,7 +111,7 @@ public class KafkaIndexTask extends SeekableStreamIndexTask<KafkaTopicPartition,
 
       final KafkaRecordSupplier recordSupplier =
           new KafkaRecordSupplier(props, configMapper, kafkaIndexTaskIOConfig.getConfigOverrides(),
-                                  kafkaIndexTaskIOConfig.isMultiTopic(), dataSchema.getDataSource()
+                                  kafkaIndexTaskIOConfig.isMultiTopic()
           );
 
       if (toolbox.getMonitorScheduler() != null) {
