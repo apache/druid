@@ -127,7 +127,7 @@ public class GroupByStatsMonitorTest
 
     int count = 0;
     try {
-      // wait at most 10 secs for the executor thread to block
+      // wait at most 20 secs for the executor thread to block
       while (mergeBufferPool.getPendingRequests() == 0) {
         Thread.sleep(100);
         count++;

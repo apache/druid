@@ -3511,9 +3511,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "first-last-aggs");
 
-    if (config.equals(V2_SMALL_BUFFER_CONFIG)) {
-      verifyMetrics(1, false);
-    }
+    verifyGroupByMetricsForSmallBufferConfig();
   }
 
   @Test
@@ -6110,9 +6108,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-multiple-aggs");
 
-    if (config.toString().equals("v2SmallBuffer")) {
-      verifyMetrics(1, false);
-    }
+    verifyGroupByMetricsForSmallBufferConfig();
   }
 
   @Test
@@ -6159,9 +6155,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-filter");
 
-    if (config.equals(V2_SMALL_BUFFER_CONFIG)) {
-      verifyMetrics(1, false);
-    }
+    verifyGroupByMetricsForSmallBufferConfig();
   }
 
   @Test
@@ -6857,9 +6851,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "subquery-postaggs");
 
-    if (config.toString().equals("v2SmallBuffer")) {
-      verifyMetrics(1, false);
-    }
+    verifyGroupByMetricsForSmallBufferConfig();
   }
 
   @Test
@@ -12449,9 +12441,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
 
-    if (config.equals(V2_SMALL_BUFFER_CONFIG)) {
-      verifyMetrics(1, true);
-    }
+    verifyGroupByMetricsForSmallBufferConfig(true);
   }
 
   @Test
@@ -12533,9 +12523,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "groupBy");
 
-    if (config.equals(V2_SMALL_BUFFER_CONFIG)) {
-      verifyMetrics(1, true);
-    }
+    verifyGroupByMetricsForSmallBufferConfig(true);
   }
 
   @Test
@@ -13756,15 +13744,24 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     }
   }
 
-  private void verifyMetrics(long queries, boolean skipMergeDictionary)
+  private void verifyGroupByMetricsForSmallBufferConfig(boolean skipMergeDictionaryMetric)
   {
+    if (!config.toString().equals(V2_SMALL_BUFFER_CONFIG.toString())) {
+      return;
+    }
     GroupByStatsProvider.AggregateStats aggregateStats = statsProvider.getStatsSince();
-    Assert.assertEquals(queries, aggregateStats.getSpilledQueries());
+    Assert.assertEquals(1, aggregateStats.getSpilledQueries());
     Assert.assertTrue(aggregateStats.getSpilledBytes() > 0);
     Assert.assertEquals(1, aggregateStats.getMergeBufferAcquisitionCount());
     Assert.assertTrue(aggregateStats.getMergeBufferAcquisitionTimeNs() > 0);
-    if (!skipMergeDictionary) {
+    if (!skipMergeDictionaryMetric) {
       Assert.assertTrue(aggregateStats.getMergeDictionarySize() > 0);
     }
   }
+
+  private void verifyGroupByMetricsForSmallBufferConfig()
+  {
+    verifyGroupByMetricsForSmallBufferConfig(false);
+  }
 }
+
