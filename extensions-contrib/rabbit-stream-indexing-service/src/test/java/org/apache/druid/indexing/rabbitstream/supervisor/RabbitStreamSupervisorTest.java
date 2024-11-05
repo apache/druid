@@ -38,6 +38,7 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfi
 import org.apache.druid.indexing.rabbitstream.RabbitStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.rabbitstream.RabbitStreamRecordSupplier;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -382,7 +383,7 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         tuningConfig
     );
 
-    Assert.assertEquals(supervisor.createTaskIoConfig(
+    SeekableStreamIndexTaskIOConfig ioConfig = supervisor.createTaskIoConfig(
         1,
         ImmutableMap.of(),
         ImmutableMap.of(),
@@ -409,6 +410,8 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
             null, // latemessagerejectionstartdatetime
             1
         )
-    ).getTaskDuration(), Duration.standardMinutes(30));
+    );
+
+    Assert.assertEquals(ioConfig.getTaskDuration(), Duration.standardMinutes(30));
   }
 }

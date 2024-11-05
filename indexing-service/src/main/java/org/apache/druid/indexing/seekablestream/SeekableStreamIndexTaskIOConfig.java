@@ -139,6 +139,8 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     return inputFormat;
   }
 
+  @Nullable
+  @JsonProperty
   public Duration getTaskDuration()
   {
     return taskDuration;
