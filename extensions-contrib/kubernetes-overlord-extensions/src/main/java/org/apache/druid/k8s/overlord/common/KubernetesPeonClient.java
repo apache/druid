@@ -25,6 +25,7 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.RetryUtils;
@@ -278,7 +279,7 @@ public class KubernetesPeonClient
       );
     }
     catch (Exception e) {
-      throw new KubernetesResourceNotFoundException("K8s pod with label: job-name=" + jobName + " not found");
+      throw DruidException.defensive(e, "Error when looking for K8s pod with label: job-name=%s", jobName);
     }
   }
 

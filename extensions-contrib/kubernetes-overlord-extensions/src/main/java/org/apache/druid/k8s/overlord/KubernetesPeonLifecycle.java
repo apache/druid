@@ -40,6 +40,7 @@ import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -364,26 +365,28 @@ public class KubernetesPeonLifecycle
   {
     log.info("📋 [LOGS] Starting log persistence for task [%s]", taskId.getOriginalTaskId());
     try {
-      Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
+      final Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
       log.info("📋 [LOGS] Created temporary log file: %s", file);
       try {
-        log.info("📋 [LOGS] Starting log watch for task [%s]...", taskId.getOriginalTaskId());
-        startWatchingLogs();
+        // Upstream improvement: Use InputStream variable with fallback to getPeonLogs()
+        final InputStream logStream;
         if (logWatch != null) {
-          log.info("📋 [LOGS] Log watch active, copying log stream to file...");
-          FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
-          log.info("📋 [LOGS] Successfully copied log stream to temp file (size: %d bytes)", file.toFile().length());
+          log.info("📋 [LOGS] Log watch active, using log watch output stream");
+          logStream = logWatch.getOutput();
         } else {
-          log.warn("📋 [LOGS] Log stream not found for %s, writing placeholder message", taskId.getOriginalTaskId());
-          FileUtils.writeStringToFile(
-              file.toFile(),
-              StringUtils.format(
+          log.warn("📋 [LOGS] No log watch available, attempting to fetch logs via getPeonLogs()");
+          logStream = kubernetesClient.getPeonLogs(taskId).or(
+              new ByteArrayInputStream(StringUtils.format(
                   "Peon for task [%s] did not report any logs. Check k8s metrics and events for the pod to see what happened.",
                   taskId
-              ),
-              Charset.defaultCharset()
+              ).getBytes(StandardCharsets.UTF_8))
           );
         }
+        
+        log.info("📋 [LOGS] Copying log stream to temp file...");
+        FileUtils.copyInputStreamToFile(logStream, file.toFile());
+        log.info("📋 [LOGS] Successfully copied log stream to temp file (size: %d bytes)", file.toFile().length());
+        
         log.info("📋 [LOGS] Pushing log file to deep storage for task [%s]...", taskId.getOriginalTaskId());
         taskLogs.pushTaskLog(taskId.getOriginalTaskId(), file.toFile());
         log.info("✅ [LOGS] Successfully pushed logs to deep storage for task [%s]", taskId.getOriginalTaskId());
