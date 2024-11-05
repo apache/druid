@@ -80,7 +80,7 @@ If you are building the project only for development, you will not need the Apac
 mvn clean install -Pdist -DskipTests
 ```
 
-Should you want to further speed up the build, you can enable parallel building with the `-T1C` option, and exclude some static analysis checks to further speed up the build:
+If you want to speed up the build even more, you can enable parallel building with the `-T1C` option and skip some static analysis checks.
 
 ```bash
 mvn clean install -Pdist -T1C -DskipTests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -Denforcer.skip=true
