@@ -21,35 +21,34 @@ package org.apache.druid.iceberg.input;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
-import java.util.HashMap;
 
-public class GlueIcebergCatalogTest  {
-    private final ObjectMapper mapper = new DefaultObjectMapper();
-    public void setUp() throws Exception {
-    }
+/**
+ * Test cases for GlueCatalog Iceberg extension.
+ * */
+public class GlueIcebergCatalogTest {
+  private final ObjectMapper mapper = new DefaultObjectMapper();
 
-    public void tearDown() throws Exception {
-    }
+  @Test
+  public void testCatalogCreate() {
+    GlueIcebergCatalog glueCatalog = new GlueIcebergCatalog(
+        new HashMap<>(),
+        true,
+        mapper
+    );
+    Assert.assertEquals("glue", glueCatalog.retrieveCatalog().name());
+  }
 
-    @Test
-    public void testCatalogCreate() {
-        GlueIcebergCatalog glueCatalog = new GlueIcebergCatalog(
-                new HashMap<>(),
-                true,
-                mapper
-        );
-        Assert.assertEquals("glue", glueCatalog.retrieveCatalog().name());
-    }
-    @Test
-    public void testIsCaseSensitive() {
-        GlueIcebergCatalog glueCatalog = new GlueIcebergCatalog(
-                new HashMap<>(),
-                true,
-                mapper
-        );
-        Assert.assertEquals(true, glueCatalog.isCaseSensitive());
-    }
+  @Test
+  public void testIsCaseSensitive() {
+    GlueIcebergCatalog glueCatalog = new GlueIcebergCatalog(
+        new HashMap<>(),
+        true,
+        mapper
+    );
+    Assert.assertEquals(true, glueCatalog.isCaseSensitive());
+  }
 }
