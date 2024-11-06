@@ -1949,6 +1949,7 @@
                 <jdk.tiered.compilation.argLine>
                     <!-- required to work around segfault described inhttps://github.com/apache/druid/issues/17429 -->
                     -XX:TieredStopAtLevel=1
+                    -XX:ReservedCodeCacheSize=512m
                 </jdk.tiered.compilation.argLine>
             </properties>
         </profile>
