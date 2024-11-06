@@ -1655,6 +1655,15 @@ public class DruidQuery
                   : Order.ASCENDING
               )
       ).collect(Collectors.toList());
+
+
+      // FIXME
+//      if (!plannerContext.featureAvailable(EngineFeature.SCAN_ORDER_BY_NON_TIME)
+//          && !orderByColumns.isEmpty()
+//          && !Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME).equals(orderByColumns)) {
+//        return null;
+//      }
+
     } else {
       orderByColumns = Collections.emptyList();
     }
@@ -1662,13 +1671,7 @@ public class DruidQuery
     if (!plannerContext.featureAvailable(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
       if (orderByColumns.size() > 1
           || orderByColumns.stream()
-                           .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME))) {
-        // We cannot handle this ordering, but we encounter this ordering as part of the exploration of the volcano
-        // planner, which means that the query that we are looking right now might only be doing this as one of the
-        // potential branches of exploration rather than being a semantic requirement of the query itself.  So, it is
-        // not safe to send an error message telling the end-user exactly what is happening, instead we need to set the
-        // planning error and hope.
-        setPlanningErrorOrderByNonTimeIsUnsupported();
+              .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME))) {
         return null;
       }
     }

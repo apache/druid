@@ -664,7 +664,10 @@ public class QueryContext
 
   public boolean isDecoupledMode()
   {
-
-
+    String value = getString(
+        QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+        QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED
+    );
+    return QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equals(value);
   }
 }

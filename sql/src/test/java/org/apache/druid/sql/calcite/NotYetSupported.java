@@ -93,7 +93,6 @@ public @interface NotYetSupported
     SORT_REMOVE_TROUBLE(DruidException.class, "Calcite assertion violated.*Sort\\.<init>"),
     SORT_REMOVE_CONSTANT_KEYS_CONFLICT(DruidException.class, "not enough rules"),
     REQUIRE_TIME_CONDITION(CannotBuildQueryException.class, "requireTimeCondition is enabled"),
-    ERROR_CANNOT_TRANSLATE_COUNT_DISTINCT(AssertionError.class, "Cannot translate aggregator.COUNT.DISTINCT"),
     UNNEST_INLINED(Exception.class, "Missing conversion is Uncollect"),
     UNNEST_RESULT_MISMATCH(AssertionError.class, "(Result count mismatch|column content mismatch)");
     // @formatter:on
