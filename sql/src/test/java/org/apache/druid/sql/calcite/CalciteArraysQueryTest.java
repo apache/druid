@@ -129,7 +129,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "array(1,2)", ColumnType.LONG_ARRAY))
-                .columns("dim1", "v0")
+                .columns("v0", "dim1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -214,7 +214,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     "array(concat(\"dim1\",'word'),'up')",
                     ColumnType.STRING_ARRAY
                 ))
-                .columns("dim1", "v0")
+                .columns("v0", "dim1")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -240,7 +240,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         .dataSource(CalciteTests.DATASOURCE1)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .virtualColumns(expressionVirtualColumn("v0", "array(concat(\"dim3\",'word'),'up')", ColumnType.STRING_ARRAY))
-        .columns("dim1", "v0")
+        .columns("v0", "dim1")
         .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
         .limit(5)
         .context(QUERY_CONTEXT_DEFAULT)
@@ -384,21 +384,15 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v9", "array_concat(\"dim2\",\"dim3\")", ColumnType.STRING_ARRAY)
                 )
                 .columns(
-                    "d1",
-                    "d2",
                     "dim1",
                     "dim2",
                     "dim3",
                     "l1",
                     "l2",
+                    "d1",
+                    "d2",
                     "v0",
                     "v1",
-                    "v10",
-                    "v11",
-                    "v12",
-                    "v13",
-                    "v14",
-                    "v15",
                     "v2",
                     "v3",
                     "v4",
@@ -406,7 +400,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     "v6",
                     "v7",
                     "v8",
-                    "v9"
+                    "v9",
+                    "v10",
+                    "v11",
+                    "v12",
+                    "v13",
+                    "v14",
+                    "v15"
                 )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
@@ -525,16 +525,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v9", "array_offset(\"arrayStringNulls\",0)", ColumnType.STRING)
                 )
                 .columns(
-                    "arrayDoubleNulls",
-                    "arrayLongNulls",
                     "arrayStringNulls",
+                    "arrayLongNulls",
+                    "arrayDoubleNulls",
                     "v0",
                     "v1",
-                    "v10",
-                    "v11",
-                    "v12",
-                    "v13",
-                    "v14",
                     "v2",
                     "v3",
                     "v4",
@@ -542,7 +537,12 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     "v6",
                     "v7",
                     "v8",
-                    "v9"
+                    "v9",
+                    "v10",
+                    "v11",
+                    "v12",
+                    "v13",
+                    "v14"
                 )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -670,8 +670,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     "dim3",
                     "v0",
                     "v1",
-                    "v10",
-                    "v11",
                     "v2",
                     "v3",
                     "v4",
@@ -679,7 +677,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     "v6",
                     "v7",
                     "v8",
-                    "v9"
+                    "v9",
+                    "v10",
+                    "v11"
                 )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
@@ -863,7 +863,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(expressionFilter("array_overlap(\"arrayStringNulls\",\"arrayString\")"))
-                .columns("arrayString", "arrayStringNulls")
+                .columns("arrayStringNulls", "arrayString")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -889,7 +889,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(expressionFilter("array_overlap(\"arrayLongNulls\",\"arrayLong\")"))
-                .columns("arrayLong", "arrayLongNulls")
+                .columns("arrayLongNulls", "arrayLong")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -915,7 +915,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(expressionFilter("array_overlap(\"arrayDoubleNulls\",\"arrayDouble\")"))
-                .columns("arrayDouble", "arrayDoubleNulls")
+                .columns("arrayDoubleNulls", "arrayDouble")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1171,7 +1171,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .filters(
                     expressionFilter("array_contains(\"arrayStringNulls\",\"arrayString\")")
                 )
-                .columns("arrayString", "arrayStringNulls")
+                .columns("arrayStringNulls", "arrayString")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1251,7 +1251,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .filters(
                     expressionFilter("array_contains(\"arrayDoubleNulls\",\"arrayDouble\")")
                 )
-                .columns("arrayDouble", "arrayDoubleNulls")
+                .columns("arrayDoubleNulls", "arrayDouble")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(5)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -4389,7 +4389,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_UNNEST)
-                  .columns(ImmutableList.of("_j0.unnest", "dim1", "j0.unnest", "v0", "v1"))
+                  .columns(ImmutableList.of("dim1", "v0", "v1", "j0.unnest", "_j0.unnest"))
                   .build()
         ),
         NullHandling.replaceWithDefault() ?
@@ -4452,7 +4452,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_UNNEST)
-                  .columns(ImmutableList.of("_j0.unnest", "arrayLongNulls", "arrayStringNulls", "j0.unnest"))
+                  .columns(ImmutableList.of("arrayStringNulls", "arrayLongNulls", "j0.unnest", "_j0.unnest"))
                   .build()
         ),
         ImmutableList.of(
@@ -4547,7 +4547,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_UNNEST)
-                  .columns(ImmutableList.of("dim1", "j0.unnest", "v0", "v1", "v2"))
+                  .columns(ImmutableList.of("dim1", "v0", "v1", "j0.unnest", "v2"))
                   .build()
         ),
         ImmutableList.of(
@@ -4601,7 +4601,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   "'Baz'",
                   ColumnType.STRING
               ))
-              .columns(ImmutableList.of("__j0.unnest", "_j0.unnest", "dimZipf", "v0"))
+              .columns(ImmutableList.of("dimZipf", "v0", "_j0.unnest", "__j0.unnest"))
               .build()
     );
     testQuery(
@@ -4699,7 +4699,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   ColumnType.STRING
               ))
               .context(QUERY_CONTEXT_UNNEST)
-              .columns(ImmutableList.of("__j0.unnest", "_j0.unnest", "dimZipf", "v0"))
+              .columns(ImmutableList.of("dimZipf", "v0", "_j0.unnest", "__j0.unnest"))
               .build()
     );
     testQuery(
@@ -4766,7 +4766,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   expressionVirtualColumn("v1", "1", ColumnType.LONG)
               )
               .context(QUERY_CONTEXT_UNNEST)
-              .columns(ImmutableList.of("__j0.unnest", "_j0.unnest", "v0", "v1"))
+              .columns(ImmutableList.of("v0", "v1", "_j0.unnest", "__j0.unnest"))
               .build()
     );
     testQuery(
@@ -4824,12 +4824,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
               .intervals(querySegmentSpec(Filtration.eternity()))
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
               .context(QUERY_CONTEXT_UNNEST)
-              .columns(ImmutableList.of("__j0.unnest", "_j0.unnest", "dimZipf", "j0.unnest"))
+              .columns(ImmutableList.of("dimZipf", "j0.unnest", "_j0.unnest", "__j0.unnest"))
               .build()
     );
     testQuery(
         sql,
-        QUERY_CONTEXT_UNNEST, expectedQuerySqlCom,
+        QUERY_CONTEXT_UNNEST,
+        expectedQuerySqlCom,
         ImmutableList.of(
             new Object[]{"27", "Baz", "Baz", "World"},
             new Object[]{"27", "Baz", "Baz", "World"},
@@ -4900,7 +4901,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   expressionVirtualColumn("v0", "array('a','b')", ColumnType.STRING_ARRAY)
               )
               .context(QUERY_CONTEXT_UNNEST)
-              .columns(ImmutableList.of("__j0.unnest", "_j0.unnest", "j0.unnest", "v0"))
+              .columns(ImmutableList.of("v0", "j0.unnest", "_j0.unnest", "__j0.unnest"))
               .build()
     );
     testQuery(
@@ -5313,7 +5314,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   ))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_UNNEST)
-                  .columns(ImmutableList.of("j0.unnest", "v0"))
+                  .columns(ImmutableList.of("v0", "j0.unnest"))
                   .build()
         ),
         ImmutableList.of(
@@ -5347,7 +5348,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                           ColumnType.LONG))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_UNNEST)
-                  .columns(ImmutableList.of("j0.unnest", "v0"))
+                  .columns(ImmutableList.of("v0", "j0.unnest"))
                   .build()
         ),
         ImmutableList.of(
@@ -6865,7 +6866,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               .intervals(querySegmentSpec(Intervals.of(
                                   "2000-01-02T00:00:00.000Z/2000-01-03T00:10:00.001Z")))
                               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                              .columns("j0.unnest", "m1")
+                              .columns("m1", "j0.unnest")
                               .limit(2)
                               .context(QUERY_CONTEXT_UNNEST)
                               .build()
@@ -7009,7 +7010,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .virtualColumns(expressionVirtualColumn("v0", "2.0", ColumnType.FLOAT))
                   .context(QUERY_CONTEXT_UNNEST)
-                  .columns(ImmutableList.of("__j0.unnest", "_j0.unnest", "j0.unnest", "v0"))
+                  .columns(ImmutableList.of("v0", "j0.unnest", "_j0.unnest", "__j0.unnest"))
                   .build()
         ),
         ImmutableList.of(
@@ -7040,7 +7041,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .virtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
                   .context(QUERY_CONTEXT_UNNEST)
-                  .columns(ImmutableList.of("j0.unnest", "v", "v0"))
+                  .columns(ImmutableList.of("v0", "v", "j0.unnest"))
                   .build()
         ),
         ImmutableList.of(
