@@ -142,7 +142,8 @@ public class SeekableStreamIndexTaskRunnerTest
 
     DateTime now = DateTimes.nowUtc();
 
-    Mockito.when(ioConfig.getTaskDuration()).thenReturn(Duration.standardHours(2));
+    Mockito.when(ioConfig.getTaskDuration()).thenReturn(null);
+    // min max time not populated.
     Mockito.when(ioConfig.getMaximumMessageTime()).thenReturn(Optional.absent());
     Mockito.when(ioConfig.getMinimumMessageTime()).thenReturn(Optional.absent());
     Mockito.when(ioConfig.getInputFormat()).thenReturn(new JsonInputFormat(null, null, null, null, null));
@@ -158,7 +159,11 @@ public class SeekableStreamIndexTaskRunnerTest
     TestasbleSeekableStreamIndexTaskRunner runner = new TestasbleSeekableStreamIndexTaskRunner(task, null, null, LockGranularity.TIME_CHUNK);
 
     Assert.assertTrue(runner.withinMinMaxRecordTime(row));
+
+    Mockito.when(row.getTimestamp()).thenReturn(now.minusHours(2).minusMinutes(1));
     Assert.assertTrue(runner.withinMinMaxRecordTime(row));
+
+    Mockito.when(row.getTimestamp()).thenReturn(now.plusHours(2).plusMinutes(1));
     Assert.assertTrue(runner.withinMinMaxRecordTime(row));
   }
 
