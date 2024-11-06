@@ -207,18 +207,15 @@ public class DruidQueryGenerator
   {
     NONE,
     LEFT,
-    RIGHT, UNION;
+    RIGHT;
 
     static JoinSupportTweaks analyze(DruidNodeStack stack)
     {
-      if (!(stack.peekNode() instanceof DruidUnion)) {
-        return UNION;
-      }
       if (stack.size() < 2) {
         return NONE;
       }
-      DruidLogicalNode parentNode = stack.parentNode();
-      if (!(parentNode instanceof DruidJoin)) {
+      DruidLogicalNode possibleJoin = stack.parentNode();
+      if (!(possibleJoin instanceof DruidJoin)) {
         return NONE;
       }
       if (stack.peekOperandIndex() == 0) {
@@ -230,14 +227,11 @@ public class DruidQueryGenerator
 
     boolean finalizeSubQuery()
     {
-      return this == NONE || this == UNION;
+      return this == NONE;
     }
 
     boolean forceSubQuery(SourceDesc sourceDesc)
     {
-      if(this==UNION) {
-        return true;
-      }
       if (sourceDesc.dataSource.isGlobal()) {
         return false;
       }
@@ -246,7 +240,7 @@ public class DruidQueryGenerator
 
     boolean filteredDatasourceAllowed()
     {
-      return this == NONE || this == UNION;
+      return this == NONE;
     }
   }
 
@@ -311,9 +305,10 @@ public class DruidQueryGenerator
       private SourceDesc realGetSource()
       {
         List<SourceDesc> sourceDescs = new ArrayList<>();
+        boolean mayUnwrap = mayUnwrapInputs();
         for (Vertex inputVertex : inputs) {
           final SourceDesc desc;
-          if (inputVertex.canUnwrapSourceDesc()) {
+          if (mayUnwrap && inputVertex.canUnwrapSourceDesc()) {
             desc = inputVertex.unwrapSourceDesc();
           } else {
             DruidQuery inputQuery = inputVertex.buildQuery(false);
@@ -330,6 +325,20 @@ public class DruidQueryGenerator
           return sourceDescs.get(0);
         }
         throw DruidException.defensive("Unable to create SourceDesc for Operator [%s]", scan);
+      }
+
+      private boolean mayUnwrapInputs()
+      {
+        if (!(partialDruidQuery.getScan() instanceof DruidUnion)) {
+          return true;
+        }
+        boolean mayUnwrap = true;
+        for (Vertex vertex : inputs) {
+          if (!vertex.canUnwrapSourceDesc()) {
+            mayUnwrap = false;
+          }
+        }
+        return mayUnwrap;
       }
 
       /**

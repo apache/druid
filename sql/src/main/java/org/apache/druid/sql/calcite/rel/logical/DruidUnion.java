@@ -91,7 +91,14 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
 
     UnionQuery unionQuery = makeUnionQuery(sources);
     if(true) {
-      return new SourceDesc(new QueryDataSource(unionQuery), unionQuery.getResultRowSignature());
+      // FIXME rowSig first match might not be the best
+      RowSignature signature = null;
+      for (SourceDesc sourceDesc : sources) {
+        if (signature == null) {
+          signature = sourceDesc.rowSignature;
+        }
+      }
+      return new SourceDesc(new QueryDataSource(unionQuery), signature);
     }
     if (mayUseUnionQuery(sources)) {
       RowSignature signature = null;

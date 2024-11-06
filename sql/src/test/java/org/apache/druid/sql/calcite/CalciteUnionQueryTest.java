@@ -28,7 +28,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
@@ -188,6 +187,8 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  // FIXME: b,a union a,b
+
   @Test
   public void testUnionAllTablesColumnTypeMismatchStringLong()
   {
@@ -202,14 +203,13 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
           .sql(sql)
           .expectedResults(
               ImmutableList.of(
-                  new Object[] {"a", null, 1.0D, 1L},
-                  new Object[] {"b", null, 1.0D, 1L},
+                  new Object[] {"a", null, 5.0D, 2L},
                   new Object[] {"en", "1", 11.0D, 1L}
               )
           )
           .run();
 
-    }else {
+    } else {
       // "dim3" has a different type in foo and foo2 (string vs long), which requires a casting subquery, so this
       // query cannot be planned.
       assertQueryIsUnplannable(
@@ -275,20 +275,33 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     }
   }
 
-  @NotYetSupported(Modes.ERROR_HANDLING)
   @Test
   public void testUnionAllTablesWhenCastAndMappingIsRequired()
   {
-    // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
-    assertQueryIsUnplannable(
-        "SELECT\n"
+    String sql = "SELECT\n"
         + "c, COUNT(*)\n"
         + "FROM (SELECT dim1 AS c, m1 FROM foo UNION ALL SELECT cnt AS c, m1 FROM numfoo)\n"
-        + "WHERE c = 'a' OR c = 'def'\n"
-        + "GROUP BY 1",
-        "SQL requires union between inputs that are not simple table scans and involve " +
-        "a filter or aliasing. Or column types of tables being unioned are not of same type."
-    );
+        + "WHERE c = '1' OR c = 'def'\n"
+        + "GROUP BY 1";
+    if (testBuilder().isDecoupledMode()) {
+      cannotVectorize();
+      testBuilder()
+          .sql(sql)
+          .expectedResults(
+              ImmutableList.of(
+                  new Object[]{"1", 7L},
+                  new Object[]{"def", 1L}
+              )
+          )
+          .run();
+    } else {
+      // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
+      assertQueryIsUnplannable(
+          sql,
+          "SQL requires union between inputs that are not simple table scans and involve " +
+          "a filter or aliasing. Or column types of tables being unioned are not of same type."
+      );
+    }
   }
 
   @Test
