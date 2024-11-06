@@ -229,24 +229,7 @@ public abstract class QueryResultPusher
     return handleDruidException(resultsWriter, DruidException.fromFailure(new QueryExceptionCompat(e)));
   }
 
-  private Response handleDruidException(ResultsWriter resultsWriter, DruidException e)
-  {
-    if (resultsWriter != null) {
-      resultsWriter.recordFailure(e);
-      counter.incrementFailed();
-
-      if (accumulator != null && accumulator.isInitialized()) {
-        // We already started sending a response when we got the error message.  In this case we just give up
-        // and hope that the partial stream generates a meaningful failure message for our client.  We could consider
-        // also throwing the exception body into the response to make it easier for the client to choke if it manages
-        // to parse a meaningful object out, but that's potentially an API change so we leave that as an exercise for
-        // the future.
-        trailerFields.put(QueryResource.ERROR_MESSAGE_TRAILER_HEADER, e.getMessage());
-        trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "false");
-        return null;
-      }
-    }
-
+  private void incrementQueryCounterForException(final DruidException e) {
     switch (e.getCategory()) {
       case INVALID_INPUT:
       case UNAUTHORIZED:
@@ -263,6 +246,26 @@ public abstract class QueryResultPusher
       case TIMEOUT:
         counter.incrementTimedOut();
         break;
+    }
+  }
+
+  private Response handleDruidException(ResultsWriter resultsWriter, DruidException e)
+  {
+    incrementQueryCounterForException(e);
+
+    if (resultsWriter != null) {
+      resultsWriter.recordFailure(e);
+
+      if (accumulator != null && accumulator.isInitialized()) {
+        // We already started sending a response when we got the error message.  In this case we just give up
+        // and hope that the partial stream generates a meaningful failure message for our client.  We could consider
+        // also throwing the exception body into the response to make it easier for the client to choke if it manages
+        // to parse a meaningful object out, but that's potentially an API change so we leave that as an exercise for
+        // the future.
+        trailerFields.put(QueryResource.ERROR_MESSAGE_TRAILER_HEADER, e.getMessage());
+        trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "false");
+        return null;
+      }
     }
 
     if (response == null) {
