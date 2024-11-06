@@ -74,42 +74,33 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
   @Override
   public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> sources)
   {
+    RowSignature signature = null;
+    for (SourceDesc sourceDesc : sources) {
+      if (signature == null) {
+        // FIXME first match might not be the best
+        signature = sourceDesc.rowSignature;
+      }
+    }
     if (mayUseUnionDataSource(sources)) {
       List<DataSource> dataSources = new ArrayList<>();
-      RowSignature signature = null;
       for (SourceDesc sourceDesc : sources) {
         checkDataSourceSupported(sourceDesc.dataSource);
         dataSources.add(sourceDesc.dataSource);
-        if (signature == null) {
-          signature = sourceDesc.rowSignature;
-        }
       }
       return new SourceDesc(new UnionDataSource(dataSources), signature);
     }
     // all other cases are handled via UnionQuery
-
-
     UnionQuery unionQuery = makeUnionQuery(sources);
     if(true) {
       // FIXME rowSig first match might not be the best
-      RowSignature signature = null;
-      for (SourceDesc sourceDesc : sources) {
-        if (signature == null) {
-          signature = sourceDesc.rowSignature;
-        }
-      }
+      RowSignature a = unionQuery.getResultRowSignature();
       return new SourceDesc(new QueryDataSource(unionQuery), signature);
     }
     if (mayUseUnionQuery(sources)) {
-      RowSignature signature = null;
       List<Query<?>> queries = new ArrayList<>();
       for (SourceDesc sourceDesc : sources) {
         QueryDataSource qds = (QueryDataSource) sourceDesc.dataSource;
         queries.add(qds.getQuery());
-        if (signature == null) {
-          // FIXME first match might not be the best
-          signature = sourceDesc.rowSignature;
-        }
       }
       return new SourceDesc(new QueryDataSource(new UnionQuery(queries)), signature);
     }

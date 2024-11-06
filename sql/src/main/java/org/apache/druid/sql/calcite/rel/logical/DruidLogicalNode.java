@@ -20,6 +20,9 @@
 package org.apache.druid.sql.calcite.rel.logical;
 
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.type.RelDataType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 /**
  * An interface to mark {@link RelNode} as Druid physical nodes. These physical nodes look a lot same as their logical
@@ -27,4 +30,12 @@ import org.apache.calcite.rel.RelNode;
  */
 public interface DruidLogicalNode extends RelNode
 {
+  default RowSignature getRowSignature()
+  {
+    RelDataType rowType = getRowType();
+    return RowSignatures.fromRelDataType(
+        rowType.getFieldNames(),
+        rowType
+    );
+  }
 }
