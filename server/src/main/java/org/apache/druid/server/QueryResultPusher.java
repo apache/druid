@@ -229,7 +229,8 @@ public abstract class QueryResultPusher
     return handleDruidException(resultsWriter, DruidException.fromFailure(new QueryExceptionCompat(e)));
   }
 
-  private void incrementQueryCounterForException(final DruidException e) {
+  private void incrementQueryCounterForException(final DruidException e)
+  {
     switch (e.getCategory()) {
       case INVALID_INPUT:
       case UNAUTHORIZED:
