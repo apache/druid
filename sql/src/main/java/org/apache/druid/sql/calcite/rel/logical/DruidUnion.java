@@ -40,6 +40,7 @@ import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer;
+import org.apache.druid.sql.calcite.table.RowSignatures;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,13 +75,10 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
   @Override
   public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> sources)
   {
-    RowSignature signature = null;
-    for (SourceDesc sourceDesc : sources) {
-      if (signature == null) {
-        // FIXME first match might not be the best
-        signature = sourceDesc.rowSignature;
-      }
-    }
+    RowSignature signature = RowSignatures.fromRelDataType(
+        sources.get(0).rowSignature.getColumnNames(),
+        getRowType()
+    );
     if (mayUseUnionDataSource(sources)) {
       List<DataSource> dataSources = new ArrayList<>();
       for (SourceDesc sourceDesc : sources) {

@@ -190,21 +190,41 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
   // FIXME: b,a union a,b
 
   @Test
+  public void test2()
+  {
+    String sql = "SELECT dim3, dim2, m1 FROM foo2";
+      testBuilder()
+          .sql(sql)
+          .run();
+  }
+
+  @Test
+  public void test1()
+  {
+    String sql = "SELECT dim3, cast(dim2 as bigint), m1 FROM foo";
+      testBuilder()
+          .sql(sql)
+          .run();
+  }
+
+  @Test
   public void testUnionAllTablesColumnTypeMismatchStringLong()
   {
-    cannotVectorize();
     String sql = "SELECT\n"
         + "dim3, dim2, SUM(m1), COUNT(*)\n"
         + "FROM (SELECT dim3, dim2, m1 FROM foo2 UNION ALL SELECT dim3, dim2, m1 FROM foo)\n"
-        + "WHERE dim3 = 'a' OR dim3 = 'en'\n"
+        + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
         + "GROUP BY 1, 2";
     if (testBuilder().isDecoupledMode()) {
+      cannotVectorize();
       testBuilder()
           .sql(sql)
           .expectedResults(
               ImmutableList.of(
-                  new Object[] {"a", null, 5.0D, 2L},
-                  new Object[] {"en", "1", 11.0D, 1L}
+                  new Object[] {"", "a", 4.0D, 1L},
+                  new Object[] {"11", "en", 1.0D, 1L},
+                  new Object[] {"a", "a", 1.0D, 1L},
+                  new Object[] {"b", "a", 1.0D, 1L}
               )
           )
           .run();
