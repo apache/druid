@@ -133,6 +133,7 @@
         <com.google.cloud.storage.version>2.29.1</com.google.cloud.storage.version>
         <jdk.strong.encapsulation.argLine><!-- empty placeholder --></jdk.strong.encapsulation.argLine>
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
+        <jdk.tiered.compilation.argLine><!-- empty placeholder --></jdk.tiered.compilation.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
         <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
@@ -1779,6 +1780,7 @@
                             @{jacocoArgLine}
                             ${jdk.strong.encapsulation.argLine}
                             ${jdk.security.manager.allow.argLine}
+                            ${jdk.tiered.compilation.argLine}
                             -Xmx2048m
                             -XX:MaxDirectMemorySize=2500m
                             -XX:+ExitOnOutOfMemoryError
@@ -1937,6 +1939,18 @@
             <mockito.version>4.11.0</mockito.version>
             <mockito.inline.artifact>inline</mockito.inline.artifact>
           </properties>
+        </profile>
+        <profile>
+            <id>java-21+</id>
+            <activation>
+                <jdk>[21,)</jdk>
+            </activation>
+            <properties>
+                <jdk.tiered.compilation.argLine>
+                    <!-- required to work around segfault described inhttps://github.com/apache/druid/issues/17429 -->
+                    -XX:TieredStopAtLevel=1
+                </jdk.tiered.compilation.argLine>
+            </properties>
         </profile>
         <profile>
             <id>java-12+</id>
