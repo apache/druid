@@ -29,6 +29,7 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
@@ -53,6 +54,9 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
       boolean all)
   {
     super(cluster, traits, hints, inputs, all);
+    if (!all) {
+      throw InvalidInput.exception("SQL requires 'UNION' but only 'UNION ALL' is supported.");
+    }
   }
 
   @Override
@@ -78,14 +82,6 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
         dataSources.add(sourceDesc.dataSource);
         if (signature == null) {
           signature = sourceDesc.rowSignature;
-        } else {
-          if (!signature.equals(sourceDesc.rowSignature)) {
-            throw DruidException.defensive(
-                "Row signature mismatch in Union inputs [%s] and [%s]",
-                signature,
-                sourceDesc.rowSignature
-            );
-          }
         }
       }
       return new SourceDesc(new UnionDataSource(dataSources), signature);
@@ -97,15 +93,8 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
         QueryDataSource qds = (QueryDataSource) sourceDesc.dataSource;
         queries.add(qds.getQuery());
         if (signature == null) {
+          // FIXME first match might not be the best
           signature = sourceDesc.rowSignature;
-        } else {
-          if (!signature.equals(sourceDesc.rowSignature)) {
-            throw DruidException.defensive(
-                "Row signature mismatch in Union inputs [%s] and [%s]",
-                signature,
-                sourceDesc.rowSignature
-            );
-          }
         }
       }
       return new SourceDesc(new QueryDataSource(new UnionQuery(queries)), signature);
