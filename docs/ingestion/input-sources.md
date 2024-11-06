@@ -1107,8 +1107,8 @@ Sample:
 ...
 "icebergCatalog":
 { 
-    "type" : "glue",
-    "catalogProperties" :
+    "type": "glue",
+    "catalogProperties":
     {
         "warehouse": "s3a://bucket/warehouse",
         "io-impl": "org.apache.iceberg.aws.s3.S3FileIO"
@@ -1116,7 +1116,6 @@ Sample:
 }
 ..
 ```
-
 
 ### Iceberg filter object
 
