@@ -91,28 +91,22 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
     }
     // all other cases are handled via UnionQuery
     UnionQuery unionQuery = makeUnionQuery(sources);
-    if(true) {
-      // FIXME rowSig first match might not be the best
-      RowSignature a = unionQuery.getResultRowSignature();
-      return new SourceDesc(new QueryDataSource(unionQuery), signature);
-    }
-    if (mayUseUnionQuery(sources)) {
-      List<Query<?>> queries = new ArrayList<>();
-      for (SourceDesc sourceDesc : sources) {
-        QueryDataSource qds = (QueryDataSource) sourceDesc.dataSource;
-        queries.add(qds.getQuery());
-      }
-      return new SourceDesc(new QueryDataSource(new UnionQuery(queries)), signature);
-    }
-
-    throw DruidException.defensive("Union with input [%s] is not supported. This should not happen.", sources);
+    return new SourceDesc(new QueryDataSource(unionQuery), signature);
   }
 
   private UnionQuery makeUnionQuery(List<SourceDesc> sources)
   {
     List<Query<?>> queries = new ArrayList<>();
     for (SourceDesc sourceDesc : sources) {
-      queries.add(sourceDesc.asQuery());
+      DataSource dataSource = sourceDesc.dataSource;
+      if (dataSource instanceof QueryDataSource) {
+        queries.add(((QueryDataSource) dataSource).getQuery());
+      } else {
+        throw DruidException.defensive(
+            "Expected to that all inputs as QueryDataSource-s! Encountered something else [%s].",
+            dataSource
+        );
+      }
     }
     return new UnionQuery(queries);
   }
