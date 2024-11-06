@@ -1033,10 +1033,10 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                   .columns(
                                       ImmutableList.of(
                                           "__time",
-                                          "cnt",
                                           "dim1",
                                           "dim2",
                                           "dim3",
+                                          "cnt",
                                           "m1",
                                           "m2",
                                           "unique_dim1"
@@ -1140,7 +1140,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         CalciteTests.createJoinableFactoryWrapper()
                     )
                 )
-                .columns("_j0.j0.dim2", "dim1")
+                .columns("dim1", "_j0.j0.dim2")
                 .eternityInterval()
                 .build()
         ),
@@ -1313,7 +1313,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                 .offset(6L)
                                 .limit(1L)
                                 .order(Order.DESCENDING)
-                                .columns("__time", "channel")
+                                .columns("channel", "__time")
                                 .context(QUERY_CONTEXT_DEFAULT)
                                 .build()
                         ),
@@ -1465,7 +1465,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .intervals(querySegmentSpec(Intervals.ETERNITY))
-                .columns("a0", "d0", "d1", "j0.dim1")
+                .columns("d0", "d1", "a0", "j0.dim1")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -1540,7 +1540,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .intervals(querySegmentSpec(Intervals.ETERNITY))
-                .columns("a0", "d0", "j0.dim1")
+                .columns("d0", "a0", "j0.dim1")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -1593,7 +1593,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .intervals(querySegmentSpec(Intervals.ETERNITY))
-                .columns("a0", "d0", "j0.__time")
+                .columns("d0", "a0", "j0.__time")
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
