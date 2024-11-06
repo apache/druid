@@ -271,7 +271,7 @@ public class KubernetesPeonLifecycle
         /* Arguably we should throw a exception here but leaving it as a warn log to prevent unexpected errors.
          If there is strange behavior during overlord restarts the operator should look for this warn log.
         */
-        log.warn("Could not get task location from k8s.");
+        log.warn("Could not get task location from k8s for task [%s].", taskId);
         return TaskLocation.unknown();
       }
 
@@ -279,7 +279,7 @@ public class KubernetesPeonLifecycle
       PodStatus podStatus = pod.getStatus();
 
       if (podStatus == null || podStatus.getPodIP() == null) {
-        log.warn("Could not get task location from k8s.");
+        log.warn("Could not get task location from k8s for task [%s].", taskId);
         return TaskLocation.unknown();
       }
       taskLocation = TaskLocation.create(
