@@ -101,7 +101,7 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
         queries.add(((QueryDataSource) dataSource).getQuery());
       } else {
         throw DruidException.defensive(
-            "Expected to that all inputs as QueryDataSource-s! Encountered something else [%s].",
+            "Expected that all inputs are QueryDataSource-s! Encountered something else [%s].",
             dataSource
         );
       }

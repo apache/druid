@@ -228,7 +228,6 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
               )
           )
           .run();
-
     } else {
       // "dim3" has a different type in foo and foo2 (string vs long), which requires a casting subquery, so this
       // query cannot be planned.
