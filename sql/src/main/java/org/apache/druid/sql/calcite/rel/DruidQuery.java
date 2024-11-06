@@ -1656,14 +1656,6 @@ public class DruidQuery
               )
       ).collect(Collectors.toList());
 
-
-      // FIXME
-//      if (!plannerContext.featureAvailable(EngineFeature.SCAN_ORDER_BY_NON_TIME)
-//          && !orderByColumns.isEmpty()
-//          && !Collections.singletonList(ColumnHolder.TIME_COLUMN_NAME).equals(orderByColumns)) {
-//        return null;
-//      }
-
     } else {
       orderByColumns = Collections.emptyList();
     }
