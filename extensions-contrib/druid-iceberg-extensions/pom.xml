@@ -268,12 +268,13 @@
       <artifactId>iceberg-hive-metastore</artifactId>
       <version>${iceberg.core.version}</version>
     </dependency>
+    <!--   Iceberg GlueCatalog & CatalogUtil  -->
     <dependency>
       <groupId>org.apache.iceberg</groupId>
       <artifactId>iceberg-aws</artifactId>
       <version>${iceberg.core.version}</version>
     </dependency>
-<!--    GlueCatalog class-->
+   <!--  GlueCatalog needs AWS SDK STS module compile time  -->
     <dependency>
       <groupId>software.amazon.awssdk</groupId>
       <artifactId>glue</artifactId>
