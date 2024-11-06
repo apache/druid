@@ -326,7 +326,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
                 .dataSource(httpDataSource)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "timestamp_parse(\"timestamp\",null,'UTC')", ColumnType.LONG))
-                .columns("isRobot", "v0")
+                .columns("v0", "isRobot")
                 .build()
          )
         .verify();
@@ -453,7 +453,7 @@ public class IngestTableFunctionTest extends CalciteIngestionDmlTest
             newScanQueryBuilder()
                 .dataSource(httpDataSource)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("a", "b", "c", "d", "x", "y", "z")
+                .columns("x", "y", "z", "a", "b", "c", "d")
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
          )
