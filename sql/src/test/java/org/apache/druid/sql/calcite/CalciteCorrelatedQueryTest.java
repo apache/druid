@@ -288,7 +288,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                              "B",
                                                                              ColumnType.STRING
                                                                          ))
-                                                                         .columns("__time", "city", "country")
+                                                                         .columns("__time", "country", "city")
                                                                          .build()),
                                 new QueryDataSource(
                                     GroupByQuery.builder()
