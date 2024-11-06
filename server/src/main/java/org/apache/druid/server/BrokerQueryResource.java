@@ -77,7 +77,6 @@ public class BrokerQueryResource extends QueryResource
         responseContextConfig,
         selfNode,
         counter
-
     );
     this.brokerServerView = brokerServerView;
   }

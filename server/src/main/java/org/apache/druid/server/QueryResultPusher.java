@@ -233,6 +233,7 @@ public abstract class QueryResultPusher
   {
     if (resultsWriter != null) {
       resultsWriter.recordFailure(e);
+      counter.incrementFailed();
 
       if (accumulator != null && accumulator.isInitialized()) {
         // We already started sending a response when we got the error message.  In this case we just give up
@@ -242,7 +243,6 @@ public abstract class QueryResultPusher
         // the future.
         trailerFields.put(QueryResource.ERROR_MESSAGE_TRAILER_HEADER, e.getMessage());
         trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "false");
-        counter.incrementFailed();
         return null;
       }
     }
