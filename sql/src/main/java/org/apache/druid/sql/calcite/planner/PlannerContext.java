@@ -29,6 +29,7 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
@@ -508,7 +509,17 @@ public class PlannerContext
    */
   public void setPlanningError(String formatText, Object... arguments)
   {
+    if (isDecoupledMode()) {
+      throw DruidException.forPersona(DruidException.Persona.USER)
+          .ofCategory(DruidException.Category.UNCATEGORIZED)
+          .build(null, formatText, arguments);
+    }
     planningError = StringUtils.nonStrictFormat(formatText, arguments);
+  }
+
+   private boolean isDecoupledMode()
+  {
+     return queryContext().isDecoupledMode();
   }
 
   public DataContext createDataContext(final JavaTypeFactory typeFactory, List<TypedValue> parameters)

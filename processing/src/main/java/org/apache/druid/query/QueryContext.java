@@ -661,4 +661,10 @@ public class QueryContext
            "context=" + context +
            '}';
   }
+
+  public boolean isDecoupledMode()
+  {
+
+
+  }
 }

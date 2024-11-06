@@ -21,6 +21,9 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidException.Category;
+import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.IAE;
@@ -29,6 +32,7 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -135,6 +139,60 @@ public class QueryContexts
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
   public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
 
+  public @interface ContextKey
+  {
+    String value();
+  }
+
+  public @interface DefaultValue
+  {
+    String value();
+  }
+
+  public interface ContextParam<T>
+  {
+    default String contextKey()
+    {
+      return getClass().getAnnotation(ContextKey.class).value();
+    }
+
+    default Object getDefault()
+    {
+      return getClass().getAnnotation(DefaultValue.class).value();
+    }
+
+    default T getValue(QueryContext ctx)
+    {
+      Object value = ctx.get(contextKey());
+      if (value == null) {
+        value = getDefault();
+      }
+      return fromString(value);
+    }
+
+    T fromString(Object string);
+  }
+
+  @ContextKey("plannerStrategy")
+  @DefaultValue("coupled")
+  public static enum PlanningMode implements ContextParam<PlanningMode>
+  {
+    COUPLED,
+    DECOUPLED;
+
+    @Override
+    public PlanningMode fromString(Object value)
+    {
+      try {
+        return PlanningMode.valueOf(value.toString().strip().toUpperCase());
+      }
+      catch (Exception e) {
+        throw DruidException.forPersona(Persona.USER)
+            .ofCategory(Category.INVALID_INPUT)
+            .build("Invalid value [%s] passed for context parameter [%s].", value, contextKey());
+      }
+    }
+  }
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize

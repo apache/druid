@@ -38,7 +38,6 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
-  public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
   public static final int NUM_FILTER_NOT_USED = -1;
 
   @JsonProperty
