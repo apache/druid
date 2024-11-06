@@ -2138,7 +2138,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                               .build()
               ))
               .intervals(querySegmentSpec(Filtration.eternity()))
-              .columns("$f1", "EXPR$0")
+              .columns("EXPR$0", "$f1")
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
               .context(QUERY_CONTEXT)
               .build()
