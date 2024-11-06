@@ -91,8 +91,8 @@ public class GroupByStatsMonitorTest
                                          ));
     Assert.assertEquals(7, resultMap.size());
     Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/pendingRequests"));
-    Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/usedCount"));
-    Assert.assertEquals(1, (long) resultMap.get("mergeBuffer/acquisitionCount"));
+    Assert.assertEquals(0, (long) resultMap.get("mergeBuffer/used"));
+    Assert.assertEquals(1, (long) resultMap.get("mergeBuffer/queries"));
     Assert.assertEquals(100, (long) resultMap.get("mergeBuffer/acquisitionTimeNs"));
     Assert.assertEquals(2, (long) resultMap.get("groupBy/spilledQueries"));
     Assert.assertEquals(200, (long) resultMap.get("groupBy/spilledBytes"));
@@ -113,7 +113,7 @@ public class GroupByStatsMonitorTest
     boolean ret = monitor.doMonitor(emitter);
     Assert.assertTrue(ret);
 
-    List<Number> numbers = emitter.getMetricValues("mergeBuffer/usedCount", Collections.emptyMap());
+    List<Number> numbers = emitter.getMetricValues("mergeBuffer/used", Collections.emptyMap());
     Assert.assertEquals(1, numbers.size());
     Assert.assertEquals(4, numbers.get(0).intValue());
   }

@@ -65,7 +65,7 @@ public class GroupByStatsProvider
 
   public static class AggregateStats
   {
-    private long mergeBufferAcquisitionCount = 0;
+    private long mergeBufferQueries = 0;
     private long mergeBufferAcquisitionTimeNs = 0;
     private long spilledQueries = 0;
     private long spilledBytes = 0;
@@ -76,23 +76,23 @@ public class GroupByStatsProvider
     }
 
     public AggregateStats(
-        long mergeBufferAcquisitionCount,
+        long mergeBufferQueries,
         long mergeBufferAcquisitionTimeNs,
         long spilledQueries,
         long spilledBytes,
         long mergeDictionarySize
     )
     {
-      this.mergeBufferAcquisitionCount = mergeBufferAcquisitionCount;
+      this.mergeBufferQueries = mergeBufferQueries;
       this.mergeBufferAcquisitionTimeNs = mergeBufferAcquisitionTimeNs;
       this.spilledQueries = spilledQueries;
       this.spilledBytes = spilledBytes;
       this.mergeDictionarySize = mergeDictionarySize;
     }
 
-    public long getMergeBufferAcquisitionCount()
+    public long getMergeBufferQueries()
     {
-      return mergeBufferAcquisitionCount;
+      return mergeBufferQueries;
     }
 
     public long getMergeBufferAcquisitionTimeNs()
@@ -118,7 +118,7 @@ public class GroupByStatsProvider
     public void addQueryStats(PerQueryStats perQueryStats)
     {
       if (perQueryStats.getMergeBufferAcquisitionTimeNs() > 0) {
-        mergeBufferAcquisitionCount++;
+        mergeBufferQueries++;
         mergeBufferAcquisitionTimeNs += perQueryStats.getMergeBufferAcquisitionTimeNs();
       }
 
@@ -134,14 +134,14 @@ public class GroupByStatsProvider
     {
       AggregateStats aggregateStats =
           new AggregateStats(
-              mergeBufferAcquisitionCount,
+              mergeBufferQueries,
               mergeBufferAcquisitionTimeNs,
               spilledQueries,
               spilledBytes,
               mergeDictionarySize
           );
 
-      this.mergeBufferAcquisitionCount = 0;
+      this.mergeBufferQueries = 0;
       this.mergeBufferAcquisitionTimeNs = 0;
       this.spilledQueries = 0;
       this.spilledBytes = 0;
@@ -164,7 +164,6 @@ public class GroupByStatsProvider
 
     public void spilledBytes(long bytes)
     {
-
       spilledBytes.addAndGet(bytes);
     }
 

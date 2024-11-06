@@ -13752,7 +13752,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     GroupByStatsProvider.AggregateStats aggregateStats = statsProvider.getStatsSince();
     Assert.assertEquals(1, aggregateStats.getSpilledQueries());
     Assert.assertTrue(aggregateStats.getSpilledBytes() > 0);
-    Assert.assertEquals(1, aggregateStats.getMergeBufferAcquisitionCount());
+    Assert.assertEquals(1, aggregateStats.getMergeBufferQueries());
     Assert.assertTrue(aggregateStats.getMergeBufferAcquisitionTimeNs() > 0);
     if (!skipMergeDictionaryMetric) {
       Assert.assertTrue(aggregateStats.getMergeDictionarySize() > 0);

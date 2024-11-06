@@ -51,7 +51,7 @@ public class GroupByStatsProviderTest
     stats2.dictionarySize(400);
 
     GroupByStatsProvider.AggregateStats aggregateStats = statsProvider.getStatsSince();
-    Assert.assertEquals(0L, aggregateStats.getMergeBufferAcquisitionCount());
+    Assert.assertEquals(0L, aggregateStats.getMergeBufferQueries());
     Assert.assertEquals(0L, aggregateStats.getMergeBufferAcquisitionTimeNs());
     Assert.assertEquals(0L, aggregateStats.getSpilledQueries());
     Assert.assertEquals(0L, aggregateStats.getSpilledBytes());
@@ -61,7 +61,7 @@ public class GroupByStatsProviderTest
     statsProvider.closeQuery(id2);
 
     aggregateStats = statsProvider.getStatsSince();
-    Assert.assertEquals(2, aggregateStats.getMergeBufferAcquisitionCount());
+    Assert.assertEquals(2, aggregateStats.getMergeBufferQueries());
     Assert.assertEquals(1800L, aggregateStats.getMergeBufferAcquisitionTimeNs());
     Assert.assertEquals(2L, aggregateStats.getSpilledQueries());
     Assert.assertEquals(1600L, aggregateStats.getSpilledBytes());

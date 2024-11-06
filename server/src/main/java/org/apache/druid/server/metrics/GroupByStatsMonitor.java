@@ -51,12 +51,12 @@ public class GroupByStatsMonitor extends AbstractMonitor
 
     emitter.emit(builder.setMetric("mergeBuffer/pendingRequests", mergeBufferPool.getPendingRequests()));
 
-    emitter.emit(builder.setMetric("mergeBuffer/usedCount", mergeBufferPool.getUsedResourcesCount()));
+    emitter.emit(builder.setMetric("mergeBuffer/used", mergeBufferPool.getUsedResourcesCount()));
 
     GroupByStatsProvider.AggregateStats statsContainer = groupByStatsProvider.getStatsSince();
 
-    if (statsContainer.getMergeBufferAcquisitionCount() > 0) {
-      emitter.emit(builder.setMetric("mergeBuffer/acquisitionCount", statsContainer.getMergeBufferAcquisitionCount()));
+    if (statsContainer.getMergeBufferQueries() > 0) {
+      emitter.emit(builder.setMetric("mergeBuffer/queries", statsContainer.getMergeBufferQueries()));
       emitter.emit(builder.setMetric(
           "mergeBuffer/acquisitionTimeNs",
           statsContainer.getMergeBufferAcquisitionTimeNs()
