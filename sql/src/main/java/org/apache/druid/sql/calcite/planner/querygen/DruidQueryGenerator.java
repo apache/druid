@@ -43,6 +43,7 @@ import org.apache.druid.sql.calcite.rel.logical.DruidAggregate;
 import org.apache.druid.sql.calcite.rel.logical.DruidJoin;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalNode;
 import org.apache.druid.sql.calcite.rel.logical.DruidSort;
+import org.apache.druid.sql.calcite.rel.logical.DruidUnion;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -206,15 +207,18 @@ public class DruidQueryGenerator
   {
     NONE,
     LEFT,
-    RIGHT;
+    RIGHT, UNION;
 
     static JoinSupportTweaks analyze(DruidNodeStack stack)
     {
+      if (!(stack.peekNode() instanceof DruidUnion)) {
+        return UNION;
+      }
       if (stack.size() < 2) {
         return NONE;
       }
-      DruidLogicalNode possibleJoin = stack.parentNode();
-      if (!(possibleJoin instanceof DruidJoin)) {
+      DruidLogicalNode parentNode = stack.parentNode();
+      if (!(parentNode instanceof DruidJoin)) {
         return NONE;
       }
       if (stack.peekOperandIndex() == 0) {
@@ -226,11 +230,14 @@ public class DruidQueryGenerator
 
     boolean finalizeSubQuery()
     {
-      return this == NONE;
+      return this == NONE || this == UNION;
     }
 
     boolean forceSubQuery(SourceDesc sourceDesc)
     {
+      if(this==UNION) {
+        return true;
+      }
       if (sourceDesc.dataSource.isGlobal()) {
         return false;
       }
@@ -239,7 +246,7 @@ public class DruidQueryGenerator
 
     boolean filteredDatasourceAllowed()
     {
-      return this == NONE;
+      return this == NONE || this == UNION;
     }
   }
 

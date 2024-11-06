@@ -86,6 +86,13 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
       }
       return new SourceDesc(new UnionDataSource(dataSources), signature);
     }
+    // all other cases are handled via UnionQuery
+
+
+    UnionQuery unionQuery = makeUnionQuery(sources);
+    if(true) {
+      return new SourceDesc(new QueryDataSource(unionQuery), unionQuery.getResultRowSignature());
+    }
     if (mayUseUnionQuery(sources)) {
       RowSignature signature = null;
       List<Query<?>> queries = new ArrayList<>();
@@ -101,6 +108,15 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
     }
 
     throw DruidException.defensive("Union with input [%s] is not supported. This should not happen.", sources);
+  }
+
+  private UnionQuery makeUnionQuery(List<SourceDesc> sources)
+  {
+    List<Query<?>> queries = new ArrayList<>();
+    for (SourceDesc sourceDesc : sources) {
+      queries.add(sourceDesc.asQuery());
+    }
+    return new UnionQuery(queries);
   }
 
   private boolean mayUseUnionQuery(List<SourceDesc> sources)

@@ -21,6 +21,9 @@ package org.apache.druid.sql.calcite.planner.querygen;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.Druids;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
@@ -61,6 +64,22 @@ public interface SourceDescProducer
     public String toString()
     {
       return ToStringBuilder.reflectionToString(this);
+    }
+
+    public Query<?> asQuery()
+    {
+      if (dataSource instanceof QueryDataSource) {
+        return ((QueryDataSource) dataSource).getQuery();
+      }
+      if(true) {
+        throw new RuntimeException();
+      }
+      return Druids.newScanQueryBuilder()
+          .dataSource(dataSource)
+          .eternityInterval()
+          .columns(rowSignature.getColumnNames())
+          .columnTypes(rowSignature.getColumnTypes())
+          .build();
     }
   }
 

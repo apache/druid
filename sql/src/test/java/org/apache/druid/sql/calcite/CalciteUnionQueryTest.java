@@ -191,18 +191,33 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnionAllTablesColumnTypeMismatchStringLong()
   {
-    // "dim3" has a different type in foo and foo2 (string vs long), which requires a casting subquery, so this
-    // query cannot be planned.
-
-    assertQueryIsUnplannable(
-        "SELECT\n"
+    cannotVectorize();
+    String sql = "SELECT\n"
         + "dim3, dim2, SUM(m1), COUNT(*)\n"
         + "FROM (SELECT dim3, dim2, m1 FROM foo2 UNION ALL SELECT dim3, dim2, m1 FROM foo)\n"
-        + "WHERE dim2 = 'a' OR dim2 = 'en'\n"
-        + "GROUP BY 1, 2",
-        "SQL requires union between inputs that are not simple table scans and involve a " +
-        "filter or aliasing. Or column types of tables being unioned are not of same type."
-    );
+        + "WHERE dim3 = 'a' OR dim3 = 'en'\n"
+        + "GROUP BY 1, 2";
+    if (testBuilder().isDecoupledMode()) {
+      testBuilder()
+          .sql(sql)
+          .expectedResults(
+              ImmutableList.of(
+                  new Object[] {"a", null, 1.0D, 1L},
+                  new Object[] {"b", null, 1.0D, 1L},
+                  new Object[] {"en", "1", 11.0D, 1L}
+              )
+          )
+          .run();
+
+    }else {
+      // "dim3" has a different type in foo and foo2 (string vs long), which requires a casting subquery, so this
+      // query cannot be planned.
+      assertQueryIsUnplannable(
+          sql,
+          "SQL requires union between inputs that are not simple table scans and involve a " +
+          "filter or aliasing. Or column types of tables being unioned are not of same type."
+      );
+    }
   }
 
   @Test
