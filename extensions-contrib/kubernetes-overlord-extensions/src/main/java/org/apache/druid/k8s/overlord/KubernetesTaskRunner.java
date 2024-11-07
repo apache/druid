@@ -358,7 +358,20 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
     catch (Exception e) {
       final long numInitialized =
-          tasks.values().stream().filter(item -> item.getPeonLifeycle().getTaskStartedSuccessfullyFuture().isDone()).count();
+          tasks.values()
+              .stream()
+              .filter(item -> {
+                if (item.getPeonLifeycle().getTaskStartedSuccessfullyFuture().isDone()) {
+                  try {
+                    return item.getPeonLifeycle().getTaskStartedSuccessfullyFuture().get();
+                  }
+                  catch (InterruptedException | ExecutionException ex) {
+                    return false;
+                  }
+                } else {
+                  return false;
+                }
+              }).count();
       log.warn(
           e,
           "Located [%,d] out of [%,d] active tasks (timeout = %s). Locating others asynchronously.",

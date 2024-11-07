@@ -152,6 +152,64 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
   }
 
   @Test
+  public void test_start_withExistingJobs_oneJobFails() throws IOException
+  {
+    SettableFuture<Boolean> settableFuture = SettableFuture.create();
+    settableFuture.set(true);
+    KubernetesTaskRunner runner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
+    )
+    {
+      @Override
+      protected KubernetesWorkItem joinAsync(Task task)
+      {
+        return tasks.computeIfAbsent(
+            task.getId(),
+            k -> new KubernetesWorkItem(
+                task,
+                Futures.immediateFuture(TaskStatus.success(task.getId())),
+                kubernetesPeonLifecycle
+            )
+        );
+      }
+    };
+
+    Job job = new JobBuilder()
+        .withNewMetadata()
+        .withName(ID)
+        .endMetadata()
+        .build();
+
+    Job job2 = new JobBuilder()
+        .withNewMetadata()
+        .withName("id2")
+        .endMetadata()
+        .build();
+
+    EasyMock.expect(peonClient.getPeonJobs()).andReturn(ImmutableList.of(job, job2));
+    EasyMock.expect(taskAdapter.toTask(job)).andReturn(task);
+    EasyMock.expect(taskAdapter.toTask(job2)).andThrow(new IOException("deserialization exception"));
+
+    EasyMock.expect(kubernetesPeonLifecycle.getTaskStartedSuccessfullyFuture()).andReturn(
+        settableFuture
+    );
+
+    replayAll();
+
+    runner.start();
+
+    verifyAll();
+
+    Assert.assertNotNull(runner.tasks);
+    Assert.assertEquals(1, runner.tasks.size());
+  }
+
+  @Test
   public void test_start_whenDeserializationExceptionThrown_isIgnored() throws IOException
   {
     KubernetesTaskRunner runner = new KubernetesTaskRunner(

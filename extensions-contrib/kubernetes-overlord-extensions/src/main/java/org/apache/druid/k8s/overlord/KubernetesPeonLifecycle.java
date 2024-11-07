@@ -145,12 +145,12 @@ public class KubernetesPeonLifecycle
     }
     catch (Exception e) {
       log.info("Failed to run task: %s", taskId.getOriginalTaskId());
-      throw e;
-    }
-    finally {
       if (!taskStartedSuccessfullyFuture.isDone()) {
         taskStartedSuccessfullyFuture.set(false);
       }
+      throw e;
+    }
+    finally {
       stopTask();
     }
   }
