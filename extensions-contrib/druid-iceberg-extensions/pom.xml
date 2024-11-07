@@ -776,6 +776,8 @@
             <ignoredUnusedDeclaredDependencies>
               <ignoredUnusedDeclaredDependency>org.apache.iceberg:iceberg-aws</ignoredUnusedDeclaredDependency>
               <ignoredUnusedDeclaredDependency>software.amazon.awssdk:glue</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>software.amazon.awssdk:s3</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>software.amazon.awssdk:sts</ignoredUnusedDeclaredDependency>
             </ignoredUnusedDeclaredDependencies>
           </configuration>
         </plugin>
