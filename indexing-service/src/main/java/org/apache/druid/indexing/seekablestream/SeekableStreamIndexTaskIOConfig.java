@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 
@@ -43,7 +42,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
   private final InputFormat inputFormat;
-  private final Duration taskDuration;
+  private final Integer refreshRejectionPeriodsInMinutes;
 
   public SeekableStreamIndexTaskIOConfig(
       @Nullable final Integer taskGroupId, // can be null for backward compabitility
@@ -54,7 +53,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
       final DateTime minimumMessageTime,
       final DateTime maximumMessageTime,
       @Nullable final InputFormat inputFormat,
-      @Nullable final Duration taskDuration // can be null for backward compabitility
+      @Nullable final Integer refreshRejectionPeriodsInMinutes // can be null for backward compabitility
   )
   {
     this.taskGroupId = taskGroupId;
@@ -65,7 +64,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
     this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
     this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
     this.inputFormat = inputFormat;
-    this.taskDuration = taskDuration;
+    this.refreshRejectionPeriodsInMinutes = refreshRejectionPeriodsInMinutes;
 
     Preconditions.checkArgument(
         startSequenceNumbers.getStream().equals(endSequenceNumbers.getStream()),
@@ -141,8 +140,8 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
 
   @Nullable
   @JsonProperty
-  public Duration getTaskDuration()
+  public Integer getRefreshRejectionPeriodsInMinutes()
   {
-    return taskDuration;
+    return refreshRejectionPeriodsInMinutes;
   }
 }

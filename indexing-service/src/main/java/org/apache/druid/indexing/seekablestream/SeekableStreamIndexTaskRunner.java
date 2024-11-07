@@ -274,12 +274,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     minMessageTime = ioConfig.getMinimumMessageTime().or(DateTimes.MIN);
     maxMessageTime = ioConfig.getMaximumMessageTime().or(DateTimes.MAX);
 
-    if (ioConfig.getTaskDuration() != null) {
+    if (ioConfig.getRefreshRejectionPeriodsInMinutes() != null) {
       Execs.scheduledSingleThreaded("RejectionPeriodUpdater-Exec--%d")
            .scheduleWithFixedDelay(
-               this::addTaskDurationToMinMaxTimes,
-               ioConfig.getTaskDuration().getStandardMinutes(),
-               ioConfig.getTaskDuration().getStandardMinutes(),
+               this::refreshMinMaxMessageTime,
+               ioConfig.getRefreshRejectionPeriodsInMinutes(),
+               ioConfig.getRefreshRejectionPeriodsInMinutes(),
                TimeUnit.MINUTES
         );
     }
@@ -2109,11 +2109,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   protected abstract TypeReference<List<SequenceMetadata<PartitionIdType, SequenceOffsetType>>> getSequenceMetadataTypeReference();
 
-
-  private void addTaskDurationToMinMaxTimes()
+  private void refreshMinMaxMessageTime()
   {
-    minMessageTime = minMessageTime.plusMinutes(ioConfig.getTaskDuration().toStandardMinutes().getMinutes());
-    maxMessageTime = maxMessageTime.plusMinutes(ioConfig.getTaskDuration().toStandardMinutes().getMinutes());
+    minMessageTime = minMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes());
+    maxMessageTime = maxMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes());
   }
 
   public boolean withinMinMaxRecordTime(final InputRow row)
