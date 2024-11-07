@@ -830,6 +830,7 @@ public class Druids
 
     public ScanQuery build()
     {
+//      assertNotNull(columnTypes);
       return new ScanQuery(
           dataSource,
           querySegmentSpec,

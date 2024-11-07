@@ -454,20 +454,22 @@ public class QueryTestRunner
           ScanQuery scanQuery2 = (ScanQuery) actualQuery;
           ScanQuery scanQuery = (ScanQuery) expectedQuery;
           if (!Objects.equal(scanQuery.getColumnTypes(), scanQuery2.getColumnTypes())) {
-            StringBuffer sv=new StringBuffer();
-            sv.append(                   ".columnTypes("
- );
+            StringBuffer sv = new StringBuffer();
+            sv.append(
+                ".columnTypes("
+            );
             for (ColumnType query : scanQuery2.getColumnTypes()) {
-              sv.append("ColumnType."+query+", ");
+              if (query.getComplexTypeName() != null) {
+                sv.append("ColumnType.ofComplex(\"" + query.getComplexTypeName() + "\"), ");
+              } else {
+                sv.append("ColumnType." + query + ", ");
+              }
             }
             int l = sv.length();
-            sv.replace(l-2, l, ")");
+            sv.replace(l - 2, l, ")");
             System.out.println("\n");
             System.out.println(sv.toString());
-            fail(sv.toString()
-
-                );
-
+            fail(sv.toString());
           }
         }
 
