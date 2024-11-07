@@ -57,9 +57,7 @@ public class WX1
         colLine = null;
       }
 
-      newLines.add(l);
-
-      if (colLine !=null && !l.contains("columnTypes")) {
+      if (colLine !=null && l!=colLine && !l.contains("columnTypes")) {
         System.out.println(colLine);
         String[] p0 = colLine.split("[()]");
         String[] aa = p0[1].split(",");
@@ -70,11 +68,12 @@ public class WX1
         sb.append("columnTypes(");
 
         for (String colName : aa) {
-          if(colName.contains("__time") || colName.contains("cnt")) {
-            sb.append("ColumnType.LONG, ");
-          } else {
-            sb.append("ColumnType.STRING, ");
-          }
+          colName=colName.strip();
+          colName=colName.replaceAll("\"", "");
+
+          String type=getTypeForColName(colName);
+
+            sb.append(type + ", ");
         }
         int ll = sb.length();
         sb.delete(ll - 2, ll);
@@ -84,9 +83,31 @@ public class WX1
         colLine=null;
         newLines.add(sb.toString());
       }
+
+      newLines.add(l);
     }
+
+
 
     Files.write(path, newLines);
 
+  }
+
+  private static String getTypeForColName(String colName)
+  {
+    switch (colName)
+    {
+      case "m1":
+        return "ColumnType.FLOAT";
+      case "m2":
+        return "ColumnType.DOUBLE";
+      case "unique_dim1":
+        return "ColumnType.ofComplex(\"hyperUnique\")";
+      case "cnt":
+      case "__time":
+        return "ColumnType.LONG";
+      default:
+        return "ColumnType.STRING";
+    }
   }
 }
