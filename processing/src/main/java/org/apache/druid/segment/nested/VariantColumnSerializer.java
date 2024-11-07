@@ -26,7 +26,6 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -56,6 +55,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.Path;
 
 /**
  * Serializer for a {@link NestedCommonFormatColumn} for single type arrays and mixed type columns, but not columns
@@ -133,7 +133,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
   }
 
   @Override
-  public void openDictionaryWriter() throws IOException
+  public void openDictionaryWriter(Path segmentBasePath) throws IOException
   {
     dictionaryWriter = StringEncodingStrategies.getStringDictionaryWriter(
         indexSpec.getStringDictionaryEncoding(),
@@ -171,7 +171,7 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
     dictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
-            FileUtils.getTempDir(),
+            segmentBasePath,
             dictionaryWriter,
             longDictionaryWriter,
             doubleDictionaryWriter,

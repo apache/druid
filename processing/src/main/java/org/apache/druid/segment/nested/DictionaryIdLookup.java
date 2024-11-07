@@ -19,8 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
-import com.google.common.primitives.Ints;
-import org.apache.druid.annotations.SuppressFBWarnings;
+import org.apache.druid.common.utils.SerializerUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.FileUtils;
@@ -43,12 +42,8 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.channels.GatheringByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.EnumSet;
 
 /**
  * Value to dictionary id lookup, backed with memory mapped dictionaries populated lazily by the supplied
@@ -56,6 +51,7 @@ import java.util.EnumSet;
  */
 public final class DictionaryIdLookup implements Closeable
 {
+
   private final String name;
   private final Path tempBasePath;
 
@@ -267,7 +263,7 @@ public final class DictionaryIdLookup implements Closeable
   {
     if (longDictionary == null) {
       longDictionaryFile = makeTempFile(name + ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
-      longBuffer = mapWriter(longDictionaryFile, longDictionaryWriter);
+      longBuffer = SerializerUtils.mapSerializer(longDictionaryFile, longDictionaryWriter);
       longDictionary = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES).get();
       // reset position
       longBuffer.position(0);
@@ -278,7 +274,7 @@ public final class DictionaryIdLookup implements Closeable
   {
     if (doubleDictionary == null) {
       doubleDictionaryFile = makeTempFile(name + ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
-      doubleBuffer = mapWriter(doubleDictionaryFile, doubleDictionaryWriter);
+      doubleBuffer = SerializerUtils.mapSerializer(doubleDictionaryFile, doubleDictionaryWriter);
       doubleDictionary = FixedIndexed.read(
           doubleBuffer,
           TypeStrategies.DOUBLE,
@@ -294,7 +290,7 @@ public final class DictionaryIdLookup implements Closeable
   {
     if (arrayDictionary == null && arrayDictionaryWriter != null) {
       arrayDictionaryFile = makeTempFile(name + ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME);
-      arrayBuffer = mapWriter(arrayDictionaryFile, arrayDictionaryWriter);
+      arrayBuffer = SerializerUtils.mapSerializer(arrayDictionaryFile, arrayDictionaryWriter);
       arrayDictionary = FrontCodedIntArrayIndexed.read(arrayBuffer, ByteOrder.nativeOrder()).get();
       // reset position
       arrayBuffer.position(0);
@@ -309,103 +305,6 @@ public final class DictionaryIdLookup implements Closeable
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  private void deleteTempFile(Path path)
-  {
-    try {
-      final File file = path.toFile();
-      if (file.isDirectory()) {
-        FileUtils.deleteDirectory(file);
-      } else {
-        Files.delete(path);
-      }
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
-  private MappedByteBuffer mapWriter(Path path, DictionaryWriter<?> writer)
-  {
-    final EnumSet<StandardOpenOption> options = EnumSet.of(
-        StandardOpenOption.READ,
-        StandardOpenOption.WRITE,
-        StandardOpenOption.CREATE,
-        StandardOpenOption.TRUNCATE_EXISTING
-    );
-
-    try (FileChannel fileChannel = FileChannel.open(path, options);
-         GatheringByteChannel smooshChannel = makeWriter(fileChannel, writer.getSerializedSize())) {
-      //noinspection DataFlowIssue
-      writer.writeTo(smooshChannel, null);
-      return fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, writer.getSerializedSize());
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private GatheringByteChannel makeWriter(FileChannel channel, long size)
-  {
-    // basically same code as smooshed writer, can't use channel directly because copying between channels
-    // doesn't handle size of source channel correctly
-    return new GatheringByteChannel()
-    {
-      private boolean isClosed = false;
-      private long currOffset = 0;
-
-      @Override
-      public boolean isOpen()
-      {
-        return !isClosed;
-      }
-
-      @Override
-      public void close() throws IOException
-      {
-        channel.close();
-        isClosed = true;
-      }
-
-      public int bytesLeft()
-      {
-        return (int) (size - currOffset);
-      }
-
-      @Override
-      public int write(ByteBuffer buffer) throws IOException
-      {
-        return addToOffset(channel.write(buffer));
-      }
-
-      @Override
-      public long write(ByteBuffer[] srcs, int offset, int length) throws IOException
-      {
-        return addToOffset(channel.write(srcs, offset, length));
-      }
-
-      @Override
-      public long write(ByteBuffer[] srcs) throws IOException
-      {
-        return addToOffset(channel.write(srcs));
-      }
-
-      public int addToOffset(long numBytesWritten)
-      {
-        if (numBytesWritten > bytesLeft()) {
-          throw DruidException.defensive(
-              "Wrote more bytes[%,d] than available[%,d]. Don't do that.",
-              numBytesWritten,
-              bytesLeft()
-          );
-        }
-        currOffset += numBytesWritten;
-
-        return Ints.checkedCast(numBytesWritten);
-      }
-    };
   }
 
   public int getStringCardinality()
@@ -430,5 +329,20 @@ public final class DictionaryIdLookup implements Closeable
   {
     ensureArrayDictionaryLoaded();
     return arrayDictionary == null ? 0 : arrayDictionary.size();
+  }
+
+  public static void deleteTempFile(Path path)
+  {
+    try {
+      final File file = path.toFile();
+      if (file.isDirectory()) {
+        FileUtils.deleteDirectory(file);
+      } else {
+        Files.delete(path);
+      }
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

@@ -22,17 +22,32 @@ package org.apache.druid.common.utils;
 import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import org.apache.druid.annotations.SuppressFBWarnings;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.serde.Serializer;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.EnumSet;
 
 public class SerializerUtils
 {
+  private static final EnumSet<StandardOpenOption> MAP_SERIALIZER_OPTIONS = EnumSet.of(
+      StandardOpenOption.READ,
+      StandardOpenOption.WRITE,
+      StandardOpenOption.CREATE,
+      StandardOpenOption.TRUNCATE_EXISTING
+  );
 
   public <T extends OutputStream> void writeString(T out, String name) throws IOException
   {
@@ -223,5 +238,84 @@ public class SerializerUtils
   public int getSerializedStringByteSize(String str)
   {
     return Integer.BYTES + StringUtils.toUtf8(str).length;
+  }
+
+
+  /**
+   * Write a {@link Serializer} to a {@link Path} and then map it as a read-only {@link MappedByteBuffer}
+   */
+  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
+  public static MappedByteBuffer mapSerializer(Path path, Serializer writer)
+  {
+    try (final FileChannel fileChannel = FileChannel.open(path, MAP_SERIALIZER_OPTIONS);
+         final GatheringByteChannel smooshChannel = createSerializableChannel(fileChannel, writer.getSerializedSize())) {
+      //noinspection DataFlowIssue
+      writer.writeTo(smooshChannel, null);
+      return fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, writer.getSerializedSize());
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  /**
+   * Create a {@link GatheringByteChannel} from another {@link FileChannel} with size set correctly so it is suitable
+   * to use for writing with a {@link Serializer}
+   */
+  private static GatheringByteChannel createSerializableChannel(FileChannel channel, long size)
+  {
+    // this is pretty similar to some implementations of SmooshedWriter in FileSmoosher, some of which could probably
+    // be refactored to use this method in the future.
+    return new GatheringByteChannel()
+    {
+      private boolean isClosed = false;
+      private long currOffset = 0;
+
+      @Override
+      public boolean isOpen()
+      {
+        return !isClosed;
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        channel.close();
+        isClosed = true;
+      }
+
+      @Override
+      public int write(ByteBuffer buffer) throws IOException
+      {
+        return addToOffset(channel.write(buffer));
+      }
+
+      @Override
+      public long write(ByteBuffer[] srcs, int offset, int length) throws IOException
+      {
+        return addToOffset(channel.write(srcs, offset, length));
+      }
+
+      @Override
+      public long write(ByteBuffer[] srcs) throws IOException
+      {
+        return addToOffset(channel.write(srcs));
+      }
+
+      public int addToOffset(long numBytesWritten)
+      {
+        final long bytesLeft = size - currOffset;
+        if (numBytesWritten > bytesLeft) {
+          throw DruidException.defensive(
+              "Wrote more bytes[%,d] than available[%,d]. Don't do that.",
+              numBytesWritten,
+              bytesLeft
+          );
+        }
+        currOffset += numBytesWritten;
+
+        return Ints.checkedCast(numBytesWritten);
+      }
+    };
   }
 }

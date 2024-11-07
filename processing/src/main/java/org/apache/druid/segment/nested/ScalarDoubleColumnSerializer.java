@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -37,6 +36,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteOrder;
+import java.nio.file.Path;
 
 /**
  * Serializer for a {@link ScalarDoubleColumn}
@@ -66,7 +66,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
   }
 
   @Override
-  public void openDictionaryWriter() throws IOException
+  public void openDictionaryWriter(Path segmentBasePath) throws IOException
   {
     dictionaryWriter = new FixedIndexedWriter<>(
         segmentWriteOutMedium,
@@ -79,7 +79,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
     dictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
-            FileUtils.getTempDir(),
+            segmentBasePath,
             null,
             null,
             dictionaryWriter,

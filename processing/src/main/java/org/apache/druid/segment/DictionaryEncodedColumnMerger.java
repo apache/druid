@@ -26,10 +26,14 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
+import org.apache.druid.common.utils.SerializerUtils;
+import org.apache.druid.java.util.common.ByteBufferUtils;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -51,13 +55,24 @@ import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarMultiIntsSerializer;
+import org.apache.druid.segment.nested.DictionaryIdLookup;
+import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.IntBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.WritableByteChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -101,6 +116,9 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   @Nullable
   protected T firstDictionaryValue;
 
+  protected File segmentBaseDir;
+  @MonotonicNonNull
+  protected PersistedIdConversions persistedIdConversions = null;
 
   public DictionaryEncodedColumnMerger(
       String dimensionName,
@@ -109,6 +127,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
+      File segmentBaseDir,
       Closer closer
   )
   {
@@ -118,8 +137,8 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     this.capabilities = capabilities;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
-
     this.progress = progress;
+    this.segmentBaseDir = segmentBaseDir;
     this.closer = closer;
   }
 
@@ -128,6 +147,19 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected abstract ObjectStrategy<T> getObjectStrategy();
   @Nullable
   protected abstract T coerceValue(T value);
+
+  @Override
+  public void markAsParent()
+  {
+    final File tmpOutputFilesDir = new File(segmentBaseDir, "tmp_" + outputName + "_merger");
+    try {
+      FileUtils.mkdirp(tmpOutputFilesDir);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    persistedIdConversions = closer.register(new PersistedIdConversions(tmpOutputFilesDir.toPath()));
+  }
 
   @Override
   public void writeMergedValueDictionary(List<IndexableAdapter> adapters) throws IOException
@@ -192,7 +224,18 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
       writeDictionary(() -> dictionaryMergeIterator);
       for (int i = 0; i < adapters.size(); i++) {
         if (dimValueLookups[i] != null && dictionaryMergeIterator.needConversion(i)) {
-          dimConversions.set(i, dictionaryMergeIterator.conversions[i]);
+          final IntBuffer conversionBuffer;
+          if (persistedIdConversions != null) {
+            // if we are a projection parent column, persist the id mapping buffer so that child mergers have access
+            // to the mappings during serialization to adjust their dictionary ids as needed when serializing
+            conversionBuffer = persistedIdConversions.map(
+                dimensionName + "_idConversions_" + i,
+                dictionaryMergeIterator.conversions[i]
+            );
+          } else {
+            conversionBuffer = dictionaryMergeIterator.conversions[i];
+          }
+          dimConversions.set(i, conversionBuffer);
         }
       }
       cardinality = dictionaryMergeIterator.getCardinality();
@@ -701,5 +744,115 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
      */
     void mergeIndexes(int dictId, MutableBitmap mergedIndexes) throws IOException;
     void write() throws IOException;
+  }
+
+  protected static class IdConversionSerializer implements Serializer
+  {
+    private final IntBuffer buffer;
+    private final ByteBuffer scratch;
+
+    protected IdConversionSerializer(IntBuffer buffer)
+    {
+      this.buffer = buffer.asReadOnlyBuffer();
+      this.buffer.position(0);
+      this.scratch = ByteBuffer.allocate(Integer.BYTES).order(ByteOrder.nativeOrder());
+    }
+
+    @Override
+    public long getSerializedSize() throws IOException
+    {
+      return (long) buffer.capacity() * Integer.BYTES;
+    }
+
+    @Override
+    public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
+    {
+      buffer.position(0);
+      while (buffer.remaining() > 0) {
+        scratch.position(0);
+        scratch.putInt(buffer.get());
+        scratch.flip();
+        channel.write(scratch);
+      }
+    }
+  }
+
+  /**
+   * Closer of {@link PersistedIdConversion} and a parent path which they are stored in for easy cleanup when the
+   * segment is closed.
+   */
+  protected static class PersistedIdConversions implements Closeable
+  {
+    private final Path tempPath;
+    private final Closer closer;
+
+    protected PersistedIdConversions(Path tempPath)
+    {
+      this.tempPath = tempPath;
+      this.closer = Closer.create();
+    }
+
+    @Nullable
+    public IntBuffer map(String name, IntBuffer intBuffer) throws IOException
+    {
+      final Path path = Files.createTempFile(tempPath, name, null);
+      final IdConversionSerializer serializer = new IdConversionSerializer(
+          intBuffer
+      );
+      return closer.register(new PersistedIdConversion(path, serializer)).getBuffer();
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      try {
+        closer.close();
+      }
+      finally {
+        FileUtils.deleteDirectory(tempPath.toFile());
+      }
+    }
+  }
+
+  /**
+   * Peristent dictionary id conversion mappings, artifacts created during segment merge which map old dictionary ids
+   * to new dictionary ids. These persistent mappings are only used when the id mapping needs a lifetime longer than
+   * the merge of the column itself, such as when the column being merged is a 'parent' column of a projection.
+   *
+   * @see DimensionMergerV9#markAsParent()
+   * @see DimensionMergerV9#attachParent(DimensionMergerV9, List)
+   */
+  protected static class PersistedIdConversion implements Closeable
+  {
+    private final Path idConversionFile;
+    private final MappedByteBuffer mappedBuffer;
+
+    private final IntBuffer buffer;
+    private boolean isClosed;
+
+    protected PersistedIdConversion(Path idConversionFile, Serializer idConversionSerializer)
+    {
+      this.idConversionFile = idConversionFile;
+      this.mappedBuffer = SerializerUtils.mapSerializer(idConversionFile, idConversionSerializer);
+      this.mappedBuffer.order(ByteOrder.nativeOrder());
+      this.buffer = mappedBuffer.asIntBuffer();
+    }
+
+    @Nullable
+    public IntBuffer getBuffer()
+    {
+      if (isClosed) {
+        return null;
+      }
+      return buffer;
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      isClosed = true;
+      ByteBufferUtils.unmap(mappedBuffer);
+      DictionaryIdLookup.deleteTempFile(idConversionFile);
+    }
   }
 }

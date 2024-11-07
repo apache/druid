@@ -27,6 +27,7 @@ import org.apache.druid.segment.serde.Serializer;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.Path;
 import java.util.SortedMap;
 
 /**
@@ -50,7 +51,7 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
   public static final String RAW_FILE_NAME = "__raw";
   public static final String NESTED_FIELD_PREFIX = "__field_";
 
-  public abstract void openDictionaryWriter() throws IOException;
+  public abstract void openDictionaryWriter(Path segmentBasePath) throws IOException;
 
   public void serializeFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> fields) throws IOException
   {

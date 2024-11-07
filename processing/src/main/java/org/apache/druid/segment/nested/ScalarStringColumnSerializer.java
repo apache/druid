@@ -20,7 +20,6 @@
 package org.apache.druid.segment.nested;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -35,6 +34,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.nio.file.Path;
 
 /**
  * Serializer for a string {@link NestedCommonFormatColumn} that can be read with
@@ -62,7 +62,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
   }
 
   @Override
-  public void openDictionaryWriter() throws IOException
+  public void openDictionaryWriter(Path segmentBasePath) throws IOException
   {
     dictionaryWriter = StringEncodingStrategies.getStringDictionaryWriter(
         indexSpec.getStringDictionaryEncoding(),
@@ -73,7 +73,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
     dictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
-            FileUtils.getTempDir(),
+            segmentBasePath,
             dictionaryWriter,
             null,
             null,

@@ -46,9 +46,11 @@ import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -87,6 +89,8 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   private boolean isVariantType = false;
   private byte variantTypeByte = 0x00;
 
+  private final Path segmentBasePath;
+
   /**
    * @param name                  column name
    * @param outputName            output smoosh file name. if this is a base table column, it will be the equivalent to
@@ -105,6 +109,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       @Nullable ColumnType castToType,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
+      File segmentBaseDir,
       Closer closer
   )
   {
@@ -114,6 +119,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
     this.castToType = castToType;
     this.indexSpec = indexSpec;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
+    this.segmentBasePath = segmentBaseDir.toPath();
     this.closer = closer;
   }
 
@@ -265,7 +271,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         );
       }
 
-      serializer.openDictionaryWriter();
+      serializer.openDictionaryWriter(segmentBasePath);
       serializer.serializeFields(mergedFields);
 
       int stringCardinality;
