@@ -26,9 +26,12 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class TopNAggregatorResourceHelper
 {
-  public static class Config {
+  public static class Config
+  {
     public final long maxAggregatorHeapSize;
-    public Config(final long maxAggregatorHeapSize) {
+
+    public Config(final long maxAggregatorHeapSize)
+    {
       this.maxAggregatorHeapSize = maxAggregatorHeapSize;
     }
   }
@@ -37,15 +40,21 @@ public class TopNAggregatorResourceHelper
   private final long newAggregatorEstimatedMemorySize;
   private final AtomicLong used = new AtomicLong(0);
 
-  TopNAggregatorResourceHelper(final long newAggregatorEstimatedMemorySize, final Config config) {
+  TopNAggregatorResourceHelper(final long newAggregatorEstimatedMemorySize, final Config config)
+  {
     this.newAggregatorEstimatedMemorySize = newAggregatorEstimatedMemorySize;
     this.config = config;
   }
 
-  public void addAggregatorMemory() {
+  public void addAggregatorMemory()
+  {
     final long newTotal = used.addAndGet(newAggregatorEstimatedMemorySize);
-    if (newTotal > config.maxAggregatorHeapSize){
-      throw new ResourceLimitExceededException(StringUtils.format("Query ran out of memory. Maximum allowed bytes=[%d], Hit bytes=[%d]", config.maxAggregatorHeapSize, newTotal));
+    if (newTotal > config.maxAggregatorHeapSize) {
+      throw new ResourceLimitExceededException(StringUtils.format(
+          "Query ran out of memory. Maximum allowed bytes=[%d], Hit bytes=[%d]",
+          config.maxAggregatorHeapSize,
+          newTotal
+      ));
     }
   }
 }

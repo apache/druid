@@ -174,7 +174,7 @@ public class TopNQueryRunnerFailureTest extends InitializedNullHandlingTest
       TopNQuery query
   )
   {
-    final Sequence<Result<TopNResultValue>> retval = runWithMerge(query);;
+    final Sequence<Result<TopNResultValue>> retval = runWithMerge(query);
     TestHelper.assertExpectedResults(expectedResults, retval);
     return retval;
   }
@@ -251,14 +251,15 @@ public class TopNQueryRunnerFailureTest extends InitializedNullHandlingTest
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.emptyList();
-    assertExpectedResults(expectedResults,
-                          query.withAggregatorSpecs(Lists.newArrayList(Iterables.concat(
-                              QueryRunnerTestHelper.COMMON_FLOAT_AGGREGATORS,
-                              Lists.newArrayList(
-                                  new FloatMaxAggregatorFactory("maxIndex", "indexFloat"),
-                                  new FloatMinAggregatorFactory("minIndex", "indexFloat")
-                              )
-                          )))
+    assertExpectedResults(
+        expectedResults,
+        query.withAggregatorSpecs(Lists.newArrayList(Iterables.concat(
+            QueryRunnerTestHelper.COMMON_FLOAT_AGGREGATORS,
+            Lists.newArrayList(
+                new FloatMaxAggregatorFactory("maxIndex", "indexFloat"),
+                new FloatMinAggregatorFactory("minIndex", "indexFloat")
+            )
+        )))
     );
   }
 }

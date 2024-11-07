@@ -89,8 +89,11 @@ public class TopNQueryEngine
       );
     }
 
-    if (!query.context().containsKey(QueryContexts.MAX_TOP_N_AGGREGATOR_HEAP_SIZE_BYTES)){
-      query = query.withOverriddenContext(ImmutableMap.of(QueryContexts.MAX_TOP_N_AGGREGATOR_HEAP_SIZE_BYTES, config.getMaxTopNAggregatorHeapSizeBytes()));
+    if (!query.context().containsKey(QueryContexts.MAX_TOP_N_AGGREGATOR_HEAP_SIZE_BYTES)) {
+      query = query.withOverriddenContext(ImmutableMap.of(
+          QueryContexts.MAX_TOP_N_AGGREGATOR_HEAP_SIZE_BYTES,
+          config.getMaxTopNAggregatorHeapSizeBytes()
+      ));
     }
 
     final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, queryMetrics);
@@ -185,7 +188,14 @@ public class TopNQueryEngine
     );
 
     final TopNAlgorithm<?, ?> topNAlgorithm;
-    if (canUsePooledAlgorithm(selector, query, columnCapabilities, bufferPool, cursorInspector.getDimensionCardinality(), numBytesPerRecord)) {
+    if (canUsePooledAlgorithm(
+        selector,
+        query,
+        columnCapabilities,
+        bufferPool,
+        cursorInspector.getDimensionCardinality(),
+        numBytesPerRecord
+    )) {
       // pool based algorithm selection, if we can
       if (selector.isAggregateAllMetrics()) {
         // if sorted by dimension we should aggregate all metrics in a single pass, use the regular pooled algorithm for

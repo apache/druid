@@ -99,7 +99,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
             : postAggregatorSpecs
     );
 
-
     final long expectedAllocBytes = aggregatorSpecs.stream().mapToLong(AggregatorFactory::getMaxIntermediateSizeWithNulls).sum();
     final long maxAggregatorHeapSizeBytes = this.context().getLong(QueryContexts.MAX_TOP_N_AGGREGATOR_HEAP_SIZE_BYTES, TopNQueryConfig.DEFAULT_MAX_AGGREGATOR_HEAP_SIZE_BYTES);
     this.aggregatorHelper = new TopNAggregatorResourceHelper(expectedAllocBytes, new TopNAggregatorResourceHelper.Config(maxAggregatorHeapSizeBytes));
@@ -107,7 +106,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     topNMetricSpec.verifyPreconditions(this.aggregatorSpecs, this.postAggregatorSpecs);
   }
 
-  public TopNAggregatorResourceHelper getAggregatorHelper() {
+  public TopNAggregatorResourceHelper getAggregatorHelper()
+  {
     return aggregatorHelper;
   }
 
