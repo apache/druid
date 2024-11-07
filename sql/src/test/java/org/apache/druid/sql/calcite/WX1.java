@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,13 +33,12 @@ public class WX1
   public static void main(String[] args) throws IOException
   {
 
-    String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteSubqueryTest.java";
-//    pathname=CalciteSubqueryTest.class.getProtectionDomain().getCodeSource().getLocation().getFile();
+    String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteNestedDataQueryTest.java";
+    // pathname=CalciteSubqueryTest.class.getProtectionDomain().getCodeSource().getLocation().getFile();
     System.out.println(pathname);
     Path path = new File(pathname).toPath();
     List<String> lines = Files.readAllLines(path);
     List<String> newLines = new ArrayList<String>();
-
 
     String st = null;
     String colLine = null;
@@ -57,7 +58,7 @@ public class WX1
         colLine = null;
       }
 
-      if (colLine !=null && l!=colLine && !l.contains("columnTypes")) {
+      if (colLine != null && l != colLine && !l.contains("columnTypes")) {
         System.out.println(colLine);
         String[] p0 = colLine.split("[()]");
         String[] aa = p0[1].split(",");
@@ -68,26 +69,24 @@ public class WX1
         sb.append("columnTypes(");
 
         for (String colName : aa) {
-          colName=colName.strip();
-          colName=colName.replaceAll("\"", "");
+          colName = StringUtils.strip(colName);
+          colName = colName.replaceAll("\"", "");
 
-          String type=getTypeForColName(colName);
+          String type = getTypeForColName(colName);
 
-            sb.append(type + ", ");
+          sb.append(type + ", ");
         }
         int ll = sb.length();
         sb.delete(ll - 2, ll);
         sb.append(")");
         System.out.println(l);
         System.out.println(sb.toString());
-        colLine=null;
+        colLine = null;
         newLines.add(sb.toString());
       }
 
       newLines.add(l);
     }
-
-
 
     Files.write(path, newLines);
 
