@@ -50,7 +50,7 @@ A tableSpec defines a table
 |--------------|---------------------------------|---------------------------------------------------------------------------|----------|---------|
 | `type`       | String                          | the type of table. The only value supported at this time is `datasource`  | yes      | null    |
 | `properties` | Map<String, Object>             | the table's defined properties. see [table properties](#table-properties) | no       | null    |
-| `columns`    | List<[ColumnSpec](#ColumnSpec)> | the table's defined columns                                               | no       | null    |
+| `columns`    | List<[ColumnSpec](#columnSpec)> | the table's defined columns                                               | no       | null    |
 
 #### Table Properties
 
@@ -81,7 +81,7 @@ Update or create a new table containing the given table specification.
 
 ##### Request body
 
-The request object for this request is a [TableSpec](#TableSpec)
+The request object for this request is a [TableSpec](#tableSpec)
 
 ##### Query parameters
 
@@ -198,7 +198,7 @@ Retrieve a table
 <TabItem value="1" label="200 SUCCESS">
 
 
-*Successfully retrieved corresponding table's [TableSpec](#TableSpec)*
+*Successfully retrieved corresponding table's [TableSpec](#tableSpec)*
 
 
 </TabItem>
