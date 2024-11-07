@@ -254,12 +254,12 @@ public class MSQSelectTest extends MSQTestBase
                    .query(newScanQueryBuilder()
                               .dataSource(CalciteTests.DATASOURCE2)
                               .intervals(querySegmentSpec(Filtration.eternity()))
-                              .columns("dim2", "m1")
+                              .columns("m1", "dim2")
                               .context(defaultScanQueryContext(
                                   context,
                                   RowSignature.builder()
-                                              .add("dim2", ColumnType.STRING)
                                               .add("m1", ColumnType.LONG)
+                                              .add("dim2", ColumnType.STRING)
                                               .build()
                               ))
                               .build())
@@ -1476,16 +1476,13 @@ public class MSQSelectTest extends MSQTestBase
                                      CalciteTests.createExprMacroTable()
                                  )
                              ).columns("user", "v0").filters(new LikeDimFilter("user", "%ot%", null, null))
-                             .context(defaultScanQueryContext(multipleWorkerContext, RowSignature.builder()
-                                                                                                 .add(
-                                                                                                     "user",
-                                                                                                     ColumnType.STRING
-                                                                                                 )
-                                                                                                 .add(
-                                                                                                     "v0",
-                                                                                                     ColumnType.LONG
-                                                                                                 )
-                                                                                                 .build()))
+                             .context(defaultScanQueryContext(
+                                 multipleWorkerContext,
+                                 RowSignature.builder()
+                                     .add("v0", ColumnType.LONG)
+                                     .add("user", ColumnType.STRING)
+                                     .build()
+                             ))
                              .build();
 
     SelectTester selectTester = testSelectQuery()
@@ -1670,12 +1667,12 @@ public class MSQSelectTest extends MSQTestBase
                        newScanQueryBuilder()
                            .dataSource(CalciteTests.DATASOURCE2)
                            .intervals(querySegmentSpec(Filtration.eternity()))
-                           .columns("dim2", "m1")
+                           .columns("m1", "dim2")
                            .context(defaultScanQueryContext(
                                context,
                                RowSignature.builder()
-                                           .add("dim2", ColumnType.STRING)
                                            .add("m1", ColumnType.LONG)
+                                           .add("dim2", ColumnType.STRING)
                                            .build()
                            ))
                            .build()
