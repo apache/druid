@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        java: [ '8', '11', '17', '21' ]
+        java: [ '8', '11', '17', '21.0.4' ]
     runs-on: ubuntu-latest
     steps:
       - name: checkout branch
