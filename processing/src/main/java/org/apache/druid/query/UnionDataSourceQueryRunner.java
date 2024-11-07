@@ -34,11 +34,11 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-public class UnionQueryRunner<T> implements QueryRunner<T>
+public class UnionDataSourceQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> baseRunner;
 
-  public UnionQueryRunner(
+  public UnionDataSourceQueryRunner(
       QueryRunner<T> baseRunner
   )
   {
