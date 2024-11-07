@@ -118,7 +118,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
 
   protected File segmentBaseDir;
   @MonotonicNonNull
-  protected PersistedIdConversions persistedIdConversions = null;
+  protected PersistedIdConversions persistedIdConversions;
 
   public DictionaryEncodedColumnMerger(
       String dimensionName,
