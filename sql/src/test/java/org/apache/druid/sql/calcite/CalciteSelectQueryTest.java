@@ -127,7 +127,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .columns("v0")
-                .columnTypes(ColumnType.STRING)
+                .columnTypes(ColumnType.STRING_ARRAY)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -489,7 +489,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
-                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.DOUBLE)
                 .virtualColumns(
                     expressionVirtualColumn("v0", "bitwiseAnd(\"l1\",\"l2\")", ColumnType.LONG),
                     expressionVirtualColumn("v1", "bitwiseOr(\"l1\",\"l2\")", ColumnType.LONG),
@@ -994,7 +994,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("CURRENT_TIMESTAMP", "EXPR$1", "EXPR$2", "EXPR$3", "EXPR$4", "CURRENT_DATE", "EXPR$6")
-                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(context)
                 .build()
@@ -1717,22 +1717,21 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE5)
                 .intervals(querySegmentSpec(Intervals.of("1990-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
                 .columns(
-                    ImmutableList.<String>builder()
-                        .add("__time")
-                        .add("count")
-                        .add("dimHyperUnique")
-                        .add("dimMultivalEnumerated")
-                        .add("dimMultivalEnumerated2")
-                        .add("dimMultivalSequentialWithNulls")
-                        .add("dimSequential")
-                        .add("dimSequentialHalfNull")
-                        .add("dimUniform")
-                        .add("dimZipf")
-                        .add("metFloatNormal")
-                        .add("metFloatZipf")
-                        .add("metLongSequential")
-                        .build()
+                    "__time",
+                    "count",
+                    "dimHyperUnique",
+                    "dimMultivalEnumerated",
+                    "dimMultivalEnumerated2",
+                    "dimMultivalSequentialWithNulls",
+                    "dimSequential",
+                    "dimSequentialHalfNull",
+                    "dimUniform",
+                    "dimZipf",
+                    "metFloatNormal",
+                    "metFloatZipf",
+                    "metLongSequential"
                 )
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
                 .limit(2)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(OUTER_LIMIT_CONTEXT)
@@ -1784,23 +1783,22 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE5)
                 .intervals(querySegmentSpec(Intervals.of("1990-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
                 .columns(
-                    ImmutableList.<String>builder()
-                        .add("__time")
-                        .add("count")
-                        .add("dimHyperUnique")
-                        .add("dimMultivalEnumerated")
-                        .add("dimMultivalEnumerated2")
-                        .add("dimMultivalSequentialWithNulls")
-                        .add("dimSequential")
-                        .add("dimSequentialHalfNull")
-                        .add("dimUniform")
-                        .add("dimZipf")
-                        .add("metFloatNormal")
-                        .add("metFloatZipf")
-                        .add("metLongSequential")
-                        .add("metLongUniform")
-                        .build()
+                    "__time",
+                    "count",
+                    "dimHyperUnique",
+                    "dimMultivalEnumerated",
+                    "dimMultivalEnumerated2",
+                    "dimMultivalSequentialWithNulls",
+                    "dimSequential",
+                    "dimSequentialHalfNull",
+                    "dimUniform",
+                    "dimZipf",
+                    "metFloatNormal",
+                    "metFloatZipf",
+                    "metLongSequential",
+                    "metLongUniform"
                 )
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
                 .limit(2)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(OUTER_LIMIT_CONTEXT)
@@ -1854,7 +1852,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "concat('beep ',\"dim1\")", ColumnType.STRING))
                 .columns("v0", "__time")
-                .columnTypes(ColumnType.STRING, ColumnType.LONG)
+                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                 .limit(2)
                 .order(Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -1912,7 +1910,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "concat('beep ',\"dim1\")", ColumnType.STRING))
                 .columns("v0", "__time")
-                .columnTypes(ColumnType.STRING, ColumnType.LONG)
+                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                 .limit(2)
                 .order(Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)

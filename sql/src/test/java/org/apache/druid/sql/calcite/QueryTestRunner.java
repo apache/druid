@@ -469,7 +469,7 @@ public class QueryTestRunner
             sv.replace(l - 2, l, ")");
             System.out.println("\n");
             System.out.println(sv.toString());
-            fail(sv.toString());
+            fail("\n" + sv.toString());
           }
         }
 
