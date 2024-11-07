@@ -1475,7 +1475,9 @@ public class MSQSelectTest extends MSQTestBase
                                      ColumnType.LONG,
                                      CalciteTests.createExprMacroTable()
                                  )
-                             ).columns("user", "v0").filters(new LikeDimFilter("user", "%ot%", null, null))
+                             )
+                             .columns("v0", "user")
+                             .filters(new LikeDimFilter("user", "%ot%", null, null))
                              .context(defaultScanQueryContext(
                                  multipleWorkerContext,
                                  RowSignature.builder()
