@@ -759,7 +759,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
 
     @Override
-    public long getSerializedSize() throws IOException
+    public long getSerializedSize()
     {
       return (long) buffer.capacity() * Integer.BYTES;
     }
@@ -848,7 +848,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       isClosed = true;
       ByteBufferUtils.unmap(mappedBuffer);
