@@ -234,7 +234,7 @@ public class IndexMergerV9 implements IndexMerger
         mergersMap.put(mergedDimensions.get(i), merger);
       }
 
-      if (segmentMetadata.getProjections() != null) {
+      if (segmentMetadata != null && segmentMetadata.getProjections() != null) {
         for (AggregateProjectionMetadata projectionMetadata : segmentMetadata.getProjections()) {
           for (String dimension : projectionMetadata.getSchema().getGroupingColumns()) {
             DimensionMergerV9 merger = mergersMap.get(dimension);
