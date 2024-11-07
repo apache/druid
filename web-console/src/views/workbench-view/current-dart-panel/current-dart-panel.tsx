@@ -66,8 +66,8 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
 
   const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
     query: workStateVersion,
-    processQuery: async _ => {
-      return (await Api.instance.get('/druid/v2/sql/dart')).data.queries;
+    processQuery: async (_, cancelToken) => {
+      return (await Api.instance.get('/druid/v2/sql/dart', { cancelToken })).data.queries;
     },
   });
 
@@ -134,7 +134,7 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
             const anonymous = w.identity === 'allowAll' && w.authenticator === 'allowAll';
             return (
               <Popover className="work-entry" key={w.sqlQueryId} position="left" content={menu}>
-                <div>
+                <div onDoubleClick={() => setShowSql(w.sql)}>
                   <div className="line1">
                     <Icon
                       className={'status-icon ' + w.state.toLowerCase()}

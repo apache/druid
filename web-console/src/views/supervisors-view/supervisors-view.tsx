@@ -637,6 +637,7 @@ export class SupervisorsView extends React.PureComponent<
   private renderSupervisorFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
+    // eslint-disable-next-line react/display-name
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
@@ -843,10 +844,14 @@ export class SupervisorsView extends React.PureComponent<
             accessor: 'stats',
             Cell: ({ value, original }) => {
               if (!value) return;
-              const activeTaskIds: string[] | undefined = deepGet(
+              const activeTasks: SupervisorStatusTask[] | undefined = deepGet(
                 original,
                 'status.payload.activeTasks',
-              )?.map((t: SupervisorStatusTask) => t.id);
+              );
+              const activeTaskIds: string[] | undefined = Array.isArray(activeTasks)
+                ? activeTasks.map((t: SupervisorStatusTask) => t.id)
+                : undefined;
+
               const c = getTotalSupervisorStats(value, statsKey, activeTaskIds);
               const seconds = getRowStatsKeySeconds(statsKey);
               const totalLabel = `Total (past ${statsKey}): `;

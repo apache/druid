@@ -52,61 +52,63 @@ public class HttpPostEmitterLoggerStressTest
         .setBatchQueueSizeLimit(10)
         .setMinHttpTimeoutMillis(100)
         .build();
-    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, new ObjectMapper());
+    try (HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, new ObjectMapper())) {
 
-    emitter.start();
+      emitter.start();
 
-    httpClient.setGoHandler(new GoHandler() {
-      @Override
-      protected ListenableFuture<Response> go(Request request)
+      httpClient.setGoHandler(new GoHandler()
       {
-        return GoHandlers.immediateFuture(EmitterTest.okResponse());
+        @Override
+        protected ListenableFuture<Response> go(Request request)
+        {
+          return GoHandlers.immediateFuture(EmitterTest.okResponse());
+        }
+      });
+
+      Event smallEvent = ServiceMetricEvent.builder()
+                                           .setFeed("smallEvents")
+                                           .setDimension("test", "hi")
+                                           .setMetric("metric", 10)
+                                           .build("qwerty", "asdfgh");
+
+      for (int i = 0; i < 1000; i++) {
+        emitter.emit(smallEvent);
+
+        Assert.assertTrue(emitter.getTotalFailedBuffers() <= 10);
+        Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
       }
-    });
 
-    Event smallEvent = ServiceMetricEvent.builder()
-                                       .setFeed("smallEvents")
-                                       .setDimension("test", "hi")
-                                       .setMetric("metric", 10)
-                                       .build("qwerty", "asdfgh");
+      // by the end of this test, there should be no outstanding failed buffers
 
-    for (int i = 0; i < 1000; i++) {
-      emitter.emit(smallEvent);
+      // with a flush time of 5s, min timeout of 100ms, 20s should be
+      // easily enough to get through all of the events
 
-      Assert.assertTrue(emitter.getTotalFailedBuffers() <= 10);
-      Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
+      while (emitter.getTotalFailedBuffers() > 0) {
+        Thread.sleep(500);
+      }
+
+      // there is also no reason to have too many log events
+      // refer to: https://github.com/apache/druid/issues/11279;
+
+      long countOfTimeouts = logCapture.getLogEvents().stream()
+                                       .filter(ev -> ev.getLevel() == Level.DEBUG)
+                                       .filter(ev -> ev.getThrown() instanceof TimeoutException)
+                                       .count();
+
+      // 1000 events limit, implies we should have no more than
+      // 1000 rejected send events within the expected 20sec
+      // duration of the test
+      long limitTimeoutEvents = 1000;
+
+      Assert.assertTrue(
+          String.format(
+              Locale.getDefault(),
+              "too many timeouts (%d), expect less than (%d)",
+              countOfTimeouts,
+              limitTimeoutEvents
+          ),
+          countOfTimeouts < limitTimeoutEvents
+      );
     }
-
-    // by the end of this test, there should be no outstanding failed buffers
-
-    // with a flush time of 5s, min timeout of 100ms, 20s should be
-    // easily enough to get through all of the events
-
-    while (emitter.getTotalFailedBuffers() > 0) {
-      Thread.sleep(500);
-    }
-
-    // there is also no reason to have too many log events
-    // refer to: https://github.com/apache/druid/issues/11279;
-
-    long countOfTimeouts = logCapture.getLogEvents().stream()
-        .filter(ev -> ev.getLevel() == Level.DEBUG)
-        .filter(ev -> ev.getThrown() instanceof TimeoutException)
-        .count();
-
-    // 1000 events limit, implies we should have no more than
-    // 1000 rejected send events within the expected 20sec
-    // duration of the test
-    long limitTimeoutEvents = 1000;
-
-    Assert.assertTrue(
-        String.format(
-          Locale.getDefault(),
-          "too many timeouts (%d), expect less than (%d)",
-          countOfTimeouts,
-          limitTimeoutEvents),
-        countOfTimeouts < limitTimeoutEvents);
-
-    emitter.close();
   }
 }

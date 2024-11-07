@@ -17,7 +17,7 @@
  */
 
 import { FormGroup, Intent, Tag } from '@blueprintjs/core';
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 import { ArrayInput } from '../../components';
 import { Api } from '../../singletons';

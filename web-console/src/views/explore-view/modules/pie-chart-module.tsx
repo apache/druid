@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-import { C, L, SqlQuery } from '@druid-toolkit/query';
+import { IconNames } from '@blueprintjs/icons';
+import { C, L } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
+import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
 import { formatEmpty, formatNumber } from '../../../utils';
 import { Issue } from '../components';
@@ -62,6 +64,7 @@ interface PieChartParameterValues {
 ModuleRepository.registerModule<PieChartParameterValues>({
   id: 'pie-chart',
   title: 'Pie chart',
+  icon: IconNames.PIE_CHART,
   parameters: {
     splitColumn: {
       type: 'expression',
@@ -94,12 +97,11 @@ ModuleRepository.registerModule<PieChartParameterValues>({
     const { splitColumn, measure, limit, showOthers } = parameterValues;
 
     const dataQueries = useMemo(() => {
-      const source = querySource.query;
       const splitExpression = splitColumn ? splitColumn.expression : L(OVERALL_LABEL);
 
       return {
-        mainQuery: SqlQuery.from(source)
-          .addWhere(where)
+        mainQuery: querySource
+          .getInitQuery(where)
           .addSelect(splitExpression.as('name'), { addToGroupBy: 'end' })
           .addSelect(measure.expression.as('value'), {
             addToOrderBy: 'end',
@@ -108,15 +110,15 @@ ModuleRepository.registerModule<PieChartParameterValues>({
           .changeLimitValue(limit),
         splitExpression: splitColumn?.expression,
         othersPartialQuery: showOthers
-          ? SqlQuery.from(source).addWhere(where).addSelect(measure.expression.as('value'))
+          ? querySource.getInitQuery(where).addSelect(measure.expression.as('value'))
           : undefined,
       };
     }, [querySource, where, splitColumn, measure, limit, showOthers]);
 
-    const [sourceDataState] = useQueryManager({
+    const [sourceDataState, queryManager] = useQueryManager({
       query: dataQueries,
-      processQuery: async ({ mainQuery, splitExpression, othersPartialQuery }) => {
-        const result = await runSqlQuery(mainQuery);
+      processQuery: async ({ mainQuery, splitExpression, othersPartialQuery }, cancelToken) => {
+        const result = await runSqlQuery(mainQuery, cancelToken);
         const data = result.toObjectArray();
 
         if (splitExpression && othersPartialQuery) {
@@ -216,6 +218,7 @@ ModuleRepository.registerModule<PieChartParameterValues>({
               },
         });
       });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sourceDataState.data]);
 
     useEffect(() => {
@@ -251,6 +254,9 @@ ModuleRepository.registerModule<PieChartParameterValues>({
           }}
         />
         {errorMessage && <Issue issue={errorMessage} />}
+        {sourceDataState.loading && (
+          <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
+        )}
       </div>
     );
   },

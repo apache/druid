@@ -142,4 +142,13 @@ public class ScalarLongColumnSerializer extends ScalarNestedCommonFormatColumnSe
       writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
     }
   }
+
+  @Override
+  public int getCardinality()
+  {
+    if (writeDictionary) {
+      return dictionaryWriter.getCardinality();
+    }
+    return dictionaryIdLookup.getLongCardinality();
+  }
 }

@@ -4223,6 +4223,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSemiJoinWithOuterTimeExtractAggregateWithOrderBy()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT COUNT(DISTINCT dim1), EXTRACT(MONTH FROM __time) FROM druid.foo\n"
         + " WHERE dim2 IN (\n"
@@ -4325,7 +4326,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     });
   }
 
-  @NotYetSupported(Modes.UNION_WITH_COMPLEX_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNION_ALL_QUERY)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testUnionAllTwoQueriesLeftQueryIsJoin(Map<String, Object> queryContext)
@@ -4337,6 +4338,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     if (!isRewriteJoinToFilter(queryContext)) {
       cannotVectorize();
     }
+
+
 
     testQuery(
         "(SELECT COUNT(*) FROM foo INNER JOIN lookup.lookyloo ON foo.dim1 = lookyloo.k)  UNION ALL SELECT SUM(cnt) FROM foo",
@@ -4370,7 +4373,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNION_WITH_COMPLEX_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNION_ALL_QUERY)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testUnionAllTwoQueriesRightQueryIsJoin(Map<String, Object> queryContext)
@@ -4415,7 +4418,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNION_WITH_COMPLEX_OPERAND)
+
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNION_ALL_QUERY)
   @Test
   public void testUnionAllTwoQueriesBothQueriesAreJoin()
   {

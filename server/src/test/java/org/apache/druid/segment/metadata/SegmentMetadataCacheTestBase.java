@@ -31,11 +31,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -90,7 +87,6 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
 
   public QueryRunnerFactoryConglomerate conglomerate;
   public Closer resourceCloser;
-  public QueryToolChestWarehouse queryToolChestWarehouse;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -112,14 +108,6 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
   {
     resourceCloser = Closer.create();
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(resourceCloser);
-    queryToolChestWarehouse = new QueryToolChestWarehouse()
-    {
-      @Override
-      public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
-      {
-        return conglomerate.findFactory(query).getToolchest();
-      }
-    };
   }
 
   public void setUpData() throws Exception
@@ -299,7 +287,7 @@ public abstract class SegmentMetadataCacheTestBase extends InitializedNullHandli
   public QueryLifecycleFactory getQueryLifecycleFactory(QuerySegmentWalker walker)
   {
     return new QueryLifecycleFactory(
-        queryToolChestWarehouse,
+        conglomerate,
         walker,
         new DefaultGenericQueryMetricsFactory(),
         new NoopServiceEmitter(),

@@ -77,6 +77,7 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
 
   @Override
   public DimensionMergerV9 makeMerger(
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
@@ -85,7 +86,7 @@ public class LongDimensionHandler implements DimensionHandler<Long, Long, Long>
   )
   {
     return new LongDimensionMergerV9(
-        dimensionName,
+        outputName,
         indexSpec,
         segmentWriteOutMedium
     );

@@ -85,9 +85,11 @@ public interface WorkerManager
   /**
    * Stop all workers.
    *
-   * The task-based implementation blocks until all tasks exit. Dart's implementation queues workers for stopping in
-   * the background, and returns immediately. Either way, this method returns quietly, no matter whether there was an
-   * exception associated with the future from {@link #start()} or not.
+   * The task-based implementation blocks until all tasks exit. Dart's implementation sends stop commands and waits
+   * for workers to exit if "interrupt" is true, otherwise it returns immediately.
+   *
+   * Either way, this method returns quietly, no matter whether there was an exception associated with the future
+   * from {@link #start()} or not.
    *
    * @param interrupt whether to interrupt currently-running work
    */

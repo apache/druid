@@ -1528,6 +1528,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayLength()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT dim1, ARRAY_LENGTH(dim3), SUM(cnt) FROM druid.numfoo GROUP BY 1, 2 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -1740,6 +1741,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayPrependAppend()
   {
+    cannotVectorizeUnlessFallback();
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
@@ -1858,6 +1860,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOffset()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_OFFSET(dim3, 1), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2179,6 +2182,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOrdinal()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_ORDINAL(dim3, 2), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2219,6 +2223,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOffsetOf()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_OFFSET_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2265,6 +2270,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayOrdinalOf()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT ARRAY_ORDINAL_OF(dim3, 'b'), SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         ImmutableList.of(
@@ -2312,6 +2318,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testArrayToString()
   {
+    cannotVectorizeUnlessFallback();
     ImmutableList<Object[]> results;
     if (useDefault) {
       results = ImmutableList.of(
@@ -7193,7 +7200,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_DIFFERENT_RESULTSET, separateDefaultModeTest = true)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_SUBSTRING_EMPTY, separateDefaultModeTest = true)
   @Test
   public void testUnnestExtractionFn()
   {
@@ -7471,6 +7478,51 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{false}
+        )
+    );
+  }
+
+  @Test
+  public void testArrayGroupStringArrayColumnLimit()
+  {
+    cannotVectorize();
+    testQuery(
+        "SELECT arrayStringNulls, SUM(cnt) FROM druid.arrays GROUP BY 1 ORDER BY 1 DESC LIMIT 10",
+        QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.ARRAYS_DATASOURCE)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(
+                            dimensions(
+                                new DefaultDimensionSpec("arrayStringNulls", "d0", ColumnType.STRING_ARRAY)
+                            )
+                        )
+                        .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
+                        .setLimitSpec(
+                            new DefaultLimitSpec(
+                                ImmutableList.of(
+                                    new OrderByColumnSpec(
+                                        "d0",
+                                        OrderByColumnSpec.Direction.DESCENDING,
+                                        StringComparators.NATURAL
+                                    )
+                                ),
+                                10
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{Arrays.asList("d", null, "b"), 2L},
+            new Object[]{Arrays.asList("b", "b"), 2L},
+            new Object[]{Arrays.asList("a", "b"), 3L},
+            new Object[]{Arrays.asList(null, "b"), 2L},
+            new Object[]{Collections.singletonList(null), 1L},
+            new Object[]{Collections.emptyList(), 1L},
+            new Object[]{null, 3L}
         )
     );
   }

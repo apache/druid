@@ -66,7 +66,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
   {
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.DOUBLE);
-    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT);
+    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
     final ColumnCapabilities columnCapabilities = builder.build().getCapabilities();
     Assert.assertTrue(Types.is(columnCapabilities, ValueType.DOUBLE));
     Assert.assertTrue(columnCapabilities.hasNulls().isTrue());
@@ -82,7 +82,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
   {
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.STRING);
-    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT);
+    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
     ColumnHolder holder = builder.build();
 
     BaseColumn theColumn = holder.getColumn();
@@ -104,7 +104,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
   {
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.STRING);
-    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT);
+    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
     ColumnHolder holder = builder.build();
 
     BaseColumn theColumn = holder.getColumn();
@@ -132,7 +132,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
   {
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.STRING);
-    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT);
+    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
     ColumnHolder holder = builder.build();
 
     BaseColumn theColumn = holder.getColumn();
@@ -151,7 +151,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
   {
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.DOUBLE);
-    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT);
+    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
     ColumnHolder holder = builder.build();
 
     BaseColumn theColumn = holder.getColumn();
@@ -172,7 +172,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
   {
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.DOUBLE);
-    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT);
+    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
     ColumnHolder holder = builder.build();
 
     BaseColumn theColumn = holder.getColumn();
@@ -196,7 +196,7 @@ public class NullColumnPartSerdeTest extends InitializedNullHandlingTest
   {
     final NullColumnPartSerde partSerde = new NullColumnPartSerde(10, RoaringBitmapSerdeFactory.getInstance());
     final ColumnBuilder builder = new ColumnBuilder().setType(ValueType.DOUBLE);
-    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT);
+    partSerde.getDeserializer().read(EMPTY_BUFFER, builder, ColumnConfig.DEFAULT, null);
     ColumnHolder holder = builder.build();
     Assert.assertNull(holder.getIndexSupplier());
   }

@@ -48,9 +48,10 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
   const [diffIndex, setDiffIndex] = useState(-1);
   const [historyState] = useQueryManager<string, SupervisorHistoryEntry[]>({
     initQuery: supervisorId,
-    processQuery: async supervisorId => {
+    processQuery: async (supervisorId, cancelToken) => {
       const resp = await Api.instance.get(
         `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/history`,
+        { cancelToken },
       );
       return resp.data.map((vs: SupervisorHistoryEntry) => deepSet(vs, 'spec', cleanSpec(vs.spec)));
     },

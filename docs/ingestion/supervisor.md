@@ -37,8 +37,11 @@ The following table outlines the high-level configuration options for a supervis
 
 |Property|Type|Description|Required|
 |--------|----|-----------|--------|
-|`type`|String|The type of ingestion to supervise. One of [`kafka`](kafka-ingestion.md) or [`kinesis`](kinesis-ingestion.md).|Yes|
-|[`spec`](#spec)|Object|The container object for the supervisor configuration.|Yes|
+|`type`|String|The supervisor type. For streaming ingestion, this can be either `kafka`, `kinesis`, or `rabbit`. For automatic compaction, set the type to `autocompact`. |Yes|
+|`spec`|Object|The container object for the supervisor configuration. For automatic compaction, this is the same as the compaction configuration. |Yes|
+|`spec.dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
+|`spec.ioConfig`|Object|The I/O configuration object to define the connection and I/O-related settings for the supervisor and indexing tasks.|Yes|
+|`spec.tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks.|No|
 |`suspended`|Boolean|Puts the supervisor in a suspended state|No|
 
 ## `spec`

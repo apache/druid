@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -128,7 +127,7 @@ public class NewestSegmentFirstPolicyBenchmark
         }
       }
     }
-    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of()).getUsedSegmentsTimelinesPerDataSource();
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments).getUsedSegmentsTimelinesPerDataSource();
   }
 
   @Benchmark

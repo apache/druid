@@ -23,7 +23,6 @@ import copy from 'copy-to-clipboard';
 import * as JSONBig from 'json-bigint-native';
 import numeral from 'numeral';
 import type { JSX } from 'react';
-import React from 'react';
 
 import { AppToaster } from '../singletons';
 

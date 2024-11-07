@@ -25,9 +25,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -83,6 +85,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -129,22 +132,47 @@ public class MSQCompactionRunner implements CompactionRunner
    * The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
+   * <li>'range' partitionsSpec with multi-valued or non-string partition dimensions.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
-   * <li>rollup in granularitySpec set to false when metricsSpec is specified or true when it's null.
-   * Null is treated as true if metricsSpec exist and false if empty.</li>
-   * <li>any metric is non-idempotent, i.e. it defines some aggregatorFactory 'A' s.t. 'A != A.combiningFactory()'.</li>
+   * <li>Rollup without metricsSpec being specified or vice-versa.</li>
+   * <li>Any aggregatorFactory {@code A} s.t. {@code A != A.combiningFactory()}.</li>
+   * <li>Multiple disjoint intervals in compaction task</li>
    * </ul>
    */
   @Override
   public CompactionConfigValidationResult validateCompactionTask(
-      CompactionTask compactionTask
+      CompactionTask compactionTask,
+      Map<Interval, DataSchema> intervalToDataSchemaMap
   )
   {
-    List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
-    if (compactionTask.getTuningConfig() != null) {
-      validationResults.add(ClientCompactionRunnerInfo.validatePartitionsSpecForMSQ(
-          compactionTask.getTuningConfig().getPartitionsSpec())
+    if (intervalToDataSchemaMap.size() > 1) {
+      // We are currently not able to handle multiple intervals in the map for multiple reasons, one of them being that
+      // the subsequent worker ids clash -- since they are derived from MSQControllerTask ID which in turn is equal to
+      // CompactionTask ID for each sequentially launched MSQControllerTask.
+      return CompactionConfigValidationResult.failure(
+          "MSQ: Disjoint compaction intervals[%s] not supported",
+          intervalToDataSchemaMap.keySet()
       );
+    }
+    List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
+    DataSchema dataSchema = Iterables.getOnlyElement(intervalToDataSchemaMap.values());
+    if (compactionTask.getTuningConfig() != null) {
+      validationResults.add(
+          ClientCompactionRunnerInfo.validatePartitionsSpecForMSQ(
+              compactionTask.getTuningConfig().getPartitionsSpec(),
+              dataSchema.getDimensionsSpec().getDimensions()
+          )
+      );
+      validationResults.add(
+          validatePartitionDimensionsAreNotMultiValued(
+              compactionTask.getTuningConfig().getPartitionsSpec(),
+              dataSchema.getDimensionsSpec(),
+              dataSchema instanceof CombinedDataSchema
+              ? ((CombinedDataSchema) dataSchema).getMultiValuedDimensions()
+              : null
+          )
+      );
+
     }
     if (compactionTask.getGranularitySpec() != null) {
       validationResults.add(ClientCompactionRunnerInfo.validateRollupForMSQ(
@@ -158,6 +186,32 @@ public class MSQCompactionRunner implements CompactionRunner
                             .filter(result -> !result.isValid())
                             .findFirst()
                             .orElse(CompactionConfigValidationResult.success());
+  }
+
+  private CompactionConfigValidationResult validatePartitionDimensionsAreNotMultiValued(
+      PartitionsSpec partitionsSpec,
+      DimensionsSpec dimensionsSpec,
+      Set<String> multiValuedDimensions
+  )
+  {
+    List<String> dimensionSchemas = dimensionsSpec.getDimensionNames();
+    if (partitionsSpec instanceof DimensionRangePartitionsSpec
+        && dimensionSchemas != null
+        && multiValuedDimensions != null
+        && !multiValuedDimensions.isEmpty()) {
+      Optional<String> multiValuedDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
+          .getPartitionDimensions()
+          .stream()
+          .filter(multiValuedDimensions::contains)
+          .findAny();
+      if (multiValuedDimension.isPresent()) {
+        return CompactionConfigValidationResult.failure(
+            "MSQ: Multi-valued string partition dimension[%s] not supported with 'range' partition spec",
+            multiValuedDimension.get()
+        );
+      }
+    }
+    return CompactionConfigValidationResult.success();
   }
 
   @Override
@@ -300,7 +354,7 @@ public class MSQCompactionRunner implements CompactionRunner
       rowSignatureBuilder.add(TIME_VIRTUAL_COLUMN, ColumnType.LONG);
     }
     for (DimensionSchema dimensionSchema : dataSchema.getDimensionsSpec().getDimensions()) {
-      rowSignatureBuilder.add(dimensionSchema.getName(), ColumnType.fromString(dimensionSchema.getTypeName()));
+      rowSignatureBuilder.add(dimensionSchema.getName(), dimensionSchema.getColumnType());
     }
     // There can be columns that are part of metricsSpec for a datasource.
     for (AggregatorFactory aggregatorFactory : dataSchema.getAggregators()) {
@@ -416,7 +470,9 @@ public class MSQCompactionRunner implements CompactionRunner
   {
     if (dataSchema.getGranularitySpec() != null) {
       // If rollup is true without any metrics, all columns are treated as dimensions and
-      // duplicate rows are removed in line with native compaction.
+      // duplicate rows are removed in line with native compaction. This case can only happen if the rollup is
+      // specified as null in the compaction spec and is then inferred to be true by segment analysis. metrics=null and
+      // rollup=true combination in turn can only have been recorded for natively ingested segments.
       return dataSchema.getGranularitySpec().isRollup();
     }
     // If no rollup specified, decide based on whether metrics are present.

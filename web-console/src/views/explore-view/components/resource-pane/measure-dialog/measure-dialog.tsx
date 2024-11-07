@@ -18,8 +18,8 @@
 
 import { Button, Classes, Dialog, FormGroup, InputGroup, Intent, Tag } from '@blueprintjs/core';
 import {
-  type QueryResult,
   L,
+  type QueryResult,
   sql,
   SqlExpression,
   SqlQuery,
@@ -57,11 +57,11 @@ export const MeasureDialog = React.memo(function MeasureDialog(props: MeasureDia
       .changeWithParts([SqlWithPart.simple('t', QuerySource.stripToBaseSource(querySource.query))])
       .addSelect(L('Overall').as('label'))
       .addSelect(expression.as('value'))
-      .applyIf(
-        querySource.baseColumns.find(column => column.isTimeColumn()),
-        q => q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),
+      .applyIf(querySource.hasBaseTimeColumn(), q =>
+        q.addWhere(sql`MAX_DATA_TIME() - INTERVAL '14' DAY <= __time`),
       )
       .toString();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [querySource.query, formula]);
 
   return (

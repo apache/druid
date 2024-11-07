@@ -49,7 +49,7 @@ function fillWithColumn(b: SqlExpression, columnName: string): SqlExpression {
 
 function fillWithColumnStartEnd(columnName: string, start: Date, end: Date): SqlExpression {
   const column = C(columnName);
-  return BETWEEN.fillPlaceholders([start, column, column, end])!;
+  return BETWEEN.fillPlaceholders([start, column, column, end]);
 }
 
 // ------------------------------------

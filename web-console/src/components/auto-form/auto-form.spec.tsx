@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import { COMPACTION_CONFIG_FIELDS } from '../../druid-models';
 import { shallow } from '../../utils/shallow-renderer';
 

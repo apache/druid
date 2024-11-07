@@ -159,7 +159,7 @@
   "jetty/threadPool/queueSize": { "dimensions" : [], "type" : "gauge" },
 
   "coordinator/time" : { "dimensions" : [], "type" : "timer"},
-  "coordinator/global/time" : { "dimensions" : [], "type" : "timer"},
+  "coordinator/global/time" : { "dimensions" : ["dutyGroup"], "type" : "timer"},
 
   "tier/required/capacity" : { "dimensions" : ["tier"], "type" : "gauge" },
   "tier/total/capacity" : { "dimensions" : ["tier"], "type" : "gauge" },

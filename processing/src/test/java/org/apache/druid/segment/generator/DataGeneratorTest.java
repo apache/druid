@@ -744,6 +744,6 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
         .build();
 
     dataGenerator.addToIndex(index, 100);
-    Assert.assertEquals(100, index.size());
+    Assert.assertEquals(100, index.numRows());
   }
 }

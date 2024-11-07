@@ -17,7 +17,7 @@
  */
 
 import { Intent, Tag } from '@blueprintjs/core';
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 import { FormGroupWithInfo, PopoverText } from '../../components';
 import { SuggestibleInput } from '../../components/suggestible-input/suggestible-input';

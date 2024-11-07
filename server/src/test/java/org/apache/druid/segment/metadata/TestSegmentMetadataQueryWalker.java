@@ -33,7 +33,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.QueryableIndex;
@@ -47,13 +46,11 @@ import java.util.stream.Collectors;
 
 public class TestSegmentMetadataQueryWalker extends SegmentMetadataQuerySegmentWalker
 {
-  private final QueryRunnerFactoryConglomerate conglomerate;
   private final Map<SegmentDescriptor, Pair<QueryableIndex, DataSegment>> queryableIndexMap;
 
   public TestSegmentMetadataQueryWalker(
       CoordinatorServerView serverView,
       DruidHttpClientConfig httpClientConfig,
-      QueryToolChestWarehouse warehouse,
       ServerConfig serverConfig,
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
@@ -63,11 +60,10 @@ public class TestSegmentMetadataQueryWalker extends SegmentMetadataQuerySegmentW
     super(
         serverView,
         httpClientConfig,
-        warehouse,
+        conglomerate,
         serverConfig,
         emitter
     );
-    this.conglomerate = conglomerate;
     this.queryableIndexMap = queryableIndexMap;
   }
 

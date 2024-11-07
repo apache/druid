@@ -17,7 +17,6 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
@@ -31,8 +30,6 @@ export interface CoordinatorDynamicConfig {
   maxKillTaskSlots?: number;
   killPendingSegmentsSkipList?: string[];
   maxSegmentsInNodeLoadingQueue?: number;
-  mergeBytesLimit?: number;
-  mergeSegmentsLimit?: number;
   millisToWaitBeforeDeleting?: number;
   replicantLifetime?: number;
   replicationThrottleLimit?: number;
@@ -220,18 +217,6 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         increasing this if you have a lot of segments and moving segments begins to stall.
       </>
     ),
-  },
-  {
-    name: 'mergeBytesLimit',
-    type: 'size-bytes',
-    defaultValue: 524288000,
-    info: <>The maximum total uncompressed size in bytes of segments to merge.</>,
-  },
-  {
-    name: 'mergeSegmentsLimit',
-    type: 'number',
-    defaultValue: 100,
-    info: <>The maximum number of segments that can be in a single append task.</>,
   },
   {
     name: 'millisToWaitBeforeDeleting',

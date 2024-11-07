@@ -26,6 +26,7 @@ import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.NoErrorResponseTransformStrategy;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.HumanReadableBytesRange;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Period;
@@ -45,8 +46,6 @@ import java.util.zip.Deflater;
 public class ServerConfig
 {
   public static final int DEFAULT_GZIP_INFLATE_BUFFER_SIZE = 4096;
-
-  private static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
 
   /**
    * The ServerConfig is normally created using {@link org.apache.druid.guice.JsonConfigProvider} binding.
@@ -143,7 +142,7 @@ public class ServerConfig
   private String maxSubqueryBytes = SubqueryGuardrailHelper.LIMIT_DISABLED_VALUE;
 
   @JsonProperty
-  private boolean useNestedForUnknownTypeInSubquery = DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
+  private boolean useNestedForUnknownTypeInSubquery = QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY;
 
   @JsonProperty
   @Min(1)

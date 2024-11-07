@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.quidem.DruidQTestInfo;
@@ -97,7 +98,7 @@ public class DecoupledExtension implements BeforeEachCallback
               qCaseDir,
               testName,
               "quidem testcase reason: " + decTestConfig.quidemReason()
-              );
+          );
         } else {
           return null;
         }
@@ -115,10 +116,11 @@ public class DecoupledExtension implements BeforeEachCallback
           return super.expectedQueries(expectedQueries);
         }
       }
-    }
-        .cannotVectorize(baseTest.cannotVectorize)
-        .skipVectorize(baseTest.skipVectorize);
+    };
 
-    return builder;
+    boolean cannotVectorize = baseTest.cannotVectorize
+        || (!ExpressionProcessing.allowVectorizeFallback() && baseTest.cannotVectorizeUnlessFallback);
+    return builder.cannotVectorize(cannotVectorize)
+        .skipVectorize(baseTest.skipVectorize);
   }
 }

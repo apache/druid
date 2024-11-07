@@ -30,7 +30,7 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 import { ClearableInput } from '../../../../components';
 import { caseInsensitiveContains, columnToIcon, filterMap } from '../../../../utils';
@@ -40,8 +40,22 @@ import type { Rename } from '../../utils';
 
 import { ColumnDialog } from './column-dialog/column-dialog';
 import { MeasureDialog } from './measure-dialog/measure-dialog';
+import { NestedColumnDialog } from './nested-column-dialog/nested-column-dialog';
 
 import './resource-pane.scss';
+
+function makeNiceTitle(name: string): string {
+  return name
+    .replace(/^[ _-]+|[ _-]+$/g, '')
+    .replace(/(^|[_-]+)\w/g, s => {
+      // 'hello_world-love' -> 'Hello World Love'
+      return s.replace(/[_-]+/, ' ').toUpperCase();
+    })
+    .replace(/[a-z0-9][A-Z]/g, s => {
+      // 'HelloWorld' -> 'Hello World'
+      return s[0] + ' ' + s[1];
+    });
+}
 
 interface ColumnEditorOpenOn {
   expression?: SqlExpression;
@@ -67,6 +81,9 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
   const [columnSearch, setColumnSearch] = useState('');
 
   const [columnEditorOpenOn, setColumnEditorOpenOn] = useState<ColumnEditorOpenOn | undefined>();
+  const [nestedColumnEditorOpenOn, setNestedColumnEditorOpenOn] = useState<
+    SqlExpression | undefined
+  >();
   const [measureEditorOpenOn, setMeasureEditorOpenOn] = useState<MeasureEditorOpenOn | undefined>();
 
   function applyUtil(nameTransform: (columnName: string) => string) {
@@ -95,11 +112,15 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
             content={
               <Menu>
                 <MenuItem
-                  text="Uppercase columns"
+                  text="Make nice columns titles"
+                  onClick={() => applyUtil(makeNiceTitle)}
+                />
+                <MenuItem
+                  text="Uppercase column names"
                   onClick={() => applyUtil(x => x.toUpperCase())}
                 />
                 <MenuItem
-                  text="Lowercase columns"
+                  text="Lowercase column names"
                   onClick={() => applyUtil(x => x.toLowerCase())}
                 />
               </Menu>
@@ -112,6 +133,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
       <div className="column-resource-list">
         {filterMap(querySource.columns, (column, i) => {
           const columnName = column.name;
+          const isNestedColumn = column.nativeType === 'COMPLEX<json>';
           if (!caseInsensitiveContains(columnName, columnSearch)) return;
           return (
             <Popover
@@ -120,19 +142,33 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
               position="right"
               content={
                 <Menu>
-                  {onFilter && (
+                  {isNestedColumn ? (
                     <MenuItem
-                      icon={IconNames.FILTER}
-                      text="Filter"
-                      onClick={() => onFilter(column)}
+                      icon={IconNames.EXPAND_ALL}
+                      text="Expand nested column"
+                      onClick={() =>
+                        setNestedColumnEditorOpenOn(
+                          querySource.getSourceExpressionForColumn(columnName),
+                        )
+                      }
                     />
+                  ) : (
+                    <>
+                      {onFilter && (
+                        <MenuItem
+                          icon={IconNames.FILTER}
+                          text="Filter"
+                          onClick={() => onFilter(column)}
+                        />
+                      )}
+                      <MenuItem
+                        icon={IconNames.EYE_OPEN}
+                        text="Show"
+                        onClick={() => onShowColumn(column)}
+                      />
+                      <MenuDivider />
+                    </>
                   )}
-                  <MenuItem
-                    icon={IconNames.EYE_OPEN}
-                    text="Show"
-                    onClick={() => onShowColumn(column)}
-                  />
-                  <MenuDivider />
                   <MenuItem
                     icon={IconNames.EDIT}
                     text="Edit"
@@ -165,7 +201,7 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
             >
               <div
                 className={Classes.MENU_ITEM}
-                draggable
+                draggable={!isNestedColumn}
                 onDragStart={e => {
                   e.dataTransfer.effectAllowed = 'all';
                   DragHelper.dragColumn = column;
@@ -266,6 +302,15 @@ export const ResourcePane = function ResourcePane(props: ResourcePaneProps) {
           querySource={querySource}
           runSqlQuery={runSqlQuery}
           onClose={() => setColumnEditorOpenOn(undefined)}
+        />
+      )}
+      {nestedColumnEditorOpenOn && (
+        <NestedColumnDialog
+          nestedColumn={nestedColumnEditorOpenOn}
+          onApply={newQuery => onQueryChange(newQuery, undefined)}
+          querySource={querySource}
+          runSqlQuery={runSqlQuery}
+          onClose={() => setNestedColumnEditorOpenOn(undefined)}
         />
       )}
       {measureEditorOpenOn && (

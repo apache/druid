@@ -73,6 +73,7 @@ public class NestedDataColumnHandlerV4 implements DimensionHandler<StructuredDat
 
   @Override
   public DimensionMergerV9 makeMerger(
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
@@ -80,7 +81,7 @@ public class NestedDataColumnHandlerV4 implements DimensionHandler<StructuredDat
       Closer closer
   )
   {
-    return new NestedDataColumnMergerV4(name, indexSpec, segmentWriteOutMedium, closer);
+    return new NestedDataColumnMergerV4(outputName, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override

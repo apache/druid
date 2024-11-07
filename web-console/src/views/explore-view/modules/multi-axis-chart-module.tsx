@@ -16,11 +16,14 @@
  * limitations under the License.
  */
 
-import { C, F, L, SqlQuery } from '@druid-toolkit/query';
+import { IconNames } from '@blueprintjs/icons';
+import type { SqlQuery } from '@druid-toolkit/query';
+import { C, F, L } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
+import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
 import {
   formatInteger,
@@ -44,6 +47,7 @@ interface MultiAxisChartParameterValues {
 ModuleRepository.registerModule<MultiAxisChartParameterValues>({
   id: 'multi-axis-chart',
   title: 'Multi-axis chart',
+  icon: IconNames.SERIES_ADD,
   parameters: {
     timeGranularity: {
       type: 'option',
@@ -81,26 +85,24 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
     const { measures } = parameterValues;
 
     const dataQuery = useMemo(() => {
-      const source = querySource.query;
-
-      return SqlQuery.from(source)
-        .addWhere(where)
+      return querySource
+        .getInitQuery(where)
         .addSelect(F.timeFloor(C(timeColumnName || '__time'), L(timeGranularity)).as('time'), {
           addToGroupBy: 'end',
           addToOrderBy: 'end',
           direction: 'ASC',
         })
         .applyForEach(measures, (q, measure) => q.addSelect(measure.expression.as(measure.name)));
-    }, [querySource, where, timeGranularity, measures]);
+    }, [querySource, where, timeColumnName, timeGranularity, measures]);
 
-    const [sourceDataState] = useQueryManager({
+    const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
-      processQuery: async (query: SqlQuery) => {
+      processQuery: async (query: SqlQuery, cancelToken) => {
         if (!timeColumnName) {
           throw new Error(`Must have a column of type TIMESTAMP for the multi-axis chart to work`);
         }
 
-        return (await runSqlQuery(query)).toObjectArray();
+        return (await runSqlQuery(query, cancelToken)).toObjectArray();
       },
     });
 
@@ -294,6 +296,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
           ],
         });
       });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sourceDataState.data]);
 
     useEffect(() => {
@@ -327,6 +330,9 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
           }}
         />
         {errorMessage && <Issue issue={errorMessage} />}
+        {sourceDataState.loading && (
+          <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
+        )}
       </div>
     );
   },

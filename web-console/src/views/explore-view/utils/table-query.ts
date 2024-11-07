@@ -37,6 +37,7 @@ import { Measure } from '../models';
 
 import { formatDuration } from './duration';
 import { addTableScope } from './general';
+import { KNOWN_AGGREGATIONS } from './known-aggregations';
 import type { Compare } from './time-manipulation';
 import { computeWhereForCompares } from './time-manipulation';
 
@@ -47,35 +48,6 @@ export type CompareStrategy = 'auto' | 'filtered' | 'join';
 export type CompareType = 'value' | 'delta' | 'absDelta' | 'percent' | 'absPercent';
 
 export type RestrictTop = 'always' | 'never';
-
-const KNOWN_AGGREGATIONS = [
-  'COUNT',
-  'SUM',
-  'MIN',
-  'MAX',
-  'AVG',
-  'APPROX_COUNT_DISTINCT',
-  'APPROX_COUNT_DISTINCT_DS_HLL',
-  'APPROX_COUNT_DISTINCT_DS_THETA',
-  'DS_HLL',
-  'DS_THETA',
-  'APPROX_QUANTILE',
-  'APPROX_QUANTILE_DS',
-  'APPROX_QUANTILE_FIXED_BUCKETS',
-  'DS_QUANTILES_SKETCH',
-  'BLOOM_FILTER',
-  'TDIGEST_QUANTILE',
-  'TDIGEST_GENERATE_SKETCH',
-  'VAR_POP',
-  'VAR_SAMP',
-  'VARIANCE',
-  'STDDEV_POP',
-  'STDDEV_SAMP',
-  'STDDEV',
-  'EARLIEST',
-  'LATEST',
-  'ANY_VALUE',
-];
 
 const DRUID_DEFAULT_TOTAL_SUB_QUERY_LIMIT = 100000;
 
@@ -227,6 +199,7 @@ interface DecodedOrderBy {
   orderedCompareDuration?: string;
   orderedCompareType?: CompareType;
 }
+
 function decodeTableOrderBy(
   orderBy: SqlOrderByExpression | undefined,
   hasCompare: boolean,
@@ -244,8 +217,8 @@ function decodeTableOrderBy(
   let orderedCompareDuration: Compare | undefined;
   let orderedCompareType: CompareType | undefined;
 
-  const m = orderByColumnName.match(
-    /^(.+):compare:(P[^:]+):(value|delta|absDelta|percent|absPercent)$/,
+  const m = /^(.+):compare:(P[^:]+):(value|delta|absDelta|percent|absPercent)$/.exec(
+    orderByColumnName,
   );
   if (m) {
     if (!hasCompare) return;
@@ -499,6 +472,7 @@ interface MakeNonCompareTableQueryAndHintsOptions {
 
   orderBy: SqlOrderByExpression | undefined;
 }
+
 function makeNonCompareTableQueryAndHints(
   options: MakeNonCompareTableQueryAndHintsOptions,
 ): QueryAndHints {
@@ -544,7 +518,7 @@ function makeNonCompareTableQueryAndHints(
 
   return {
     columnHints: makeBaseColumnHints(splitColumns, timeBucket, showColumns),
-    query: SqlQuery.from(source)
+    query: SqlQuery.from(source.as('t'))
       .addWhere(where)
       .applyForEach(mainGroupByExpressions, (q, groupByExpression) =>
         q.addSelect(groupByExpression, {
@@ -694,7 +668,7 @@ function makeJoinCompareTableQueryAndHints(
           : q
               .applyIf(orderByCompareDuration, q =>
                 q.changeOrderByExpression(
-                  decodedOrderBy!.orderedMeasure!.expression.toOrderByExpression('DESC'),
+                  decodedOrderBy.orderedMeasure!.expression.toOrderByExpression('DESC'),
                 ),
               )
               .changeLimitValue(safeSubQueryLimit),
@@ -727,7 +701,7 @@ function makeJoinCompareTableQueryAndHints(
               q =>
                 q
                   .changeOrderByExpression(
-                    effectiveOrderBy.changeExpression(C(decodedOrderBy!.orderedMeasure!.name)),
+                    effectiveOrderBy.changeExpression(C(decodedOrderBy.orderedMeasure!.name)),
                   )
                   .changeLimitValue(maxRows),
               q =>
@@ -742,7 +716,7 @@ function makeJoinCompareTableQueryAndHints(
                     )
                   : q
                       .changeOrderByExpression(
-                        C(decodedOrderBy!.orderedThing.name).toOrderByExpression('DESC'),
+                        C(decodedOrderBy.orderedThing.name).toOrderByExpression('DESC'),
                       )
                       .changeLimitValue(safeSubQueryLimit),
             ),
@@ -896,7 +870,7 @@ function makeFilteredCompareTableQueryAndHints(
   );
 
   const columnHints = makeBaseColumnHints(splitColumns, timeBucket, showColumns);
-  const query = SqlQuery.from(source)
+  const query = SqlQuery.from(source.as('t'))
     .addWhere(commonWhere)
     .applyForEach(mainGroupByExpressions, (q, groupByExpression) =>
       q.addSelect(groupByExpression, {

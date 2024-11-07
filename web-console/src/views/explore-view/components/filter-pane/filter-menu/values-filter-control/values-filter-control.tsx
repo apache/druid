@@ -16,14 +16,15 @@
  * limitations under the License.
  */
 
-import { FormGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { FormGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { QueryResult, SqlQuery, ValuesFilterPattern } from '@druid-toolkit/query';
-import { C, F, L, SqlExpression, SqlLiteral } from '@druid-toolkit/query';
+import { C, F, SqlExpression } from '@druid-toolkit/query';
 import React, { useMemo, useState } from 'react';
 
+import { ClearableInput } from '../../../../../../components';
 import { useQueryManager } from '../../../../../../hooks';
-import { caseInsensitiveContains } from '../../../../../../utils';
+import { caseInsensitiveContains, filterMap } from '../../../../../../utils';
 import type { QuerySource } from '../../../../models';
 import { toggle } from '../../../../utils';
 import { ColumnValue } from '../../column-value/column-value';
@@ -46,21 +47,22 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
   const [initValues] = useState(selectedValues);
   const [searchString, setSearchString] = useState('');
 
-  const valuesQuery = useMemo(() => {
-    const columnRef = C(column);
-    const queryParts: string[] = [`SELECT ${columnRef.as('c')}`, `FROM (${querySource.query})`];
-
-    const filterEx = SqlExpression.and(
-      filter,
-      searchString ? F('ICONTAINS_STRING', columnRef, L(searchString)) : undefined,
-    );
-    if (!(filterEx instanceof SqlLiteral)) {
-      queryParts.push(`WHERE ${filterEx}`);
-    }
-
-    queryParts.push(`GROUP BY 1 ORDER BY COUNT(*) DESC LIMIT 101`);
-    return queryParts.join('\n');
-  }, [querySource.query, filter, column, searchString]);
+  const valuesQuery = useMemo(
+    () =>
+      querySource
+        .getInitQuery(
+          SqlExpression.and(
+            filter,
+            searchString ? F('ICONTAINS_STRING', C(column), searchString) : undefined,
+          ),
+        )
+        .addSelect(C(column).as('c'), { addToGroupBy: 'end' })
+        .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
+        .changeLimitValue(101)
+        .toString(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [querySource.query, filter, column, searchString],
+  );
 
   const [valuesState] = useQueryManager<string, any[]>({
     query: valuesQuery,
@@ -77,42 +79,37 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
   if (values) {
     valuesToShow = valuesToShow.concat(values.filter(v => !initValues.includes(v)));
   }
-  if (searchString) {
-    valuesToShow = valuesToShow.filter(v => caseInsensitiveContains(v, searchString));
-  }
 
   const showSearch = querySource.columns.find(c => c.name === column)?.sqlType !== 'BOOLEAN';
-
   return (
     <FormGroup className="values-filter-control">
       {showSearch && (
-        <InputGroup
-          value={searchString}
-          onChange={e => setSearchString(e.target.value)}
-          placeholder="Search"
-        />
+        <ClearableInput value={searchString} onChange={setSearchString} placeholder="Search" />
       )}
       <Menu className="value-list">
-        {valuesToShow.map((v, i) => (
-          <MenuItem
-            key={i}
-            icon={
-              selectedValues.includes(v)
-                ? negated
-                  ? IconNames.DELETE
-                  : IconNames.TICK_CIRCLE
-                : IconNames.CIRCLE
-            }
-            text={<ColumnValue value={v} />}
-            shouldDismissPopover={false}
-            onClick={e => {
-              setFilterPattern({
-                ...filterPattern,
-                values: e.altKey ? [v] : toggle(selectedValues, v),
-              });
-            }}
-          />
-        ))}
+        {filterMap(valuesToShow, (v, i) => {
+          if (!caseInsensitiveContains(v, searchString)) return;
+          return (
+            <MenuItem
+              key={i}
+              icon={
+                selectedValues.includes(v)
+                  ? negated
+                    ? IconNames.DELETE
+                    : IconNames.TICK_CIRCLE
+                  : IconNames.CIRCLE
+              }
+              text={<ColumnValue value={v} />}
+              shouldDismissPopover={false}
+              onClick={e => {
+                setFilterPattern({
+                  ...filterPattern,
+                  values: e.altKey ? [v] : toggle(selectedValues, v),
+                });
+              }}
+            />
+          );
+        })}
         {valuesState.loading && <MenuItem icon={IconNames.BLANK} text="Loading..." disabled />}
       </Menu>
     </FormGroup>

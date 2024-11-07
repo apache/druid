@@ -173,10 +173,7 @@ public class ScanQueryKit implements QueryKit<ScanQuery>
                        .broadcastInputs(dataSourcePlan.getBroadcastInputs())
                        .shuffleSpec(scanShuffleSpec)
                        .signature(signatureToUse)
-                       .maxWorkerCount(
-                           dataSourcePlan.isSingleWorker()
-                           ? 1
-                           : queryKitSpec.getMaxWorkerCount(dataSourcePlan.getInputSpecs()))
+                       .maxWorkerCount(dataSourcePlan.getMaxWorkerCount(queryKitSpec))
                        .processorFactory(new ScanQueryFrameProcessorFactory(queryToRun))
     );
 

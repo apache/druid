@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.msq.dart.controller.ControllerHolder;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.DruidNode;
 import org.joda.time.DateTime;
 
 import java.util.Objects;
@@ -38,6 +39,7 @@ public class DartQueryInfo
   private final String sqlQueryId;
   private final String dartQueryId;
   private final String sql;
+  private final String controllerHost;
   private final String authenticator;
   private final String identity;
   private final DateTime startTime;
@@ -48,6 +50,7 @@ public class DartQueryInfo
       @JsonProperty("sqlQueryId") final String sqlQueryId,
       @JsonProperty("dartQueryId") final String dartQueryId,
       @JsonProperty("sql") final String sql,
+      @JsonProperty("controllerHost") final String controllerHost,
       @JsonProperty("authenticator") final String authenticator,
       @JsonProperty("identity") final String identity,
       @JsonProperty("startTime") final DateTime startTime,
@@ -57,6 +60,7 @@ public class DartQueryInfo
     this.sqlQueryId = Preconditions.checkNotNull(sqlQueryId, "sqlQueryId");
     this.dartQueryId = Preconditions.checkNotNull(dartQueryId, "dartQueryId");
     this.sql = sql;
+    this.controllerHost = controllerHost;
     this.authenticator = authenticator;
     this.identity = identity;
     this.startTime = startTime;
@@ -69,6 +73,7 @@ public class DartQueryInfo
         holder.getSqlQueryId(),
         holder.getController().queryId(),
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(holder.getSql()),
+        holder.getControllerHost(),
         holder.getAuthenticationResult().getAuthenticatedBy(),
         holder.getAuthenticationResult().getIdentity(),
         holder.getStartTime(),
@@ -102,6 +107,16 @@ public class DartQueryInfo
   public String getSql()
   {
     return sql;
+  }
+
+  /**
+   * Controller host:port, from {@link DruidNode#getHostAndPortToUse()}, that is executing this query.
+   */
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getControllerHost()
+  {
+    return controllerHost;
   }
 
   /**
@@ -145,7 +160,7 @@ public class DartQueryInfo
    */
   public DartQueryInfo withoutAuthenticationResult()
   {
-    return new DartQueryInfo(sqlQueryId, dartQueryId, sql, null, null, startTime, state);
+    return new DartQueryInfo(sqlQueryId, dartQueryId, sql, controllerHost, null, null, startTime, state);
   }
 
   @Override
@@ -161,6 +176,7 @@ public class DartQueryInfo
     return Objects.equals(sqlQueryId, that.sqlQueryId)
            && Objects.equals(dartQueryId, that.dartQueryId)
            && Objects.equals(sql, that.sql)
+           && Objects.equals(controllerHost, that.controllerHost)
            && Objects.equals(authenticator, that.authenticator)
            && Objects.equals(identity, that.identity)
            && Objects.equals(startTime, that.startTime)
@@ -170,7 +186,7 @@ public class DartQueryInfo
   @Override
   public int hashCode()
   {
-    return Objects.hash(sqlQueryId, dartQueryId, sql, authenticator, identity, startTime, state);
+    return Objects.hash(sqlQueryId, dartQueryId, sql, controllerHost, authenticator, identity, startTime, state);
   }
 
   @Override
@@ -180,10 +196,11 @@ public class DartQueryInfo
            "sqlQueryId='" + sqlQueryId + '\'' +
            ", dartQueryId='" + dartQueryId + '\'' +
            ", sql='" + sql + '\'' +
+           ", controllerHost='" + controllerHost + '\'' +
            ", authenticator='" + authenticator + '\'' +
            ", identity='" + identity + '\'' +
            ", startTime=" + startTime +
-           ", state=" + state +
+           ", state='" + state + '\'' +
            '}';
   }
 }
