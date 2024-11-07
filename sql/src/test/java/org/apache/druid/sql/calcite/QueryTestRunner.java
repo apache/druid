@@ -459,11 +459,9 @@ public class QueryTestRunner
                 ".columnTypes("
             );
             for (ColumnType query : scanQuery2.getColumnTypes()) {
-              if (query.getComplexTypeName() != null) {
-                sv.append("ColumnType.ofComplex(\"" + query.getComplexTypeName() + "\"), ");
-              } else {
-                sv.append("ColumnType." + query + ", ");
-              }
+              String typeString = typeStringFor(query);
+              sv.append(typeString);
+              sv.append(", ");
             }
             int l = sv.length();
             sv.replace(l - 2, l, ")");
@@ -492,6 +490,18 @@ public class QueryTestRunner
         catch (JsonProcessingException e) {
           Assert.fail(e.getMessage());
         }
+      }
+    }
+
+    private String typeStringFor(ColumnType query)
+    {
+      if(query.isArray()) {
+        return String.format("ColumnType.ofArray(ColumnType.%s)", query.getElementType());
+      }
+      if (query.getComplexTypeName() != null) {
+        return "ColumnType.ofComplex(\"" + query.getComplexTypeName() + "\")";
+      } else {
+        return ("ColumnType." + query);
       }
     }
   }
