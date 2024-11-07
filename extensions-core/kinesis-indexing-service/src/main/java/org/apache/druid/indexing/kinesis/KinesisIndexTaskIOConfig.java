@@ -92,7 +92,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
         minimumMessageTime,
         maximumMessageTime,
         inputFormat,
-        taskDuration
+        taskDuration.getStandardMinutes()
     );
     Preconditions.checkArgument(
         getEndSequenceNumbers().getPartitionSequenceNumberMap()

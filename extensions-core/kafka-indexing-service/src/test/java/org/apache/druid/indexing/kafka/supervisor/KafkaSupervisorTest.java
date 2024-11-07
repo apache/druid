@@ -498,7 +498,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         ),
         new KafkaIndexTaskTuningConfig(
             null,
@@ -5644,7 +5644,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
             maximumMessageTime,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         ),
         Collections.emptyMap(),
         OBJECT_MAPPER

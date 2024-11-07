@@ -40,7 +40,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -90,7 +89,7 @@ public class SeekableStreamIndexTaskRunnerTest
 
     DateTime now = DateTimes.nowUtc();
 
-    Mockito.when(ioConfig.getTaskDuration()).thenReturn(Duration.standardHours(2));
+    Mockito.when(ioConfig.getRefreshRejectionPeriodsInMinutes()).thenReturn(120L);
     Mockito.when(ioConfig.getMaximumMessageTime()).thenReturn(Optional.of(DateTimes.nowUtc().plusHours(2)));
     Mockito.when(ioConfig.getMinimumMessageTime()).thenReturn(Optional.of(DateTimes.nowUtc().minusHours(2)));
     Mockito.when(ioConfig.getInputFormat()).thenReturn(new JsonInputFormat(null, null, null, null, null));
@@ -142,7 +141,7 @@ public class SeekableStreamIndexTaskRunnerTest
 
     DateTime now = DateTimes.nowUtc();
 
-    Mockito.when(ioConfig.getTaskDuration()).thenReturn(null);
+    Mockito.when(ioConfig.getRefreshRejectionPeriodsInMinutes()).thenReturn(null);
     // min max time not populated.
     Mockito.when(ioConfig.getMaximumMessageTime()).thenReturn(Optional.absent());
     Mockito.when(ioConfig.getMinimumMessageTime()).thenReturn(Optional.absent());

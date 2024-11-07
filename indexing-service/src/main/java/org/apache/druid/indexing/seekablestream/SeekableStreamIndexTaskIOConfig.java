@@ -42,7 +42,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
   private final Optional<DateTime> minimumMessageTime;
   private final Optional<DateTime> maximumMessageTime;
   private final InputFormat inputFormat;
-  private final Integer refreshRejectionPeriodsInMinutes;
+  private final Long refreshRejectionPeriodsInMinutes;
 
   public SeekableStreamIndexTaskIOConfig(
       @Nullable final Integer taskGroupId, // can be null for backward compabitility
@@ -53,7 +53,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
       final DateTime minimumMessageTime,
       final DateTime maximumMessageTime,
       @Nullable final InputFormat inputFormat,
-      @Nullable final Integer refreshRejectionPeriodsInMinutes // can be null for backward compabitility
+      @Nullable final Long refreshRejectionPeriodsInMinutes // can be null for backward compabitility
   )
   {
     this.taskGroupId = taskGroupId;
@@ -140,7 +140,7 @@ public abstract class SeekableStreamIndexTaskIOConfig<PartitionIdType, SequenceO
 
   @Nullable
   @JsonProperty
-  public Integer getRefreshRejectionPeriodsInMinutes()
+  public Long getRefreshRejectionPeriodsInMinutes()
   {
     return refreshRejectionPeriodsInMinutes;
   }

@@ -52,7 +52,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMockSupport;
-import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -412,6 +411,6 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         )
     );
 
-    Assert.assertEquals(Duration.standardMinutes(30), ioConfig.getTaskDuration());
+    Assert.assertEquals(30L, ioConfig.getRefreshRejectionPeriodsInMinutes().longValue());
   }
 }

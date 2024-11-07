@@ -359,7 +359,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     Assert.assertTrue(task.supportsQueries());
@@ -416,7 +416,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -465,7 +465,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     task.addToContext(Tasks.STORE_EMPTY_COLUMNS_KEY, false);
@@ -501,7 +501,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -543,7 +543,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -595,7 +595,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -673,7 +673,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -777,7 +777,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -904,7 +904,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -983,7 +983,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -1047,7 +1047,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final KafkaIndexTask staleReplica = createTask(
@@ -1064,7 +1064,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1131,7 +1131,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1180,7 +1180,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             DateTimes.of("2010"),
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1238,7 +1238,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1310,7 +1310,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             new TestKafkaInputFormat(INPUT_FORMAT),
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     Assert.assertTrue(task.supportsQueries());
@@ -1383,7 +1383,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             KAFKA_INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     Assert.assertTrue(task.supportsQueries());
@@ -1435,7 +1435,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1471,7 +1471,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1518,7 +1518,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1570,7 +1570,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1609,7 +1609,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1702,7 +1702,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1769,7 +1769,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -1786,7 +1786,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1835,7 +1835,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -1852,7 +1852,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1903,7 +1903,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -1920,7 +1920,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1969,7 +1969,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2016,7 +2016,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -2033,7 +2033,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2084,7 +2084,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2119,7 +2119,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2170,7 +2170,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2214,7 +2214,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2266,7 +2266,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2338,7 +2338,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2376,7 +2376,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2424,7 +2424,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         ),
         context
     );
@@ -2469,7 +2469,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2509,7 +2509,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2591,7 +2591,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
                     null,
                     INPUT_FORMAT,
                     null,
-                    Duration.standardHours(2)
+                    Duration.standardHours(2).getStandardMinutes()
             )
     );
 
@@ -2652,7 +2652,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -2676,7 +2676,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2723,7 +2723,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2756,7 +2756,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3019,7 +3019,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3081,7 +3081,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             new TestKafkaFormatWithMalformedDataDetection(INPUT_FORMAT),
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3154,7 +3154,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             new TestKafkaFormatWithMalformedDataDetection(INPUT_FORMAT),
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3229,7 +3229,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             new TestKafkaFormatWithMalformedDataDetection(INPUT_FORMAT),
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3282,7 +3282,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3337,7 +3337,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             INPUT_FORMAT,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 

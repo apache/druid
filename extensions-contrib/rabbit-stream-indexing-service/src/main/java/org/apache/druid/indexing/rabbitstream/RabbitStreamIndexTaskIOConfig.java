@@ -67,7 +67,7 @@ public class RabbitStreamIndexTaskIOConfig extends SeekableStreamIndexTaskIOConf
         minimumMessageTime,
         maximumMessageTime,
         inputFormat,
-        taskDuration
+        taskDuration.getStandardMinutes()
     );
 
     this.pollTimeout = pollTimeout != null ? pollTimeout : RabbitStreamSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;
