@@ -34,6 +34,7 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Finalization;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -161,6 +162,12 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   public RowSignature getRowSignature()
   {
     return rowSignature;
+  }
+
+  @Override
+  public RowSignature getResultRowSignature(Finalization finalization)
+  {
+    return getRowSignature();
   }
 
   @Override

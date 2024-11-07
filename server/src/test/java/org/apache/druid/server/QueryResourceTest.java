@@ -51,7 +51,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
-import org.apache.druid.query.MapQueryToolChestWarehouse;
+import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryException;
@@ -59,7 +59,6 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
@@ -125,7 +124,7 @@ import java.util.function.Consumer;
 
 public class QueryResourceTest
 {
-  private static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(ImmutableMap.of());
+  private static final DefaultQueryRunnerFactoryConglomerate CONGLOMERATE = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of());
   private static final AuthenticationResult AUTHENTICATION_RESULT =
       new AuthenticationResult("druid", "druid", null, null);
 
@@ -239,7 +238,7 @@ public class QueryResourceTest
   {
     return new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
@@ -274,7 +273,7 @@ public class QueryResourceTest
     DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
@@ -327,7 +326,7 @@ public class QueryResourceTest
     DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             new QuerySegmentWalker()
             {
               @Override
@@ -397,7 +396,7 @@ public class QueryResourceTest
   {
     queryResource = new QueryResource(
       new QueryLifecycleFactory(
-        WAREHOUSE,
+        CONGLOMERATE,
         new QuerySegmentWalker()
         {
           @Override
@@ -478,7 +477,7 @@ public class QueryResourceTest
   {
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
@@ -549,7 +548,7 @@ public class QueryResourceTest
           public QueryLifecycle factorize()
           {
             return new QueryLifecycle(
-                WAREHOUSE,
+                CONGLOMERATE,
                 querySegmentWalker,
                 new DefaultGenericQueryMetricsFactory(),
                 new NoopServiceEmitter(),
@@ -602,7 +601,7 @@ public class QueryResourceTest
     DefaultQueryConfig overrideConfig = new DefaultQueryConfig(ImmutableMap.of(overrideConfigKey, overrideConfigValue));
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
@@ -839,7 +838,7 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
@@ -914,7 +913,7 @@ public class QueryResourceTest
 
     final QueryResource timeoutQueryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             timeoutSegmentWalker,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
@@ -1010,7 +1009,7 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
@@ -1117,7 +1116,7 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             TEST_SEGMENT_WALKER,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
@@ -1469,7 +1468,7 @@ public class QueryResourceTest
 
     queryResource = new QueryResource(
         new QueryLifecycleFactory(
-            WAREHOUSE,
+            CONGLOMERATE,
             texasRanger,
             new DefaultGenericQueryMetricsFactory(),
             new NoopServiceEmitter(),
