@@ -254,7 +254,7 @@ public class MSQSelectTest extends MSQTestBase
                    .query(newScanQueryBuilder()
                               .dataSource(CalciteTests.DATASOURCE2)
                               .intervals(querySegmentSpec(Filtration.eternity()))
-                              .columns("dim2", "m1")
+                              .columns("m1", "dim2")
                               .context(defaultScanQueryContext(
                                   context,
                                   RowSignature.builder()
