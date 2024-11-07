@@ -280,6 +280,21 @@
       <artifactId>glue</artifactId>
       <version>${awssdk.version}</version>
     </dependency>
+    <!-- software/amazon/awssdk/services/sts/model/Tag needed for GlueCatalog initialize -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>sts</artifactId>
+      <version>${awssdk.version}</version>
+    </dependency>
+
+    <!-- software/amazon/awssdk/services/s3/model/ObjectCannedACL needed for GlueCatalog initialize -->
+    <dependency>
+      <groupId>software.amazon.awssdk</groupId>
+      <artifactId>s3</artifactId>
+      <version>${awssdk.version}</version>
+    </dependency>
+
+
     <dependency>
       <groupId>org.apache.hive</groupId>
       <artifactId>hive-metastore</artifactId>
