@@ -33,7 +33,7 @@ public class WX1
   public static void main(String[] args) throws IOException
   {
 
-    String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteSelectQueryTest.java";
+    String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteTableAppendTest.java";
     // pathname=CalciteSubqueryTest.class.getProtectionDomain().getCodeSource().getLocation().getFile();
     System.out.println(pathname);
     Path path = new File(pathname).toPath();
@@ -96,8 +96,10 @@ public class WX1
   {
     switch (colName)
     {
+      case "f1":
       case "m1":
         return "ColumnType.FLOAT";
+      case "d1":
       case "m2":
         return "ColumnType.DOUBLE";
       case "unique_dim1":
