@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
@@ -35,7 +36,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.quidem.DruidQTestInfo;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
@@ -62,6 +65,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
+import static org.junit.Assert.fail;
 
 /**
  * Runs a test built up by {@link QueryTestBuilder}. Running a SQL query test
@@ -443,19 +448,42 @@ public class QueryTestRunner
           recordedQueries.size()
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
+        Query<?> expectedQuery = expectedQueries.get(i);
+        Query<?> actualQuery = recordedQueries.get(i);
+        if (expectedQuery instanceof ScanQuery && actualQuery instanceof ScanQuery) {
+          ScanQuery scanQuery2 = (ScanQuery) actualQuery;
+          ScanQuery scanQuery = (ScanQuery) expectedQuery;
+          if (!Objects.equal(scanQuery.getColumnTypes(), scanQuery2.getColumnTypes())) {
+            StringBuffer sv=new StringBuffer();
+            sv.append(                   ".columnTypes("
+ );
+            for (ColumnType query : scanQuery2.getColumnTypes()) {
+              sv.append("ColumnType."+query+", ");
+            }
+            int l = sv.length();
+            sv.replace(l-2, l, ")");
+            System.out.println("\n");
+            System.out.println(sv.toString());
+            fail(sv.toString()
+
+                );
+
+          }
+        }
+
         Assert.assertEquals(
             StringUtils.format("query #%d: %s", i + 1, builder.sql),
-            expectedQueries.get(i),
-            recordedQueries.get(i)
+            expectedQuery,
+            actualQuery
         );
 
         try {
           // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
           // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
           // in the recorded queries, but it is a regular map after deserialization
-          final String recordedString = queryJsonMapper.writeValueAsString(recordedQueries.get(i));
+          final String recordedString = queryJsonMapper.writeValueAsString(actualQuery);
           final Query<?> stringAndBack = queryJsonMapper.readValue(recordedString, Query.class);
-          final String expectedString = queryJsonMapper.writeValueAsString(expectedQueries.get(i));
+          final String expectedString = queryJsonMapper.writeValueAsString(expectedQuery);
           final Query<?> expectedStringAndBack = queryJsonMapper.readValue(expectedString, Query.class);
           Assert.assertEquals(expectedStringAndBack, stringAndBack);
         }
