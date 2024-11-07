@@ -750,5 +750,21 @@
         </configuration>
       </plugin>
     </plugins>
+
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <configuration>
+            <!-- ignore annotations for "unused but declared" warnings -->
+            <ignoredUnusedDeclaredDependencies>
+              <ignoredUnusedDeclaredDependency>org.apache.iceberg:iceberg-aws</ignoredUnusedDeclaredDependency>
+              <ignoredUnusedDeclaredDependency>software.amazon.awssdk:glue</ignoredUnusedDeclaredDependency>
+            </ignoredUnusedDeclaredDependencies>
+          </configuration>
+        </plugin>
+      </plugins>
+  </pluginManagement>
   </build>
 </project>
