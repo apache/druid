@@ -30,7 +30,10 @@ public class WX1
 {
   public static void main(String[] args) throws IOException
   {
-    String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteLookupFunctionQueryTest.java";
+
+    String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteSubqueryTest.java";
+//    pathname=CalciteSubqueryTest.class.getProtectionDomain().getCodeSource().getLocation().getFile();
+    System.out.println(pathname);
     Path path = new File(pathname).toPath();
     List<String> lines = Files.readAllLines(path);
     List<String> newLines = new ArrayList<String>();
@@ -43,7 +46,7 @@ public class WX1
       if (l.contains("ScanQueryBuilder")) {
         st = l;
       }
-      if (l.contains("columns")) {
+      if (l.contains("columns(") && l.contains(")")) {
         colLine = l;
       }
       if (l.contains("columnTypes")) {
@@ -54,7 +57,10 @@ public class WX1
         colLine = null;
       }
 
+      newLines.add(l);
+
       if (colLine !=null && !l.contains("columnTypes")) {
+        System.out.println(colLine);
         String[] p0 = colLine.split("[()]");
         String[] aa = p0[1].split(",");
 
@@ -64,7 +70,11 @@ public class WX1
         sb.append("columnTypes(");
 
         for (String colName : aa) {
-          sb.append("ColumnType.STRING, ");
+          if(colName.contains("__time") || colName.contains("cnt")) {
+            sb.append("ColumnType.LONG, ");
+          } else {
+            sb.append("ColumnType.STRING, ");
+          }
         }
         int ll = sb.length();
         sb.delete(ll - 2, ll);
@@ -74,10 +84,6 @@ public class WX1
         colLine=null;
         newLines.add(sb.toString());
       }
-
-
-
-      newLines.add(l);
     }
 
     Files.write(path, newLines);
