@@ -987,7 +987,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"j0.m2\",\"type\":\"DOUBLE\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
+                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.m2\",\"type\":\"DOUBLE\"}]"
                     )
                     .build();
 
@@ -1037,7 +1037,7 @@ public class MSQWindowTest extends MSQTestBase
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("j0.m2", "m1")
+                .columns("m1", "j0.m2")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1090,7 +1090,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"j0.m2\",\"type\":\"DOUBLE\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
+                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.m2\",\"type\":\"DOUBLE\"}]"
                     )
                     .build();
 
@@ -1140,7 +1140,7 @@ public class MSQWindowTest extends MSQTestBase
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("j0.m2", "m1")
+                .columns("m1", "j0.m2")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1269,7 +1269,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"j0.unnest\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
+                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.unnest\",\"type\":\"STRING\"}]"
                     )
                     .build();
 
@@ -1297,7 +1297,7 @@ public class MSQWindowTest extends MSQTestBase
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("j0.unnest", "m1")
+                .columns("m1", "j0.unnest")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1351,7 +1351,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"j0.unnest\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
+                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.unnest\",\"type\":\"STRING\"}]"
                     )
                     .build();
 
@@ -1379,7 +1379,7 @@ public class MSQWindowTest extends MSQTestBase
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("j0.unnest", "m1")
+                .columns("m1", "j0.unnest")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1740,7 +1740,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"cityName\",\"type\":\"STRING\"}]"
+                        "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"added\",\"type\":\"LONG\"}]"
                     )
                     .build();
 
@@ -1750,7 +1750,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.WIKIPEDIA)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(in("cityName", ImmutableList.of("Ahmedabad", "Albuquerque")))
-                .columns("added", "cityName")
+                .columns("cityName", "added")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1829,7 +1829,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"}]"
+                        "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"added\",\"type\":\"LONG\"}]"
                     )
                     .build();
 
@@ -1839,7 +1839,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.WIKIPEDIA)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(notNull("cityName"))
-                .columns("added", "cityName", "countryIsoCode")
+                .columns("cityName", "countryIsoCode", "added")
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(innerContextWithRowSignature)
                 .build()),
@@ -1861,13 +1861,13 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"w0\",\"type\":\"LONG\"}]"
+                        "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"w0\",\"type\":\"LONG\"}]"
                     )
                     .build();
     final Query scanQuery = Druids.newScanQueryBuilder()
                                   .dataSource(new QueryDataSource(query))
                                   .intervals(querySegmentSpec(Filtration.eternity()))
-                                  .columns("added", "cityName", "w0")
+                                  .columns("cityName", "added", "w0")
                                   .limit(5)
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                   .context(outerContextWithRowSignature)
