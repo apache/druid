@@ -41,6 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
         java: [ '8', '11', '17', '21.0.4' ]
     runs-on: ubuntu-latest
     steps:
