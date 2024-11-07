@@ -21,7 +21,6 @@ package org.apache.druid.k8s.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodBuilder;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -91,7 +90,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     )
     {
       @Override
-      protected synchronized TaskStatus join(long timeout, SettableFuture<Boolean> taskActiveStatusFuture)
+      protected synchronized TaskStatus join(long timeout)
       {
         return TaskStatus.success(ID);
       }
@@ -136,7 +135,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     )
     {
       @Override
-      protected synchronized TaskStatus join(long timeout, SettableFuture<Boolean> taskActiveStatusFuture)
+      protected synchronized TaskStatus join(long timeout)
       {
         return TaskStatus.success(ID);
       }
@@ -180,7 +179,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     )
     {
       @Override
-      protected synchronized TaskStatus join(long timeout, SettableFuture<Boolean> taskActiveStatusFuture)
+      protected synchronized TaskStatus join(long timeout)
       {
         return TaskStatus.success(ID);
       }
@@ -229,7 +228,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
     )
     {
       @Override
-      protected synchronized TaskStatus join(long timeout, SettableFuture<Boolean> taskActiveStatusFuture)
+      protected synchronized TaskStatus join(long timeout)
       {
         throw new IllegalStateException();
       }
@@ -289,7 +288,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L, null);
+    TaskStatus taskStatus = peonLifecycle.join(0L);
 
     verifyAll();
 
@@ -310,6 +309,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
         stateListener
     );
 
+    Assert.assertFalse(peonLifecycle.getTaskStartedSuccessfullyFuture().isDone());
     Job job = new JobBuilder()
         .withNewMetadata()
         .withName(ID)
@@ -343,10 +343,10 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L, null);
+    TaskStatus taskStatus = peonLifecycle.join(0L);
 
     verifyAll();
-
+    Assert.assertTrue(peonLifecycle.getTaskStartedSuccessfullyFuture().isDone());
     Assert.assertEquals(SUCCESS.withDuration(58000), taskStatus);
     Assert.assertEquals(KubernetesPeonLifecycle.State.STOPPED, peonLifecycle.getState());
   }
@@ -397,12 +397,12 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L, null);
+    TaskStatus taskStatus = peonLifecycle.join(0L);
 
     Assert.assertThrows(
         "Task [id] failed to join: invalid peon lifecycle state transition [STOPPED]->[PENDING]",
         IllegalStateException.class,
-        () -> peonLifecycle.join(0L, null)
+        () -> peonLifecycle.join(0L)
     );
 
     verifyAll();
@@ -449,7 +449,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L, null);
+    TaskStatus taskStatus = peonLifecycle.join(0L);
 
     verifyAll();
 
@@ -499,7 +499,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L, null);
+    TaskStatus taskStatus = peonLifecycle.join(0L);
 
     verifyAll();
 
@@ -551,7 +551,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    TaskStatus taskStatus = peonLifecycle.join(0L, null);
+    TaskStatus taskStatus = peonLifecycle.join(0L);
 
     verifyAll();
 
@@ -591,7 +591,7 @@ public class KubernetesPeonLifecycleTest extends EasyMockSupport
 
     replayAll();
 
-    Assert.assertThrows(RuntimeException.class, () -> peonLifecycle.join(0L, null));
+    Assert.assertThrows(RuntimeException.class, () -> peonLifecycle.join(0L));
 
     verifyAll();
 

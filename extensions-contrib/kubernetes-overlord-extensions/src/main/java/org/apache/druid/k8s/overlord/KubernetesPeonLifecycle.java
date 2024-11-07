@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodStatus;
@@ -73,11 +74,11 @@ public class KubernetesPeonLifecycle
 
   protected enum State
   {
-    /** Lifecycle's state before {@link #run(Job, long, long, boolean)} or {@link #join(long, SettableFuture)} is called. */
+    /** Lifecycle's state before {@link #run(Job, long, long, boolean)} or {@link #join(long)} is called. */
     NOT_STARTED,
     /** Lifecycle's state since {@link #run(Job, long, long, boolean)} is called. */
     PENDING,
-    /** Lifecycle's state since {@link #join(long, SettableFuture)} is called. */
+    /** Lifecycle's state since {@link #join(long)} is called. */
     RUNNING,
     /** Lifecycle's state since the task has completed. */
     STOPPED
@@ -90,6 +91,7 @@ public class KubernetesPeonLifecycle
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
+  private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -110,6 +112,7 @@ public class KubernetesPeonLifecycle
     this.taskLogs = taskLogs;
     this.mapper = mapper;
     this.stateListener = stateListener;
+    this.taskStartedSuccessfullyFuture = SettableFuture.create();
   }
 
   /**
@@ -138,14 +141,16 @@ public class KubernetesPeonLifecycle
           launchTimeout,
           TimeUnit.MILLISECONDS
       );
-
-      return join(timeout, null);
+      return join(timeout);
     }
     catch (Exception e) {
       log.info("Failed to run task: %s", taskId.getOriginalTaskId());
       throw e;
     }
     finally {
+      if (!taskStartedSuccessfullyFuture.isDone()) {
+        taskStartedSuccessfullyFuture.set(false);
+      }
       stopTask();
     }
   }
@@ -176,13 +181,11 @@ public class KubernetesPeonLifecycle
    * @return
    * @throws IllegalStateException
    */
-  protected synchronized TaskStatus join(long timeout, SettableFuture<Boolean> taskActiveStatusFuture) throws IllegalStateException
+  protected synchronized TaskStatus join(long timeout) throws IllegalStateException
   {
     try {
       updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
-      if (taskActiveStatusFuture != null) {
-        taskActiveStatusFuture.set(true);
-      }
+      taskStartedSuccessfullyFuture.set(true);
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
           taskId,
           timeout,
@@ -192,8 +195,8 @@ public class KubernetesPeonLifecycle
       return getTaskStatus(jobResponse.getJobDuration());
     }
     catch (Exception e) {
-      if (taskActiveStatusFuture != null) {
-        taskActiveStatusFuture.set(false);
+      if (!taskStartedSuccessfullyFuture.isDone()) {
+        taskStartedSuccessfullyFuture.set(false);
       }
       throw e;
     }
@@ -394,5 +397,18 @@ public class KubernetesPeonLifecycle
         targetState
     );
     stateListener.stateChanged(state.get(), taskId.getOriginalTaskId());
+  }
+
+  /**
+   * Retrieves the current {@link ListenableFuture} representing whether the task started successfully
+   *
+   * <p>This future can be used to track whether the task started successfully, with a boolean result
+   * indicating success (true) or failure (false) when the task starts.
+   *
+   * @return a {@link ListenableFuture} representing whether the task started successfully.
+   */
+  protected ListenableFuture<Boolean> getTaskStartedSuccessfullyFuture()
+  {
+    return taskStartedSuccessfullyFuture;
   }
 }

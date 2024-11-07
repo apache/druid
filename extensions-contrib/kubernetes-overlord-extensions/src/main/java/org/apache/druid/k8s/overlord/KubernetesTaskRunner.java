@@ -28,7 +28,6 @@ import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -150,15 +149,28 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public ListenableFuture<TaskStatus> run(Task task)
   {
     synchronized (tasks) {
-      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> runTask(task))))
-                  .getResult();
+      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(
+          task,
+          exec.submit(() -> runTask(task)),
+          peonLifecycleFactory.build(
+              task,
+              this::emitTaskStateMetrics
+          )
+      )).getResult();
     }
   }
 
   protected KubernetesWorkItem joinAsync(Task task)
   {
     synchronized (tasks) {
-      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(task, exec.submit(() -> joinTask(task))));
+      return tasks.computeIfAbsent(task.getId(), k -> new KubernetesWorkItem(
+          task,
+          exec.submit(() -> joinTask(task)),
+          peonLifecycleFactory.build(
+              task,
+              this::emitTaskStateMetrics
+          )
+      ));
     }
   }
 
@@ -176,12 +188,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   protected TaskStatus doTask(Task task, boolean run)
   {
     try {
-      KubernetesPeonLifecycle peonLifecycle = peonLifecycleFactory.build(
-          task,
-          this::emitTaskStateMetrics
-      );
+      KubernetesPeonLifecycle peonLifecycle;
 
-      SettableFuture<Boolean> taskActiveStatusFuture;
       synchronized (tasks) {
         KubernetesWorkItem workItem = tasks.get(task.getId());
 
@@ -189,8 +197,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
           throw new ISE("Task [%s] has been shut down", task.getId());
         }
 
-        workItem.setKubernetesPeonLifecycle(peonLifecycle);
-        taskActiveStatusFuture = workItem.getTaskActiveStatusFuture();
+        peonLifecycle = workItem.getPeonLifeycle();
       }
 
       TaskStatus taskStatus;
@@ -203,9 +210,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         );
       } else {
         taskStatus = peonLifecycle.join(
-            config.getTaskTimeout().toStandardDuration().getMillis(),
-            taskActiveStatusFuture
-
+            config.getTaskTimeout().toStandardDuration().getMillis()
         );
       }
 
@@ -336,7 +341,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     for (Job job : peonJobs) {
       try {
         KubernetesWorkItem kubernetesWorkItem = joinAsync(adapter.toTask(job));
-        taskStatusActiveList.add(kubernetesWorkItem.getTaskActiveStatusFuture());
+        taskStatusActiveList.add(kubernetesWorkItem.getPeonLifeycle().getTaskStartedSuccessfullyFuture());
       }
       catch (IOException e) {
         log.error(e, "Error deserializing task from job [%s]", job.getMetadata().getName());
@@ -353,7 +358,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
     }
     catch (Exception e) {
       final long numInitialized =
-          tasks.values().stream().filter(item -> item.getTaskActiveStatusFuture().isDone()).count();
+          tasks.values().stream().filter(item -> item.getPeonLifeycle().getTaskStartedSuccessfullyFuture().isDone()).count();
       log.warn(
           e,
           "Located [%,d] out of [%,d] active tasks (timeout = %s). Locating others asynchronously.",
@@ -362,8 +367,6 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
           config.getTaskJoinTimeout()
       );
     }
-
-    log.info("Loaded %,d tasks from previous run", tasks.size());
 
     cleanupExecutor.scheduleAtFixedRate(
         () ->
@@ -375,7 +378,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
         config.getTaskCleanupInterval().toStandardDuration().getMillis(),
         TimeUnit.MILLISECONDS
     );
-    log.debug("Started cleanup executor for jobs older than %s...", config.getTaskCleanupDelay());
+    log.info("Started cleanup executor for jobs older than %s...", config.getTaskCleanupDelay());
   }
 
   @Override
