@@ -33,7 +33,7 @@ public class WX1
   public static void main(String[] args) throws IOException
   {
 
-    String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteParameterQueryTest.java";
+    String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteSelectQueryTest.java";
     // pathname=CalciteSubqueryTest.class.getProtectionDomain().getCodeSource().getLocation().getFile();
     System.out.println(pathname);
     Path path = new File(pathname).toPath();
