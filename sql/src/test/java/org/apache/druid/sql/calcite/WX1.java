@@ -96,6 +96,10 @@ public class WX1
   {
     switch (colName)
     {
+      case "j0.unnest":
+      case "nest":
+      case "nester":
+        return "ColumnType.ofComplex(\"json\"))";
       case "f1":
       case "m1":
         return "ColumnType.FLOAT";

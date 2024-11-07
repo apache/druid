@@ -1183,7 +1183,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                           new NestedFieldVirtualColumn("arrayNestedLong", "$[0]", "v3", ColumnType.LONG_ARRAY)
                       )
                       .columns("v0", "v1", "v2", "v3")
-                      .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                      .columnTypes(ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.LONG_ARRAY)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -1331,7 +1331,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
-                      .columnTypes(ColumnType.LONG)
+                      .columnTypes(ColumnType.STRING)
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
@@ -1388,7 +1388,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
-                      .columnTypes(ColumnType.STRING)
+                      .columnTypes(ColumnType.DOUBLE)
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
@@ -4960,7 +4960,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("v0")
-                  .columnTypes(ColumnType.STRING)
+                  .columnTypes(ColumnType.ofComplex("json"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5008,7 +5008,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("v0")
-                  .columnTypes(ColumnType.STRING)
+                  .columnTypes(ColumnType.LONG)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5155,7 +5155,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       expressionVirtualColumn("v2", "json_keys(\"nester\",'$.array[-1]')", ColumnType.STRING_ARRAY)
                   )
                   .columns("v0", "v1", "v2")
-                  .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                  .columnTypes(ColumnType.STRING, ColumnType.NESTED_DATA, ColumnType.STRING_ARRAY)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5192,7 +5192,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       expressionVirtualColumn("v1", "array('$')", ColumnType.STRING_ARRAY)
                   )
                   .columns("v0", "v1")
-                  .columnTypes(ColumnType.STRING, ColumnType.STRING)
+                  .columnTypes(ColumnType.STRING_ARRAY, ColumnType.STRING_ARRAY)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5231,7 +5231,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       expressionVirtualColumn("v1", "null", ColumnType.STRING_ARRAY)
                   )
                   .columns("v0", "v1")
-                  .columnTypes(ColumnType.STRING, ColumnType.STRING)
+                  .columnTypes(ColumnType.STRING_ARRAY, ColumnType.STRING_ARRAY)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5355,9 +5355,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.LONG),
                       new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                   )
-                  .columns(
-                      "v1", "v0"
-                  )
+                  .columns("v1", "v0")
+                  .columnTypes(ColumnType.STRING, ColumnType.LONG)
                   .filters(isNull("v0"))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -5563,7 +5562,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .filters(notNull("v0"))
                   .columns("v0")
-                  .columnTypes(ColumnType.STRING)
+                  .columnTypes(ColumnType.LONG)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -6069,6 +6068,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       "cObjectArray",
                       "cnt"
                   )
+                  .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.LONG, ColumnType.STRING, ColumnType.DOUBLE, ColumnType.ofComplex("json"), ColumnType.LONG_ARRAY, ColumnType.STRING_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.STRING_ARRAY, ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.ofComplex("json"), ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.LONG)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -6661,7 +6661,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("nest")
-                  .columnTypes(ColumnType.STRING)
+                  .columnTypes(ColumnType.NESTED_DATA)
                   .filters(notNull("nest"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
@@ -6691,7 +6691,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("nest", "nester")
-                  .columnTypes(ColumnType.STRING, ColumnType.STRING)
+                  .columnTypes(ColumnType.ofComplex("json"), ColumnType.ofComplex("json"))
                   .filters(isNull("nest"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
@@ -6748,7 +6748,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .virtualColumns(expressionVirtualColumn("v0", "nvl(\"j0.unnest\",\"long\")", ColumnType.LONG))
                     .intervals(querySegmentSpec(Filtration.eternity()))
                     .columns("j0.unnest", "long", "v0")
-                    .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                    .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                     .context(QUERY_CONTEXT_DEFAULT)
                     .build()
@@ -6811,7 +6811,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .virtualColumns(expressionVirtualColumn("v0", "nvl(\"long\",\"j0.unnest\")", ColumnType.LONG))
                   .columns("v0")
-                  .columnTypes(ColumnType.STRING)
+                  .columnTypes(ColumnType.LONG)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -6897,7 +6897,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("v0", "v1")
-                  .columnTypes(ColumnType.STRING, ColumnType.STRING)
+                  .columnTypes(ColumnType.STRING_ARRAY, ColumnType.ofComplex("json"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -6938,7 +6938,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                           )
                       )
                       .columns("v0")
-                      .columnTypes(ColumnType.STRING)
+                      .columnTypes(ColumnType.ofArray(ColumnType.NESTED_DATA))
                       .context(QUERY_CONTEXT_DEFAULT)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
@@ -6992,7 +6992,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .filters(isNull("arrayObject"))
                       .columns("v0")
-                      .columnTypes(ColumnType.STRING)
+                      .columnTypes(ColumnType.ofArray(ColumnType.NESTED_DATA))
                       .limit(1)
                       .context(QUERY_CONTEXT_DEFAULT)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -7033,7 +7033,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
-                      .columnTypes(ColumnType.STRING)
+                      .columnTypes(ColumnType.ofComplex("json"))
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
@@ -7204,9 +7204,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             Druids.newScanQueryBuilder()
                   .dataSource(DATA_SOURCE_ALL)
                   .intervals(querySegmentSpec(Filtration.eternity()))
-                  .columns(
-                      "v0"
-                  )
+                  .columns("v0")
+                  .columnTypes(ColumnType.STRING)
                   .virtualColumns(
                       new NestedFieldVirtualColumn(
                           "cObj",
@@ -7296,7 +7295,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v3", "(nvl(\"v0\",1.0) == 1.0)", ColumnType.LONG)
                 )
                 .columns("v0", "v1", "v2", "v3")
-                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.LONG, ColumnType.LONG)
                 .build()
         ),
         NullHandling.sqlCompatible()
@@ -7348,7 +7347,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 )
                 .filters(range("v0", ColumnType.LONG, NullHandling.sqlCompatible() ? 0.0 : "0", null, true, false))
                 .columns("v1", "v0", "v2")
-                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.LONG)
                 .build()
         ),
         NullHandling.sqlCompatible()
@@ -7423,7 +7422,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 )
                 .filters(equality("v0", 1.0, ColumnType.DOUBLE))
                 .columns("v1", "v0", "v2")
-                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.LONG)
                 .build()
         ),
         NullHandling.sqlCompatible()
