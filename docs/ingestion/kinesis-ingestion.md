@@ -27,7 +27,11 @@ import TabItem from '@theme/TabItem';
   ~ under the License.
   -->
 
-When you enable the Kinesis indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kinesis indexing tasks. Kinesis indexing tasks read events using the Kinesis shard and sequence number mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
+When you enable the Amazon Kinesis indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kinesis indexing tasks.
+
+The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
+
+Kinesis indexing tasks read events using the Kinesis shard and sequence number mechanism to guarantee exactly-once ingestion. 
 
 This topic contains configuration information for the Kinesis indexing service supervisor for Apache Druid.
 
@@ -37,9 +41,11 @@ To use the Kinesis indexing service, you must first load the `druid-kinesis-inde
 
 Review [Known issues](#known-issues) before deploying the `druid-kinesis-indexing-service` extension to production.
 
-## Supervisor spec configuration
+## `spec`
 
-This section outlines the configuration properties that are specific to the Amazon Kinesis streaming ingestion method. For configuration properties shared across all streaming ingestion methods supported by Druid, see [Supervisor spec](supervisor.md#supervisor-spec).
+This section outlines the configuration properties that are specific to streaming ingestion from Amazon Kinesis.
+
+For configuration properties shared across all streaming ingestion methods, see [supervisor spec](supervisor.md#spec).
 
 The following example shows a supervisor spec for a stream with the name `KinesisStream`:
 
@@ -119,10 +125,13 @@ The following example shows a supervisor spec for a stream with the name `Kinesi
 ```
 </details>
 
-### I/O configuration
+### `ioConfig`
+
+The `ioConfig` object defines how Druid reads data from a source system, such as Amazon Kinesis, Amazon S3, a mounted filesystem, or any other supported source system.
 
 The following table outlines the `ioConfig` configuration properties specific to Kinesis.
-For configuration properties shared across all streaming ingestion methods, refer to [Supervisor I/O configuration](supervisor.md#io-configuration).
+
+For properties common to all streaming ingestion configurations, see [supervisor `ioConfig`](supervisor.md#ioconfig).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -148,14 +157,17 @@ The Kinesis indexing service supports the following values for `inputFormat`:
 
 You can use `parser` to read [`thrift`](../development/extensions-contrib/thrift.md) formats.
 
-### Tuning configuration
+### `tuningConfig`
+
+You specify tuning properties in a `tuningConfig` object at the top level of an ingestion spec.
 
 The following table outlines the `tuningConfig` configuration properties specific to Kinesis.
-For configuration properties shared across all streaming ingestion methods, refer to [Supervisor tuning configuration](supervisor.md#tuning-configuration).
+
+For properties common to all streaming ingestion configurations, see [supervisor `tuningConfig`](supervisor.md#tuningconfig).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
-|`skipSequenceNumberAvailabilityCheck`|Boolean|Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If `false`, the indexing task attempts to reset the current sequence number, depending on the value of `resetOffsetAutomatically`. For more information on the `resetOffsetAutomatically` property, see [Supervisor tuning configuration](supervisor.md#tuning-configuration).|No|`false`|
+|`skipSequenceNumberAvailabilityCheck`|Boolean|Whether to enable checking if the current sequence number is still available in a particular Kinesis shard. If `false`, the indexing task attempts to reset the current sequence number, depending on the value of `resetOffsetAutomatically`. For more information on the `resetOffsetAutomatically` property, see [Supervisor tuning configuration](supervisor.md#tuningconfig).|No|`false`|
 |`recordBufferSizeBytes`|Integer| The size of the buffer (heap memory bytes) Druid uses between the Kinesis fetch threads and the main ingestion thread.|No| See [Determine fetch settings](#determine-fetch-settings) for defaults.|
 |`recordBufferOfferTimeout`|Integer|The number of milliseconds to wait for space to become available in the buffer before timing out.|No|5000|
 |`recordBufferFullWait`|Integer|The number of milliseconds to wait for the buffer to drain before Druid attempts to fetch records from Kinesis again.|No|5000|
@@ -331,4 +343,4 @@ Before you deploy the `druid-kinesis-indexing-service` extension to production, 
 See the following topics for more information:
 
 * [Supervisor API](../api-reference/supervisor-api.md) for how to manage and monitor supervisors using the API.
-* [Supervisor](../ingestion/supervisor.md) for supervisor status and capacity planning.
+* [Supervisor](supervisor.md) for supervisor status and capacity planning.
