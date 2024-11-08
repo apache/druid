@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -48,5 +49,11 @@ public class FrameSignaturePair
   public RowSignature getRowSignature()
   {
     return rowSignature;
+  }
+
+  @Override
+  public String toString()
+  {
+    return ToStringBuilder.reflectionToString(this);
   }
 }

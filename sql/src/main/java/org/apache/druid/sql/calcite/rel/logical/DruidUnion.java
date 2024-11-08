@@ -31,10 +31,8 @@ import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.column.RowSignature;
@@ -79,17 +77,27 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
         sources.get(0).rowSignature.getColumnNames(),
         getRowType()
     );
-    if (mayUseUnionDataSource(sources)) {
-      List<DataSource> dataSources = new ArrayList<>();
-      for (SourceDesc sourceDesc : sources) {
-        checkDataSourceSupported(sourceDesc.dataSource);
-        dataSources.add(sourceDesc.dataSource);
-      }
-      return new SourceDesc(new UnionDataSource(dataSources), signature);
+    UnionDataSource unionDataSource = buildUnionDataSource(sources);
+    if (unionDataSource != null) {
+      return new SourceDesc(unionDataSource, signature);
+
     }
     // all other cases are handled via UnionQuery
     UnionQuery unionQuery = makeUnionQuery(sources);
     return new SourceDesc(new QueryDataSource(unionQuery), signature);
+  }
+
+  private UnionDataSource buildUnionDataSource(List<SourceDesc> sources)
+  {
+    List<DataSource> dataSources = new ArrayList<>();
+    for (SourceDesc sourceDesc : sources) {
+      DataSource dataSource = sourceDesc.dataSource;
+      if (!UnionDataSource.isCompatibleDataSource(dataSource)) {
+        return null;
+      }
+      dataSources.add(dataSource);
+    }
+    return new UnionDataSource(dataSources);
   }
 
   private UnionQuery makeUnionQuery(List<SourceDesc> sources)
@@ -107,37 +115,5 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
       }
     }
     return new UnionQuery(queries);
-  }
-
-  private boolean mayUseUnionQuery(List<SourceDesc> sources)
-  {
-    for (SourceDesc sourceDesc : sources) {
-      DataSource dataSource = sourceDesc.dataSource;
-      if (dataSource instanceof QueryDataSource) {
-        continue;
-      }
-      return false;
-    }
-    return true;
-  }
-
-  private boolean mayUseUnionDataSource(List<SourceDesc> sources)
-  {
-    for (SourceDesc sourceDesc : sources) {
-      DataSource dataSource = sourceDesc.dataSource;
-      if (dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource) {
-        continue;
-      }
-      return false;
-    }
-    return true;
-  }
-
-  private void checkDataSourceSupported(DataSource dataSource)
-  {
-    if (dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource) {
-      return;
-    }
-    throw DruidException.defensive("Only Table and Values are supported as inputs for Union [%s]", dataSource);
   }
 }
