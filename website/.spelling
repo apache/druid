@@ -50,6 +50,7 @@ Base64-encoded
 ByteBuffer
 bottlenecked
 cartesian
+ColumnSpec
 concat
 CIDR
 CORS
@@ -554,6 +555,7 @@ symlink
 syntaxes
 systemFields
 tablePath
+TableSpec
 tiering
 timeseries
 Timeseries
