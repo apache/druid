@@ -457,6 +457,7 @@ public class ScanQueryTest extends InitializedNullHandlingTest
   {
     EqualsVerifier.forClass(ScanQuery.class)
         .suppress(Warning.NULL_FIELDS, Warning.NONFINAL_FIELDS)
+        // these fields are derived from the context
         .withIgnoredFields("maxRowsQueuedForOrdering", "maxSegmentPartitionsOrderedInMemory")
         .usingGetClass()
         .verify();
