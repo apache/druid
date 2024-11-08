@@ -2494,7 +2494,7 @@ public class MSQSelectTest extends MSQTestBase
                         .dataSource("foo")
                         .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
                         .columns("v0")
-                        .columnTypes(ColumnType.STRING)
+                        .columnTypes(ColumnType.LONG)
                         .context(defaultScanQueryContext(
                             queryContext,
                             RowSignature.builder().add("v0", ColumnType.LONG).build()
