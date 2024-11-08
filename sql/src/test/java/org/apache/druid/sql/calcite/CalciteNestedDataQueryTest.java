@@ -5343,7 +5343,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                   )
                   .columns(
-                      "v0", "v1"
+                      "v1", "v0"
                   )
                   .filters(isNull("v0"))
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -6019,41 +6019,41 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns(
                       "__time",
-                      "arrayBool",
-                      "arrayDouble",
-                      "arrayDoubleNulls",
-                      "arrayLong",
-                      "arrayLongNulls",
-                      "arrayNestedLong",
-                      "arrayObject",
+                      "str",
+                      "long",
+                      "double",
+                      "bool",
+                      "variant",
+                      "variantNumeric",
+                      "variantEmptyObj",
+                      "variantEmtpyArray",
+                      "variantWithArrays",
+                      "obj",
+                      "complexObj",
                       "arrayString",
                       "arrayStringNulls",
+                      "arrayLong",
+                      "arrayLongNulls",
+                      "arrayDouble",
+                      "arrayDoubleNulls",
                       "arrayVariant",
-                      "bool",
+                      "arrayBool",
+                      "arrayNestedLong",
+                      "arrayObject",
+                      "null",
+                      "cstr",
+                      "clong",
+                      "cdouble",
+                      "cObj",
+                      "cstringArray",
+                      "cLongArray",
                       "cDoubleArray",
                       "cEmptyArray",
                       "cEmptyObj",
-                      "cEmptyObjectArray",
-                      "cLongArray",
                       "cNullArray",
-                      "cObj",
+                      "cEmptyObjectArray",
                       "cObjectArray",
-                      "cdouble",
-                      "clong",
-                      "cnt",
-                      "complexObj",
-                      "cstr",
-                      "cstringArray",
-                      "double",
-                      "long",
-                      "null",
-                      "obj",
-                      "str",
-                      "variant",
-                      "variantEmptyObj",
-                      "variantEmtpyArray",
-                      "variantNumeric",
-                      "variantWithArrays"
+                      "cnt"
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
@@ -7237,7 +7237,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 )
                 .filters(range("v0", ColumnType.LONG, NullHandling.sqlCompatible() ? 0.0 : "0", null, true, false))
                 .limit(1)
-                .columns("v0", "v1", "v2")
+                .columns("v1", "v0", "v2")
                 .build()
         ),
         NullHandling.sqlCompatible()
@@ -7322,7 +7322,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
                 )
                 .filters(range("v0", ColumnType.LONG, NullHandling.sqlCompatible() ? 0.0 : "0", null, true, false))
-                .columns("v0", "v1", "v2")
+                .columns("v1", "v0", "v2")
                 .build()
         ),
         NullHandling.sqlCompatible()
@@ -7395,7 +7395,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
                 )
                 .filters(equality("v0", 1.0, ColumnType.DOUBLE))
-                .columns("v0", "v1", "v2")
+                .columns("v1", "v0", "v2")
                 .build()
         ),
         NullHandling.sqlCompatible()

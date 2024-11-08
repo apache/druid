@@ -7774,7 +7774,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 )
                 .context(QUERY_CONTEXT_DEFAULT)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("_j0.a0", "a0", "d0", "j0.a0"))
+                .columns(ImmutableList.of("d0", "a0", "j0.a0", "_j0.a0"))
                 .build()
         ),
         NullHandling.sqlCompatible()
@@ -15873,7 +15873,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 false
                             )
                         )
-                        .setProjectedColumns("a0", "d0")
+                        .setProjectedColumns("d0", "a0")
                         .build()
                 )
                 .build()
@@ -15955,7 +15955,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 false
                             )
                         )
-                        .setProjectedColumns("a0", "d0")
+                        .setProjectedColumns("d0", "a0")
                         .build()
                 )
                 .build()
@@ -16051,7 +16051,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 .build()
                         )
                         .intervals(querySegmentSpec(Filtration.eternity()))
-                        .columns("a0", "w0")
+                        .columns("w0", "a0")
                         .context(QUERY_CONTEXT_DEFAULT)
                         .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                         .limit(10)
@@ -16069,7 +16069,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .setLeafOperators(
                     OperatorFactoryBuilders.scanOperatorFactoryBuilder()
                         .setOffsetLimit(0, Long.MAX_VALUE)
-                        .setProjectedColumns("a0", "w0")
+                        .setProjectedColumns("w0", "a0")
                         .build()
                 )
                 .build()
