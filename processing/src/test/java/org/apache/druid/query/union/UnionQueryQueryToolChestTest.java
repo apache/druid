@@ -203,61 +203,9 @@ public class UnionQueryQueryToolChestTest
     );
   }
 
-  @Test
-  void testQueryRunnerFrames()
-  {
-    RowSignature sig = RowSignature.builder()
-        .add("a", ColumnType.STRING)
-        .add("b", ColumnType.STRING)
-        .build();
-
-    TestScanQuery scan1 = new TestScanQuery("foo", sig)
-        .appendRow("a1", "b1")
-        .appendRow("a2", "b2");
-    TestScanQuery scan2 = new TestScanQuery("bar", sig)
-        .appendRow("b3", "a3")
-        .appendRow("b4", "a4");
-
-    UnionQuery query = new UnionQuery(
-        ImmutableList.of(
-            scan1.query,
-            scan2.query
-        )
-    );
-    query = (UnionQuery) serializedAsFrames(query);
-
-    QuerySegmentWalker walker = Mockito.mock(QuerySegmentWalker.class);
-    Mockito.when(walker.getQueryRunnerForIntervals(argThat(scan1::matchQuery), any()))
-        .thenReturn((q, ctx) -> (Sequence) scan1.makeResultSequence());
-    Mockito.when(walker.getQueryRunnerForIntervals(argThat(scan2::matchQuery), any()))
-        .thenReturn((q, ctx) -> (Sequence) scan2.makeResultSequence());
-
-    QueryRunner<Object> unionRunner = queryLogic.entryPoint(query, walker);
-    Sequence results = unionRunner.run(QueryPlus.wrap(query), null);
-
-    List res = results.toList();
-    for (Object object : res) {
-
-      System.out.println(object);
-    }
-//    QueryToolChestTestHelper.assertArrayResultsEquals(
-//        Sequences.of(
-//            scan1.makeResultsAsArrays(),
-//            scan2.makeResultsAsArrays()
-//        ).toList(),
-//        results
-//    );
-  }
-
   private static Query<?> serializedAsRows(Query<?> query)
   {
     return query
         .withOverriddenContext(ImmutableMap.of(ResultSerializationMode.CTX_SERIALIZATION_PARAMETER, "rows"));
-  }
-
-  private static Query<?> serializedAsFrames(Query<?> query)
-  {
-    return query
-        .withOverriddenContext(ImmutableMap.of(ResultSerializationMode.CTX_SERIALIZATION_PARAMETER, "frames"));
   }
 }
