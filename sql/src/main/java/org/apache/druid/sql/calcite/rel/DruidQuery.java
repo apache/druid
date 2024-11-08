@@ -1672,7 +1672,7 @@ public class DruidQuery
       }
     }
 
-    // Compute the list of columns to select, sorted and deduped.
+    // Deduplicate column list
     final Set<String> scanColumns = new LinkedHashSet<>(outputRowSignature.getColumnNames());
     orderByColumns.forEach(column -> scanColumns.add(column.getColumnName()));
 
