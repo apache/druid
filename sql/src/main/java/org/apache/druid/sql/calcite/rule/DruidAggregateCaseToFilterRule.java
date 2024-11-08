@@ -47,7 +47,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Druid version of {@link AggregateCaseToFilterRule}
+ * Druid extension of {@link AggregateCaseToFilterRule}.
+ *
  * after enhancing the upstream one to support cases like
  *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
  * without introducing an inner case this should be removed.
