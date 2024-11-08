@@ -33,7 +33,7 @@ public class WX1
   public static void main(String[] args) throws IOException
   {
 
-    String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteScanSignatureTest.java";
+    String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteArraysQueryTest.java";
     // pathname=CalciteSubqueryTest.class.getProtectionDomain().getCodeSource().getLocation().getFile();
     System.out.println(pathname);
     Path path = new File(pathname).toPath();
@@ -99,7 +99,7 @@ public class WX1
       case "j0.unnest":
       case "nest":
       case "nester":
-        return "ColumnType.ofComplex(\"json\"))";
+        return "ColumnType.ofComplex(\"json\")";
       case "f1":
       case "m1":
         return "ColumnType.FLOAT";
