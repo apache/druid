@@ -203,13 +203,47 @@ public class DruidQueryGenerator
     SourceDesc unwrapSourceDesc();
   }
 
-  enum JoinSupportTweaks
+  private static class VertexTweaks
   {
+    private JoinTweaks joinType;
+
+    public VertexTweaks(JoinTweaks joinType)
+    {
+      this.joinType = joinType;
+    }
+
+    static VertexTweaks analyze(DruidNodeStack stack)
+    {
+      JoinTweaks joinType = JoinTweaks.analyze(stack);
+      return new VertexTweaks(joinType);
+    }
+
+    boolean forceSubQuery(SourceDesc sourceDesc)
+    {
+      if (sourceDesc.dataSource.isGlobal()) {
+        return false;
+      }
+      return joinType== JoinTweaks.RIGHT;
+    }
+
+    boolean filteredDatasourceAllowed()
+    {
+      return joinType== JoinTweaks.NONE;
+    }
+
+    boolean finalizeSubQuery()
+    {
+      return joinType== JoinTweaks.NONE;
+    }
+
+
+    enum JoinTweaks {
     NONE,
     LEFT,
     RIGHT;
 
-    static JoinSupportTweaks analyze(DruidNodeStack stack)
+
+    public static JoinTweaks analyze(DruidNodeStack stack)
     {
       if (stack.size() < 2) {
         return NONE;
@@ -224,23 +258,6 @@ public class DruidQueryGenerator
         return RIGHT;
       }
     }
-
-    boolean finalizeSubQuery()
-    {
-      return this == NONE;
-    }
-
-    boolean forceSubQuery(SourceDesc sourceDesc)
-    {
-      if (sourceDesc.dataSource.isGlobal()) {
-        return false;
-      }
-      return this == RIGHT;
-    }
-
-    boolean filteredDatasourceAllowed()
-    {
-      return this == NONE;
     }
   }
 
@@ -260,7 +277,7 @@ public class DruidQueryGenerator
 
     Vertex createVertex(DruidNodeStack stack, PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
     {
-      JoinSupportTweaks jst = JoinSupportTweaks.analyze(stack);
+      VertexTweaks jst = VertexTweaks.analyze(stack);
       return new PDQVertex(partialDruidQuery, inputs, jst);
     }
 
@@ -268,10 +285,10 @@ public class DruidQueryGenerator
     {
       final PartialDruidQuery partialDruidQuery;
       final List<Vertex> inputs;
-      final JoinSupportTweaks jst;
+      final VertexTweaks jst;
       private SourceDesc source;
 
-      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, JoinSupportTweaks jst)
+      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, VertexTweaks jst)
       {
         this.partialDruidQuery = partialDruidQuery;
         this.inputs = inputs;
