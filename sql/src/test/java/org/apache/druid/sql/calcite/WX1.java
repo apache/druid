@@ -117,6 +117,9 @@ public class WX1
         return "ColumnType.STRING_ARRAY";
       case "arrayLongNulls":
         return "ColumnType.LONG_ARRAY";
+      case        "arrayDoubleNulls":
+      case "arrayDouble":
+        return "ColumnType.DOUBLE_ARRAY";
       default:
         return "ColumnType.STRING";
     }
