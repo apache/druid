@@ -26,6 +26,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class WX1
 {
@@ -33,7 +35,7 @@ public class WX1
   {
 
     String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteArraysQueryTest.java";
-    pathname="../extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java";
+    pathname="../extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQSelectTest.java";
     // pathname=CalciteSubqueryTest.class.getProtectionDomain().getCodeSource().getLocation().getFile();
     System.out.println(pathname);
     Path path = new File(pathname).toPath();
@@ -48,6 +50,13 @@ public class WX1
         st = l;
       }
       if (l.contains("columns(") && l.contains(")")) {
+
+        Pattern p = Pattern.compile("( *\\.columns\\()ImmutableList.of.(.*)\\)\\)$");
+        Matcher m = p.matcher(l);
+        if(m.matches()) {
+          String newL = m.group(1) + m.group(2) + ")";
+          l = newL;
+        }
         colLine = l;
       }
       if (l.contains("columnTypes")) {
