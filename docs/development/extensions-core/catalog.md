@@ -56,7 +56,7 @@ A tableSpec defines a table
 
 | PropertyKeyName      | PropertyValueType | Description                                                                                                                                                                                                                                                                                                                                              | Required | Default |
 |----------------------|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
-| `segmentGranularity` | String            | determines how time-based partitioning is done. See [Partitioning by time](../../multi-stage-query/concepts.md#partitioning-by-time). Can specify any of the values as permitted for [PARTITIONED BY](../../multi-stage-query/reference.md#partitioned-by). This property value may be overriden at query time, by specifying the PARTITIONED BY clause. | no       | null    |
+| `segmentGranularity` | String            | determines how time-based partitioning is done. See [Partitioning by time](../../multi-stage-query/concepts.md#partitioning-by-time). Can specify any of the values as permitted for [PARTITIONED BY](../../multi-stage-query/reference.md#partitioned-by). This property value may be overridden at query time, by specifying the PARTITIONED BY clause. | no       | null    |
 | `sealed`             | boolean           | require all columns in the table schema to be fully declared before data is ingested. Setting this to true will cause failure when DML queries attempt to add undefined columns to the table.                                                                                                                                                            | no       | false   |
 
 #### ColumnSpec
@@ -67,13 +67,11 @@ A tableSpec defines a table
 | `dataType`   | String              | The type of the column. Can be any column data type that is available to Druid. Depends on what extensions are loaded. | no       | null    |
 | `properties` | Map<String, Object> | the column's defined properties. Non properties defined at this time.                                                  | no       | null    |
 
-
 ### APIs
 
 #### Create or update a table
 
 Update or create a new table containing the given table specification.
-
 
 ##### URL
 
@@ -85,9 +83,9 @@ The request object for this request is a [TableSpec](#tablespec)
 
 ##### Query parameters
 
-The endpoint supports a set of optional query parameters to enforce optimisitic locking, and to specify that a request
+The endpoint supports a set of optional query parameters to enforce optimistic locking, and to specify that a request
 is meant to update a table rather than create a new one. In the default case, with no query parameters set, this request
-will return an errr if a table of the same name already exists in the schema specified.
+will return an error if a table of the same name already exists in the schema specified.
 
 | Parameter   | Type    | Description                                                                                                                   |
 |-------------|---------|-------------------------------------------------------------------------------------------------------------------------------|
@@ -100,7 +98,6 @@ will return an errr if a table of the same name already exists in the schema spe
 
 <TabItem value="1" label="200 SUCCESS">
 
-
 *Successfully submitted table spec. Returns an object that includes the version of the table created or updated:*
 
 ```json
@@ -111,7 +108,6 @@ will return an errr if a table of the same name already exists in the schema spe
 
 </TabItem>
 <TabItem value="2" label="400 BAD REQUEST">
-
 
 *Error thrown due to bad request. Returns a JSON object detailing the error with the following format:*
 
@@ -177,6 +173,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/catalog/schemas/druid/ta
 ```
 
 ##### Sample response
+
 ```json
 {
   "version": 1730965026295
@@ -197,13 +194,10 @@ Retrieve a table
 
 <TabItem value="1" label="200 SUCCESS">
 
-
 *Successfully retrieved corresponding table's [TableSpec](#tablespec)*
-
 
 </TabItem>
 <TabItem value="2" label="400 BAD REQUEST">
-
 
 *Error thrown due to bad request. Returns a JSON object detailing the error with the following format:*
 
@@ -215,7 +209,6 @@ Retrieve a table
 ```
 </TabItem>
 <TabItem value="3" label="500 INTERNAL SERVER ERROR">
-
 
 *Error thrown due to unexpected conditions. Returns a JSON object detailing the error with the following format:*
 
@@ -238,6 +231,7 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/catalog/schemas/druid/ta
 ```
 
 ##### Sample response
+
 <details>
   <summary>View the response</summary>
 
@@ -297,13 +291,10 @@ Delete a table
 
 <TabItem value="1" label="200 SUCCESS">
 
-
 *No response body*
-
 
 </TabItem>
 <TabItem value="2" label="400 BAD REQUEST">
-
 
 *Error thrown due to bad request. Returns a JSON object detailing the error with the following format:*
 
@@ -315,7 +306,6 @@ Delete a table
 ```
 </TabItem>
 <TabItem value="3" label="500 INTERNAL SERVER ERROR">
-
 
 *Error thrown due to unexpected conditions. Returns a JSON object detailing the error with the following format:*
 
@@ -341,7 +331,7 @@ curl -X 'DELETE' "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/catalog/sche
 
 No response body
 
-#### retrieve list of schema names
+#### Retrieve list of schema names
 
 retrieve list of schema names
 
@@ -355,13 +345,10 @@ retrieve list of schema names
 
 <TabItem value="1" label="200 SUCCESS">
 
-
 *Successfully retrieved list of schema names*
-
 
 </TabItem>
 <TabItem value="2" label="400 BAD REQUEST">
-
 
 *Error thrown due to bad request. Returns a JSON object detailing the error with the following format:*
 
@@ -373,7 +360,6 @@ retrieve list of schema names
 ```
 </TabItem>
 <TabItem value="3" label="500 INTERNAL SERVER ERROR">
-
 
 *Error thrown due to unexpected conditions. Returns a JSON object detailing the error with the following format:*
 
@@ -408,9 +394,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/catalog/schemas"
 ]
 ```
 
-#### retrieve list of table names in schema
+#### Retrieve list of table names in schema
 
-retrieve list table names in schema
+Retrieve a list of table names in the schema.
 
 ##### URL
 
@@ -422,13 +408,10 @@ retrieve list table names in schema
 
 <TabItem value="1" label="200 SUCCESS">
 
-
 *Successfully retrieved list of table names belonging to schema*
-
 
 </TabItem>
 <TabItem value="2" label="400 BAD REQUEST">
-
 
 *Error thrown due to bad request. Returns a JSON object detailing the error with the following format:*
 
@@ -440,7 +423,6 @@ retrieve list table names in schema
 ```
 </TabItem>
 <TabItem value="3" label="500 INTERNAL SERVER ERROR">
-
 
 *Error thrown due to unexpected conditions. Returns a JSON object detailing the error with the following format:*
 
