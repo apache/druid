@@ -116,6 +116,7 @@ public class WX1
       case "arrayStringNulls":
         return "ColumnType.STRING_ARRAY";
       case "arrayLongNulls":
+      case "arrayLong":
         return "ColumnType.LONG_ARRAY";
       case        "arrayDoubleNulls":
       case "arrayDouble":

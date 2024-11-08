@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
@@ -467,7 +468,7 @@ public class QueryTestRunner
             sv.replace(l - 2, l, ")");
             System.out.println("\n");
             System.out.println(sv.toString());
-            fail("\n" + sv.toString());
+            fail("\n" + sv.toString()+ "\n"+Joiner.on("\n").join(sv.toString().split(" ")));
           }
         }
 
