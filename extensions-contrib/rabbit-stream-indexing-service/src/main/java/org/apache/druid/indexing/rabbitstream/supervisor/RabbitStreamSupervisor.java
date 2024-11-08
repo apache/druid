@@ -202,7 +202,7 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
         maximumMessageTime,
         ioConfig.getInputFormat(),
         rabbitConfig.getUri(),
-        ioConfig.getTaskDuration()
+        ioConfig.getTaskDuration().getStandardMinutes()
     );
   }
 

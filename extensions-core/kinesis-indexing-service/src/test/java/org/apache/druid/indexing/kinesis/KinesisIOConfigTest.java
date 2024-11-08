@@ -269,7 +269,7 @@ public class KinesisIOConfigTest
         2000,
         "awsAssumedRoleArn",
         "awsExternalId",
-        Duration.standardHours(2)
+        Duration.standardHours(2).getStandardMinutes()
     );
 
     final byte[] json = mapper.writeValueAsBytes(currentConfig);

@@ -28,7 +28,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -55,7 +54,7 @@ public class RabbitStreamIndexTaskIOConfig extends SeekableStreamIndexTaskIOConf
       @JsonProperty("maximumMessageTime") DateTime maximumMessageTime,
       @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
       @JsonProperty("uri") String uri,
-      @JsonProperty("taskDuration") Duration taskDuration
+      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes
   )
   {
     super(
@@ -67,7 +66,7 @@ public class RabbitStreamIndexTaskIOConfig extends SeekableStreamIndexTaskIOConf
         minimumMessageTime,
         maximumMessageTime,
         inputFormat,
-        taskDuration.getStandardMinutes()
+        refreshRejectionPeriodsInMinutes
     );
 
     this.pollTimeout = pollTimeout != null ? pollTimeout : RabbitStreamSupervisorIOConfig.DEFAULT_POLL_TIMEOUT_MILLIS;

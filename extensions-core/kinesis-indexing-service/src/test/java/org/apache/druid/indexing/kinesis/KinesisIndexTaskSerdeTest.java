@@ -96,7 +96,7 @@ public class KinesisIndexTaskSerdeTest
       null,
       null,
       null,
-      Duration.standardHours(2)
+      Duration.standardHours(2).getStandardMinutes()
   );
   private static final String ACCESS_KEY = "test-access-key";
   private static final String SECRET_KEY = "test-secret-key";

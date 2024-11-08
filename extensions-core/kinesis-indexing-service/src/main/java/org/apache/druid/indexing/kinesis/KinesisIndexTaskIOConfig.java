@@ -28,7 +28,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
 import java.util.Set;
@@ -80,7 +79,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       @JsonProperty("fetchDelayMillis") Integer fetchDelayMillis,
       @JsonProperty("awsAssumedRoleArn") String awsAssumedRoleArn,
       @JsonProperty("awsExternalId") String awsExternalId,
-      @JsonProperty("taskDuration") Duration taskDuration
+      @JsonProperty("refreshRejectionPeriodsInMinutes") Long refreshRejectionPeriodsInMinutes
   )
   {
     super(
@@ -92,7 +91,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
         minimumMessageTime,
         maximumMessageTime,
         inputFormat,
-        taskDuration.getStandardMinutes()
+        refreshRejectionPeriodsInMinutes
     );
     Preconditions.checkArgument(
         getEndSequenceNumbers().getPartitionSequenceNumberMap()
@@ -121,7 +120,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
       Integer fetchDelayMillis,
       String awsAssumedRoleArn,
       String awsExternalId,
-      Duration taskDuration
+      Long refreshRejectionPeriodsInMinutes
   )
   {
     this(
@@ -140,7 +139,7 @@ public class KinesisIndexTaskIOConfig extends SeekableStreamIndexTaskIOConfig<St
         fetchDelayMillis,
         awsAssumedRoleArn,
         awsExternalId,
-        taskDuration
+        refreshRejectionPeriodsInMinutes
     );
   }
 

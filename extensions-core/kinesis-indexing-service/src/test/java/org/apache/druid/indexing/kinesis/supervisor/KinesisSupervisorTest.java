@@ -5565,7 +5565,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
             null,
             null,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         ),
         Collections.emptyMap(),
         false,

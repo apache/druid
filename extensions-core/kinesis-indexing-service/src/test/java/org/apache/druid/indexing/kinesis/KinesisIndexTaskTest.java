@@ -787,7 +787,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -850,7 +850,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1950,7 +1950,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         ),
         context
     );
@@ -2113,7 +2113,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         ),
         context
     );
@@ -2315,7 +2315,7 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             null,
-            Duration.standardHours(2)
+            Duration.standardHours(2).getStandardMinutes()
         ),
         null
     );
