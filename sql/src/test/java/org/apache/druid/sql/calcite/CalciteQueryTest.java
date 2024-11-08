@@ -624,7 +624,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v0", "div(\"m1\",2)", ColumnType.LONG),
                     expressionVirtualColumn("v1", "div((\"cnt\" + 2),(\"cnt\" + 1))", ColumnType.LONG)
                 )
-                .columns(ImmutableList.of("cnt", "m1", "v0", "v1"))
+                .columns("cnt", "m1", "v0", "v1")
                 .columnTypes(ColumnType.LONG, ColumnType.FLOAT, ColumnType.LONG, ColumnType.LONG)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -2532,7 +2532,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .limit(1)
-                  .columns(ImmutableList.of("v0"))
+                  .columns("v0")
                   .columnTypes(ColumnType.STRING)
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -3486,6 +3486,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0")
+                  .columnTypes(ColumnType.LONG)
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         )
@@ -3523,6 +3524,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0")
+                  .columnTypes(ColumnType.LONG)
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         )
@@ -3560,6 +3562,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("EXPR$0")
+                  .columnTypes(ColumnType.LONG)
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         )
@@ -7789,7 +7792,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 )
                 .context(QUERY_CONTEXT_DEFAULT)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("d0", "a0", "j0.a0", "_j0.a0"))
+                .columns("d0", "a0", "j0.a0", "_j0.a0")
                 .columnTypes(ColumnType.STRING, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
                 .build()
         ),
@@ -12935,6 +12938,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                     )
                     .intervals(querySegmentSpec(Filtration.eternity()))
                     .columns("dim1", "dim2", "dimX")
+                    .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
                     .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                     .build()
 
@@ -15547,7 +15551,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Intervals.of(
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
                 .limit(1)
-                .columns(ImmutableList.of("__time", "m1"))
+                .columns("__time", "m1")
                 .columnTypes(ColumnType.LONG, ColumnType.FLOAT)
                 .order(Order.ASCENDING)
                 .build()
@@ -15590,7 +15594,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Intervals.of(
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
                 .limit(1)
-                .columns(ImmutableList.of("__time", "m1"))
+                .columns("__time", "m1")
                 .columnTypes(ColumnType.LONG, ColumnType.FLOAT)
                 .order(Order.DESCENDING)
                 .build()
@@ -15613,7 +15617,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .intervals(querySegmentSpec(Intervals.of(
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
-                .columns(ImmutableList.of("__time", "dim1"))
+                .columns("__time", "dim1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING)
                 .filters(not(in("dim1", Arrays.asList("", "a"))))
                 .build()
@@ -15640,7 +15644,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .intervals(querySegmentSpec(Intervals.of(
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
-                .columns(ImmutableList.of("__time", "dim1"))
+                .columns("__time", "dim1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING)
                 .filters(not(in("dim1", Arrays.asList("", "a"))))
                 .build()
@@ -15667,7 +15671,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .intervals(querySegmentSpec(Intervals.of(
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
-                .columns(ImmutableList.of("__time", "dim1"))
+                .columns("__time", "dim1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING)
                 .filters(not(in("dim1", Arrays.asList("", "a"))))
                 .build()
@@ -15694,7 +15698,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                 .context(QUERY_CONTEXT_DEFAULT)
                 .intervals(querySegmentSpec(Intervals.of(
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z")))
-                .columns(ImmutableList.of("__time", "dim1"))
+                .columns("__time", "dim1")
                 .columnTypes(ColumnType.LONG, ColumnType.STRING)
                 .filters(not(in("dim1", Arrays.asList("", "a"))))
                 .build()
