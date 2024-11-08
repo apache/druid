@@ -35,13 +35,7 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.rex.RexOver;
-import org.apache.calcite.rex.RexShuttle;
-import org.apache.calcite.rex.RexWindow;
-import org.apache.calcite.rex.RexWindowBound;
-import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.SqlPostfixOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
@@ -63,6 +57,22 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
   public DruidAggregateCaseToFilterRule()
   {
     super(operand(Aggregate.class, operand(Project.class, any())));
+  }
+
+  @Override
+  public boolean matches(final RelOptRuleCall call)
+  {
+    final Aggregate aggregate = call.rel(0);
+    final Project project = call.rel(1);
+
+    for (AggregateCall aggregateCall : aggregate.getAggCallList()) {
+      final int singleArg = soleArgument(aggregateCall);
+      if (singleArg >= 0
+          && isThreeArgCase(project.getProjects().get(singleArg))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
@@ -141,87 +151,60 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
       filter = filterFromCase;
     }
 
+    RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
     final SqlKind kind = call.getAggregation().getKind();
     if (call.isDistinct()) {
       return null;
     }
 
-    if (kind == SqlKind.COUNT // Case C
-        && arg1.isA(SqlKind.LITERAL)
-        && !RexLiteral.isNullLiteral(arg1)
-        && RexLiteral.isNullLiteral(arg2)) {
-      newProjects.add(filter);
-      return AggregateCall.create(
-          SqlStdOperatorTable.COUNT,
-          false,
-          false,
-          false,
-          call.rexList,
-          ImmutableList.of(),
-          newProjects.size() - 1,
-          null,
-          RelCollations.EMPTY, call.getType(),
-          call.getName()
-      );
-    } else if (kind == SqlKind.SUM0 // Case B
-        && isIntLiteral(arg1, BigDecimal.ONE)
-        && isIntLiteral(arg2, BigDecimal.ZERO)) {
+    // Rewrites
+    // D1: SUM(CASE WHEN x = 'foo' THEN cnt ELSE 0 END)
+    //   => SUM0(cnt) FILTER (x = 'foo')
+    // D2: SUM(CASE WHEN x = 'foo' THEN 1 ELSE 0 END)
+    //   => COUNT() FILTER (x = 'foo')
+    //
+    // https://issues.apache.org/jira/browse/CALCITE-5953
+    // have restricted this rewrite as in case there are no rows it may not be equvivalent;
+    // however it may have some performance impact in Druid
+    if (kind == SqlKind.SUM && isIntLiteral(arg2, BigDecimal.ZERO)) {
+      if (isIntLiteral(arg1, BigDecimal.ONE)) { // D2
+        newProjects.add(filter);
+        final RelDataType dataType = typeFactory.createTypeWithNullability(
+            typeFactory.createSqlType(SqlTypeName.BIGINT), false
+        );
+        return AggregateCall.create(
+            SqlStdOperatorTable.COUNT,
+            false,
+            false,
+            false,
+            call.rexList,
+            ImmutableList.of(),
+            newProjects.size() - 1,
+            null,
+            RelCollations.EMPTY,
+            dataType,
+            call.getName()
+        );
 
-      newProjects.add(filter);
-      final RelDataTypeFactory typeFactory = cluster.getTypeFactory();
-      final RelDataType dataType = typeFactory.createTypeWithNullability(
-          typeFactory.createSqlType(SqlTypeName.BIGINT), false
-      );
-      return AggregateCall.create(
-          SqlStdOperatorTable.COUNT,
-          false,
-          false,
-          false,
-          call.rexList,
-          ImmutableList.of(),
-          newProjects.size() - 1,
-          null,
-          RelCollations.EMPTY,
-          dataType,
-          call.getName()
-      );
-    } else if ((RexLiteral.isNullLiteral(arg2) // Case A1
-        && call.getAggregation().allowsFilter())
-        || (kind == SqlKind.SUM0 // Case A2
-            && isIntLiteral(arg2, BigDecimal.ZERO))) {
-      newProjects.add(arg1);
-      newProjects.add(filter);
-      return AggregateCall.create(
-          call.getAggregation(),
-          false,
-          false,
-          false,
-          call.rexList,
-          ImmutableList.of(newProjects.size() - 2),
-          newProjects.size() - 1,
-          null,
-          RelCollations.EMPTY,
-          call.getType(),
-          call.getName()
-      );
+      } else { // D1
+        newProjects.add(arg1);
+        newProjects.add(filter);
 
-    } else if (kind == SqlKind.SUM && isIntLiteral(arg2, BigDecimal.ZERO)) {
-      newProjects.add(arg1);
-      newProjects.add(filter);
-
-      RelDataType newType = rexBuilder.getTypeFactory().createTypeWithNullability(call.getType(), true);
-      return AggregateCall.create(
-          call.getAggregation(),
-          false,
-          false,
-          true,
-          call.rexList,
-          ImmutableList.of(newProjects.size() - 2),
-          newProjects.size() - 1,
-          null,
-          RelCollations.EMPTY,
-          newType, call.getName()
-      );
+        RelDataType newType = typeFactory.createTypeWithNullability(call.getType(), true);
+        return AggregateCall.create(
+            call.getAggregation(),
+            false,
+            false,
+            false,
+            call.rexList,
+            ImmutableList.of(newProjects.size() - 2),
+            newProjects.size() - 1,
+            null,
+            RelCollations.EMPTY,
+            newType,
+            call.getName()
+        );
+      }
     }
 
     return null;
@@ -249,69 +232,5 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
     return rexNode instanceof RexLiteral
         && SqlTypeName.INT_TYPES.contains(rexNode.getType().getSqlTypeName())
         && value.equals(((RexLiteral) rexNode).getValueAs(BigDecimal.class));
-  }
-
-  private static class RewriteShuttle extends RexShuttle
-  {
-    private final RexBuilder rexBuilder;
-
-    public RewriteShuttle(RexBuilder rexBuilder)
-    {
-      this.rexBuilder = rexBuilder;
-    }
-
-    @Override
-    public RexNode visitOver(RexOver over)
-    {
-      SqlOperator operator = over.getOperator();
-      RexWindow window = over.getWindow();
-      RexWindowBound upperBound = window.getUpperBound();
-      RexWindowBound lowerBound = window.getLowerBound();
-
-      if (window.orderKeys.size() > 0) {
-        if (operator.getKind() == SqlKind.LAST_VALUE && !upperBound.isUnbounded()) {
-          if (upperBound.isCurrentRow()) {
-            return rewriteToReferenceCurrentRow(over);
-          }
-        }
-        if (operator.getKind() == SqlKind.FIRST_VALUE && !lowerBound.isUnbounded()) {
-          if (lowerBound.isCurrentRow()) {
-            return rewriteToReferenceCurrentRow(over);
-          }
-        }
-      }
-      return super.visitOver(over);
-    }
-
-    private RexNode rewriteToReferenceCurrentRow(RexOver over)
-    {
-      // could remove `last_value( x ) over ( .... order by y )`
-      // best would be to: return over.getOperands().get(0);
-      // however that make some queries too good
-      return makeOver(
-          over,
-          over.getWindow(),
-          SqlStdOperatorTable.LAG,
-          ImmutableList.of(over.getOperands().get(0), rexBuilder.makeBigintLiteral(BigDecimal.ZERO))
-      );
-    }
-
-    private RexNode makeOver(RexOver over, RexWindow window, SqlAggFunction aggFunction, List<RexNode> operands)
-    {
-      return rexBuilder.makeOver(
-          over.type,
-          aggFunction,
-          operands,
-          window.partitionKeys,
-          window.orderKeys,
-          window.getLowerBound(),
-          window.getUpperBound(),
-          window.isRows(),
-          true,
-          false,
-          over.isDistinct(),
-          over.ignoreNulls()
-      );
-    }
   }
 }

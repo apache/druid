@@ -1,4 +1,4 @@
-# !set plannerStrategy DECOUPLED
+!set plannerStrategy DECOUPLED
 !set debug true
 !use druidtest://?numMergeBuffers=3
 !set outputformat mysql
@@ -28,8 +28,8 @@ LogicalUnion(all=[true])
   LogicalValues(tuples=[[{ null, null }]])
 
 !convertedPlan
-LogicalProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR])
-  LogicalValues(tuples=[[{ null, null }]])
+DruidProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR], druid=[logical])
+  DruidValues(tuples=[[{ null, null }]])
 
 !druidPlan
 {

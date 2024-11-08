@@ -5178,9 +5178,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .granularity(Granularities.ALL)
               .context(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
+      cannotVectorize();
       builder = builder.virtualColumns(
-                          expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING),
-                          expressionVirtualColumn("v1", "1", ColumnType.LONG)
+                          expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
                         )
                        .aggregators(
                            aggregators(
@@ -5208,7 +5208,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                    not(equality("dim1", "1", ColumnType.STRING))
                                ),
                                new FilteredAggregatorFactory(
-                                   new LongSumAggregatorFactory("a5", "v1"),
+                                   new CountAggregatorFactory("a5"),
                                    not(equality("dim1", "1", ColumnType.STRING))
                                ),
                                new FilteredAggregatorFactory(
@@ -5251,16 +5251,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                        );
     } else {
       builder = builder.virtualColumns(
-              expressionVirtualColumn(
-              "v0",
-              "case_searched((\"dim1\" != '1'),1,0)",
-              ColumnType.LONG
-          ),
-          expressionVirtualColumn(
-              "v1",
-              "case_searched((\"dim1\" != '1'),\"cnt\",0)",
-              ColumnType.LONG
-          ))
+          )
           .aggregators(
               aggregators(
               new FilteredAggregatorFactory(
@@ -5286,7 +5277,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                   new CountAggregatorFactory("a4"),
                   not(equality("dim1", "1", ColumnType.STRING))
               ),
-              new LongSumAggregatorFactory("a5", "v0"),
+              new FilteredAggregatorFactory(
+                  new CountAggregatorFactory("a5"),
+                  not(equality("dim1", "1", ColumnType.STRING))
+              ),
               new FilteredAggregatorFactory(
                   new LongSumAggregatorFactory("a6", "cnt"),
                   equality("dim2", "a", ColumnType.STRING)
@@ -5298,7 +5292,10 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                       not(equality("dim1", "1", ColumnType.STRING))
                   )
               ),
-              new LongSumAggregatorFactory("a8", "v1"),
+              new FilteredAggregatorFactory(
+                  new LongSumAggregatorFactory("a8", "cnt"),
+                  not(equality("dim1", "1", ColumnType.STRING))
+              ),
               new FilteredAggregatorFactory(
                   new LongMaxAggregatorFactory("a9", "cnt"),
                   not(equality("dim1", "1", ColumnType.STRING))
@@ -5352,6 +5349,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCaseFilteredAggregationWithGroupBy()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT\n"
         + "  cnt,\n"
@@ -5364,12 +5362,9 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setDimensions(dimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG)))
-                        .setVirtualColumns(
-                            expressionVirtualColumn("v0", "1", ColumnType.LONG)
-                        )
                         .setAggregatorSpecs(aggregators(
                             new FilteredAggregatorFactory(
-                                new LongSumAggregatorFactory("a0", "v0"),
+                                new CountAggregatorFactory("a0"),
                                 not(equality("dim1", "1", ColumnType.STRING))
                             ),
                             new LongSumAggregatorFactory("a1", "cnt")
@@ -5384,6 +5379,51 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
             new Object[]{1L, 11L}
         )
     );
+  }
+
+  @Test
+  public void testCaseFilteredAggregationWithGroupRewriteToSum()
+  {
+    testBuilder()
+        .sql(
+            "SELECT\n"
+                + "  cnt,\n"
+                + "  SUM(CASE WHEN dim1 <> '1' THEN 2 ELSE 0 END) + SUM(cnt)\n"
+                + "FROM druid.foo\n"
+                + "GROUP BY cnt"
+        )
+        .expectedQueries(
+            ImmutableList.of(
+                GroupByQuery.builder()
+                    .setDataSource(CalciteTests.DATASOURCE1)
+                    .setInterval(querySegmentSpec(Filtration.eternity()))
+                    .setGranularity(Granularities.ALL)
+                    .setDimensions(dimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG)))
+                    .setVirtualColumns(
+                        expressionVirtualColumn("v0", "2", ColumnType.LONG)
+                    )
+                    .setAggregatorSpecs(
+                        aggregators(
+                            new FilteredAggregatorFactory(
+                                new LongSumAggregatorFactory("a0", "v0"),
+                                not(equality("dim1", "1", ColumnType.STRING))
+                            ),
+                            new LongSumAggregatorFactory("a1", "cnt")
+                        )
+                    )
+                    .setPostAggregatorSpecs(
+                        expressionPostAgg("p0", "(\"a0\" + \"a1\")", ColumnType.LONG)
+                    )
+                    .setContext(QUERY_CONTEXT_DEFAULT)
+                    .build()
+            )
+        )
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {1L, 16L}
+            )
+        )
+        .run();
   }
 
   @Test
@@ -9453,6 +9493,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
+    cannotVectorizeUnlessFallback();
     msqIncompatible();
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
@@ -9479,11 +9520,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                     "v0",
                                                     "((\"__time\" >= 947005200000) && (\"__time\" < 1641402000000))",
                                                     ColumnType.LONG
-                                                ),
-                                                expressionVirtualColumn(
-                                                    "v1",
-                                                    "1",
-                                                    ColumnType.LONG
                                                 )
                                             )
                                             .setDimensions(
@@ -9495,7 +9531,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                             .setAggregatorSpecs(
                                                 aggregators(
                                                     new FilteredAggregatorFactory(
-                                                        new LongSumAggregatorFactory("a0", "v1"),
+                                                        new CountAggregatorFactory("a0"),
                                                         range(
                                                             "__time",
                                                             ColumnType.LONG,
@@ -9507,7 +9543,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                     ),
                                                     new GroupingAggregatorFactory(
                                                         "a1",
-                                                        ImmutableList.of("v0", "dim1")
+                                                        ImmutableList.of("dim1", "v0")
                                                     )
                                                 )
                                             )
