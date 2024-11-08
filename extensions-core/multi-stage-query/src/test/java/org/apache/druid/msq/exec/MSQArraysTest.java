@@ -774,6 +774,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns(scanSignature.getColumnNames())
+        .columnTypes(scanSignature.getColumnTypes())
         .virtualColumns(new ExpressionVirtualColumn(
             "v0",
             "timestamp_parse(\"timestamp\",null,'UTC')",
@@ -854,6 +855,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayString")
+        .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.descending("arrayString")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
@@ -917,6 +919,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayLong")
+        .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.ascending("arrayLong")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
@@ -980,6 +983,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayDouble")
+        .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.ascending("arrayDouble")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
@@ -1032,6 +1036,7 @@ public class MSQArraysTest extends MSQTestBase
         )
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("a_bool")
+        .columnTypes(scanSignature.getColumnTypes())
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 
@@ -1080,6 +1085,7 @@ public class MSQArraysTest extends MSQTestBase
         )
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("a_bool")
+        .columnTypes(scanSignature.getColumnTypes())
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 

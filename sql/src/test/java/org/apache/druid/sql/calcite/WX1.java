@@ -35,7 +35,7 @@ public class WX1
   {
 
     String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteArraysQueryTest.java";
-    pathname="../extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQSelectTest.java";
+    pathname="../extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQComplexGroupByTest.java";
     // pathname=CalciteSubqueryTest.class.getProtectionDomain().getCodeSource().getLocation().getFile();
     System.out.println(pathname);
     Path path = new File(pathname).toPath();
