@@ -33,6 +33,7 @@ public class WX1
   {
 
     String pathname = "./src/test/java/org/apache/druid/sql/calcite/CalciteArraysQueryTest.java";
+    pathname="../extensions-core/multi-stage-query/src/test/java/org/apache/druid/msq/exec/MSQWindowTest.java";
     // pathname=CalciteSubqueryTest.class.getProtectionDomain().getCodeSource().getLocation().getFile();
     System.out.println(pathname);
     Path path = new File(pathname).toPath();
@@ -93,10 +94,12 @@ public class WX1
 
   private static String getTypeForColName(String colName)
   {
+    colName = colName.replaceAll(".*\\.", "");
     switch (colName)
     {
       case "j0.unnest":
       case "_j0.unnest":
+      case "unnest":
         return "ColumnType.STRING";
       case "nest":
       case "nester":
@@ -110,6 +113,7 @@ public class WX1
       case "unique_dim1":
         return "ColumnType.ofComplex(\"hyperUnique\")";
       case "z":
+      case "added":
       case "cnt":
       case "__time":
         return "ColumnType.LONG";
