@@ -27,10 +27,13 @@ import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Window;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexInputRef;
+import org.apache.calcite.rex.RexNode;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
@@ -205,17 +208,20 @@ public class DruidQueryGenerator
 
   private static class VertexTweaks
   {
-    private JoinTweaks joinType;
+    public final JoinPosition joinType;
+    public final boolean isParentUnion;
 
-    public VertexTweaks(JoinTweaks joinType)
+    public VertexTweaks(JoinPosition joinType, boolean isParentUnion)
     {
       this.joinType = joinType;
+      this.isParentUnion = isParentUnion;
     }
 
     static VertexTweaks analyze(DruidNodeStack stack)
     {
-      JoinTweaks joinType = JoinTweaks.analyze(stack);
-      return new VertexTweaks(joinType);
+      JoinPosition joinType = JoinPosition.analyze(stack);
+      boolean isParentUnion = stack.size()>2 && stack.parentNode()  instanceof DruidUnion;
+      return new VertexTweaks(joinType, isParentUnion);
     }
 
     boolean forceSubQuery(SourceDesc sourceDesc)
@@ -223,41 +229,43 @@ public class DruidQueryGenerator
       if (sourceDesc.dataSource.isGlobal()) {
         return false;
       }
-      return joinType== JoinTweaks.RIGHT;
+      return joinType == JoinPosition.RIGHT;
     }
 
     boolean filteredDatasourceAllowed()
     {
-      return joinType== JoinTweaks.NONE;
+      return joinType == JoinPosition.NONE;
     }
 
     boolean finalizeSubQuery()
     {
-      return joinType== JoinTweaks.NONE;
+      return joinType == JoinPosition.NONE;
     }
 
-
-    enum JoinTweaks {
-    NONE,
-    LEFT,
-    RIGHT;
-
-
-    public static JoinTweaks analyze(DruidNodeStack stack)
+    boolean mayUnwrapWithRename()
     {
-      if (stack.size() < 2) {
-        return NONE;
-      }
-      DruidLogicalNode possibleJoin = stack.parentNode();
-      if (!(possibleJoin instanceof DruidJoin)) {
-        return NONE;
-      }
-      if (stack.peekOperandIndex() == 0) {
-        return LEFT;
-      } else {
-        return RIGHT;
-      }
+      return !isParentUnion;
     }
+
+    enum JoinPosition
+    {
+      NONE, LEFT, RIGHT;
+
+      public static JoinPosition analyze(DruidNodeStack stack)
+      {
+        if (stack.size() < 2) {
+          return NONE;
+        }
+        DruidLogicalNode possibleJoin = stack.parentNode();
+        if (!(possibleJoin instanceof DruidJoin)) {
+          return NONE;
+        }
+        if (stack.peekOperandIndex() == 0) {
+          return LEFT;
+        } else {
+          return RIGHT;
+        }
+      }
     }
   }
 
@@ -285,14 +293,14 @@ public class DruidQueryGenerator
     {
       final PartialDruidQuery partialDruidQuery;
       final List<Vertex> inputs;
-      final VertexTweaks jst;
+      final VertexTweaks tweaks;
       private SourceDesc source;
 
       public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, VertexTweaks jst)
       {
         this.partialDruidQuery = partialDruidQuery;
         this.inputs = inputs;
-        this.jst = jst;
+        this.tweaks = jst;
       }
 
       @Override
@@ -304,7 +312,7 @@ public class DruidQueryGenerator
             source.rowSignature,
             plannerContext,
             rexBuilder,
-            !(topLevel) && jst.finalizeSubQuery()
+            !(topLevel) && tweaks.finalizeSubQuery()
         );
       }
 
@@ -457,21 +465,61 @@ public class DruidQueryGenerator
       @Override
       public boolean canUnwrapSourceDesc()
       {
-        if (jst.forceSubQuery(getSource())) {
+        if (tweaks.forceSubQuery(getSource())) {
           return false;
         }
         if (partialDruidQuery.stage() == Stage.SCAN) {
           return true;
         }
-        if (jst.filteredDatasourceAllowed() && partialDruidQuery.stage() == PartialDruidQuery.Stage.WHERE_FILTER) {
+        if (tweaks.filteredDatasourceAllowed() && partialDruidQuery.stage() == PartialDruidQuery.Stage.WHERE_FILTER) {
           return true;
         }
         if (partialDruidQuery.stage() == PartialDruidQuery.Stage.SELECT_PROJECT &&
-            (jst.filteredDatasourceAllowed() || partialDruidQuery.getWhereFilter() == null) &&
-            partialDruidQuery.getSelectProject().isMapping()) {
+            (tweaks.filteredDatasourceAllowed() || partialDruidQuery.getWhereFilter() == null) &&
+            mayDiscardSelectProject()) {
           return true;
         }
         return false;
+      }
+
+      private boolean mayDiscardSelectProject()
+      {
+        if(!partialDruidQuery.getSelectProject().isMapping()) {
+          return false;
+        }
+        SourceDesc src = getSource();
+        List<String> inputFieldNames = src.rowSignature.getColumnNames();
+        List<String> outputFieldNames = partialDruidQuery.getRowType().getFieldNames();
+
+        if(!isNameConsistentMapping(partialDruidQuery.getSelectProject(), inputFieldNames, outputFieldNames)) {
+          return false;
+        }
+
+        boolean isAssociative = UnionDataSource.isCompatibleDataSource(src.dataSource);
+
+        if (!isAssociative) {
+          if (!outputFieldNames.equals(inputFieldNames.subList(0, outputFieldNames.size()))) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      private boolean isNameConsistentMapping(
+          Project selectProject,
+          List<String> inputFieldNames,
+          List<String> outputFieldNames)
+      {
+        List<RexNode> projects = selectProject.getProjects();
+        for (int i = 0; i < projects.size(); i++) {
+          RexInputRef p = (RexInputRef) projects.get(i);
+          String inputName = inputFieldNames.get(p.getIndex());
+          String outputName = outputFieldNames.get(i);
+          if (!inputName.equals(outputName)) {
+            return false;
+          }
+        }
+        return true;
       }
     }
   }

@@ -248,9 +248,15 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
         + "WHERE c = 'a' OR c = 'def'\n"
         + "GROUP BY 1";
     if (testBuilder().isDecoupledMode()) {
+      cannotVectorize();
       testBuilder()
           .sql(sql)
-          .expectedResults(ImmutableList.of(new Object[] {"def", 2L}))
+          .expectedResults(
+              ImmutableList.of(
+                  new Object[] {"a", 2L},
+                  new Object[] {"def", 1L}
+              )
+          )
           .run();
     } else {
       // Cannot plan this UNION ALL operation, because the column swap would require generating a subquery.
