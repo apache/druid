@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.commons.lang3.StringUtils;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -97,6 +96,8 @@ public class WX1
     switch (colName)
     {
       case "j0.unnest":
+      case "_j0.unnest":
+        return "ColumnType.STRING";
       case "nest":
       case "nester":
         return "ColumnType.ofComplex(\"json\")";
@@ -112,6 +113,10 @@ public class WX1
       case "cnt":
       case "__time":
         return "ColumnType.LONG";
+      case "arrayStringNulls":
+        return "ColumnType.STRING_ARRAY";
+      case "arrayLongNulls":
+        return "ColumnType.LONG_ARRAY";
       default:
         return "ColumnType.STRING";
     }
