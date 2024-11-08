@@ -399,6 +399,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                     new ExpressionVirtualColumn("v1", "case_searched((\"j0.a0\" < \"_a0\"),'val2',((\"j0.a0\" >= \"_a0\") && (\"j0.a0\" < \"_a1\")),'val3',(\"j0.a0\" >= \"_a1\"),'val1',null)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
                 )
                 .columns("v0", "j0.d0", "j0.a0", "v1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.STRING)
                 .build()
         ),
         expectedResults
