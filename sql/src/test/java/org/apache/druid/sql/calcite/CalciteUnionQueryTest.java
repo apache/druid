@@ -187,25 +187,33 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  // FIXME: b,a union a,b
-
   @Test
-  public void test2()
+  public void testUnionFlipFlop()
   {
-    String sql = "SELECT dim3, dim2, m1 FROM foo2";
+    String sql = "SELECT\n"
+        + "dim1,dim2,count(1) \n"
+        + "FROM (SELECT dim1 as dim1, dim2 as dim2 FROM foo UNION ALL SELECT dim2 as dim1, dim1 as dim2 FROM foo)\n"
+        + "WHERE dim1 = 'def' OR dim2 = 'def'\n"
+        + "GROUP BY 1, 2";
+    if (testBuilder().isDecoupledMode()) {
+      cannotVectorize();
       testBuilder()
           .sql(sql)
+          .expectedResults(
+              ImmutableList.of(
+                  new Object[] {"abc", "def", 1L},
+                  new Object[] {"def", "abc", 1L}
+              )
+          )
           .run();
+    } else {
+      assertQueryIsUnplannable(
+          sql,
+          "names queried for each table are different"
+      );
+    }
   }
 
-  @Test
-  public void test1()
-  {
-    String sql = "SELECT dim3, cast(dim2 as bigint), m1 FROM foo";
-      testBuilder()
-          .sql(sql)
-          .run();
-  }
 
   @Test
   public void testUnionAllTablesColumnTypeMismatchStringLong()
