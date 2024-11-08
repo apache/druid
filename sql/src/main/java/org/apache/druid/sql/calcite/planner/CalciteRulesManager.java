@@ -45,6 +45,7 @@ import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql2rel.RelDecorrelator;
+import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
@@ -538,7 +539,11 @@ public class CalciteRulesManager
     {
       final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
       final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel, relBuilder);
-      return new DruidRelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
+      if(true) {
+        return new DruidRelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
+      } else {
+        return new RelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
+      }
     }
   }
 }
