@@ -1245,6 +1245,8 @@ public class QueryResourceTest
     for (Future<Boolean> theFuture : back2) {
       Assert.assertTrue(theFuture.get());
     }
+    Assert.assertEquals(2, queryResource.getSuccessfulQueryCount());
+    Assert.assertEquals(1, queryResource.getFailedQueryCount());
   }
 
   @Test(timeout = 10_000L)
