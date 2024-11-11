@@ -1217,7 +1217,13 @@ public class ControllerImpl implements Controller
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
                     .put(ScanQuery.class, new ScanQueryKit(context.jsonMapper()))
                     .put(GroupByQuery.class, new GroupByQueryKit(context.jsonMapper()))
-                    .put(WindowOperatorQuery.class, new WindowOperatorQueryKit(context.jsonMapper(), queryContext))
+                    .put(
+                        WindowOperatorQuery.class,
+                        new WindowOperatorQueryKit(
+                            context.jsonMapper(),
+                            MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(queryContext)
+                        )
+                    )
                     .build();
 
     return new MultiQueryKit(kitMap);
