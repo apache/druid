@@ -39,18 +39,6 @@
     <scrooge.version>19.10.0</scrooge.version>
   </properties>
 
-  <!--
-  maven-dependency-plugin:3.1.2 seems to have updated HTTP repository access behavior.
-  We get the following error "Blocked mirror for repositories: [twitter (http://maven.twttr.com, default, releases+snapshots)]"
-  The suggested action step is to add the mirror: https://maven.apache.org/docs/3.8.1/release-notes.html#how-to-fix-when-i-get-a-http-repository-blocked
-   -->
-  <repositories>
-    <repository>
-      <id>twitter</id>
-      <url>https://maven.twttr.com</url>
-    </repository>
-  </repositories>
-
   <dependencies>
     <dependency>
       <groupId>org.apache.druid</groupId>
