@@ -34,6 +34,7 @@ import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.operator.AbstractPartitioningOperatorFactory;
 import org.apache.druid.query.operator.AbstractSortOperatorFactory;
 import org.apache.druid.query.operator.ColumnWithDirection;
@@ -56,10 +57,12 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 {
   private static final Logger log = new Logger(WindowOperatorQueryKit.class);
   private final ObjectMapper jsonMapper;
+  private final QueryContext queryContext;
 
-  public WindowOperatorQueryKit(ObjectMapper jsonMapper)
+  public WindowOperatorQueryKit(ObjectMapper jsonMapper, QueryContext queryContext)
   {
     this.jsonMapper = jsonMapper;
+    this.queryContext = queryContext;
   }
 
   @Override
@@ -174,7 +177,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                                                             .flatMap(of -> of.getPartitionColumns().stream())
                                                             .collect(Collectors.toList());
 
-      final List<OperatorFactory> operatorFactories = MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(originalQuery.context())
+      final List<OperatorFactory> operatorFactories = MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(queryContext)
                                                       ? getTransformedOperatorFactoryListForStageDefinition(operatorList.get(i), maxRowsMaterialized)
                                                       : operatorList.get(i);
 

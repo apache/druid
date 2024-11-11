@@ -571,7 +571,7 @@ public class ControllerImpl implements Controller
 
     final QueryContext queryContext = querySpec.getQuery().context();
     final QueryDefinition queryDef = makeQueryDefinition(
-        context.makeQueryKitSpec(makeQueryControllerToolKit(), queryId, querySpec, queryKernelConfig),
+        context.makeQueryKitSpec(makeQueryControllerToolKit(queryContext), queryId, querySpec, queryKernelConfig),
         querySpec,
         context,
         resultsContext
@@ -1211,13 +1211,13 @@ public class ControllerImpl implements Controller
   }
 
   @SuppressWarnings("rawtypes")
-  private QueryKit<Query<?>> makeQueryControllerToolKit()
+  private QueryKit<Query<?>> makeQueryControllerToolKit(QueryContext queryContext)
   {
     final Map<Class<? extends Query>, QueryKit> kitMap =
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
                     .put(ScanQuery.class, new ScanQueryKit(context.jsonMapper()))
                     .put(GroupByQuery.class, new GroupByQueryKit(context.jsonMapper()))
-                    .put(WindowOperatorQuery.class, new WindowOperatorQueryKit(context.jsonMapper()))
+                    .put(WindowOperatorQuery.class, new WindowOperatorQueryKit(context.jsonMapper(), queryContext))
                     .build();
 
     return new MultiQueryKit(kitMap);

@@ -21,7 +21,6 @@ package org.apache.druid.msq.querykit;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -45,13 +44,11 @@ import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
-import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
@@ -200,7 +197,6 @@ public class DataSourcePlan
       return forQuery(
           queryKitSpec,
           (QueryDataSource) dataSource,
-          queryContext,
           minStageNumber,
           broadcast
       );
@@ -238,7 +234,6 @@ public class DataSourcePlan
         case SORT_MERGE:
           return forSortMergeJoin(
               queryKitSpec,
-              queryContext,
               (JoinDataSource) dataSource,
               querySegmentSpec,
               minStageNumber,
@@ -418,25 +413,15 @@ public class DataSourcePlan
   private static DataSourcePlan forQuery(
       final QueryKitSpec queryKitSpec,
       final QueryDataSource dataSource,
-      final QueryContext queryContext,
       final int minStageNumber,
       final boolean broadcast
   )
   {
-    final Query query = dataSource.getQuery()
-                                  // Subqueries ignore SQL_INSERT_SEGMENT_GRANULARITY, even if set in the context. It's only used for the
-                                  // outermost query, and setting it for the subquery makes us erroneously add bucketing where it doesn't belong.
-                                  .withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY)
-                                  // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
-                                  .withOverriddenContext(
-                                      ImmutableMap.of(
-                                          MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION,
-                                          MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(queryContext)
-                                      )
-                                  );
     final QueryDefinition subQueryDef = queryKitSpec.getQueryKit().makeQueryDefinition(
         queryKitSpec,
-        query,
+        // Subqueries ignore SQL_INSERT_SEGMENT_GRANULARITY, even if set in the context. It's only used for the
+        // outermost query, and setting it for the subquery makes us erroneously add bucketing where it doesn't belong.
+        dataSource.getQuery().withOverriddenContext(CONTEXT_MAP_NO_SEGMENT_GRANULARITY),
         ShuffleSpecFactories.globalSortWithMaxPartitionCount(queryKitSpec.getNumPartitionsForShuffle()),
         minStageNumber
     );
@@ -645,7 +630,6 @@ public class DataSourcePlan
    */
   private static DataSourcePlan forSortMergeJoin(
       final QueryKitSpec queryKitSpec,
-      final QueryContext queryContext,
       final JoinDataSource dataSource,
       final QuerySegmentSpec querySegmentSpec,
       final int minStageNumber,
@@ -668,7 +652,6 @@ public class DataSourcePlan
     final DataSourcePlan leftPlan = forQuery(
         queryKitSpec,
         (QueryDataSource) dataSource.getLeft(),
-        queryContext,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         false
     );
@@ -680,7 +663,6 @@ public class DataSourcePlan
     final DataSourcePlan rightPlan = forQuery(
         queryKitSpec,
         (QueryDataSource) dataSource.getRight(),
-        queryContext,
         Math.max(minStageNumber, subQueryDefBuilder.getNextStageNumber()),
         false
     );
