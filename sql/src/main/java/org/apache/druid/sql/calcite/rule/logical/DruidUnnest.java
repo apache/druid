@@ -124,6 +124,6 @@ public class DruidUnnest extends Unnest implements DruidLogicalNode, SourceDescP
 
   private RelDataType getUnnestedType()
   {
-    return rowType.getFieldList().get(rowType.getFieldCount() - 1).getType();
+    return unnestFieldType.getType();
   }
 }

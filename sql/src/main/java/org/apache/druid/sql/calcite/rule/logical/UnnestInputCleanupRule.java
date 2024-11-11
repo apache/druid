@@ -30,12 +30,10 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.error.DruidException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -135,7 +133,10 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
     if(type.isNullable()) {
       rn = rexBuilder.makeNullLiteral(type);
     } else {
-      rn=      rexBuilder.makeCall(type, SqlStdOperatorTable.CURRENT_VALUE, Collections.emptyList());
+      // bail out
+      return;
+//      reutrn;
+//      rn=      rexBuilder.makeCall(type, SqlStdOperatorTable.CURRENT_VALUE, Collections.emptyList());
     }
 
     projectFields.set(
