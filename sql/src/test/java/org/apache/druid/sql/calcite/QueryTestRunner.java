@@ -21,6 +21,8 @@ package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Joiner;
+import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedMap;
@@ -35,7 +37,9 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.quidem.DruidQTestInfo;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
@@ -62,6 +66,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
+
+import static org.junit.Assert.fail;
 
 /**
  * Runs a test built up by {@link QueryTestBuilder}. Running a SQL query test
@@ -445,6 +451,27 @@ public class QueryTestRunner
       for (int i = 0; i < expectedQueries.size(); i++) {
         Query<?> expectedQuery = expectedQueries.get(i);
         Query<?> actualQuery = recordedQueries.get(i);
+        if (expectedQuery instanceof ScanQuery && actualQuery instanceof ScanQuery) {
+          ScanQuery scanQuery2 = (ScanQuery) actualQuery;
+          ScanQuery scanQuery = (ScanQuery) expectedQuery;
+          if (!Objects.equal(scanQuery.getColumnTypes(), scanQuery2.getColumnTypes())) {
+            StringBuffer sv = new StringBuffer();
+            sv.append(
+                ".columnTypes("
+            );
+            for (ColumnType query : scanQuery2.getColumnTypes()) {
+              String typeString = typeStringFor(query);
+              sv.append(typeString);
+              sv.append(", ");
+            }
+            int l = sv.length();
+            sv.replace(l - 2, l, ")");
+            System.out.println("\n");
+            System.out.println(sv.toString());
+            fail("\n" + sv.toString()+ "\n"+Joiner.on("\n").join(sv.toString().split(" ")));
+          }
+        }
+
         Assert.assertEquals(
             StringUtils.format("query #%d: %s", i + 1, builder.sql),
             expectedQuery,
@@ -464,6 +491,18 @@ public class QueryTestRunner
         catch (JsonProcessingException e) {
           Assert.fail(e.getMessage());
         }
+      }
+    }
+
+    private String typeStringFor(ColumnType query)
+    {
+      if(query.isArray()) {
+        return String.format("ColumnType.ofArray(ColumnType.%s)", query.getElementType());
+      }
+      if (query.getComplexTypeName() != null) {
+        return "ColumnType.ofComplex(\"" + query.getComplexTypeName() + "\")";
+      } else {
+        return ("ColumnType." + query);
       }
     }
   }
