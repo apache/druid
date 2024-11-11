@@ -54,8 +54,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * {@link NodeAnnouncer} announces a single node on Zookeeper and only watches this node,
- * while {@link Announcer} watches all child paths, not only this node.
+ * The {@link Announcer} class manages the announcement of multiple child nodes
+ * under a specified parent path in a ZooKeeper ensemble. It monitors these nodes
+ * to ensure their existence and manage their lifecycle collectively.
+ *
+ * <p>Utilize this class when you need to handle complex node structures,
+ * including relationships between multiple child nodes. Should your use case
+ * involve the management of a standalone node instead, see {@link NodeAnnouncer}.</p>
  */
 public class Announcer
 {

@@ -44,38 +44,53 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
- * {@link NodeAnnouncer} announces a single node on Zookeeper and only watches this node,
- * while {@link Announcer} watches all child paths, not only this node.
+ * The {@link NodeAnnouncer} class is responsible for announcing a single node
+ * in a ZooKeeper ensemble. It creates an ephemeral node at a specified path
+ * and monitors its existence to ensure that it remains active until it is
+ * explicitly unannounced or the object is closed.
+ *
+ * <p>This class provides methods to announce and update the content of the
+ * node as well as handle path creation if required.</p>
+ *
+ * <p>Use this class when you need to manage the lifecycle of a standalone
+ * node without concerns about its children or siblings. Should your use case
+ * involve the management of child nodes under a specific parent path in a
+ * ZooKeeper ensemble, see {@link Announcer}.</p>
  */
 public class NodeAnnouncer
 {
   private static final Logger log = new Logger(NodeAnnouncer.class);
 
   private final CuratorFramework curator;
-
-  /**
-   * In case a path is added to this collection in {@link #announce} before zk is connected,
-   * should remember the path and do announce in {@link #start} later.
-   */
-  @GuardedBy("toAnnounce")
-  private final List<Announceable> toAnnounce = new ArrayList<>();
-  /**
-   * In case a path is added to this collection in {@link #update} before zk is connected,
-   * should remember the path and do update in {@link #start} later.
-   */
-  @GuardedBy("toAnnounce")
-  private final List<Announceable> toUpdate = new ArrayList<>();
   private final ConcurrentMap<String, NodeCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, byte[]> announcedPaths = new ConcurrentHashMap<>();
-  /**
-   * This list is to remember all paths this node announcer has created.
-   * On {@link #stop}, the node announcer is responsible for deleting all paths in this list.
-   */
-  @GuardedBy("toAnnounce")
-  private final List<String> pathsCreatedInThisAnnouncer = new ArrayList<>();
 
   @GuardedBy("toAnnounce")
   private boolean started = false;
+
+  /**
+   * This list holds paths that need to be announced. If a path is added to this list
+   * in the {@link #announce} method before the connection to ZooKeeper is established,
+   * it will be stored here and announced later during the {@link #start} method.
+   */
+  @GuardedBy("toAnnounce")
+  private final List<Announceable> toAnnounce = new ArrayList<>();
+
+  /**
+   * This list holds paths that need to be updated. If a path is added to this list
+   * in the {@link #update} method before the connection to ZooKeeper is established,
+   * it will be stored here and updated later during the {@link #start} method.
+   */
+  @GuardedBy("toAnnounce")
+  private final List<Announceable> toUpdate = new ArrayList<>();
+
+  /**
+   * This list keeps track of all the paths created by this node announcer.
+   * When the {@link #stop} method is called,
+   * the node announcer is responsible for deleting all paths stored in this list.
+   */
+  @GuardedBy("toAnnounce")
+  private final List<String> pathsCreatedInThisAnnouncer = new ArrayList<>();
 
   public NodeAnnouncer(CuratorFramework curator)
   {
@@ -89,12 +104,12 @@ public class NodeAnnouncer
   }
 
   @LifecycleStart
-  @SuppressWarnings("DuplicatedCode")
   public void start()
   {
-    log.info("Starting announcer");
+    log.info("Starting NodeAnnouncer");
     synchronized (toAnnounce) {
       if (started) {
+        log.debug("Called start() but NodeAnnouncer have already started.");
         return;
       }
 
@@ -115,23 +130,37 @@ public class NodeAnnouncer
   @LifecycleStop
   public void stop()
   {
-    log.info("Stopping announcer");
+    log.info("Stopping NodeAnnouncer");
     synchronized (toAnnounce) {
       if (!started) {
+        log.debug("Called stop() but NodeAnnouncer have not started.");
         return;
       }
 
       started = false;
+      closeResources();
+      deletePaths();
+    }
+  }
 
-      Closer closer = Closer.create();
-      for (NodeCache cache : listeners.values()) {
-        closer.register(cache);
-      }
-      for (String announcementPath : announcedPaths.keySet()) {
-        closer.register(() -> unannounce(announcementPath));
-      }
-      CloseableUtils.closeAndWrapExceptions(closer);
+  private void closeResources()
+  {
+    Closer closer = Closer.create();
+    for (NodeCache cache : listeners.values()) {
+      closer.register(cache);
+    }
+    for (String announcementPath : announcedPaths.keySet()) {
+      closer.register(() -> unannounce(announcementPath));
+    }
+    CloseableUtils.closeAndWrapExceptions(closer);
+  }
 
+  private void deletePaths()
+  {
+    // deletePaths method is only used in stop(), which already has synchronized(toAnnounce),
+    // this line is here just to prevent the static analysis from throwing
+    // "Access to field 'pathsCreatedInThisAnnouncer' outside declared guards".
+    synchronized (toAnnounce) {
       if (!pathsCreatedInThisAnnouncer.isEmpty()) {
         final List<CuratorOp> deleteOps = new ArrayList<>(pathsCreatedInThisAnnouncer.size());
         for (String parent : pathsCreatedInThisAnnouncer) {
@@ -142,6 +171,7 @@ public class NodeAnnouncer
             log.error(e, "Unable to delete parent[%s].", parent);
           }
         }
+
         try {
           curator.transaction().forOperations(deleteOps);
         }
@@ -152,8 +182,9 @@ public class NodeAnnouncer
     }
   }
 
+
   /**
-   * Like announce(path, bytes, true).
+   * Overload of {@link #announce(String, byte[],boolean)}, but removes parent node of path after announcement.
    */
   public void announce(String path, byte[] bytes)
   {
@@ -172,6 +203,7 @@ public class NodeAnnouncer
   {
     synchronized (toAnnounce) {
       if (!started) {
+        log.debug("NodeAnnouncer has not started yet, queuing announcement for later processing...");
         toAnnounce.add(new Announceable(path, bytes, removeParentIfCreated));
         return;
       }
@@ -329,7 +361,11 @@ public class NodeAnnouncer
       if (removeParentsIfCreated) {
         pathsCreatedInThisAnnouncer.add(parentPath);
       }
-      log.debug("Created parentPath[%s], %s remove on stop() called.", parentPath, removeParentsIfCreated ? "will" : "will not");
+      log.debug(
+          "Created parentPath[%s], %s remove on stop() called.",
+          parentPath,
+          removeParentsIfCreated ? "will" : "will not"
+      );
     }
     catch (Exception e) {
       log.error(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
