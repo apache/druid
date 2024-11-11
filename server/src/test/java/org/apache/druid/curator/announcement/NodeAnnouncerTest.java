@@ -20,17 +20,12 @@
 package org.apache.druid.curator.announcement;
 
 import com.google.common.collect.Sets;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.api.CuratorEvent;
 import org.apache.curator.framework.api.CuratorEventType;
-import org.apache.curator.framework.api.CuratorListener;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
 import org.apache.curator.test.KillSession;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.ZKPathsUtils;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.data.Stat;
@@ -42,20 +37,16 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
 
 /**
  */
-public class AnnouncerTest extends CuratorTestBase
+public class NodeAnnouncerTest extends CuratorTestBase
 {
-  private static final Logger log = new Logger(AnnouncerTest.class);
-  private ExecutorService exec;
 
   @Before
   public void setUp() throws Exception
   {
     setupServerAndCurator();
-    exec = Execs.singleThreaded("test-announcer-sanity-%s");
   }
 
   @After
@@ -69,8 +60,7 @@ public class AnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    Announcer announcer = new Announcer(curator, exec);
-    announcer.initializeAddedChildren();
+    NodeAnnouncer announcer = new NodeAnnouncer(curator);
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath1 = "/test1";
@@ -81,7 +71,7 @@ public class AnnouncerTest extends CuratorTestBase
     Assert.assertNull("/somewhere/test2 does not exists", curator.checkExists().forPath(testPath2));
 
     announcer.start();
-    while (!announcer.getAddedChildren().contains("/test1")) {
+    while (!announcer.getAddedPaths().contains("/test1")) {
       Thread.sleep(100);
     }
 
@@ -100,14 +90,9 @@ public class AnnouncerTest extends CuratorTestBase
 
       final CountDownLatch latch = new CountDownLatch(1);
       curator.getCuratorListenable().addListener(
-          new CuratorListener()
-          {
-            @Override
-            public void eventReceived(CuratorFramework client, CuratorEvent event)
-            {
-              if (event.getType() == CuratorEventType.CREATE && event.getPath().equals(testPath1)) {
-                latch.countDown();
-              }
+          (client, event) -> {
+            if (event.getType() == CuratorEventType.CREATE && event.getPath().equals(testPath1)) {
+              latch.countDown();
             }
           }
       );
@@ -151,7 +136,7 @@ public class AnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    Announcer announcer = new Announcer(curator, exec);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator);
     try {
       curator.inTransaction().create().forPath("/somewhere").and().commit();
       announcer.start();
@@ -168,16 +153,11 @@ public class AnnouncerTest extends CuratorTestBase
 
       final CountDownLatch latch = new CountDownLatch(1);
       curator.getCuratorListenable().addListener(
-          new CuratorListener()
-          {
-            @Override
-            public void eventReceived(CuratorFramework client, CuratorEvent event)
-            {
-              if (event.getType() == CuratorEventType.CREATE) {
-                paths.remove(event.getPath());
-                if (paths.isEmpty()) {
-                  latch.countDown();
-                }
+          (client, event) -> {
+            if (event.getType() == CuratorEventType.CREATE) {
+              paths.remove(event.getPath());
+              if (paths.isEmpty()) {
+                latch.countDown();
               }
             }
           }
@@ -208,7 +188,7 @@ public class AnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    Announcer announcer = new Announcer(curator, exec);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator);
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
@@ -234,7 +214,7 @@ public class AnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    Announcer announcer = new Announcer(curator, exec);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator);
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
@@ -263,7 +243,7 @@ public class AnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    Announcer announcer = new Announcer(curator, exec);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator);
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
@@ -285,7 +265,7 @@ public class AnnouncerTest extends CuratorTestBase
   }
 
   private void awaitAnnounce(
-      final Announcer announcer,
+      final NodeAnnouncer announcer,
       final String path,
       final byte[] bytes,
       boolean removeParentsIfCreated
@@ -293,14 +273,9 @@ public class AnnouncerTest extends CuratorTestBase
   {
     final CountDownLatch latch = new CountDownLatch(1);
     curator.getCuratorListenable().addListener(
-        new CuratorListener()
-        {
-          @Override
-          public void eventReceived(CuratorFramework client, CuratorEvent event)
-          {
-            if (event.getType() == CuratorEventType.CREATE && event.getPath().equals(path)) {
-              latch.countDown();
-            }
+        (client, event) -> {
+          if (event.getType() == CuratorEventType.CREATE && event.getPath().equals(path)) {
+            latch.countDown();
           }
         }
     );

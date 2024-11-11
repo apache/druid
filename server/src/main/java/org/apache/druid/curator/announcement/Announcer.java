@@ -39,6 +39,7 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
+import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,7 +54,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Announces things on Zookeeper.
+ * {@link NodeAnnouncer} announces a single node on Zookeeper and only watches this node,
+ * while {@link Announcer} watches all child paths, not only this node.
  */
 public class Announcer
 {
@@ -63,11 +65,13 @@ public class Announcer
   private final PathChildrenCacheFactory factory;
   private final ExecutorService pathChildrenCacheExecutor;
 
+  @GuardedBy("toAnnounce")
   private final List<Announceable> toAnnounce = new ArrayList<>();
+  @GuardedBy("toAnnounce")
   private final List<Announceable> toUpdate = new ArrayList<>();
   private final ConcurrentMap<String, PathChildrenCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new ConcurrentHashMap<>();
-  private final List<String> parentsIBuilt = new CopyOnWriteArrayList<String>();
+  private final List<String> parentsIBuilt = new CopyOnWriteArrayList<>();
 
   // Used for testing
   private Set<String> addedChildren;
@@ -228,7 +232,7 @@ public class Announcer
           cache.getListenable().addListener(
               new PathChildrenCacheListener()
               {
-                private final AtomicReference<Set<String>> pathsLost = new AtomicReference<Set<String>>(null);
+                private final AtomicReference<Set<String>> pathsLost = new AtomicReference<>(null);
 
                 @Override
                 public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception
@@ -428,20 +432,6 @@ public class Announcer
     }
     catch (Exception e) {
       log.info(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
-    }
-  }
-
-  private static class Announceable
-  {
-    final String path;
-    final byte[] bytes;
-    final boolean removeParentsIfCreated;
-
-    public Announceable(String path, byte[] bytes, boolean removeParentsIfCreated)
-    {
-      this.path = path;
-      this.bytes = bytes;
-      this.removeParentsIfCreated = removeParentsIfCreated;
     }
   }
 }
