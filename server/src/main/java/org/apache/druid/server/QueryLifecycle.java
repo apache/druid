@@ -78,7 +78,7 @@ import java.util.concurrent.TimeUnit;
  * <li>Initialization ({@link #initialize(Query)})</li>
  * <li>Authorization ({@link #authorize(HttpServletRequest)}</li>
  * <li>Execution ({@link #execute()}</li>
- * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long, long)}</li>
+ * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long, long, long)}</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String)}</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable)}</li>
  * </ol>
@@ -271,7 +271,7 @@ public class QueryLifecycle
   /**
    * Execute the query. Can only be called if the query has been authorized. Note that query logs and metrics will
    * not be emitted automatically when the Sequence is fully iterated. It is the caller's responsibility to call
-   * {@link #emitLogsAndMetrics(Throwable, String, long, long)} to emit logs and metrics.
+   * {@link #emitLogsAndMetrics(Throwable, String, long, long, long)} to emit logs and metrics.
    *
    * @return result sequence and response context
    */
@@ -301,7 +301,7 @@ public class QueryLifecycle
           @Nullable final String remoteAddress
   )
   {
-    this.emitLogsAndMetrics(e, remoteAddress, -1, -1);
+    this.emitLogsAndMetrics(e, remoteAddress, -1, -1, -1);
   }
 
   /**
@@ -317,7 +317,8 @@ public class QueryLifecycle
       @Nullable final Throwable e,
       @Nullable final String remoteAddress,
       final long bytesWritten,
-      final long rowsScanned
+      final long rowsScanned,
+      final long cpuConsumedNanos
   )
   {
     if (baseQuery == null) {
@@ -361,6 +362,8 @@ public class QueryLifecycle
       final Map<String, Object> statsMap = new LinkedHashMap<>();
       statsMap.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
       statsMap.put("query/bytes", bytesWritten);
+      statsMap.put("query/rowsScanned", rowsScanned);
+      statsMap.put("query/cpuConsumedNanos", cpuConsumedNanos);
       statsMap.put("success", success);
 
       if (authenticationResult != null) {
@@ -426,7 +429,7 @@ public class QueryLifecycle
           @Nullable final Throwable e
   )
   {
-    this.emitLogsAndMetrics(e, null, -1, -1);
+    this.emitLogsAndMetrics(e, null, -1, -1, -1);
   }
 
   private boolean isSerializeDateTimeAsLong()

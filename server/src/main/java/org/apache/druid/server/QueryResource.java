@@ -223,6 +223,8 @@ public class QueryResource implements QueryCountStatsProvider
         final ObjectWriter jsonWriter = queryLifecycle.newOutputWriter(ioReaderWriter);
         long rowsScanned = responseContext.get(Keys.NUM_SCANNED_ROWS) != null ?
                 (long) responseContext.get(Keys.NUM_SCANNED_ROWS) : 0;
+        long cpuConsumedNanos = responseContext.get(Keys.CPU_CONSUMED_NANOS) != null ?
+                                (long) responseContext.get(Keys.CPU_CONSUMED_NANOS) : 0;
 
         Response.ResponseBuilder responseBuilder = Response
             .ok(
@@ -249,7 +251,7 @@ public class QueryResource implements QueryCountStatsProvider
                     finally {
                       Thread.currentThread().setName(currThreadName);
 
-                      queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), os.getCount(), rowsScanned);
+                      queryLifecycle.emitLogsAndMetrics(e, req.getRemoteAddr(), os.getCount(), rowsScanned, cpuConsumedNanos);
 
                       if (e == null) {
                         successfulQueryCount.incrementAndGet();
@@ -269,9 +271,7 @@ public class QueryResource implements QueryCountStatsProvider
                     TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime))
             // Emit Cpu time as a response header. Note that it doesn't include Cpu spent on serializing the response.
             // Druid streams the output which results in the header being sent out before the response is fully serialized and sent to the client.
-            .header(QUERY_CPU_TIME,
-                    responseContext.get(Keys.CPU_CONSUMED_NANOS) != null ?
-                            responseContext.get(Keys.CPU_CONSUMED_NANOS) : 0)
+            .header(QUERY_CPU_TIME, cpuConsumedNanos)
             .header(NUM_SCANNED_ROWS, rowsScanned);
 
         attachResponseContextToHttpResponse(queryId, responseContext, responseBuilder, jsonMapper,
