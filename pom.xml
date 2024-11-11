@@ -1622,6 +1622,16 @@
                                 <ignore>sun.misc.Unsafe</ignore>
                                 <!-- ignore java reflection polymorphic api signatures -->
                                 <ignore>java.lang.invoke.MethodHandle</ignore>
+                                <!--
+                                 For the following java.nio.* classes, we get errors like: "Undefined reference: java.nio.ByteBuffer java.nio.ByteBuffer.clear()"
+                                 GitHub issue: https://github.com/mojohaus/animal-sniffer/issues/4
+                                 -->
+                                <ignore>java.nio.ByteBuffer</ignore>
+                                <ignore>java.nio.IntBuffer</ignore>
+                                <ignore>java.nio.CharBuffer</ignore>
+                                <ignore>java.nio.FloatBuffer</ignore>
+                                <ignore>java.nio.DoubleBuffer</ignore>
+                                <ignore>java.nio.MappedByteBuffer</ignore>
                             </ignores>
                         </configuration>
                     </execution>
