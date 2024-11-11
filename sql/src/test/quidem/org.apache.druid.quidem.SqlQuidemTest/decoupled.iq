@@ -2,95 +2,95 @@
 !use druidtest://?numMergeBuffers=3
 !set outputformat mysql
 
-SELECT
-  (TIME_FLOOR("__time", 'P1D', NULL, 'Asia/Calcutta')) AS "__time",
-  SUM(CASE WHEN "countryIsoCode" IN ('US') THEN added  ELSE 0 END) AS "CASE_LONG",
-  SUM(CASE WHEN "countryIsoCode" IN ('US') THEN CAST(added as double)  ELSE 0.0 END) AS "CASE_DOUBLE",
-  CAST(SUM(CASE WHEN "countryIsoCode" IN ('US') THEN added ELSE 0 END) as double) AS "CASE_DOUBLE2",
-  SUM(CAST(added as double)) AS "CASE_DOUBLE3"
-FROM "wikipedia"
-WHERE ("__time" >= '2024-10-23T09:00:00.000Z' AND "__time" < '2024-10-30T11:00:00.000Z')
-GROUP BY 1
-ORDER BY "__time"
-LIMIT 10001;
-+--------+-----------+-------------+--------------+--------------+
-| __time | CASE_LONG | CASE_DOUBLE | CASE_DOUBLE2 | CASE_DOUBLE3 |
-+--------+-----------+-------------+--------------+--------------+
-+--------+-----------+-------------+--------------+--------------+
-(0 rows)
+select cityName, count(case when delta > 0 then channel end) as cnt, count(1) as aall
+from wikipedia
+where cityName in ('New York', 'Aarhus')
+group by 1
+order by 1;
++----------+-----+------+
+| cityName | cnt | aall |
++----------+-----+------+
+| Aarhus   |   0 |    1 |
+| New York |   7 |   13 |
++----------+-----+------+
+(2 rows)
 
 !ok
-LogicalSort(sort0=[$0], dir0=[ASC], fetch=[10001])
-  LogicalProject(__time=[$0], CASE_LONG=[$1], CASE_DOUBLE=[$2], CASE_DOUBLE2=[CAST($1):DOUBLE], CASE_DOUBLE3=[$3])
-    LogicalAggregate(group=[{0}], CASE_LONG=[SUM($1)], CASE_DOUBLE=[SUM($2)], CASE_DOUBLE3=[SUM($3)])
-      LogicalProject(__time=[TIME_FLOOR($0, 'P1D', null:TIMESTAMP(3), 'Asia/Calcutta')], $f1=[CASE(=($4, 'US'), $18, 0:BIGINT)], $f2=[CASE(=($4, 'US'), CAST($18):DOUBLE, 0.0:DOUBLE)], $f3=[CAST($18):DOUBLE])
-        LogicalFilter(condition=[AND(>=($0, CAST('2024-10-23T09:00:00.000Z'):TIMESTAMP(3) NOT NULL), <($0, CAST('2024-10-30T11:00:00.000Z'):TIMESTAMP(3) NOT NULL))])
-          LogicalTableScan(table=[[druid, wikipedia]])
+LogicalSort(sort0=[$0], dir0=[ASC])
+  LogicalAggregate(group=[{0}], cnt=[COUNT($1)], aall=[COUNT()])
+    LogicalProject(cityName=[$2], $f1=[CASE(>($17, 0), $1, null:VARCHAR)])
+      LogicalFilter(condition=[OR(=($2, 'New York'), =($2, 'Aarhus'))])
+        LogicalTableScan(table=[[druid, wikipedia]])
 
 !convertedPlan
-LogicalProject(__time=[$0], CASE_LONG=[$1], CASE_DOUBLE=[$2], CASE_DOUBLE2=[CAST($1):DOUBLE], CASE_DOUBLE3=[$3])
-  LogicalSort(sort0=[$0], dir0=[ASC], fetch=[10001])
-    LogicalAggregate(group=[{0}], CASE_LONG=[SUM($1)], CASE_DOUBLE=[SUM($2)], CASE_DOUBLE3=[SUM($3)])
-      LogicalProject(__time=[TIME_FLOOR($0, 'P1D', null:TIMESTAMP(3), 'Asia/Calcutta')], $f1=[CASE(=($4, 'US'), $18, 0:BIGINT)], $f2=[CASE(=($4, 'US'), CAST($18):DOUBLE, 0.0:DOUBLE)], $f3=[CAST($18):DOUBLE])
-        LogicalFilter(condition=[SEARCH($0, Sarg[[2024-10-23 09:00:00:TIMESTAMP(3)..2024-10-30 11:00:00:TIMESTAMP(3))]:TIMESTAMP(3))])
-          LogicalTableScan(table=[[druid, wikipedia]])
+LogicalSort(sort0=[$0], dir0=[ASC])
+  LogicalAggregate(group=[{0}], cnt=[COUNT($1) FILTER $2], aall=[COUNT()])
+    LogicalProject(cityName=[$2], channel=[$1], $f3=[IS TRUE(>($17, 0))])
+      LogicalFilter(condition=[SEARCH($2, Sarg['Aarhus':VARCHAR, 'New York':VARCHAR]:VARCHAR)])
+        LogicalTableScan(table=[[druid, wikipedia]])
 
 !logicalPlan
-DruidProject(__time=[$0], CASE_LONG=[$1], CASE_DOUBLE=[$2], CASE_DOUBLE2=[CAST($1):DOUBLE], CASE_DOUBLE3=[$3], druid=[logical])
-  DruidSort(sort0=[$0], dir0=[ASC], fetch=[10001], druid=[logical])
-    DruidAggregate(group=[{0}], CASE_LONG=[SUM($1)], CASE_DOUBLE=[SUM($2)], CASE_DOUBLE3=[SUM($3)], druid=[logical])
-      DruidProject(__time=[TIME_FLOOR($0, 'P1D', null:TIMESTAMP(3), 'Asia/Calcutta')], $f1=[CASE(=($4, 'US'), $18, 0:BIGINT)], $f2=[CASE(=($4, 'US'), CAST($18):DOUBLE, 0.0:DOUBLE)], $f3=[CAST($18):DOUBLE], druid=[logical])
-        DruidFilter(condition=[SEARCH($0, Sarg[[2024-10-23 09:00:00:TIMESTAMP(3)..2024-10-30 11:00:00:TIMESTAMP(3))]:TIMESTAMP(3))])
-          DruidTableScan(table=[[druid, wikipedia]], druid=[logical])
+DruidAggregate(group=[{0}], cnt=[COUNT($1) FILTER $2], aall=[COUNT()], druid=[logical])
+  DruidProject(cityName=[$2], channel=[$1], $f3=[IS TRUE(>($17, 0))], druid=[logical])
+    DruidFilter(condition=[SEARCH($2, Sarg['Aarhus':VARCHAR, 'New York':VARCHAR]:VARCHAR)])
+      DruidTableScan(table=[[druid, wikipedia]], druid=[logical])
 
 !druidPlan
 {
-  "queryType" : "timeseries",
+  "queryType" : "groupBy",
   "dataSource" : {
     "type" : "table",
     "name" : "wikipedia"
   },
   "intervals" : {
     "type" : "intervals",
-    "intervals" : [ "2024-10-23T09:00:00.000Z/2024-10-30T11:00:00.000Z" ]
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
   },
-  "virtualColumns" : [ {
-    "type" : "expression",
-    "name" : "v1",
-    "expression" : "case_searched((\"countryIsoCode\" == 'US'),\"added\",0)",
-    "outputType" : "LONG"
-  }, {
-    "type" : "expression",
-    "name" : "v2",
-    "expression" : "case_searched((\"countryIsoCode\" == 'US'),CAST(\"added\", 'DOUBLE'),0.0)",
-    "outputType" : "DOUBLE"
-  } ],
+  "filter" : {
+    "type" : "inType",
+    "column" : "cityName",
+    "matchValueType" : "STRING",
+    "sortedValues" : [ "Aarhus", "New York" ]
+  },
   "granularity" : {
-    "type" : "period",
-    "period" : "P1D",
-    "timeZone" : "Asia/Kolkata",
-    "origin" : null
+    "type" : "all"
   },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "cityName",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
   "aggregations" : [ {
-    "type" : "longSum",
-    "name" : "a0",
-    "fieldName" : "v1"
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a0"
+    },
+    "filter" : {
+      "type" : "and",
+      "fields" : [ {
+        "type" : "not",
+        "field" : {
+          "type" : "null",
+          "column" : "channel"
+        }
+      }, {
+        "type" : "range",
+        "column" : "delta",
+        "matchValueType" : "LONG",
+        "lower" : 0,
+        "lowerOpen" : true
+      } ]
+    },
+    "name" : "a0"
   }, {
-    "type" : "doubleSum",
-    "name" : "a1",
-    "fieldName" : "v2"
-  }, {
-    "type" : "doubleSum",
-    "name" : "a2",
-    "fieldName" : "added"
+    "type" : "count",
+    "name" : "a1"
   } ],
-  "postAggregations" : [ {
-    "type" : "expression",
-    "name" : "s0",
-    "expression" : "CAST(\"a0\", 'DOUBLE')",
-    "outputType" : "DOUBLE"
-  } ],
-  "limit" : 10001
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
 }
 !nativePlan
 
