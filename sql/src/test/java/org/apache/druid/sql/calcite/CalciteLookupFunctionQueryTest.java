@@ -1747,6 +1747,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(
                     expressionVirtualColumn("v0", "null", ColumnType.STRING)
                 )
+                .columnTypes(ColumnType.STRING)
                 .columns("v0")
                 .filters(isNull("dim2"))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -1783,6 +1784,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(
                     expressionVirtualColumn("v0", "null", ColumnType.STRING)
                 )
+                .columnTypes(ColumnType.STRING)
                 .columns("v0")
                 .filters(isNull("dim2"))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -2139,6 +2141,7 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
               ))
               .intervals(querySegmentSpec(Filtration.eternity()))
               .columns("EXPR$0", "$f1")
+              .columnTypes(ColumnType.STRING, ColumnType.LONG)
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
               .context(QUERY_CONTEXT)
               .build()

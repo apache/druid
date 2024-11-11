@@ -92,6 +92,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(REPLACE_ALL_TIME_CHUNKS)
                 .build()
         )
@@ -111,6 +112,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(
                     addReplaceTimeChunkToQueryContext(
                         queryContextWithGranularity(Granularities.DAY),
@@ -138,6 +140,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(
                     addReplaceTimeChunkToQueryContext(
                         queryContextWithGranularity(Granularities.DAY),
@@ -163,6 +166,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(
                     addReplaceTimeChunkToQueryContext(
                         queryContextWithGranularity(Granularities.MONTH),
@@ -189,6 +193,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(
                     addReplaceTimeChunkToQueryContext(
                         queryContextWithGranularity(Granularities.MONTH),
@@ -214,6 +219,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(
                     addReplaceTimeChunkToQueryContext(
                         queryContextWithGranularity(Granularities.MONTH),
@@ -342,6 +348,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .virtualColumns(expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING))
                 .filters(equality("dim2", "a", ColumnType.STRING))
                 .columns("v0")
+                .columnTypes(ColumnType.STRING)
                 .context(REPLACE_ALL_TIME_CHUNKS)
                 .build()
         )
@@ -360,6 +367,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(REPLACE_ALL_TIME_CHUNKS)
                 .build()
         )
@@ -383,6 +391,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim1", "dim3")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                 .context(REPLACE_ALL_TIME_CHUNKS)
                 .build()
         )
@@ -524,6 +533,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource(externalDataSource)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("x", "y", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
                 .context(REPLACE_ALL_TIME_CHUNKS)
                 .build()
         )
@@ -549,6 +559,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "v0", "dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.FLOAT, ColumnType.STRING)
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
                 .limit(10)
                 .offset(20)
@@ -583,6 +594,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "v0", "dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.FLOAT, ColumnType.STRING)
                 .virtualColumns(expressionVirtualColumn("v0", "floor(\"m1\")", ColumnType.FLOAT))
                 .orderBy(
                     ImmutableList.of(
@@ -637,6 +649,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                   .dataSource("foo")
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("__time", "dim1")
+                  .columnTypes(ColumnType.LONG, ColumnType.STRING)
                   .context(queryContext)
                   .build()
           )
@@ -686,6 +699,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .dataSource(externalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("x", "y", "z")
+        .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
         .context(
             queryJsonMapper.readValue(
                 "{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlInsertSegmentGranularity\":\"{\\\"type\\\":\\\"all\\\"}\",\"sqlQueryId\":\"dummy\",\"sqlReplaceTimeChunks\":\"all\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"}",
@@ -758,6 +772,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .dataSource("foo")
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+        .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
         .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
         .columnTypes(LONG, STRING, STRING, STRING, LONG, FLOAT, DOUBLE, ofComplex("hyperUnique"))
         .context(
@@ -836,6 +851,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
         .dataSource("foo")
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+        .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
         .limit(10)
         .orderBy(
             ImmutableList.of(
@@ -1013,6 +1029,7 @@ public class CalciteReplaceDmlTest extends CalciteIngestionDmlTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "concat(\"x\",\"y\")", ColumnType.STRING))
                 .columns("v0", "z")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG)
                 .context(REPLACE_ALL_TIME_CHUNKS)
                 .build()
         )

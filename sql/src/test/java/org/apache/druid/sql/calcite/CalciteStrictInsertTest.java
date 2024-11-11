@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.CalciteStrictInsertTest.StrictInsertComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
@@ -75,6 +76,7 @@ public class CalciteStrictInsertTest extends CalciteIngestionDmlTest
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )

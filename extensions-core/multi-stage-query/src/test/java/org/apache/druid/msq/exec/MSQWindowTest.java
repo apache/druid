@@ -591,6 +591,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1")
+                .columnTypes(ColumnType.FLOAT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -658,6 +659,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1", "m2")
+                .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -728,6 +730,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1", "m2")
+                .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -870,6 +873,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1", "v0")
+                .columnTypes(ColumnType.FLOAT, ColumnType.LONG)
                 .virtualColumns(expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
@@ -942,6 +946,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1")
+                .columnTypes(ColumnType.FLOAT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1024,6 +1029,7 @@ public class MSQWindowTest extends MSQTestBase
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .virtualColumns(expressionVirtualColumn("v0", "\"m2\"", ColumnType.FLOAT))
                                 .columns("m2", "v0")
+                                .columnTypes(ColumnType.DOUBLE, ColumnType.FLOAT)
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(contextWithRowSignature1)
                                 .build()
@@ -1038,6 +1044,7 @@ public class MSQWindowTest extends MSQTestBase
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1", "j0.m2")
+                .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1127,6 +1134,7 @@ public class MSQWindowTest extends MSQTestBase
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .virtualColumns(expressionVirtualColumn("v0", "\"m2\"", ColumnType.FLOAT))
                                 .columns("m2", "v0")
+                                .columnTypes(ColumnType.DOUBLE, ColumnType.FLOAT)
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(contextWithRowSignature1)
                                 .build()
@@ -1141,6 +1149,7 @@ public class MSQWindowTest extends MSQTestBase
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1", "j0.m2")
+                .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1213,6 +1222,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim2", "m1")
+                .columnTypes(ColumnType.STRING, ColumnType.FLOAT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1298,6 +1308,7 @@ public class MSQWindowTest extends MSQTestBase
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1", "j0.unnest")
+                .columnTypes(ColumnType.FLOAT, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1380,6 +1391,7 @@ public class MSQWindowTest extends MSQTestBase
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1", "j0.unnest")
+                .columnTypes(ColumnType.FLOAT, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1751,6 +1763,7 @@ public class MSQWindowTest extends MSQTestBase
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(in("cityName", ImmutableList.of("Ahmedabad", "Albuquerque")))
                 .columns("cityName", "added")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1840,6 +1853,7 @@ public class MSQWindowTest extends MSQTestBase
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(notNull("cityName"))
                 .columns("cityName", "countryIsoCode", "added")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(innerContextWithRowSignature)
                 .build()),
@@ -1868,6 +1882,7 @@ public class MSQWindowTest extends MSQTestBase
                                   .dataSource(new QueryDataSource(query))
                                   .intervals(querySegmentSpec(Filtration.eternity()))
                                   .columns("cityName", "added", "w0")
+                                  .columnTypes(ColumnType.STRING, ColumnType.LONG, ColumnType.LONG)
                                   .limit(5)
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                   .context(outerContextWithRowSignature)
@@ -2087,6 +2102,7 @@ public class MSQWindowTest extends MSQTestBase
                                   .dataSource(new QueryDataSource(windowQuery))
                                   .intervals(querySegmentSpec(Filtration.eternity()))
                                   .columns("d0", "d1", "d2", "w0", "w1")
+                                  .columnTypes(ColumnType.STRING, ColumnType.DOUBLE, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
                                   .orderBy(
                                       ImmutableList.of(
                                           OrderBy.ascending("d0"),
