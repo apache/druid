@@ -26,12 +26,12 @@ import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.NodeCache;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.guava.CloseQuietly;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.ZKPathsUtils;
+import org.apache.druid.utils.CloseableUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 
@@ -130,7 +130,7 @@ public class NodeAnnouncer
       for (String announcementPath : announcedPaths.keySet()) {
         closer.register(() -> unannounce(announcementPath));
       }
-      CloseQuietly.close(closer);
+      CloseableUtils.closeAndWrapExceptions(closer);
 
       if (!pathsCreatedInThisAnnouncer.isEmpty()) {
         final List<CuratorOp> deleteOps = new ArrayList<>(pathsCreatedInThisAnnouncer.size());
@@ -317,8 +317,7 @@ public class NodeAnnouncer
       cache.start();
     }
     catch (Exception e) {
-      CloseQuietly.close(cache);
-      throw new RuntimeException(e);
+      throw CloseableUtils.closeInCatch(new RuntimeException(e), cache);
     }
   }
 
