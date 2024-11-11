@@ -106,10 +106,9 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
         unnest.getTraitSet(),
         newInputRel,
         newUnnestExpr,
-        unnest.getRowType(),
+        unnest.unnestFieldType,
         unnest.filter
     );
-
 
     builder.push(newUnnest);
     // Erase any extra fields created during the above transformation to be seen outside
