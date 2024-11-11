@@ -19,10 +19,25 @@
 
 package org.apache.druid.curator.announcement;
 
+/**
+ * The {@link Announceable} is a representation of an announcement to be made in ZooKeeper.
+ */
 class Announceable
 {
+  /**
+   * Represents the path in ZooKeeper where the announcement will be made.
+   */
   final String path;
+
+  /**
+   * Holds the actual data to be announced.
+   */
   final byte[] bytes;
+
+  /**
+   * Indicates whether parent nodes should be removed if the announcement is created successfully.
+   * This can be useful for cleaning up unused paths in ZooKeeper.
+   */
   final boolean removeParentsIfCreated;
 
   public Announceable(String path, byte[] bytes, boolean removeParentsIfCreated)
