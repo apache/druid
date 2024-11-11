@@ -371,7 +371,7 @@ name: Guice
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.0
+version: 4.2.2
 libraries:
   - com.google.inject: guice
   - com.google.inject.extensions: guice-multibindings
