@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.planner;
 import org.apache.calcite.rel.RelHomogeneousShuttle;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.CorrelationId;
+import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -57,9 +58,29 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
   @Override
   protected TrimResult dummyProject(int fieldCount, RelNode input)
   {
-
-    return result(input, Mappings.createIdentity(input.getRowType().getFieldCount()));
+    Mapping mapping = Mappings.createIdentity(input.getRowType().getFieldCount());
+//    mapping = Mappings.create(
+//        MappingType.INVERSE_SURJECTION,
+//        fieldCount,
+//        0
+//    );
+    return result(input, mapping);
   }
+
+  public TrimResult trimFields(
+      final TableScan tableAccessRel,
+      ImmutableBitSet fieldsUsed,
+      Set<RelDataTypeField> extraFields) {
+
+    Mapping mapping = Mappings.createIdentity(tableAccessRel.getRowType().getFieldCount());
+//  mapping = Mappings.create(
+//      MappingType.INVERSE_SURJECTION,
+//      fieldCount,
+//      0
+//  );
+  return result(tableAccessRel, mapping, tableAccessRel);
+  }
+
 
   public TrimResult trimFields(LogicalCorrelate correlate,
       ImmutableBitSet fieldsUsed,

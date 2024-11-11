@@ -542,12 +542,9 @@ public class CalciteRulesManager
     {
       final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
       final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel, relBuilder);
-      if(true) {
-        return new DruidRelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
-      } else {
-        return new RelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
-      }
+      return runFieldTrimmer(relBuilder, decorrelatedRel);
     }
+
   }
 
   /** Program that trims fields. */
@@ -558,7 +555,16 @@ public class CalciteRulesManager
         List<RelOptLattice> lattices) {
       final RelBuilder relBuilder =
           RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
-      return new DruidRelFieldTrimmer(null, relBuilder).trim(rel);
+      return runFieldTrimmer(relBuilder, rel);
+    }
+  }
+
+  private static RelNode runFieldTrimmer(final RelBuilder relBuilder, final RelNode decorrelatedRel)
+  {
+    if(true) {
+      return new DruidRelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
+    } else {
+      return new RelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
     }
   }
 

@@ -5502,7 +5502,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               not(equality("dim1", "foo", ColumnType.STRING))
                           )
                       ),
-                      expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                      nestedExpressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
                       or(
                           in("j0.unnest", ImmutableList.of("a", "c")),
                           new LikeDimFilter("j0.unnest", "_", null, null)
@@ -5645,7 +5645,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+//  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
 //  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
   @Test
   public void testUnnestWithJoinOnTheLeft()
@@ -5674,7 +5674,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           "(\"dim2\" == \"j0.dim2\")",
                           JoinType.INNER
                       ),
-                      expressionVirtualColumn("_j0.unnest", "\"dim3\"", ColumnType.STRING),
+                      nestedExpressionVirtualColumn("_j0.unnest", "\"dim3\"", ColumnType.STRING),
                       null
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))

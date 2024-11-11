@@ -26,14 +26,17 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.rules.SubstitutionRule;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.error.DruidException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -134,9 +137,10 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
       rn = rexBuilder.makeNullLiteral(type);
     } else {
       // bail out
-      return;
+//      return;
 //      reutrn;
-//      rn=      rexBuilder.makeCall(type, SqlStdOperatorTable.CURRENT_VALUE, Collections.emptyList());
+//      rn =rexBuilder.makeAbstractCast(type, rexBuilder.makeNullLiteral(type), true);
+      rn=      rexBuilder.makeCall(type, SqlStdOperatorTable.CURRENT_TIMESTAMP, Collections.emptyList());
     }
 
     projectFields.set(
@@ -145,7 +149,12 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
     );
     builder.project(projectFields);
 
-    call.transformTo(builder.build());
+    RelNode build = builder.build();
+    RelDataTypeField newField = build.getRowType().getFieldList().get(inputIndex);
+    if(newField.getType().isNullable() != type.isNullable()) {
+      int asd = 1;
+    }
+    call.transformTo(build);
     call.getPlanner().prune(unnest);
   }
 
