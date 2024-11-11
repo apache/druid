@@ -284,7 +284,10 @@ public class CalciteRulesManager
     builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
     builder.addRuleInstance(new LogicalUnnestRule());
     builder.addRuleInstance(new UnnestInputCleanupRule());
-    return Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE);
+    return Programs.sequence(
+        Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
+        new DruidTrimFieldsProgram()
+    );
   }
 
   /**
@@ -546,4 +549,17 @@ public class CalciteRulesManager
       }
     }
   }
+
+  /** Program that trims fields. */
+  private static class DruidTrimFieldsProgram implements Program {
+    @Override public RelNode run(RelOptPlanner planner, RelNode rel,
+        RelTraitSet requiredOutputTraits,
+        List<RelOptMaterialization> materializations,
+        List<RelOptLattice> lattices) {
+      final RelBuilder relBuilder =
+          RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
+      return new DruidRelFieldTrimmer(null, relBuilder).trim(rel);
+    }
+  }
+
 }

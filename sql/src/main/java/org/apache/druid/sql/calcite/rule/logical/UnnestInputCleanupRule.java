@@ -25,14 +25,17 @@ import org.apache.calcite.plan.RelOptUtil.InputFinder;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.rules.SubstitutionRule;
+import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.error.DruidException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -84,6 +87,11 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
 
     RexNode newUnnestExpr = unnestInput.accept(new ExpressionPullerRexShuttle(newProjects, inputIndex));
 
+    if(newUnnestExpr instanceof RexInputRef) {
+      // this won't make it simpler
+      return;
+    }
+
     if(newProjects.get(inputIndex) == null ) {
       newProjects.set(
           inputIndex,
@@ -117,14 +125,26 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
     List<RexNode> projectFields = new ArrayList<>(builder.fields());
     int hideCount = newProjects.size() - oldProject.getProjects().size();
     if(hideCount>0) {
-      return;
+//      return;
     }
     for (int i = 0; i < hideCount; i++) {
       projectFields.remove(unnest.getRowType().getFieldCount()-2);
     }
+    RelDataType type = oldProject.getProjects().get(inputIndex).getType();
+    RexNode rn;
+    if(type.isNullable()) {
+      rn = rexBuilder.makeNullLiteral(type);
+    } else {
+      rn=      rexBuilder.makeCall(type, SqlStdOperatorTable.CURRENT_VALUE, Collections.emptyList());
+    }
+
+    projectFields.set(
+        inputIndex,
+        rn
+    );
     builder.project(projectFields);
 
-    call.transformTo(newUnnest);
+    call.transformTo(builder.build());
     call.getPlanner().prune(unnest);
   }
 

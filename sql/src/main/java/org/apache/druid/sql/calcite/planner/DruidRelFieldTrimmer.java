@@ -54,6 +54,13 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
     this.relBuilder = relBuilder;
   }
 
+  @Override
+  protected TrimResult dummyProject(int fieldCount, RelNode input)
+  {
+
+    return result(input, Mappings.createIdentity(input.getRowType().getFieldCount()));
+  }
+
   public TrimResult trimFields(LogicalCorrelate correlate,
       ImmutableBitSet fieldsUsed,
       Set<RelDataTypeField> extraFields)
