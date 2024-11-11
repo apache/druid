@@ -2424,18 +2424,16 @@ public class KinesisIndexTaskTest extends SeekableStreamIndexTaskTestBase
   @Override
   protected QueryRunnerFactoryConglomerate makeQueryRunnerConglomerate()
   {
-    return new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.of(
-            TimeseriesQuery.class,
-            new TimeseriesQueryRunnerFactory(
-                new TimeseriesQueryQueryToolChest(),
-                new TimeseriesQueryEngine(),
-                (query, future) -> {
-                  // do nothing
-                }
-            )
+    return DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
+        TimeseriesQuery.class,
+        new TimeseriesQueryRunnerFactory(
+            new TimeseriesQueryQueryToolChest(),
+            new TimeseriesQueryEngine(),
+            (query, future) -> {
+              // do nothing
+            }
         )
-    );
+    ));
   }
 
   private void makeToolboxFactory() throws IOException

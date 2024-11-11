@@ -71,9 +71,12 @@ public class ScanQueryQueryToolChestTest
       new Object[]{3.5, "str4"}
   );
 
-  private final ScanQueryQueryToolChest toolChest = new ScanQueryQueryToolChest(
-      DefaultGenericQueryMetricsFactory.instance()
-  );
+  private final ScanQueryQueryToolChest toolChest = makeTestScanQueryToolChest();
+
+  public static ScanQueryQueryToolChest makeTestScanQueryToolChest()
+  {
+    return new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance());
+  }
 
   @Test
   public void test_resultArraySignature_columnsNotSpecified()
