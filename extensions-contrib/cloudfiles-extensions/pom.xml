@@ -61,6 +61,7 @@
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-multibindings</artifactId>
             <version>${guice.version}</version>
+            <scope>provided</scope>
             <!--$NO-MVN-MAN-VER$ -->
         </dependency>
         <dependency>
