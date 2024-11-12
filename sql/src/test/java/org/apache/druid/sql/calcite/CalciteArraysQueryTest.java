@@ -5895,7 +5895,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testUnnestWithNotFiltersOnUnnestedColumn()
   {
     testQuery(
-        "SELECT d3,MV_TO_ARRAY(dim3) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3!='d' ",
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3!='d' ",
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
