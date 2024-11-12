@@ -5612,13 +5612,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
-                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", ds("d0"), ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setLimitSpec(
                             DefaultLimitSpec
                                 .builder()
                                 .orderBy(new OrderByColumnSpec(
-                                    "_d0",
+                                    ds("d0"),
                                     OrderByColumnSpec.Direction.DESCENDING,
                                     StringComparators.LEXICOGRAPHIC
                                 ))
@@ -6340,9 +6340,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithGroupByHavingSelector()
   {
-//    if(true) {
-//      throw new RuntimeException("tjhs");
-//    }
     cannotVectorize();
     testQuery(
         "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 HAVING d3='b'",
