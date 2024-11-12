@@ -63,7 +63,7 @@ public class NodeAnnouncer
 
   private final CuratorFramework curator;
   private final ConcurrentMap<String, NodeCache> listeners = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, byte[]> announcedPaths = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, byte[]> announcedPaths = new ConcurrentHashMap<>();
 
   @GuardedBy("toAnnounce")
   private boolean started = false;
@@ -282,19 +282,23 @@ public class NodeAnnouncer
 
   private boolean updateAnnouncedPaths(String path, byte[] bytes)
   {
-    boolean created = false;
     synchronized (toAnnounce) {
-      if (started) {
-        byte[] oldBytes = announcedPaths.putIfAbsent(path, bytes);
-
-        if (oldBytes == null) {
-          created = true;
-        } else if (!Arrays.equals(oldBytes, bytes)) {
-          throw new IAE("Cannot reannounce different values under the same path");
-        }
+      if (!started) {
+        return false; // Do nothing if not started
       }
     }
-    return created;
+
+    final byte[] updatedAnnouncementData = announcedPaths.compute(path, (key, oldBytes) -> {
+      if (oldBytes == null) {
+        return bytes; // Insert the new value
+      } else if (!Arrays.equals(oldBytes, bytes)) {
+        throw new IAE("Cannot reannounce different values under the same path");
+      }
+      return oldBytes; // No change if values are equal
+    });
+
+    // Return true if we have updated the paths.
+    return Arrays.equals(updatedAnnouncementData, bytes);
   }
 
   @GuardedBy("toAnnounce")
@@ -306,13 +310,16 @@ public class NodeAnnouncer
         pathsCreatedInThisAnnouncer.add(parentPath);
       }
       log.debug(
-          "Created parentPath[%s], %s remove on stop() called.",
+          "Created parentPath[%s], %s remove when stop() is called.",
           parentPath,
           removeParentsIfCreated ? "will" : "will not"
       );
     }
+    catch (KeeperException.NodeExistsException e) {
+      log.error(e, "The parentPath[%s] already exists.", parentPath);
+    }
     catch (Exception e) {
-      log.error(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
+      log.error(e, "Failed to create parentPath[%s].", parentPath);
     }
   }
 
@@ -342,16 +349,21 @@ public class NodeAnnouncer
       throw new ISE("Cannot update a path[%s] that hasn't been announced!", path);
     }
 
+    boolean canUpdate = false;
     synchronized (toAnnounce) {
-      try {
-        if (!Arrays.equals(oldBytes, bytes)) {
-          announcedPaths.put(path, bytes);
-          updateAnnouncement(path, bytes);
-        }
+      if (!Arrays.equals(oldBytes, bytes)) {
+        announcedPaths.put(path, bytes);
+        canUpdate = true;
       }
-      catch (Exception e) {
-        throw new RuntimeException(e);
+    }
+
+    try {
+      if (canUpdate) {
+        updateAnnouncement(path, bytes);
       }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -375,12 +387,14 @@ public class NodeAnnouncer
    */
   public void unannounce(String path)
   {
-    log.info("unannouncing [%s]", path);
-    final byte[] value = announcedPaths.remove(path);
+    synchronized (toAnnounce) {
+      log.info("unannouncing [%s]", path);
+      final byte[] value = announcedPaths.remove(path);
 
-    if (value == null) {
-      log.error("Path[%s] not announced, cannot unannounce.", path);
-      return;
+      if (value == null) {
+        log.error("Path[%s] not announced, cannot unannounce.", path);
+        return;
+      }
     }
 
     try {
