@@ -384,4 +384,4 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 
 ## Introspection
 
-Globally cached lookups have introspection points at `/keys` and `/values` which return a complete set of the keys and values (respectively) in the lookup. Introspection to `/` returns the entire map. Introspection to `/version` returns the version indicator for the lookup.
+Globally cached lookups have introspection points at `/keys` and `/values`, which return the complete set of keys and values respectively in the lookup as a JSON object. Introspection to `/` returns the entire map as a JSON object. Introspection to `/version` provides the internal version indicating when the lookup cache was last updated. See [Introspect A Lookup](./lookups.md#Introspect a Lookup) for examples.

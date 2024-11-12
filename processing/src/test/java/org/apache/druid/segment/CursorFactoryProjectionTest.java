@@ -1110,7 +1110,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
     Assert.assertEquals(2, results.size());
-    final RowSignature querySignature = query.getResultSignature(RowSignature.Finalization.YES);
+    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
     Assert.assertArrayEquals(new Object[]{TIMESTAMP, 16L}, getResultArray(results.get(0), querySignature));
     Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1), 3L}, getResultArray(results.get(1), querySignature));
   }
@@ -1147,7 +1147,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
     Assert.assertEquals(1, results.size());
-    final RowSignature querySignature = query.getResultSignature(RowSignature.Finalization.YES);
+    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
     Assert.assertArrayEquals(new Object[]{TIMESTAMP, 19L}, getResultArray(results.get(0), querySignature));
   }
 
@@ -1183,7 +1183,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
     Assert.assertEquals(8, results.size());
-    final RowSignature querySignature = query.getResultSignature(RowSignature.Finalization.YES);
+    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
     Assert.assertArrayEquals(new Object[]{TIMESTAMP, 1L}, getResultArray(results.get(0), querySignature));
     Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusMinutes(2), 1L}, getResultArray(results.get(1), querySignature));
     Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusMinutes(4), 2L}, getResultArray(results.get(2), querySignature));

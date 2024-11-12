@@ -42,10 +42,10 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
@@ -86,7 +86,7 @@ public class QueryLifecycle
 {
   private static final Logger log = new Logger(QueryLifecycle.class);
 
-  private final QueryToolChestWarehouse warehouse;
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final QuerySegmentWalker texasRanger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
   private final ServiceEmitter emitter;
@@ -107,7 +107,7 @@ public class QueryLifecycle
   private Set<String> userContextKeys;
 
   public QueryLifecycle(
-      final QueryToolChestWarehouse warehouse,
+      final QueryRunnerFactoryConglomerate conglomerate,
       final QuerySegmentWalker texasRanger,
       final GenericQueryMetricsFactory queryMetricsFactory,
       final ServiceEmitter emitter,
@@ -119,7 +119,7 @@ public class QueryLifecycle
       final long startNs
   )
   {
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.texasRanger = texasRanger;
     this.queryMetricsFactory = queryMetricsFactory;
     this.emitter = emitter;
@@ -207,7 +207,7 @@ public class QueryLifecycle
     Map<String, Object> mergedUserAndConfigContext = QueryContexts.override(defaultQueryConfig.getContext(), baseQuery.getContext());
     mergedUserAndConfigContext.put(BaseQuery.QUERY_ID, queryId);
     this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext);
-    this.toolChest = warehouse.getToolChest(this.baseQuery);
+    this.toolChest = conglomerate.getToolChest(this.baseQuery);
   }
 
   /**

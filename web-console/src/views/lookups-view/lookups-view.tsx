@@ -354,11 +354,13 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
     if (isLookupsUninitialized(lookupEntriesAndTiersState.error)) {
       return (
-        <div className="init-div">
+        <div className="init-pane">
           <Button
             icon={IconNames.BUILD}
             text="Initialize lookups"
             onClick={() => void this.initializeLookup()}
+            large
+            intent={Intent.PRIMARY}
           />
         </div>
       );

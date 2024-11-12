@@ -38,7 +38,9 @@ import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.operator.AbstractPartitioningOperatorFactory;
 import org.apache.druid.query.operator.AbstractSortOperatorFactory;
 import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.GlueingPartitioningOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
+import org.apache.druid.query.operator.PartitionSortOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
 import org.apache.druid.segment.column.ColumnType;
@@ -54,10 +56,12 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 {
   private static final Logger log = new Logger(WindowOperatorQueryKit.class);
   private final ObjectMapper jsonMapper;
+  private final boolean isOperatorTransformationEnabled;
 
-  public WindowOperatorQueryKit(ObjectMapper jsonMapper)
+  public WindowOperatorQueryKit(ObjectMapper jsonMapper, boolean isOperatorTransformationEnabled)
   {
     this.jsonMapper = jsonMapper;
+    this.isOperatorTransformationEnabled = isOperatorTransformationEnabled;
   }
 
   @Override
@@ -90,7 +94,8 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         queryKitSpec.getNumPartitionsForShuffle(),
         queryKitSpec.getMaxNonLeafWorkerCount(),
         resultShuffleSpecFactory,
-        signatureFromInput
+        signatureFromInput,
+        isOperatorTransformationEnabled
     );
 
     final ShuffleSpec nextShuffleSpec = windowStages.getStages().get(0).findShuffleSpec(queryKitSpec.getNumPartitionsForShuffle());
@@ -119,6 +124,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     private final ShuffleSpec finalWindowStageShuffleSpec;
     private final RowSignature finalWindowStageRowSignature;
     private final RowSignature.Builder rowSignatureBuilder;
+    private final boolean isOperatorTransformationEnabled;
 
     private WindowStages(
         WindowOperatorQuery query,
@@ -126,13 +132,15 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
         int numPartitionsForShuffle,
         int maxNonLeafWorkerCount,
         ShuffleSpecFactory resultShuffleSpecFactory,
-        RowSignature signatureFromInput
+        RowSignature signatureFromInput,
+        boolean isOperatorTransformationEnabled
     )
     {
       this.stages = new ArrayList<>();
       this.query = query;
       this.numPartitionsForShuffle = numPartitionsForShuffle;
       this.maxNonLeafWorkerCount = maxNonLeafWorkerCount;
+      this.isOperatorTransformationEnabled = isOperatorTransformationEnabled;
 
       final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
           jsonMapper,
@@ -216,6 +224,9 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                                       stages.get(windowStageIndex + 1).findShuffleSpec(numPartitionsForShuffle);
 
       final RowSignature stageRowSignature = getRowSignatureForStage(windowStageIndex, shuffleSpec);
+      final List<OperatorFactory> operatorFactories = isOperatorTransformationEnabled
+                                                      ? getTransformedOperatorFactoryListForStageDefinition(stage.getOperatorFactories())
+                                                      : stage.getOperatorFactories();
 
       return StageDefinition.builder(stageNumber)
                             .inputs(new StageInputSpec(stageNumber - 1))
@@ -224,7 +235,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
                             .shuffleSpec(shuffleSpec)
                             .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
                                 query,
-                                stage.getOperatorFactories(),
+                                operatorFactories,
                                 stageRowSignature,
                                 getMaxRowsMaterialized(),
                                 stage.getPartitionColumns()
@@ -280,6 +291,39 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     private int getMaxRowsMaterialized()
     {
       return MultiStageQueryContext.getMaxRowsMaterializedInWindow(query.context());
+    }
+
+
+    /**
+     * This method converts the operator chain received from native plan into MSQ plan.
+     * (NaiveSortOperator -> Naive/GlueingPartitioningOperator -> WindowOperator) is converted into (GlueingPartitioningOperator -> PartitionSortOperator -> WindowOperator).
+     * We rely on MSQ's shuffling to do the clustering on partitioning keys for us at every stage.
+     * This conversion allows us to blindly read N rows from input channel and push them into the operator chain, and repeat until the input channel isn't finished.
+     * @param operatorFactoryListFromQuery
+     * @return
+     */
+    private List<OperatorFactory> getTransformedOperatorFactoryListForStageDefinition(List<OperatorFactory> operatorFactoryListFromQuery)
+    {
+      final List<OperatorFactory> operatorFactoryList = new ArrayList<>();
+      final List<OperatorFactory> sortOperatorFactoryList = new ArrayList<>();
+      for (OperatorFactory operatorFactory : operatorFactoryListFromQuery) {
+        if (operatorFactory instanceof AbstractPartitioningOperatorFactory) {
+          AbstractPartitioningOperatorFactory partition = (AbstractPartitioningOperatorFactory) operatorFactory;
+          operatorFactoryList.add(new GlueingPartitioningOperatorFactory(partition.getPartitionColumns(), getMaxRowsMaterialized()));
+        } else if (operatorFactory instanceof AbstractSortOperatorFactory) {
+          AbstractSortOperatorFactory sortOperatorFactory = (AbstractSortOperatorFactory) operatorFactory;
+          sortOperatorFactoryList.add(new PartitionSortOperatorFactory(sortOperatorFactory.getSortColumns()));
+        } else {
+          // Add all the PartitionSortOperator(s) before every window operator.
+          operatorFactoryList.addAll(sortOperatorFactoryList);
+          sortOperatorFactoryList.clear();
+          operatorFactoryList.add(operatorFactory);
+        }
+      }
+
+      operatorFactoryList.addAll(sortOperatorFactoryList);
+      sortOperatorFactoryList.clear();
+      return operatorFactoryList;
     }
   }
 

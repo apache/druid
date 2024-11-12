@@ -6329,16 +6329,6 @@ license_file_path: licenses/bin/react-router.MIT
 
 ---
 
-name: "react-splitter-layout"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Yang Liu
-version: 4.0.0
-license_file_path: licenses/bin/react-splitter-layout.MIT
-
----
-
 name: "react-table"
 license_category: binary
 module: web-console

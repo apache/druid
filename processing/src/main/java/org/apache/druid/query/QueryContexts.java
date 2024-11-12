@@ -133,6 +133,8 @@ public class QueryContexts
   public static final int DEFAULT_IN_FUNCTION_EXPR_THRESHOLD = 2;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
+  public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
+
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize
