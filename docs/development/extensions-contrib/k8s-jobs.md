@@ -599,6 +599,40 @@ Druid selects the pod templates as follows:
 In this example, if there is an `index_kafka` task for the `wikipedia` datasource with the tag `userProvidedTag: tag1`,
 Druid selects the pod template `podSpecWithHighMemRequests.yaml`.
 
+In the above example, for selection key `podSpec1` we didn't specify task `type`. This is equivalent to setting `type` to `null` or an empty array.
+All three examples below are equivalent.
+
+- Not setting `type`
+    ```json
+    {
+      "selectionKey": "podSpec1",
+      "context.tags": { "userProvidedTag": ["tag1", "tag2"] },
+      "dataSource": ["wikipedia"]
+    }
+    ```
+
+- Setting `type` to `null`
+    ```json
+    {
+      "selectionKey": "podSpec1",
+      "context.tags": { "userProvidedTag": ["tag1", "tag2"] },
+      "dataSource": ["wikipedia"],
+      "type": null
+    }
+    ```
+
+- Setting `type` to an empty array
+    ```json
+    {
+      "selectionKey": "podSpec1",
+      "context.tags": { "userProvidedTag": ["tag1", "tag2"] },
+      "dataSource": ["wikipedia"],
+      "type": []
+    }
+    ```
+
+In all the above cases, Druid will match the selector to any value of task type. Druid applies similar logic for `dataSource`. For `context.tags` setting `null` or an empty object `{}` is equivalent. 
+
 ### Properties
 |Property| Possible Values | Description                                                                                                                                                                                                                                      |Default|required|
 |--------|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|--------|
