@@ -25,6 +25,7 @@ import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
 import org.apache.curator.test.KillSession;
 import org.apache.druid.curator.CuratorTestBase;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.ZKPathsUtils;
 import org.apache.zookeeper.KeeperException.Code;
@@ -39,6 +40,7 @@ import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 
 /**
+ *
  */
 public class NodeAnnouncerTest extends CuratorTestBase
 {
@@ -53,6 +55,93 @@ public class NodeAnnouncerTest extends CuratorTestBase
   public void tearDown()
   {
     tearDownServerAndCurator();
+  }
+
+  @Test
+  public void testAnnounceBeforeStartingNodeAnnouncer() throws Exception
+  {
+    curator.start();
+    curator.blockUntilConnected();
+    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    final byte[] billy = StringUtils.toUtf8("billy");
+    final String testPath = "/testAnnounce";
+
+    announcer.announce(testPath, billy);
+    announcer.start();
+
+    // Verify that the path was announced
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath));
+    announcer.stop();
+  }
+
+  @Test
+  public void testCreateParentPath() throws Exception
+  {
+    curator.start();
+    curator.blockUntilConnected();
+    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    final byte[] billy = StringUtils.toUtf8("billy");
+    final String testPath = "/newParent/testPath";
+    final String parentPath = ZKPathsUtils.getParentPath(testPath);
+
+    announcer.start();
+
+    Assert.assertNull("Parent path should not exist before announcement", curator.checkExists().forPath(parentPath));
+
+    // Announce with parent creation
+    announcer.announce(testPath, billy);
+
+    // Wait for the announcement to be processed
+    while (curator.checkExists().forPath(testPath) == null) {
+      Thread.sleep(100);
+    }
+
+    // Verify the parent path has been created
+    Assert.assertNotNull("Parent path should be created", curator.checkExists().forPath(parentPath));
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath));
+
+    announcer.stop();
+  }
+
+  @Test
+  public void testUpdateSuccessfully() throws Exception
+  {
+    curator.start();
+    curator.blockUntilConnected();
+    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    final byte[] billy = StringUtils.toUtf8("billy");
+    final byte[] tilly = StringUtils.toUtf8("tilly");
+    final String testPath = "/testUpdate";
+
+    announcer.start();
+    announcer.announce(testPath, billy);
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath));
+
+    announcer.update(testPath, billy);
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath));
+
+    announcer.update(testPath, tilly);
+    Assert.assertArrayEquals(tilly, curator.getData().decompressed().forPath(testPath));
+    announcer.stop();
+  }
+
+  @Test
+  public void testUpdateWithNonExistentPath() throws Exception
+  {
+    curator.start();
+    curator.blockUntilConnected();
+    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    final byte[] billy = StringUtils.toUtf8("billy");
+    final String testPath = "/testUpdate";
+
+    announcer.start();
+
+    Exception exception = Assert.assertThrows(ISE.class, () -> {
+      announcer.update(testPath, billy);
+    });
+    Assert.assertTrue(exception.getMessage().contains("Cannot update a path"));
+
+    announcer.stop();
   }
 
   @Test(timeout = 60_000L)

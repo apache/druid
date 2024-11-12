@@ -179,7 +179,6 @@ public class NodeAnnouncer
     }
   }
 
-
   /**
    * Overload of {@link #announce(String, byte[], boolean)}, but removes parent node of path after announcement.
    */
