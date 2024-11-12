@@ -286,7 +286,8 @@ public class CalciteRulesManager
     builder.addRuleInstance(new UnnestInputCleanupRule());
     return Programs.sequence(
         Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
-        new DruidTrimFieldsProgram()
+        new DruidTrimFieldsProgram(),
+        Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE)
     );
   }
 
@@ -542,7 +543,7 @@ public class CalciteRulesManager
     {
       final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
       final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel, relBuilder);
-      return runFieldTrimmer(relBuilder, decorrelatedRel);
+      return runFieldTrimmer2(relBuilder, decorrelatedRel);
     }
 
   }
@@ -558,6 +559,14 @@ public class CalciteRulesManager
       return runFieldTrimmer(relBuilder, rel);
     }
   }
+
+  private static RelNode runFieldTrimmer2(RelBuilder relBuilder, RelNode decorrelatedRel)
+  {
+    RelNode a = new RelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
+    a=decorrelatedRel;
+    return runFieldTrimmer(relBuilder, a);
+  }
+
 
   private static RelNode runFieldTrimmer(final RelBuilder relBuilder, final RelNode decorrelatedRel)
   {
