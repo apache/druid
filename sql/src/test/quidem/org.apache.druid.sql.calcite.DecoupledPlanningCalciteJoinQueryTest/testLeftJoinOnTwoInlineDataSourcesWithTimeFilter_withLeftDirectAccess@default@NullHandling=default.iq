@@ -71,8 +71,8 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
           "dimension" : "dim1",
           "value" : "10.1"
         },
-        "columns" : [ "__time", "v0" ],
-        "columnTypes" : [ "LONG", "STRING" ],
+        "columns" : [ "v0", "__time" ],
+        "columnTypes" : [ "STRING", "LONG" ],
         "granularity" : {
           "type" : "all"
         },
@@ -126,8 +126,8 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
     "outputType" : "STRING"
   } ],
   "resultFormat" : "compactedList",
-  "columns" : [ "__time", "_v0" ],
-  "columnTypes" : [ "LONG", "STRING" ],
+  "columns" : [ "_v0", "__time" ],
+  "columnTypes" : [ "STRING", "LONG" ],
   "granularity" : {
     "type" : "all"
   },
