@@ -70,7 +70,7 @@ public class NodeAnnouncer
 
   /**
    * This list holds paths that need to be announced. If a path is added to this list
-   * in the {@link #announce} method before the connection to ZooKeeper is established,
+   * in the {@link #announce(String, byte[], boolean)} method before the connection to ZooKeeper is established,
    * it will be stored here and announced later during the {@link #start} method.
    */
   @GuardedBy("toAnnounce")
@@ -139,10 +139,11 @@ public class NodeAnnouncer
 
       started = false;
       closeResources();
-      deletePaths();
+      dropPathsCreatedInThisAnnouncer();
     }
   }
 
+  @GuardedBy("toAnnounce")
   private void closeResources()
   {
     Closer closer = Closer.create();
@@ -155,36 +156,32 @@ public class NodeAnnouncer
     CloseableUtils.closeAndWrapExceptions(closer);
   }
 
-  private void deletePaths()
+  @GuardedBy("toAnnounce")
+  private void dropPathsCreatedInThisAnnouncer()
   {
-    // deletePaths method is only used in stop(), which already has synchronized(toAnnounce),
-    // this line is here just to prevent the static analysis from throwing
-    // "Access to field 'pathsCreatedInThisAnnouncer' outside declared guards".
-    synchronized (toAnnounce) {
-      if (!pathsCreatedInThisAnnouncer.isEmpty()) {
-        final List<CuratorOp> deleteOps = new ArrayList<>(pathsCreatedInThisAnnouncer.size());
-        for (String parent : pathsCreatedInThisAnnouncer) {
-          try {
-            deleteOps.add(curator.transactionOp().delete().forPath(parent));
-          }
-          catch (Exception e) {
-            log.error(e, "Unable to delete parent[%s].", parent);
-          }
-        }
-
+    if (!pathsCreatedInThisAnnouncer.isEmpty()) {
+      final List<CuratorOp> deleteOps = new ArrayList<>(pathsCreatedInThisAnnouncer.size());
+      for (String parent : pathsCreatedInThisAnnouncer) {
         try {
-          curator.transaction().forOperations(deleteOps);
+          deleteOps.add(curator.transactionOp().delete().forPath(parent));
         }
         catch (Exception e) {
-          log.error(e, "Unable to commit transaction.");
+          log.error(e, "Unable to delete parent[%s].", parent);
         }
+      }
+
+      try {
+        curator.transaction().forOperations(deleteOps);
+      }
+      catch (Exception e) {
+        log.error(e, "Unable to commit transaction.");
       }
     }
   }
 
 
   /**
-   * Overload of {@link #announce(String, byte[],boolean)}, but removes parent node of path after announcement.
+   * Overload of {@link #announce(String, byte[], boolean)}, but removes parent node of path after announcement.
    */
   public void announce(String path, byte[] bytes)
   {
@@ -202,6 +199,8 @@ public class NodeAnnouncer
   public void announce(String path, byte[] bytes, boolean removeParentIfCreated)
   {
     synchronized (toAnnounce) {
+      // In the case that this method is called by other components or thread that assumes the NodeAnnouncer
+      // is ready when NodeAnnouncer has not started, we will queue the announcement request.
       if (!started) {
         log.debug("NodeAnnouncer has not started yet, queuing announcement for later processing...");
         toAnnounce.add(new Announceable(path, bytes, removeParentIfCreated));
@@ -210,39 +209,19 @@ public class NodeAnnouncer
     }
 
     final String parentPath = ZKPathsUtils.getParentPath(path);
-    boolean buildParentPath = false;
-
     byte[] value = announcedPaths.get(path);
 
+    // We have yet to announce this path. Check if we need to build a parent path.
     if (value == null) {
-      try {
-        if (curator.checkExists().forPath(parentPath) == null) {
-          buildParentPath = true;
-        }
-      }
-      catch (Exception e) {
-        log.debug(e, "Problem checking if the parent path doesn't exist, ignoring.");
-      }
+      boolean shouldBuildParentPath = canBuildParentPath(parentPath);
 
       // Synchronize to make sure that I only create a listener once.
       synchronized (toAnnounce) {
         if (!listeners.containsKey(path)) {
-          final NodeCache cache = new NodeCache(curator, path, true);
-          cache.getListenable().addListener(
-              () -> {
-                ChildData currentData = cache.getCurrentData();
-                if (currentData == null) {
-                  final byte[] value1 = announcedPaths.get(path);
-                  if (value1 != null) {
-                    log.info("Node[%s] dropped, reinstating.", path);
-                    createAnnouncement(path, value1);
-                  }
-                }
-              }
-          );
+          final NodeCache cache = setupNodeCache(path);
 
           if (started) {
-            if (buildParentPath) {
+            if (shouldBuildParentPath) {
               createPath(parentPath, removeParentIfCreated);
             }
             startCache(cache);
@@ -252,6 +231,57 @@ public class NodeAnnouncer
       }
     }
 
+    final boolean readyToCreateAnnouncement = updateAnnouncedPaths(path, bytes);
+
+    if (readyToCreateAnnouncement) {
+      try {
+        createAnnouncement(path, bytes);
+      }
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  private boolean canBuildParentPath(String parentPath)
+  {
+    try {
+      return (curator.checkExists().forPath(parentPath) == null);
+    }
+    catch (Exception e) {
+      log.debug(e, "Failed to check existence of parent path. Proceeding without creating parent path.");
+      return false;
+    }
+  }
+
+  @GuardedBy("toAnnounce")
+  private NodeCache setupNodeCache(String path)
+  {
+    final NodeCache cache = new NodeCache(curator, path, true);
+    cache.getListenable().addListener(
+        () -> {
+          ChildData currentData = cache.getCurrentData();
+
+          if (currentData == null) {
+            // If currentData is null, and we record having announced the data,
+            // this means that the ephemeral node was unexpectedly removed.
+            // We will recreate the node again using the previous data.
+            final byte[] previouslyAnnouncedData = announcedPaths.get(path);
+            if (previouslyAnnouncedData != null) {
+              log.info(
+                  "Ephemeral node at path [%s] was unexpectedly removed. Recreating node with previous data.",
+                  path
+              );
+              createAnnouncement(path, previouslyAnnouncedData);
+            }
+          }
+        }
+    );
+    return cache;
+  }
+
+  private boolean updateAnnouncedPaths(String path, byte[] bytes)
+  {
     boolean created = false;
     synchronized (toAnnounce) {
       if (started) {
@@ -264,14 +294,35 @@ public class NodeAnnouncer
         }
       }
     }
+    return created;
+  }
 
-    if (created) {
-      try {
-        createAnnouncement(path, bytes);
+  @GuardedBy("toAnnounce")
+  private void createPath(String parentPath, boolean removeParentsIfCreated)
+  {
+    try {
+      curator.create().creatingParentsIfNeeded().forPath(parentPath);
+      if (removeParentsIfCreated) {
+        pathsCreatedInThisAnnouncer.add(parentPath);
       }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
+      log.debug(
+          "Created parentPath[%s], %s remove on stop() called.",
+          parentPath,
+          removeParentsIfCreated ? "will" : "will not"
+      );
+    }
+    catch (Exception e) {
+      log.error(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
+    }
+  }
+
+  private void startCache(NodeCache cache)
+  {
+    try {
+      cache.start();
+    }
+    catch (Exception e) {
+      throw CloseableUtils.closeInCatch(new RuntimeException(e), cache);
     }
   }
 
@@ -340,35 +391,6 @@ public class NodeAnnouncer
     }
     catch (Exception e) {
       throw new RuntimeException(e);
-    }
-  }
-
-  private void startCache(NodeCache cache)
-  {
-    try {
-      cache.start();
-    }
-    catch (Exception e) {
-      throw CloseableUtils.closeInCatch(new RuntimeException(e), cache);
-    }
-  }
-
-  @GuardedBy("toAnnounce")
-  private void createPath(String parentPath, boolean removeParentsIfCreated)
-  {
-    try {
-      curator.create().creatingParentsIfNeeded().forPath(parentPath);
-      if (removeParentsIfCreated) {
-        pathsCreatedInThisAnnouncer.add(parentPath);
-      }
-      log.debug(
-          "Created parentPath[%s], %s remove on stop() called.",
-          parentPath,
-          removeParentsIfCreated ? "will" : "will not"
-      );
-    }
-    catch (Exception e) {
-      log.error(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
     }
   }
 }
