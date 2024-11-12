@@ -363,7 +363,7 @@ public class QueryLifecycle
       statsMap.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
       statsMap.put("query/bytes", bytesWritten);
       statsMap.put("query/rowsScanned", rowsScanned);
-      statsMap.put("query/cpuConsumedNanos", cpuConsumedNanos);
+      statsMap.put("query/cpu/time", TimeUnit.NANOSECONDS.toMillis(cpuConsumedNanos));
       statsMap.put("success", success);
 
       if (authenticationResult != null) {
