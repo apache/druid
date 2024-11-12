@@ -225,7 +225,7 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 
       final RowSignature stageRowSignature = getRowSignatureForStage(windowStageIndex, shuffleSpec);
       final List<OperatorFactory> operatorFactories = isOperatorTransformationEnabled
-                                                      ? getTransformedOperatorFactoryListForStageDefinition(stage.getOperatorFactories())
+                                                      ? stage.getTransformedOperatorFactories()
                                                       : stage.getOperatorFactories();
 
       return StageDefinition.builder(stageNumber)
@@ -292,39 +292,6 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
     {
       return MultiStageQueryContext.getMaxRowsMaterializedInWindow(query.context());
     }
-
-
-    /**
-     * This method converts the operator chain received from native plan into MSQ plan.
-     * (NaiveSortOperator -> Naive/GlueingPartitioningOperator -> WindowOperator) is converted into (GlueingPartitioningOperator -> PartitionSortOperator -> WindowOperator).
-     * We rely on MSQ's shuffling to do the clustering on partitioning keys for us at every stage.
-     * This conversion allows us to blindly read N rows from input channel and push them into the operator chain, and repeat until the input channel isn't finished.
-     * @param operatorFactoryListFromQuery
-     * @return
-     */
-    private List<OperatorFactory> getTransformedOperatorFactoryListForStageDefinition(List<OperatorFactory> operatorFactoryListFromQuery)
-    {
-      final List<OperatorFactory> operatorFactoryList = new ArrayList<>();
-      final List<OperatorFactory> sortOperatorFactoryList = new ArrayList<>();
-      for (OperatorFactory operatorFactory : operatorFactoryListFromQuery) {
-        if (operatorFactory instanceof AbstractPartitioningOperatorFactory) {
-          AbstractPartitioningOperatorFactory partition = (AbstractPartitioningOperatorFactory) operatorFactory;
-          operatorFactoryList.add(new GlueingPartitioningOperatorFactory(partition.getPartitionColumns(), getMaxRowsMaterialized()));
-        } else if (operatorFactory instanceof AbstractSortOperatorFactory) {
-          AbstractSortOperatorFactory sortOperatorFactory = (AbstractSortOperatorFactory) operatorFactory;
-          sortOperatorFactoryList.add(new PartitionSortOperatorFactory(sortOperatorFactory.getSortColumns()));
-        } else {
-          // Add all the PartitionSortOperator(s) before every window operator.
-          operatorFactoryList.addAll(sortOperatorFactoryList);
-          sortOperatorFactoryList.clear();
-          operatorFactoryList.add(operatorFactory);
-        }
-      }
-
-      operatorFactoryList.addAll(sortOperatorFactoryList);
-      sortOperatorFactoryList.clear();
-      return operatorFactoryList;
-    }
   }
 
   /**
@@ -363,6 +330,26 @@ public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
       }
       if (partitioningOperatorFactory != null) {
         operatorFactories.add(partitioningOperatorFactory);
+      }
+      operatorFactories.addAll(windowOperatorFactories);
+      return operatorFactories;
+    }
+
+    /**
+     * This method converts the operator chain received from native plan into MSQ plan.
+     * (NaiveSortOperator -> Naive/GlueingPartitioningOperator -> WindowOperator) is converted into (GlueingPartitioningOperator -> PartitionSortOperator -> WindowOperator).
+     * We rely on MSQ's shuffling to do the clustering on partitioning keys for us at every stage.
+     * This conversion allows us to blindly read N rows from input channel and push them into the operator chain, and repeat until the input channel isn't finished.
+     * @return
+     */
+    private List<OperatorFactory> getTransformedOperatorFactories()
+    {
+      List<OperatorFactory> operatorFactories = new ArrayList<>();
+      if (partitioningOperatorFactory != null) {
+        operatorFactories.add(new GlueingPartitioningOperatorFactory(partitioningOperatorFactory.getPartitionColumns(), maxRowsMaterialized));
+      }
+      if (sortOperatorFactory != null) {
+        operatorFactories.add(new PartitionSortOperatorFactory(sortOperatorFactory.getSortColumns()));
       }
       operatorFactories.addAll(windowOperatorFactories);
       return operatorFactories;
