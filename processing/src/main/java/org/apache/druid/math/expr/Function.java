@@ -4341,4 +4341,29 @@ public interface Function extends NamedFunction
       return HumanReadableBytes.UnitSystem.DECIMAL;
     }
   }
+
+  class RuntimeAssert extends UnivariateFunction
+  {
+    public static final String NAME = "assert";
+
+    @Override
+    public String name()
+    {
+      return NAME;
+    }
+
+    @Nullable
+    @Override
+    public ExpressionType getOutputType(Expr.InputBindingInspector inspector, List<Expr> args)
+    {
+      return ExpressionType.STRING;
+    }
+
+    @Override
+    protected ExprEval eval(ExprEval param)
+    {
+      throw DruidException.defensive("Runtime assertion: " + param.asString());
+    }
+  }
+
 }

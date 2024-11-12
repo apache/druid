@@ -6340,6 +6340,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   @Test
   public void testUnnestWithGroupByHavingSelector()
   {
+//    if(true) {
+//      throw new RuntimeException("tjhs");
+//    }
     cannotVectorize();
     testQuery(
         "SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 HAVING d3='b'",

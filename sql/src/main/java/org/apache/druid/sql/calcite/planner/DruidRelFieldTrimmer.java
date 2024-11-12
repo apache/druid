@@ -48,6 +48,7 @@ import java.util.Set;
 public class DruidRelFieldTrimmer extends RelFieldTrimmer
 {
   private RelBuilder relBuilder;
+  private boolean trimTableScan = true;
 
   public DruidRelFieldTrimmer(@Nullable SqlValidator validator, RelBuilder relBuilder)
   {
@@ -71,14 +72,12 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
       final TableScan tableAccessRel,
       ImmutableBitSet fieldsUsed,
       Set<RelDataTypeField> extraFields) {
-
-    Mapping mapping = Mappings.createIdentity(tableAccessRel.getRowType().getFieldCount());
-//  mapping = Mappings.create(
-//      MappingType.INVERSE_SURJECTION,
-//      fieldCount,
-//      0
-//  );
-  return result(tableAccessRel, mapping, tableAccessRel);
+    if (trimTableScan) {
+      return super.trimFields(tableAccessRel, fieldsUsed, extraFields);
+    } else {
+      Mapping mapping = Mappings.createIdentity(tableAccessRel.getRowType().getFieldCount());
+      return result(tableAccessRel, mapping, tableAccessRel);
+    }
   }
 
 

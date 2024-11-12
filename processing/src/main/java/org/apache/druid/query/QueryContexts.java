@@ -127,7 +127,7 @@ public class QueryContexts
   public static final boolean DEFAULT_ENABLE_SQL_JOIN_LEFT_SCAN_DIRECT = false;
   public static final boolean DEFAULT_USE_FILTER_CNF = false;
   public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
-  public static final boolean DEFAULT_ENABLE_DEBUG = false;
+  public static final boolean DEFAULT_ENABLE_DEBUG = true;
   public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = Integer.MAX_VALUE;
   public static final int DEFAULT_IN_FUNCTION_THRESHOLD = 100;
   public static final int DEFAULT_IN_FUNCTION_EXPR_THRESHOLD = 2;
