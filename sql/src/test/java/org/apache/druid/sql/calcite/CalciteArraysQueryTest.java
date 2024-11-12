@@ -5618,7 +5618,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                             DefaultLimitSpec
                                 .builder()
                                 .orderBy(new OrderByColumnSpec(
-                                    ds("d0"),
+                                    super.ds("d0"),
                                     OrderByColumnSpec.Direction.DESCENDING,
                                     StringComparators.LEXICOGRAPHIC
                                 ))
