@@ -1996,7 +1996,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     // Cannot vectorize as we donot have support in native query subsytem for grouping on arrays as keys
     cannotVectorize();
     testQuery(
-        "SELECT ARRAY[d1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
+        "SELECT ARRAY[dbl1], SUM(cnt) FROM druid.numfoo GROUP BY 1 ORDER BY 2 DESC",
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
         ImmutableList.of(
             GroupByQuery.builder()
@@ -2005,7 +2005,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn(
                             "v0",
-                            "array(\"d1\")",
+                            "array(\"dbl1\")",
                             ColumnType.DOUBLE_ARRAY
                         ))
                         .setDimensions(
@@ -2197,7 +2197,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -2615,14 +2615,14 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           ),
                           new ExpressionLambdaAggregatorFactory(
                               "a2",
-                              ImmutableSet.of("d1"),
+                              ImmutableSet.of("dbl1"),
                               "__acc",
                               "ARRAY<DOUBLE>[]",
                               "ARRAY<DOUBLE>[]",
                               true,
                               true,
                               false,
-                              "array_append(\"__acc\", \"d1\")",
+                              "array_append(\"__acc\", \"dbl1\")",
                               "array_concat(\"__acc\", \"a2\")",
                               null,
                               null,
@@ -2631,14 +2631,14 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           ),
                           new ExpressionLambdaAggregatorFactory(
                               "a3",
-                              ImmutableSet.of("d1"),
+                              ImmutableSet.of("dbl1"),
                               "__acc",
                               "ARRAY<DOUBLE>[]",
                               "ARRAY<DOUBLE>[]",
                               true,
                               true,
                               false,
-                              "array_set_add(\"__acc\", \"d1\")",
+                              "array_set_add(\"__acc\", \"dbl1\")",
                               "array_set_add_all(\"__acc\", \"a3\")",
                               null,
                               null,
@@ -3423,7 +3423,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                           .setInterval(querySegmentSpec(Filtration.eternity()))
                                           .setGranularity(Granularities.ALL)
                                           .setDimFilter(notNull("dim1"))
-                                          .setDimensions(new DefaultDimensionSpec("dim4", "_d0"))
+                                          .setDimensions(new DefaultDimensionSpec("dim4", "d0"))
                                           .setAggregatorSpecs(
                                               aggregators(
                                                   new ExpressionLambdaAggregatorFactory(
@@ -3448,7 +3448,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                           .build()
                           ),
                           "j0.",
-                          "(\"dim4\" == \"j0._d0\")",
+                          "(\"dim4\" == \"j0.d0\")",
                           JoinType.INNER,
                           null
                       )
@@ -3545,7 +3545,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                         .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                                                         .setDimensions(
                                                             new DefaultDimensionSpec("dim1", "d0"),
-                                                            new DefaultDimensionSpec("dim2", "d1"),
+                                                            new DefaultDimensionSpec("dim2", "dbl1"),
                                                             new DefaultDimensionSpec("dim3", "d2"
                                                             )
                                                         )
@@ -5612,13 +5612,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         )
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
-                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setLimitSpec(
                             DefaultLimitSpec
                                 .builder()
                                 .orderBy(new OrderByColumnSpec(
-                                    "_d0",
+                                    "d0",
                                     OrderByColumnSpec.Direction.DESCENDING,
                                     StringComparators.LEXICOGRAPHIC
                                 ))
