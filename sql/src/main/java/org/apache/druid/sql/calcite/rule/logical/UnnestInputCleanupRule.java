@@ -146,12 +146,13 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
   private static class ExpressionPullerRexShuttle extends RexShuttle
   {
     private final List<RexNode> projects;
+    // FIXME: remove this crap
     private int replaceableIndex;
 
     private ExpressionPullerRexShuttle(List<RexNode> projects, int replaceableIndex)
     {
       this.projects = projects;
-      this.replaceableIndex = replaceableIndex;
+      this.replaceableIndex = -1;
     }
 
     @Override

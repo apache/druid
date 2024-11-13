@@ -21,14 +21,14 @@ SELECT substring(d3,1) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested 
 
 !ok
 LogicalProject(EXPR$0=[SUBSTRING($1, 1)])
-  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[<>(SUBSTRING($0, 1), 'b')])
-    LogicalProject(dim3=[$3])
+  LogicalUnnest(unnestExpr=[$0], filter=[<>(SUBSTRING($0, 1), 'b')])
+    LogicalProject($f17=[MV_TO_ARRAY($3)])
       LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
 DruidProject(EXPR$0=[SUBSTRING($1, 1)], druid=[logical])
-  DruidUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[<>(SUBSTRING($0, 1), 'b')])
-    DruidProject(dim3=[$3], druid=[logical])
+  DruidUnnest(unnestExpr=[$0], filter=[<>(SUBSTRING($0, 1), 'b')])
+    DruidProject($f17=[MV_TO_ARRAY($3)], druid=[logical])
       DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan
@@ -37,13 +37,36 @@ DruidProject(EXPR$0=[SUBSTRING($1, 1)], druid=[logical])
   "dataSource" : {
     "type" : "unnest",
     "base" : {
-      "type" : "table",
-      "name" : "numfoo"
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "numfoo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "mv_to_array(\"dim3\")",
+          "outputType" : "ARRAY<STRING>"
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "v0" ],
+        "columnTypes" : [ "ARRAY<STRING>" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
     },
     "virtualColumn" : {
       "type" : "expression",
       "name" : "j0.unnest",
-      "expression" : "mv_to_array(\"dim3\")",
+      "expression" : "\"v0\"",
       "outputType" : "ARRAY<STRING>"
     },
     "unnestFilter" : {
@@ -57,12 +80,12 @@ DruidProject(EXPR$0=[SUBSTRING($1, 1)], druid=[logical])
   },
   "virtualColumns" : [ {
     "type" : "expression",
-    "name" : "v0",
+    "name" : "_v0",
     "expression" : "substring(\"j0.unnest\", 0, -1)",
     "outputType" : "STRING"
   } ],
   "resultFormat" : "compactedList",
-  "columns" : [ "v0" ],
+  "columns" : [ "_v0" ],
   "columnTypes" : [ "STRING" ],
   "granularity" : {
     "type" : "all"
