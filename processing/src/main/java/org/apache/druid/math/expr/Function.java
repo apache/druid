@@ -3974,7 +3974,7 @@ public interface Function extends NamedFunction
     {
       if (args.get(1).isLiteral()) {
         final ExpressionType lhsType = args.get(0).getOutputType(inspector);
-        if (lhsType == null) {
+        if (lhsType == null || !(lhsType.isPrimitive() || lhsType.isPrimitiveArray())) {
           return this;
         }
         final ExpressionType lhsArrayType = ExpressionType.asArrayType(lhsType);
@@ -4107,7 +4107,7 @@ public interface Function extends NamedFunction
     {
       if (args.get(1).isLiteral()) {
         final ExpressionType lhsType = args.get(0).getOutputType(inspector);
-        if (lhsType == null) {
+        if (lhsType == null || !(lhsType.isPrimitive() || lhsType.isPrimitiveArray())) {
           return this;
         }
         final ExpressionType lhsArrayType = ExpressionType.asArrayType(lhsType);

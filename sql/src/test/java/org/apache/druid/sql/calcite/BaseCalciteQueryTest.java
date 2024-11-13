@@ -1658,16 +1658,4 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     }
     return file;
   }
-
-  /**
-   * Adds shadowing in non-decoupled mode planning.
-   *
-   * Due to some circumstances - DruidUnnestRel have exposed all columns during planning;
-   * which made the VC registry to see some columns which are not selected ; and as a result
-   * it renamed some columns with underscores.
-   */
-  public String ds(String colName)
-  {
-    return "_" + colName;
-  }
 }
