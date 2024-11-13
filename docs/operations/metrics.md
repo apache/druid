@@ -427,6 +427,8 @@ For more information, see [Enabling Metrics](../configuration/index.md#enabling-
 |`jvm/mem/committed`|Committed memory|`memKind`, `jvmVersion`|Close to max memory|
 |`jvm/gc/count`|Garbage collection count|`gcName` (cms/g1/parallel/etc.), `gcGen` (old/young), `jvmVersion`|Varies|
 |`jvm/gc/cpu`|Count of CPU time in Nanoseconds spent on garbage collection. Note: `jvm/gc/cpu` represents the total time over multiple GC cycles; divide by `jvm/gc/count` to get the mean GC time per cycle.|`gcName`, `gcGen`, `jvmVersion`|Sum of `jvm/gc/cpu` should be within 10-30% of sum of `jvm/cpu/total`, depending on the GC algorithm used (reported by [`JvmCpuMonitor`](../configuration/index.md#enabling-metrics)). |
+|`jvm/gc/pause`| Stop-the-world garbage collection JVM-reported pause time (ms). Only emitted if `druid.monitoring.jvm.duration=true`.| `gcName` (cms/g1/parallel/etc.), `gcGen` (old/young), `jvmVersion` | Varies|
+|`jvm/gc/concurrentTime`| JVM-reported time spent in concurrent phases of CMS pauses (ms). Only emitted if `druid.monitoring.jvm.duration=true`.| `gcName`(cms/g1/etc.), `gcGen` (old/young), `jvmVersion` | Varies| 
 
 ### ZooKeeper
 

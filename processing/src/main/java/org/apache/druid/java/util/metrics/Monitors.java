@@ -25,36 +25,38 @@ import java.util.Map;
 public class Monitors
 {
   /**
-   * Creates a JVM monitor, configured with the given dimensions, that gathers all currently available JVM-wide
+   * Creates a JVM monitor, configured with the given dimensions and config that gathers all currently available JVM-wide
    * monitors. Emitted events have default feed {@link FeedDefiningMonitor#DEFAULT_METRICS_FEED}
-   * See: {@link Monitors#createCompoundJvmMonitor(Map, String)}
+   * See: {@link Monitors#createCompoundJvmMonitor(Map, String, JvmMonitorConfig)}
    *
    * @param dimensions common dimensions to configure the JVM monitor with
+   * @param config JVM-wide monitor config
    *
    * @return a universally useful JVM-wide monitor
    */
-  public static Monitor createCompoundJvmMonitor(Map<String, String[]> dimensions)
+  public static Monitor createCompoundJvmMonitor(Map<String, String[]> dimensions, JvmMonitorConfig config)
   {
-    return createCompoundJvmMonitor(dimensions, FeedDefiningMonitor.DEFAULT_METRICS_FEED);
+    return createCompoundJvmMonitor(dimensions, FeedDefiningMonitor.DEFAULT_METRICS_FEED, config);
   }
 
   /**
-   * Creates a JVM monitor, configured with the given dimensions, that gathers all currently available JVM-wide
+   * Creates a JVM monitor, configured with the given dimensions and config that gathers all currently available JVM-wide
    * monitors: {@link JvmMonitor}, {@link JvmCpuMonitor} and {@link JvmThreadsMonitor} (this list may
    * change in any future release of this library, including a minor release).
    *
    * @param dimensions common dimensions to configure the JVM monitor with
    * @param feed       feed for all emitted events
+   * @param config JVM-wide monitor config
    *
    * @return a universally useful JVM-wide monitor
    */
-  public static Monitor createCompoundJvmMonitor(Map<String, String[]> dimensions, String feed)
+  public static Monitor createCompoundJvmMonitor(Map<String, String[]> dimensions, String feed, JvmMonitorConfig config)
   {
     // This list doesn't include SysMonitor because it should probably be run only in one JVM, if several JVMs are
     // running on the same instance, so most of the time SysMonitor should be configured/set up differently than
     // "simple" JVM monitors, created below.
     return and(// Could equally be or(), because all member monitors always return true from their monitor() methods.
-                new JvmMonitor(dimensions, feed),
+                new JvmMonitor(dimensions, feed, config),
                 new JvmCpuMonitor(dimensions, feed),
                 new JvmThreadsMonitor(dimensions, feed)
     );
