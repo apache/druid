@@ -86,7 +86,7 @@ public class WorkerCuratorCoordinator
   @LifecycleStart
   public void start() throws Exception
   {
-    log.info("WorkerCuratorCoordinator good to go sir. Server[%s]", worker.getHost());
+    log.info("WorkerCuratorCoordinator good to go. Server[%s]", worker.getHost());
     synchronized (lock) {
       if (started) {
         return;

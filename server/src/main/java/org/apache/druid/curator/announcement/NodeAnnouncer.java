@@ -345,7 +345,7 @@ public class NodeAnnouncer
     byte[] oldBytes = announcedPaths.get(path);
 
     if (oldBytes == null) {
-      throw new ISE("Cannot update a path[%s] that hasn't been announced!", path);
+      throw new ISE("Cannot update path[%s] that hasn't been announced!", path);
     }
 
     boolean canUpdate = false;

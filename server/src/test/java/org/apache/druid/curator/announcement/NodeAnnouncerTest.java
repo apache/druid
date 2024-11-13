@@ -139,8 +139,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
     Exception exception = Assert.assertThrows(ISE.class, () -> {
       announcer.update(testPath, billy);
     });
-    Assert.assertTrue(exception.getMessage().contains("Cannot update a path"));
-
+    Assert.assertEquals(exception.getMessage(), "Cannot update path[/testUpdate] that hasn't been announced!");
     announcer.stop();
   }
 

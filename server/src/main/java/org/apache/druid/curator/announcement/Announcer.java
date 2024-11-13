@@ -169,14 +169,14 @@ public class Announcer
             transaction = transaction.delete().forPath(parent).and();
           }
           catch (Exception e) {
-            log.info(e, "Unable to delete parent[%s], boooo.", parent);
+            log.info(e, "Unable to delete parent[%s].", parent);
           }
         }
         try {
           ((CuratorTransactionFinal) transaction).commit();
         }
         catch (Exception e) {
-          log.info(e, "Unable to commit transaction. Please feed the hamsters");
+          log.info(e, "Unable to commit transaction.");
         }
       }
     }
@@ -356,7 +356,7 @@ public class Announcer
     ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
 
     if (subPaths == null || subPaths.get(nodePath) == null) {
-      throw new ISE("Cannot update a path[%s] that hasn't been announced!", path);
+      throw new ISE("Cannot update path[%s] that hasn't been announced!", path);
     }
 
     synchronized (toAnnounce) {
