@@ -157,7 +157,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                             "case_searched((\"dim4\" == 'a'),array('foo','bar','baz'),null)",
                             ColumnType.STRING_ARRAY
                         ))
-                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING_ARRAY))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -336,8 +336,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         + " dim3,"
         + " l1,"
         + " l2,"
-        + " d1,"
-        + " d2,"
+        + " dbl1,"
+        + " dbl2,"
         + " ARRAY['a', 'b', 'c'],"
         + " ARRAY[1,2,3],"
         + " ARRAY[1.9, 2.2, 4.3],"
@@ -345,15 +345,15 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         + " ARRAY_PREPEND('foo', ARRAY[dim2]),"
         + " ARRAY_APPEND(ARRAY[1,2], l1),"
         + " ARRAY_PREPEND(l2, ARRAY[1,2]),"
-        + " ARRAY_APPEND(ARRAY[1.2,2.2], d1),"
-        + " ARRAY_PREPEND(d2, ARRAY[1.1,2.2]),"
+        + " ARRAY_APPEND(ARRAY[1.2,2.2], dbl1),"
+        + " ARRAY_PREPEND(dbl2, ARRAY[1.1,2.2]),"
         + " ARRAY_CONCAT(dim2,dim3),"
         + " ARRAY_CONCAT(ARRAY[l1],ARRAY[l2]),"
-        + " ARRAY_CONCAT(ARRAY[d1],ARRAY[d2]),"
+        + " ARRAY_CONCAT(ARRAY[dbl1],ARRAY[dbl2]),"
         + " ARRAY_OFFSET(ARRAY[l1],0),"
-        + " ARRAY_OFFSET(ARRAY[d1],0),"
+        + " ARRAY_OFFSET(ARRAY[dbl1],0),"
         + " ARRAY_ORDINAL(ARRAY[l1],1),"
-        + " ARRAY_ORDINAL(ARRAY[d1],1)"
+        + " ARRAY_ORDINAL(ARRAY[dbl1],1)"
         + " FROM druid.numfoo"
         + " LIMIT 1",
         ImmutableList.of(
@@ -367,25 +367,25 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v10", "array_concat(array(\"l1\"),array(\"l2\"))", ColumnType.LONG_ARRAY),
                     expressionVirtualColumn(
                         "v11",
-                        "array_concat(array(\"d1\"),array(\"d2\"))",
+                        "array_concat(array(\"dbl1\"),array(\"dbl2\"))",
                         ColumnType.DOUBLE_ARRAY
                     ),
                     expressionVirtualColumn("v12", "array_offset(array(\"l1\"),0)", ColumnType.LONG),
-                    expressionVirtualColumn("v13", "array_offset(array(\"d1\"),0)", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v13", "array_offset(array(\"dbl1\"),0)", ColumnType.DOUBLE),
                     expressionVirtualColumn("v14", "array_ordinal(array(\"l1\"),1)", ColumnType.LONG),
-                    expressionVirtualColumn("v15", "array_ordinal(array(\"d1\"),1)", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v15", "array_ordinal(array(\"dbl1\"),1)", ColumnType.DOUBLE),
                     expressionVirtualColumn("v2", "array(1.9,2.2,4.3)", ColumnType.DOUBLE_ARRAY),
                     expressionVirtualColumn("v3", "array_append(\"dim3\",'foo')", ColumnType.STRING_ARRAY),
                     expressionVirtualColumn("v4", "array_prepend('foo',array(\"dim2\"))", ColumnType.STRING_ARRAY),
                     expressionVirtualColumn("v5", "array_append(array(1,2),\"l1\")", ColumnType.LONG_ARRAY),
                     expressionVirtualColumn("v6", "array_prepend(\"l2\",array(1,2))", ColumnType.LONG_ARRAY),
-                    expressionVirtualColumn("v7", "array_append(array(1.2,2.2),\"d1\")", ColumnType.DOUBLE_ARRAY),
-                    expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1.1,2.2))", ColumnType.DOUBLE_ARRAY),
+                    expressionVirtualColumn("v7", "array_append(array(1.2,2.2),\"dbl1\")", ColumnType.DOUBLE_ARRAY),
+                    expressionVirtualColumn("v8", "array_prepend(\"dbl2\",array(1.1,2.2))", ColumnType.DOUBLE_ARRAY),
                     expressionVirtualColumn("v9", "array_concat(\"dim2\",\"dim3\")", ColumnType.STRING_ARRAY)
                 )
                 .columns(
-                    "d1",
-                    "d2",
+                    "dbl1",
+                    "dbl2",
                     "dim1",
                     "dim2",
                     "dim3",
@@ -420,8 +420,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     .add("dim3", ColumnType.STRING)
                     .add("l1", ColumnType.LONG)
                     .add("l2", ColumnType.LONG)
-                    .add("d1", ColumnType.DOUBLE)
-                    .add("d2", ColumnType.DOUBLE)
+                    .add("dbl1", ColumnType.DOUBLE)
+                    .add("dbl2", ColumnType.DOUBLE)
                     .add("EXPR$7", ColumnType.STRING_ARRAY)
                     .add("EXPR$8", ColumnType.LONG_ARRAY)
                     .add("EXPR$9", ColumnType.DOUBLE_ARRAY)
@@ -634,11 +634,11 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
         + " ARRAY_PREPEND('foo', ARRAY[dim2]),"
         + " ARRAY_APPEND(ARRAY[1,2], l1),"
         + " ARRAY_PREPEND(l2, ARRAY[1,2]),"
-        + " ARRAY_APPEND(ARRAY[1.2,2.2], d1),"
-        + " ARRAY_PREPEND(d2, ARRAY[1.1,2.2]),"
+        + " ARRAY_APPEND(ARRAY[1.2,2.2], dbl1),"
+        + " ARRAY_PREPEND(dbl2, ARRAY[1.1,2.2]),"
         + " ARRAY_CONCAT(dim2,dim3),"
         + " ARRAY_CONCAT(ARRAY[l1],ARRAY[l2]),"
-        + " ARRAY_CONCAT(ARRAY[d1],ARRAY[d2])"
+        + " ARRAY_CONCAT(ARRAY[dbl1],ARRAY[dbl2])"
         + " FROM druid.numfoo"
         + " LIMIT 1",
         QUERY_CONTEXT_NO_STRINGIFY_ARRAY,
@@ -652,7 +652,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v10", "array_concat(array(\"l1\"),array(\"l2\"))", ColumnType.LONG_ARRAY),
                     expressionVirtualColumn(
                         "v11",
-                        "array_concat(array(\"d1\"),array(\"d2\"))",
+                        "array_concat(array(\"dbl1\"),array(\"dbl2\"))",
                         ColumnType.DOUBLE_ARRAY
                     ),
                     expressionVirtualColumn("v2", "array(1.9,2.2,4.3)", ColumnType.DOUBLE_ARRAY),
@@ -660,8 +660,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v4", "array_prepend('foo',array(\"dim2\"))", ColumnType.STRING_ARRAY),
                     expressionVirtualColumn("v5", "array_append(array(1,2),\"l1\")", ColumnType.LONG_ARRAY),
                     expressionVirtualColumn("v6", "array_prepend(\"l2\",array(1,2))", ColumnType.LONG_ARRAY),
-                    expressionVirtualColumn("v7", "array_append(array(1.2,2.2),\"d1\")", ColumnType.DOUBLE_ARRAY),
-                    expressionVirtualColumn("v8", "array_prepend(\"d2\",array(1.1,2.2))", ColumnType.DOUBLE_ARRAY),
+                    expressionVirtualColumn("v7", "array_append(array(1.2,2.2),\"dbl1\")", ColumnType.DOUBLE_ARRAY),
+                    expressionVirtualColumn("v8", "array_prepend(\"dbl2\",array(1.1,2.2))", ColumnType.DOUBLE_ARRAY),
                     expressionVirtualColumn("v9", "array_concat(\"dim2\",\"dim3\")", ColumnType.STRING_ARRAY)
                 )
                 .columns(
@@ -936,7 +936,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     Druids.ScanQueryBuilder builder = newScanQueryBuilder()
             .dataSource(CalciteTests.DATASOURCE3)
             .intervals(querySegmentSpec(Filtration.eternity()))
-            .filters(expressionFilter("array_overlap(array(1.0,1.7,null),array(\"d1\"))"))
+            .filters(expressionFilter("array_overlap(array(1.0,1.7,null),array(\"dbl1\"))"))
             .columns("dim3")
             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
             .limit(5)
@@ -948,7 +948,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             ImmutableList.of(
                     new SqlParameter(SqlType.ARRAY, Arrays.asList(1.0, 1.7, null))
             ),
-            "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(?, ARRAY[d1]) LIMIT 5",
+            "SELECT dim3 FROM druid.numfoo WHERE ARRAY_OVERLAP(?, ARRAY[dbl1]) LIMIT 5",
             CalciteTests.REGULAR_USER_AUTH_RESULT,
             ImmutableList.of(builder.build()),
             NullHandling.sqlCompatible() ? ImmutableList.of(
@@ -1306,7 +1306,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     Druids.ScanQueryBuilder builder = newScanQueryBuilder()
             .dataSource(CalciteTests.DATASOURCE3)
             .intervals(querySegmentSpec(Filtration.eternity()))
-            .filters(expressionFilter("array_contains(array(1,null),array((\"d1\" > 1)))"))
+            .filters(expressionFilter("array_contains(array(1,null),array((\"dbl1\" > 1)))"))
             .columns("dim3")
             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
             .limit(5)
@@ -1318,7 +1318,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             ImmutableList.of(
                     new SqlParameter(SqlType.ARRAY, Arrays.asList(true, null))
             ),
-            "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(?, ARRAY[d1>1]) LIMIT 5",
+            "SELECT dim3 FROM druid.numfoo WHERE ARRAY_CONTAINS(?, ARRAY[dbl1>1]) LIMIT 5",
             CalciteTests.REGULAR_USER_AUTH_RESULT,
             ImmutableList.of(builder.build()),
             NullHandling.sqlCompatible() ? ImmutableList.of(
@@ -1539,14 +1539,14 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(expressionVirtualColumn("v0", "array_length(\"dim3\")", ColumnType.LONG))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("dim1", "_d0", ColumnType.STRING),
-                                new DefaultDimensionSpec("v0", "_d1", ColumnType.LONG)
+                                new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING),
+                                new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
                         .setLimitSpec(new DefaultLimitSpec(
                             ImmutableList.of(new OrderByColumnSpec(
-                                "_d1",
+                                "d1",
                                 OrderByColumnSpec.Direction.DESCENDING,
                                 StringComparators.NUMERIC
                             )),
@@ -1662,7 +1662,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING_ARRAY)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1719,7 +1719,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING_ARRAY)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1780,8 +1780,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         )
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING),
-                                new DefaultDimensionSpec("v1", "_d1", ColumnType.STRING)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING),
+                                new DefaultDimensionSpec("v1", "d1", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1838,7 +1838,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING_ARRAY)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1871,7 +1871,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setVirtualColumns(expressionVirtualColumn("v0", "array_offset(\"dim3\",1)", ColumnType.STRING))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -1914,7 +1914,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.LONG_ARRAY)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG_ARRAY)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -2010,7 +2010,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.DOUBLE_ARRAY)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE_ARRAY)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -2106,7 +2106,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.ofArray(ColumnType.FLOAT))
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.ofArray(ColumnType.FLOAT))
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -2155,7 +2155,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING_ARRAY)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING_ARRAY)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -2238,7 +2238,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.LONG)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -2285,7 +2285,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.LONG)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.LONG)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -2350,7 +2350,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING)
+                                new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -2409,7 +2409,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         .setDimFilter(range("v0", ColumnType.LONG, 0L, null, true, false))
                         .setDimensions(
                             dimensions(
-                                new DefaultDimensionSpec("v1", "_d0", ColumnType.STRING_ARRAY)
+                                new DefaultDimensionSpec("v1", "d0", ColumnType.STRING_ARRAY)
                             )
                         )
                         .setAggregatorSpecs(aggregators(new LongSumAggregatorFactory("a0", "cnt")))
@@ -2573,7 +2573,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
     testQuery(
-        "SELECT ARRAY_AGG(l1), ARRAY_AGG(DISTINCT l1), ARRAY_AGG(d1), ARRAY_AGG(DISTINCT d1), ARRAY_AGG(f1), ARRAY_AGG(DISTINCT f1) FROM numfoo",
+        "SELECT ARRAY_AGG(l1), ARRAY_AGG(DISTINCT l1), ARRAY_AGG(dbl1), ARRAY_AGG(DISTINCT dbl1), ARRAY_AGG(f1), ARRAY_AGG(DISTINCT f1) FROM numfoo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE3)
@@ -3545,7 +3545,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                         .setContext(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                                                         .setDimensions(
                                                             new DefaultDimensionSpec("dim1", "d0"),
-                                                            new DefaultDimensionSpec("dim2", "dbl1"),
+                                                            new DefaultDimensionSpec("dim2", "d1"),
                                                             new DefaultDimensionSpec("dim3", "d2"
                                                             )
                                                         )
@@ -3556,14 +3556,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                             querySegmentSpec(Filtration.eternity()))
                                         .setGranularity(Granularities.ALL)
                                         .setDimensions(
-                                            new DefaultDimensionSpec(
-                                                "d0",
-                                                "_d0"
-                                            ),
-                                            new DefaultDimensionSpec(
-                                                "d1",
-                                                "_d1"
-                                            )
+                                            new DefaultDimensionSpec("d0", "_d0"),
+                                            new DefaultDimensionSpec("d1", "_d1")
                                         )
                                         .setAggregatorSpecs(new ExpressionLambdaAggregatorFactory(
                                             "_a0",
@@ -3619,11 +3613,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                         .setDimensions(
                                                             new DefaultDimensionSpec("dim1", "d0"),
                                                             new DefaultDimensionSpec("dim2", "d1"),
-                                                            new DefaultDimensionSpec("dim3", "d2"
-                                                            )
+                                                            new DefaultDimensionSpec("dim3", "d2")
                                                         )
-                                                        .setAggregatorSpecs(
-                                                            new CountAggregatorFactory("a0"))
+                                                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                                                         .build()))
                                         .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
                                         .setGranularity(Granularities.ALL)
@@ -3686,11 +3678,9 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                                                 .setDimensions(
                                                     new DefaultDimensionSpec("dim1", "d0"),
                                                     new DefaultDimensionSpec("dim2", "d1"),
-                                                    new DefaultDimensionSpec("dim3", "d2"
-                                                    )
+                                                    new DefaultDimensionSpec("dim3", "d2")
                                                 )
-                                                .setAggregatorSpecs(
-                                                    new CountAggregatorFactory("a0"))
+                                                .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                                                 .build()))
                                 .setQuerySegmentSpec(querySegmentSpec(Filtration.eternity()))
                                 .setGranularity(Granularities.ALL)
@@ -4934,7 +4924,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
-                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setContext(QUERY_CONTEXT_UNNEST)
                         .build()
@@ -5005,13 +4995,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
-                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setLimitSpec(
                             DefaultLimitSpec
                                 .builder()
                                 .orderBy(new OrderByColumnSpec(
-                                    "_d0",
+                                    "d0",
                                     OrderByColumnSpec.Direction.DESCENDING,
                                     StringComparators.LEXICOGRAPHIC
                                 ))
@@ -5055,7 +5045,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     null
                 ))
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .dimension(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                .dimension(new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.STRING))
                 .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
                 .threshold(4)
                 .aggregators(aggregators(new CountAggregatorFactory("a0")))
@@ -5094,7 +5084,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
-                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                         .setHavingSpec(new DimFilterHavingSpec(equality("a0", 1L, ColumnType.LONG), true))
@@ -5895,7 +5885,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testUnnestWithNotFiltersOnUnnestedColumn()
   {
     testQuery(
-        "SELECT d3,MV_TO_ARRAY(dim3) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3!='d' ",
+        "SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3!='d' ",
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(
             Druids.newScanQueryBuilder()
@@ -6353,7 +6343,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
-                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setDimFilter(equality("j0.unnest", "b", ColumnType.STRING))
                         .setAggregatorSpecs(new CountAggregatorFactory("a0"))
@@ -6462,7 +6452,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
-                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                         .setHavingSpec(new DimFilterHavingSpec(equality("a0", 1L, ColumnType.LONG), true))
@@ -6492,7 +6482,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                         ))
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setContext(QUERY_CONTEXT_UNNEST)
-                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "_d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("j0.unnest", "d0", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(new CountAggregatorFactory("a0"))
                         .setDimFilter(equality("j0.unnest", "a", ColumnType.STRING))
