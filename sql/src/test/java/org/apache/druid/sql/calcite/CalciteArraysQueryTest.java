@@ -6914,7 +6914,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:10:00.001Z")))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_UNNEST)
-                  .columns(ImmutableList.of("_j0.unnest", "j0.unnest"))
+                  .columns(ImmutableList.of("j0.unnest", "_j0.unnest"))
+                  .columnTypes(ColumnType.FLOAT, ColumnType.STRING)
                   .build()
         ),
         ImmutableList.of(
@@ -6952,6 +6953,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_UNNEST)
                   .columns(ImmutableList.of("j0.unnest"))
+                  .columnTypes(ColumnType.FLOAT)
                   .build()
         ),
         ImmutableList.of(
