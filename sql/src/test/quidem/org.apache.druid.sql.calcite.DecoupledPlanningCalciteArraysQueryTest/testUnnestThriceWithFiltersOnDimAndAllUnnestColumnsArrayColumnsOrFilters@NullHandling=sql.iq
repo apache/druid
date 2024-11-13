@@ -1,0 +1,157 @@
+# testUnnestThriceWithFiltersOnDimAndAllUnnestColumnsArrayColumnsOrFilters@NullHandling=sql case-crc:727a851b
+# quidem testcase reason: UNNEST_EXTRA_SCAN
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set sqlStringifyArrays false
+!set outputformat mysql
+!use druidtest:///
+    SELECT arrayString, uln, udn, usn FROM 
+      ( SELECT * FROM 
+           ( SELECT * FROM arrays, UNNEST(arrayLongNulls) as ut(uln))           ,UNNEST(arrayDoubleNulls) as ut(udn) 
+      ), UNNEST(arrayStringNulls) as ut(usn)  WHERE arrayString = ARRAY['a','b'] AND (uln = 1 OR udn = 2.2) AND usn = 'a';
++-------------+-----+-----+-----+
+| arrayString | uln | udn | usn |
++-------------+-----+-----+-----+
+| [a, b]      |   1 | 1.1 | a   |
+| [a, b]      |   1 | 2.2 | a   |
+| [a, b]      |   1 |     | a   |
+| [a, b]      |   3 | 2.2 | a   |
+| [a, b]      |     | 2.2 | a   |
++-------------+-----+-----+-----+
+(5 rows)
+
+!ok
+LogicalProject(arrayString=[CAST(ARRAY('a':VARCHAR, 'b':VARCHAR)):VARCHAR ARRAY], uln=[$2], udn=[$3], usn=[$4])
+  LogicalUnnest(unnestExpr=[$1], filter=[=($0, 'a')])
+    LogicalProject(arrayString=[CAST(ARRAY('a':VARCHAR, 'b':VARCHAR)):VARCHAR ARRAY], arrayStringNulls=[$1], uln=[$3], udn=[$4])
+      LogicalFilter(condition=[OR(=($3, 1), =($4, 2.2))])
+        LogicalUnnest(unnestExpr=[$2])
+          LogicalProject(arrayString=[$0], arrayStringNulls=[$1], arrayDoubleNulls=[$3], uln=[$4])
+            LogicalUnnest(unnestExpr=[$2])
+              LogicalFilter(condition=[=($0, CAST(ARRAY('a', 'b')):VARCHAR ARRAY NOT NULL)])
+                LogicalProject(arrayString=[$1], arrayStringNulls=[$2], arrayLongNulls=[$4], arrayDoubleNulls=[$6])
+                  LogicalTableScan(table=[[druid, arrays]])
+
+!logicalPlan
+DruidProject(arrayString=[CAST(ARRAY('a':VARCHAR, 'b':VARCHAR)):VARCHAR ARRAY], uln=[$2], udn=[$3], usn=[$4], druid=[logical])
+  DruidUnnest(unnestExpr=[$1], filter=[=($0, 'a')])
+    DruidProject(arrayString=[CAST(ARRAY('a':VARCHAR, 'b':VARCHAR)):VARCHAR ARRAY], arrayStringNulls=[$1], uln=[$3], udn=[$4], druid=[logical])
+      DruidFilter(condition=[OR(=($3, 1), =($4, 2.2))])
+        DruidUnnest(unnestExpr=[$2])
+          DruidProject(arrayString=[$0], arrayStringNulls=[$1], arrayDoubleNulls=[$3], uln=[$4], druid=[logical])
+            DruidUnnest(unnestExpr=[$2])
+              DruidFilter(condition=[=($0, CAST(ARRAY('a', 'b')):VARCHAR ARRAY NOT NULL)])
+                DruidProject(arrayString=[$1], arrayStringNulls=[$2], arrayLongNulls=[$4], arrayDoubleNulls=[$6], druid=[logical])
+                  DruidTableScan(table=[[druid, arrays]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "unnest",
+          "base" : {
+            "type" : "unnest",
+            "base" : {
+              "type" : "filter",
+              "base" : {
+                "type" : "table",
+                "name" : "arrays"
+              },
+              "filter" : {
+                "type" : "equals",
+                "column" : "arrayString",
+                "matchValueType" : "ARRAY<STRING>",
+                "matchValue" : [ "a", "b" ]
+              }
+            },
+            "virtualColumn" : {
+              "type" : "expression",
+              "name" : "j0.unnest",
+              "expression" : "\"arrayLongNulls\"",
+              "outputType" : "ARRAY<LONG>"
+            },
+            "unnestFilter" : null
+          },
+          "virtualColumn" : {
+            "type" : "expression",
+            "name" : "_j0.unnest",
+            "expression" : "\"arrayDoubleNulls\"",
+            "outputType" : "ARRAY<DOUBLE>"
+          },
+          "unnestFilter" : null
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "array('a','b')",
+          "outputType" : "ARRAY<STRING>"
+        } ],
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "or",
+          "fields" : [ {
+            "type" : "equals",
+            "column" : "j0.unnest",
+            "matchValueType" : "LONG",
+            "matchValue" : 1
+          }, {
+            "type" : "equals",
+            "column" : "_j0.unnest",
+            "matchValueType" : "DOUBLE",
+            "matchValue" : 2.2
+          } ]
+        },
+        "columns" : [ "v0", "arrayStringNulls", "j0.unnest", "_j0.unnest" ],
+        "columnTypes" : [ "ARRAY<STRING>", "ARRAY<STRING>", "LONG", "DOUBLE" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "__j0.unnest",
+      "expression" : "\"arrayStringNulls\"",
+      "outputType" : "ARRAY<STRING>"
+    },
+    "unnestFilter" : {
+      "type" : "equals",
+      "column" : "__j0.unnest",
+      "matchValueType" : "STRING",
+      "matchValue" : "a"
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "_v0",
+    "expression" : "array('a','b')",
+    "outputType" : "ARRAY<STRING>"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "_v0", "j0.unnest", "_j0.unnest", "__j0.unnest" ],
+  "columnTypes" : [ "ARRAY<STRING>", "LONG", "DOUBLE", "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

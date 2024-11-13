@@ -37,6 +37,7 @@ import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
+import org.apache.calcite.rel.rules.FilterCorrelateRule;
 import org.apache.calcite.rel.rules.FilterJoinRule.FilterIntoJoinRule.FilterIntoJoinRuleConfig;
 import org.apache.calcite.rel.rules.JoinExtractFilterRule;
 import org.apache.calcite.rel.rules.JoinPushThroughJoinRule;
@@ -280,6 +281,10 @@ public class CalciteRulesManager
     builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
+    builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
+    builder.addRuleCollection(baseRuleSet(plannerContext));
+    builder.addRuleInstance(CoreRules.UNION_MERGE);
+    builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
     builder.addRuleInstance(new LogicalUnnestRule());

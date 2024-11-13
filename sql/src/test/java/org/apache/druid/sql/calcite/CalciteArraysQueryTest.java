@@ -4598,7 +4598,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
 
-//  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
   @Test
   public void testUnnestThriceWithFiltersOnDimAndUnnestCol()
   {
@@ -4685,7 +4685,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-//  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
   @Test
   public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumns()
   {
@@ -4889,6 +4889,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  // FIXME: thyis
+//  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_EXTRA_SCAN, separateDefaultModeTest = true)
   @Test
   public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumnsArrayColumnsOrFilters()
   {
@@ -5338,7 +5340,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-//  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_EXTRA_SCAN, separateDefaultModeTest = true)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_EXTRA_SCAN, separateDefaultModeTest = true)
   @Test
   public void testUnnestWithFiltersWithExpressionInInnerQuery()
   {
@@ -5375,7 +5377,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-//  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_EXTRA_SCAN, separateDefaultModeTest = true)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_EXTRA_SCAN, separateDefaultModeTest = true)
   @Test
   public void testUnnestWithInFiltersWithExpressionInInnerQuery()
   {
@@ -5477,7 +5479,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               not(equality("dim1", "foo", ColumnType.STRING))
                           )
                       ),
-                      expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                      nestedExpressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
                       not(equality("j0.unnest", "b", ColumnType.STRING))
                   ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
@@ -5703,8 +5705,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-//  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
-//  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
+  @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
   @Test
   public void testUnnestWithJoinOnTheLeft()
   {
@@ -6985,16 +6987,16 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                               expressionVirtualColumn("j0.unnest", "array(\"m1\",\"m2\")", ColumnType.FLOAT_ARRAY),
                               null
                           ),
-                          expressionVirtualColumn("_j0.unnest", "array(\"dim1\",\"dim2\")", ColumnType.STRING_ARRAY),
+                          expressionVirtualColumn(ds("j0.unnest"), "array(\"dim1\",\"dim2\")", ColumnType.STRING_ARRAY),
                           null
                       ),
-                      nestedExpressionVirtualColumn("__j0.unnest", "\"dim3\"", ColumnType.STRING),
+                      nestedExpressionVirtualColumn(ds2("j0.unnest"), "\"dim3\"", ColumnType.STRING),
                       null
                   ))
                   .intervals(querySegmentSpec(Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:10:00.001Z")))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_UNNEST)
-                  .columns("__j0.unnest")
+                  .columns(ds2("j0.unnest"))
                   .columnTypes(ColumnType.STRING)
                   .build()
         ),

@@ -1668,6 +1668,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
    */
   public String ds(String colName)
   {
-    return "_" + colName;
+    if (testBuilder().isDecoupledMode()) {
+      return colName;
+    } else {
+      return "_" + colName;
+    }
+  }
+
+  public String ds2(String colName)
+  {
+    return ds(ds(colName));
   }
 }
