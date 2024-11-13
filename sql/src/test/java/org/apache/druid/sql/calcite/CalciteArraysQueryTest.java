@@ -338,8 +338,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                 .add("dim3", ColumnType.STRING)
                 .add("l1", ColumnType.LONG)
                 .add("l2", ColumnType.LONG)
-                .add("d1", ColumnType.DOUBLE)
-                .add("d2", ColumnType.DOUBLE)
+                .add("dbl1", ColumnType.DOUBLE)
+                .add("dbl2", ColumnType.DOUBLE)
                 .add("EXPR$7", ColumnType.STRING_ARRAY)
                 .add("EXPR$8", ColumnType.LONG_ARRAY)
                 .add("EXPR$9", ColumnType.DOUBLE_ARRAY)
@@ -417,8 +417,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                     "dim3",
                     "l1",
                     "l2",
-                    "d1",
-                    "d2",
+                    "dbl1",
+                    "dbl2",
                     "v0",
                     "v1",
                     "v2",
