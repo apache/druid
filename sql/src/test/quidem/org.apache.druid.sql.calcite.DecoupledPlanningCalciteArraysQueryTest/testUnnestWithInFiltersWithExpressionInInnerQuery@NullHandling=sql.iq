@@ -63,7 +63,7 @@ DruidProject(t=[$0], d3=[$3], druid=[logical])
           "matchValueType" : "STRING",
           "sortedValues" : [ "a", "b" ]
         },
-        "columns" : [ "__time", "dim3", "v0" ],
+        "columns" : [ "v0", "dim3", "__time" ],
         "columnTypes" : [ "LONG", "STRING", "LONG" ],
         "granularity" : {
           "type" : "all"
@@ -84,8 +84,8 @@ DruidProject(t=[$0], d3=[$3], druid=[logical])
     "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
   },
   "resultFormat" : "compactedList",
-  "columns" : [ "j0.unnest", "v0" ],
-  "columnTypes" : [ "STRING", "LONG" ],
+  "columns" : [ "v0", "j0.unnest" ],
+  "columnTypes" : [ "LONG", "STRING" ],
   "granularity" : {
     "type" : "all"
   },

@@ -17,37 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.guice;
 
-import org.apache.druid.java.util.common.logger.Logger;
+import com.google.inject.Inject;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryToolChestWarehouse;
 
-/**
- */
-@Deprecated
-public class ReflectionQueryToolChestWarehouse implements QueryToolChestWarehouse
+public class ConglomerateBackedToolChestWarehouse implements QueryToolChestWarehouse
 {
-  private static final Logger log = new Logger(ReflectionQueryToolChestWarehouse.class);
+  private QueryRunnerFactoryConglomerate conglomerate;
 
-  private final ClassValue<QueryToolChest<?, ?>> toolChests = new ClassValue<QueryToolChest<?, ?>>()
+  @Inject
+  public ConglomerateBackedToolChestWarehouse(QueryRunnerFactoryConglomerate conglomerate)
   {
-    @Override
-    protected QueryToolChest<?, ?> computeValue(Class<?> type)
-    {
-      try {
-        final Class<?> queryToolChestClass = Class.forName(type.getName() + "QueryToolChest");
-        return (QueryToolChest<?, ?>) queryToolChestClass.newInstance();
-      }
-      catch (Exception e) {
-        log.warn(e, "Unable to load interface[QueryToolChest] for input class[%s]", type);
-        throw new RuntimeException(e);
-      }
-    }
-  };
+    this.conglomerate = conglomerate;
+  }
 
   @Override
-  @SuppressWarnings("unchecked")
   public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
   {
-    return (QueryToolChest<T, QueryType>) toolChests.get(query.getClass());
+    return conglomerate.getToolChest(query);
   }
 }
