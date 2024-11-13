@@ -208,10 +208,10 @@ public class NodeAnnouncer
     }
 
     final String parentPath = ZKPathsUtils.getParentPath(path);
-    byte[] value = announcedPaths.get(path);
+    byte[] announcedPayload = announcedPaths.get(path);
 
-    // We have yet to announce this path. Check if we need to build a parent path.
-    if (value == null) {
+    if (announcedPayload == null) {
+      // Payload does not exist. We have yet to announce this path. Check if we need to build a parent path.
       boolean shouldBuildParentPath = canBuildParentPath(parentPath);
 
       // Synchronize to make sure that I only create a listener once.
@@ -291,7 +291,7 @@ public class NodeAnnouncer
       if (oldBytes == null) {
         return bytes; // Insert the new value
       } else if (!Arrays.equals(oldBytes, bytes)) {
-        throw new IAE("Cannot reannounce different values under the same path");
+        throw new IAE("Cannot reannounce different values under the same path.");
       }
       return oldBytes; // No change if values are equal
     });

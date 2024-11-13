@@ -25,6 +25,7 @@ import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
 import org.apache.curator.test.KillSession;
 import org.apache.druid.curator.CuratorTestBase;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.ZKPathsUtils;
@@ -74,7 +75,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
     announcer.stop();
   }
 
-  @Test
+  @Test(timeout = 60_000L)
   public void testCreateParentPath() throws Exception
   {
     curator.start();
@@ -85,10 +86,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
     final String parentPath = ZKPathsUtils.getParentPath(testPath);
 
     announcer.start();
-
     Assert.assertNull("Parent path should not exist before announcement", curator.checkExists().forPath(parentPath));
-
-    // Announce with parent creation
     announcer.announce(testPath, billy);
 
     // Wait for the announcement to be processed
@@ -96,10 +94,56 @@ public class NodeAnnouncerTest extends CuratorTestBase
       Thread.sleep(100);
     }
 
-    // Verify the parent path has been created
     Assert.assertNotNull("Parent path should be created", curator.checkExists().forPath(parentPath));
     Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath));
+    announcer.stop();
+  }
 
+  @Test(timeout = 60_000L)
+  public void testAnnounceSamePathWithDifferentPayloadThrowsIAE() throws Exception
+  {
+    curator.start();
+    curator.blockUntilConnected();
+    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    final byte[] billy = StringUtils.toUtf8("billy");
+    final byte[] tilly = StringUtils.toUtf8("tilly");
+    final String testPath = "/testPath";
+
+    announcer.start();
+    announcer.announce(testPath, billy);
+    while (curator.checkExists().forPath(testPath) == null) {
+      Thread.sleep(100);
+    }
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath));
+
+    // Nothing wrong when we announce same path.
+    announcer.announce(testPath, billy);
+
+    // Something wrong when we announce different path.
+    Exception exception = Assert.assertThrows(IAE.class, () -> announcer.announce(testPath, tilly));
+    Assert.assertEquals(exception.getMessage(), "Cannot reannounce different values under the same path.");
+
+    // Confirm that the new announcement is invalidated, and we still have payload from previous announcement.
+    Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath));
+    announcer.stop();
+  }
+
+  @Test
+  public void testUpdateBeforeStartingNodeAnnouncer() throws Exception
+  {
+    curator.start();
+    curator.blockUntilConnected();
+    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    final byte[] billy = StringUtils.toUtf8("billy");
+    final byte[] tilly = StringUtils.toUtf8("tilly");
+    final String testPath = "/testAnnounce";
+
+    announcer.update(testPath, tilly);
+    announcer.announce(testPath, billy);
+    announcer.start();
+
+    // Verify that the path was announced
+    Assert.assertArrayEquals(tilly, curator.getData().decompressed().forPath(testPath));
     announcer.stop();
   }
 
@@ -136,9 +180,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
 
     announcer.start();
 
-    Exception exception = Assert.assertThrows(ISE.class, () -> {
-      announcer.update(testPath, billy);
-    });
+    Exception exception = Assert.assertThrows(ISE.class, () -> announcer.update(testPath, billy));
     Assert.assertEquals(exception.getMessage(), "Cannot update path[/testUpdate] that hasn't been announced!");
     announcer.stop();
   }
