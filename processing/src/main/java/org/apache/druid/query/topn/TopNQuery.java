@@ -61,7 +61,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   private final DimFilter dimFilter;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
-  private TopNAggregatorResourceHelper aggregatorHelper;
+  private final TopNAggregatorResourceHelper aggregatorHelper;
 
   @JsonCreator
   public TopNQuery(
@@ -104,11 +104,6 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     this.aggregatorHelper = new TopNAggregatorResourceHelper(expectedAllocBytes, new TopNAggregatorResourceHelper.Config(maxAggregatorHeapSizeBytes));
 
     topNMetricSpec.verifyPreconditions(this.aggregatorSpecs, this.postAggregatorSpecs);
-  }
-
-  public TopNAggregatorResourceHelper getAggregatorHelper()
-  {
-    return aggregatorHelper;
   }
 
   @Override
@@ -232,6 +227,10 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   public Query<Result<TopNResultValue>> withDataSource(DataSource dataSource)
   {
     return new TopNQueryBuilder(this).dataSource(dataSource).build();
+  }
+
+  public void trackAggregatorMemory() {
+    aggregatorHelper.addAggregatorMemory();
   }
 
   @Override

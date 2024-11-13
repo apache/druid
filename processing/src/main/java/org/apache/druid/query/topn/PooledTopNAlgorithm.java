@@ -256,7 +256,7 @@ public class PooledTopNAlgorithm
 
       final int numBytesToWorkWith = resultsBuf.remaining();
 
-      query.getAggregatorHelper().addAggregatorMemory();
+      query.trackAggregatorMemory();
       final int[] aggregatorSizes = new int[query.getAggregatorSpecs().size()];
       int numBytesPerRecord = 0;
 
