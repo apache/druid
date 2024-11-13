@@ -1775,7 +1775,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
       filter = and(
           notNull("dim1"),
           notNull("l1"),
-          notNull("d1"),
+          notNull("dbl1"),
           notNull("f1")
       );
     }
@@ -5004,7 +5004,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                           ),
                           new FilteredAggregatorFactory(
                               new CountAggregatorFactory("a8"),
-                              notNull("d1")
+                              notNull("dbl1")
                           ),
                           new DoubleSumAggregatorFactory("a9:sum", "dbl1"),
                           new FilteredAggregatorFactory(
@@ -10729,7 +10729,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                 : new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("a10:count"),
                                     and(
-                                        notNull("d1"),
+                                        notNull("dbl1"),
                                         equality("dim1", "nonexistent", ColumnType.STRING)
                                     )
                                 )
