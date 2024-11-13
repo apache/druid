@@ -64,7 +64,8 @@ DruidProject(d3=[$18], druid=[logical])
           "matchValue" : "a"
         },
         "columns" : [ "__time", "cnt", "dbl1", "dbl2", "dim1", "dim3", "dim4", "dim5", "dim6", "f1", "f2", "l1", "l2", "m1", "m2", "unique_dim1", "v0" ],
-        "columnTypes" : [ "LONG", "LONG", "DOUBLE", "DOUBLE", "STRING", "STRING", "STRING", "STRING", "STRING", "FLOAT", "FLOAT", "LONG", "LONG", "FLOAT", "DOUBLE", "COMPLEX<hyperUnique>", "STRING" ],
+        "columns" : [ "__time", "dim1", "v0", "dim3", "dim4", "dim5", "dim6", "d1", "d2", "f1", "f2", "l1", "l2", "cnt", "m1", "m2", "unique_dim1" ],
+        "columnTypes" : [ "LONG", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "DOUBLE", "DOUBLE", "FLOAT", "FLOAT", "LONG", "LONG", "LONG", "FLOAT", "DOUBLE", "COMPLEX<hyperUnique>" ],
         "granularity" : {
           "type" : "all"
         },

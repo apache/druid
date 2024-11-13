@@ -20,7 +20,6 @@
 package org.apache.druid.k8s.overlord;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
@@ -34,27 +33,19 @@ import java.io.InputStream;
 public class KubernetesWorkItem extends TaskRunnerWorkItem
 {
   private final Task task;
-  private KubernetesPeonLifecycle kubernetesPeonLifecycle = null;
+  private final KubernetesPeonLifecycle kubernetesPeonLifecycle;
 
-  public KubernetesWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture)
+  public KubernetesWorkItem(Task task, ListenableFuture<TaskStatus> statusFuture, KubernetesPeonLifecycle kubernetesPeonLifecycle)
   {
     super(task.getId(), statusFuture);
     this.task = task;
-  }
-
-  protected synchronized void setKubernetesPeonLifecycle(KubernetesPeonLifecycle kubernetesPeonLifecycle)
-  {
-    Preconditions.checkState(this.kubernetesPeonLifecycle == null);
     this.kubernetesPeonLifecycle = kubernetesPeonLifecycle;
   }
 
   protected synchronized void shutdown()
   {
-
-    if (this.kubernetesPeonLifecycle != null) {
-      this.kubernetesPeonLifecycle.startWatchingLogs();
-      this.kubernetesPeonLifecycle.shutdown();
-    }
+    this.kubernetesPeonLifecycle.startWatchingLogs();
+    this.kubernetesPeonLifecycle.shutdown();
   }
 
   protected boolean isPending()
@@ -88,18 +79,12 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
 
   protected Optional<InputStream> streamTaskLogs()
   {
-    if (kubernetesPeonLifecycle == null) {
-      return Optional.absent();
-    }
     return kubernetesPeonLifecycle.streamLogs();
   }
 
   @Override
   public TaskLocation getLocation()
   {
-    if (kubernetesPeonLifecycle == null) {
-      return TaskLocation.unknown();
-    }
     return kubernetesPeonLifecycle.getTaskLocation();
   }
 
@@ -118,5 +103,10 @@ public class KubernetesWorkItem extends TaskRunnerWorkItem
   public Task getTask()
   {
     return task;
+  }
+
+  protected KubernetesPeonLifecycle getPeonLifeycle()
+  {
+    return this.kubernetesPeonLifecycle;
   }
 }

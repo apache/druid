@@ -23,6 +23,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import nl.jqno.equalsverifier.EqualsVerifier;
+import nl.jqno.equalsverifier.Warning;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -448,5 +450,16 @@ public class ScanQueryTest extends InitializedNullHandlingTest
     Assert.assertNull(buildSpec.getGroupingColumns());
     Assert.assertNull(buildSpec.getAggregators());
     Assert.assertEquals(virtualColumns, buildSpec.getVirtualColumns());
+  }
+
+  @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(ScanQuery.class)
+        .suppress(Warning.NULL_FIELDS, Warning.NONFINAL_FIELDS)
+        // these fields are derived from the context
+        .withIgnoredFields("maxRowsQueuedForOrdering", "maxSegmentPartitionsOrderedInMemory")
+        .usingGetClass()
+        .verify();
   }
 }
