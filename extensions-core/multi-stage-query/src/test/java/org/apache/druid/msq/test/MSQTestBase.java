@@ -273,6 +273,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
                   .put(MSQTaskQueryMaker.USER_KEY, "allowAll")
+                  .put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true)
                   .build();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
