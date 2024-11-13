@@ -6894,7 +6894,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testUnnestWithTimeFilterOnlyNestedIsBad0()
   {
     testQuery1(
-        "select d,c from foo CROSS JOIN UNNEST(ARRAY[m1,m2]) as un(d) CROSS JOIN unnest(MV_TO_ARRAY(dim3)) as u(c)"
+        "select d,c,ARRAY[m1,m2] from foo CROSS JOIN UNNEST(ARRAY[m1,m2]) as un(d) CROSS JOIN unnest(MV_TO_ARRAY(dim3)) as u(c)"
         + " where __time >= TIMESTAMP '2000-01-02 00:00:00' and __time <= TIMESTAMP '2000-01-03 00:10:00'",
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(

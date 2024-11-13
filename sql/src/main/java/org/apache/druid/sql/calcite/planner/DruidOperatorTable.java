@@ -110,7 +110,6 @@ import org.apache.druid.sql.calcite.expression.builtin.ReinterpretOperatorConver
 import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
-import org.apache.druid.sql.calcite.expression.builtin.RuntimeAssertOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SafeDivideOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ScalarInArrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SearchOperatorConversion;
@@ -433,7 +432,6 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .addAll(CUSTOM_MATH_OPERATOR_CONVERSIONS)
                    .addAll(NESTED_DATA_OPERATOR_CONVERSIONS)
                    .add(TableAppendMacro.OPERATOR_CONVERSION)
-                   .add(new RuntimeAssertOperatorConversion())
                    .build();
 
   // Operators that have no conversion, but are handled in the convertlet table, so they still need to exist.

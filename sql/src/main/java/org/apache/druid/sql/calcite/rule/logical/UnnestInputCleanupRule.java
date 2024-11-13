@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rule.logical;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
@@ -28,19 +27,14 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.rules.SubstitutionRule;
 import org.apache.calcite.rel.type.RelDataType;
-import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
-import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.sql.calcite.expression.builtin.RuntimeAssertOperatorConversion;
-
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -110,10 +104,6 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
         .build();
 
 
-//    new RelRecordType(
-//
-//        );
-
     RelNode newUnnest = new LogicalUnnest(
         unnest.getCluster(),
         unnest.getTraitSet(),
@@ -133,48 +123,17 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
 //      return;
     }
     for (int i = 0; i < hideCount; i++) {
-      projectFields.remove(unnest.getRowType().getFieldCount()-2);
+      projectFields.remove(unnest.getRowType().getFieldCount() - 2);
     }
     RelDataType type = oldProject.getProjects().get(inputIndex).getType();
-    RexNode rn;
-    if(type.isNullable()) {
-      rn = rexBuilder.makeNullLiteral(type);
-    } else {
-      // bail out
-//      return;
-//      reutrn;
-      rn=null;
-      int i=4;
-      if(i==1) {
-      rn =rexBuilder.makeReinterpretCast(type, rexBuilder.makeNullLiteral(type), null);
-      }
-      if(i==2) {
-        rn =rexBuilder.makeAbstractCast(type, rexBuilder.makeNullLiteral(type), true);
-      }
-
-      if(i==3) {
-        rn = rexBuilder.makeCall(type, SqlStdOperatorTable.CURRENT_TIMESTAMP, Collections.emptyList());
-      }
-      if(i==4) {
-        rn = rexBuilder.makeCall(
-            type,
-            new RuntimeAssertOperatorConversion().calciteOperator(),
-            ImmutableList.of(rexBuilder.makeLiteral("Not possible to access the unnested function's input"))
-        );
-      }
-    }
 
     projectFields.set(
         inputIndex,
-        rn
+        newUnnestExpr
     );
     builder.project(projectFields, ImmutableSet.of() , true);
 
     RelNode build = builder.build();
-    RelDataTypeField newField = build.getRowType().getFieldList().get(inputIndex);
-    if(newField.getType().isNullable() != type.isNullable()) {
-      int asd = 1;
-    }
     call.transformTo(build);
     call.getPlanner().prune(unnest);
   }
