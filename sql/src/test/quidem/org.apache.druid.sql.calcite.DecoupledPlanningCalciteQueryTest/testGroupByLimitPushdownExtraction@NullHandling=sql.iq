@@ -21,17 +21,19 @@ SELECT dim4, substring(dim5, 1, 1), count(*) FROM druid.numfoo WHERE dim4 = 'a' 
 LogicalProject(dim4=[CAST('a':VARCHAR):VARCHAR], EXPR$1=[$0], EXPR$2=[$1])
   LogicalSort(fetch=[2])
     LogicalAggregate(group=[{0}], EXPR$2=[COUNT()])
-      LogicalProject(EXPR$1=[SUBSTRING($5, 1, 1)])
-        LogicalFilter(condition=[=($4, 'a')])
-          LogicalTableScan(table=[[druid, numfoo]])
+      LogicalProject(EXPR$1=[SUBSTRING($1, 1, 1)])
+        LogicalFilter(condition=[=($0, 'a')])
+          LogicalProject(dim4=[$4], dim5=[$5])
+            LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
 DruidProject(dim4=[CAST('a':VARCHAR):VARCHAR], EXPR$1=[$0], EXPR$2=[$1], druid=[logical])
   DruidSort(fetch=[2], druid=[logical])
     DruidAggregate(group=[{0}], EXPR$2=[COUNT()], druid=[logical])
-      DruidProject(EXPR$1=[SUBSTRING($5, 1, 1)], druid=[logical])
-        DruidFilter(condition=[=($4, 'a')])
-          DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+      DruidProject(EXPR$1=[SUBSTRING($1, 1, 1)], druid=[logical])
+        DruidFilter(condition=[=($0, 'a')])
+          DruidProject(dim4=[$4], dim5=[$5], druid=[logical])
+            DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan
 {

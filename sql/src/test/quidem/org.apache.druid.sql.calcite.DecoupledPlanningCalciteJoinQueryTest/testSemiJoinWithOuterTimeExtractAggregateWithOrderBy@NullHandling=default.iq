@@ -31,9 +31,10 @@ LogicalProject(EXPR$0=[$1], EXPR$1=[$0])
           LogicalFilter(condition=[<>($1, '')])
             LogicalProject(__time=[$0], dim1=[$1], dim2=[$2])
               LogicalTableScan(table=[[druid, foo]])
-          LogicalAggregate(group=[{2}])
-            LogicalFilter(condition=[=($1, 'def')])
-              LogicalTableScan(table=[[druid, foo]])
+          LogicalAggregate(group=[{1}])
+            LogicalFilter(condition=[=($0, 'def')])
+              LogicalProject(dim1=[$1], dim2=[$2])
+                LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidProject(EXPR$0=[$1], EXPR$1=[$0], druid=[logical])
@@ -43,9 +44,10 @@ DruidProject(EXPR$0=[$1], EXPR$1=[$0], druid=[logical])
         DruidFilter(condition=[<>($1, '')])
           DruidProject(__time=[$0], dim1=[$1], dim2=[$2], druid=[logical])
             DruidTableScan(table=[[druid, foo]], druid=[logical])
-        DruidAggregate(group=[{2}], druid=[logical])
-          DruidFilter(condition=[=($1, 'def')])
-            DruidTableScan(table=[[druid, foo]], druid=[logical])
+        DruidAggregate(group=[{1}], druid=[logical])
+          DruidFilter(condition=[=($0, 'def')])
+            DruidProject(dim1=[$1], dim2=[$2], druid=[logical])
+              DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
 {

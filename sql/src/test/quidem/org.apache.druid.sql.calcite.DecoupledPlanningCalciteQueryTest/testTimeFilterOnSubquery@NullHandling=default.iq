@@ -19,15 +19,15 @@ WHERE TIME_IN_INTERVAL(__time, '2000/P1D') OR TIME_IN_INTERVAL(__time, '2001/P1D
 (2 rows)
 
 !ok
-LogicalProject(__time=[$0], m1=[$5])
-  LogicalFilter(condition=[SEARCH($0, Sarg[[2000-01-01 00:00:00:TIMESTAMP(3)..2000-01-02 00:00:00:TIMESTAMP(3)), [2001-01-01 00:00:00:TIMESTAMP(3)..2001-01-02 00:00:00:TIMESTAMP(3))]:TIMESTAMP(3))])
-    LogicalSort(fetch=[100])
+LogicalFilter(condition=[SEARCH($0, Sarg[[2000-01-01 00:00:00:TIMESTAMP(3)..2000-01-02 00:00:00:TIMESTAMP(3)), [2001-01-01 00:00:00:TIMESTAMP(3)..2001-01-02 00:00:00:TIMESTAMP(3))]:TIMESTAMP(3))])
+  LogicalSort(fetch=[100])
+    LogicalProject(__time=[$0], m1=[$5])
       LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
-DruidProject(__time=[$0], m1=[$5], druid=[logical])
-  DruidFilter(condition=[SEARCH($0, Sarg[[2000-01-01 00:00:00:TIMESTAMP(3)..2000-01-02 00:00:00:TIMESTAMP(3)), [2001-01-01 00:00:00:TIMESTAMP(3)..2001-01-02 00:00:00:TIMESTAMP(3))]:TIMESTAMP(3))])
-    DruidSort(fetch=[100], druid=[logical])
+DruidFilter(condition=[SEARCH($0, Sarg[[2000-01-01 00:00:00:TIMESTAMP(3)..2000-01-02 00:00:00:TIMESTAMP(3)), [2001-01-01 00:00:00:TIMESTAMP(3)..2001-01-02 00:00:00:TIMESTAMP(3))]:TIMESTAMP(3))])
+  DruidSort(fetch=[100], druid=[logical])
+    DruidProject(__time=[$0], m1=[$5], druid=[logical])
       DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
@@ -47,8 +47,8 @@ DruidProject(__time=[$0], m1=[$5], druid=[logical])
       },
       "resultFormat" : "compactedList",
       "limit" : 100,
-      "columns" : [ "__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1" ],
-      "columnTypes" : [ "LONG", "STRING", "STRING", "STRING", "LONG", "FLOAT", "DOUBLE", "COMPLEX<hyperUnique>" ],
+      "columns" : [ "__time", "m1" ],
+      "columnTypes" : [ "LONG", "FLOAT" ],
       "granularity" : {
         "type" : "all"
       },

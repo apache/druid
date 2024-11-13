@@ -22,13 +22,15 @@ SELECT dim2, SUM(cnt), COUNT(distinct dim1) FROM druid.foo GROUP BY dim2;
 
 !ok
 LogicalAggregate(group=[{1}], EXPR$1=[SUM($2)], EXPR$2=[COUNT($0)])
-  LogicalAggregate(group=[{1, 2}], EXPR$1=[SUM($4)])
-    LogicalTableScan(table=[[druid, foo]])
+  LogicalAggregate(group=[{0, 1}], EXPR$1=[SUM($2)])
+    LogicalProject(dim1=[$1], dim2=[$2], cnt=[$4])
+      LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidAggregate(group=[{1}], EXPR$1=[SUM($2)], EXPR$2=[COUNT($0)], druid=[logical])
-  DruidAggregate(group=[{1, 2}], EXPR$1=[SUM($4)], druid=[logical])
-    DruidTableScan(table=[[druid, foo]], druid=[logical])
+  DruidAggregate(group=[{0, 1}], EXPR$1=[SUM($2)], druid=[logical])
+    DruidProject(dim1=[$1], dim2=[$2], cnt=[$4], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
 {

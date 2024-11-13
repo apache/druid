@@ -18,27 +18,29 @@ SELECT COUNT(*) FILTER (WHERE FLOOR(100) NOT IN (SELECT m1 FROM foo)) FROM foo;
 
 !ok
 LogicalAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0])
-  LogicalProject($f0=[OR(=($1, 0), AND(IS NULL($4), >=($2, $1)))])
-    LogicalJoin(condition=[=(CAST(FLOOR(100)):FLOAT NOT NULL, $3)], joinType=[left])
+  LogicalProject($f0=[OR(=($8, 0), AND(IS NULL($11), >=($9, $8)))])
+    LogicalJoin(condition=[=(CAST(FLOOR(100)):FLOAT NOT NULL, $10)], joinType=[left])
       LogicalJoin(condition=[true], joinType=[inner])
-        LogicalProject(DUMMY=[0])
-          LogicalTableScan(table=[[druid, foo]])
-        LogicalAggregate(group=[{}], c=[COUNT()], ck=[COUNT($5)])
-          LogicalTableScan(table=[[druid, foo]])
-      LogicalAggregate(group=[{5}], i=[LITERAL_AGG(true)])
         LogicalTableScan(table=[[druid, foo]])
+        LogicalAggregate(group=[{}], c=[COUNT()], ck=[COUNT($0)])
+          LogicalProject(m1=[$5])
+            LogicalTableScan(table=[[druid, foo]])
+      LogicalAggregate(group=[{0}], i=[LITERAL_AGG(true)])
+        LogicalProject(m1=[$5])
+          LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], druid=[logical])
-  DruidProject($f0=[OR(=($1, 0), AND(IS NULL($4), >=($2, $1)))], druid=[logical])
-    DruidJoin(condition=[=(CAST(FLOOR(100)):FLOAT NOT NULL, $3)], joinType=[left])
+  DruidProject($f0=[OR(=($8, 0), AND(IS NULL($11), >=($9, $8)))], druid=[logical])
+    DruidJoin(condition=[=(CAST(FLOOR(100)):FLOAT NOT NULL, $10)], joinType=[left])
       DruidJoin(condition=[true], joinType=[inner])
-        DruidProject(DUMMY=[0], druid=[logical])
-          DruidTableScan(table=[[druid, foo]], druid=[logical])
-        DruidAggregate(group=[{}], c=[COUNT()], ck=[COUNT($5)], druid=[logical])
-          DruidTableScan(table=[[druid, foo]], druid=[logical])
-      DruidAggregate(group=[{5}], i=[LITERAL_AGG(true)], druid=[logical])
         DruidTableScan(table=[[druid, foo]], druid=[logical])
+        DruidAggregate(group=[{}], c=[COUNT()], ck=[COUNT($0)], druid=[logical])
+          DruidProject(m1=[$5], druid=[logical])
+            DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidAggregate(group=[{0}], i=[LITERAL_AGG(true)], druid=[logical])
+        DruidProject(m1=[$5], druid=[logical])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
 {
@@ -48,31 +50,8 @@ DruidAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], druid=[logical])
     "left" : {
       "type" : "join",
       "left" : {
-        "type" : "query",
-        "query" : {
-          "queryType" : "scan",
-          "dataSource" : {
-            "type" : "table",
-            "name" : "foo"
-          },
-          "intervals" : {
-            "type" : "intervals",
-            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-          },
-          "virtualColumns" : [ {
-            "type" : "expression",
-            "name" : "v0",
-            "expression" : "0",
-            "outputType" : "LONG"
-          } ],
-          "resultFormat" : "compactedList",
-          "columns" : [ "v0" ],
-          "columnTypes" : [ "LONG" ],
-          "granularity" : {
-            "type" : "all"
-          },
-          "legacy" : false
-        }
+        "type" : "table",
+        "name" : "foo"
       },
       "right" : {
         "type" : "query",

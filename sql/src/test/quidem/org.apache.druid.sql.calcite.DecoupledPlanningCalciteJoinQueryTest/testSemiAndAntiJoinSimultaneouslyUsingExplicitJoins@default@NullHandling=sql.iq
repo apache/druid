@@ -31,9 +31,11 @@ LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
           LogicalProject(__time=[$0], dim1=[$1])
             LogicalTableScan(table=[[druid, foo]])
         LogicalAggregate(group=[{}], t=[MAX($0)])
-          LogicalTableScan(table=[[druid, foo]])
+          LogicalProject(__time=[$0])
+            LogicalTableScan(table=[[druid, foo]])
       LogicalAggregate(group=[{}], t=[MIN($0)])
-        LogicalTableScan(table=[[druid, foo]])
+        LogicalProject(__time=[$0])
+          LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
@@ -44,9 +46,11 @@ DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
           DruidProject(__time=[$0], dim1=[$1], druid=[logical])
             DruidTableScan(table=[[druid, foo]], druid=[logical])
         DruidAggregate(group=[{}], t=[MAX($0)], druid=[logical])
-          DruidTableScan(table=[[druid, foo]], druid=[logical])
+          DruidProject(__time=[$0], druid=[logical])
+            DruidTableScan(table=[[druid, foo]], druid=[logical])
       DruidAggregate(group=[{}], t=[MIN($0)], druid=[logical])
-        DruidTableScan(table=[[druid, foo]], druid=[logical])
+        DruidProject(__time=[$0], druid=[logical])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
 {

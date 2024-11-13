@@ -5410,7 +5410,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNUSED_VIRTUALCOLUMN, separateDefaultModeTest = true)
   @Test
   public void testUnnestWithFiltersInnerLimit()
   {
@@ -6853,13 +6852,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           expressionVirtualColumn("j0.unnest", "array(\"m1\",\"m2\")", ColumnType.FLOAT_ARRAY),
                           null
                       ),
-                      nestedExpressionVirtualColumn("_j0.unnest", "\"dim3\"", ColumnType.STRING),
+                      nestedExpressionVirtualColumn(ds("j0.unnest"), "\"dim3\"", ColumnType.STRING),
                       null
                   ))
                   .intervals(querySegmentSpec(Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:10:00.001Z")))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_UNNEST)
-                  .columns("_j0.unnest")
+                  .columns(ds("j0.unnest"))
                   .columnTypes(ColumnType.STRING)
                   .build()
         ),
@@ -6894,7 +6893,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   public void testUnnestWithTimeFilterOnlyNestedIsBad0()
   {
     testQuery1(
-        "select d,c,ARRAY[m1,m2] from foo CROSS JOIN UNNEST(ARRAY[m1,m2]) as un(d) CROSS JOIN unnest(MV_TO_ARRAY(dim3)) as u(c)"
+        "select d,c from foo CROSS JOIN UNNEST(ARRAY[m1,m2]) as un(d) CROSS JOIN unnest(MV_TO_ARRAY(dim3)) as u(c)"
         + " where __time >= TIMESTAMP '2000-01-02 00:00:00' and __time <= TIMESTAMP '2000-01-03 00:10:00'",
         QUERY_CONTEXT_UNNEST,
         ImmutableList.of(

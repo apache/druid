@@ -25,9 +25,10 @@ LogicalSort(fetch=[1])
     LogicalJoin(condition=[=($0, $2)], joinType=[inner])
       LogicalProject(dim4=[$4], m1=[$14])
         LogicalTableScan(table=[[druid, numfoo]])
-      LogicalAggregate(group=[{4}])
-        LogicalFilter(condition=[<>($4, 'a')])
-          LogicalTableScan(table=[[druid, numfoo]])
+      LogicalAggregate(group=[{0}])
+        LogicalFilter(condition=[<>($0, 'a')])
+          LogicalProject(dim4=[$4])
+            LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
 DruidSort(fetch=[1], druid=[logical])
@@ -35,9 +36,10 @@ DruidSort(fetch=[1], druid=[logical])
     DruidJoin(condition=[=($0, $2)], joinType=[inner])
       DruidProject(dim4=[$4], m1=[$14], druid=[logical])
         DruidTableScan(table=[[druid, numfoo]], druid=[logical])
-      DruidAggregate(group=[{4}], druid=[logical])
-        DruidFilter(condition=[<>($4, 'a')])
-          DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+      DruidAggregate(group=[{0}], druid=[logical])
+        DruidFilter(condition=[<>($0, 'a')])
+          DruidProject(dim4=[$4], druid=[logical])
+            DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan
 {
