@@ -26,7 +26,6 @@ import org.apache.calcite.plan.RelOptUtil.InputFinder;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.rules.SubstitutionRule;
-import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
@@ -125,7 +124,6 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
     for (int i = 0; i < hideCount; i++) {
       projectFields.remove(unnest.getRowType().getFieldCount() - 2);
     }
-    RelDataType type = oldProject.getProjects().get(inputIndex).getType();
 
     projectFields.set(
         inputIndex,
@@ -146,13 +144,10 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
   private static class ExpressionPullerRexShuttle extends RexShuttle
   {
     private final List<RexNode> projects;
-    // FIXME: remove this crap
-    private int replaceableIndex;
 
     private ExpressionPullerRexShuttle(List<RexNode> projects, int replaceableIndex)
     {
       this.projects = projects;
-      this.replaceableIndex = -1;
     }
 
     @Override
@@ -160,14 +155,8 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
     {
       int newIndex = projects.indexOf(inputRef);
       if (newIndex < 0) {
-        if (replaceableIndex >= 0) {
-          newIndex = replaceableIndex;
-          projects.set(replaceableIndex, inputRef);
-          replaceableIndex = -1;
-        } else {
           newIndex = projects.size();
           projects.add(inputRef);
-        }
       }
       if (newIndex == inputRef.getIndex()) {
         return inputRef;
