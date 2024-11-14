@@ -20,11 +20,12 @@
 package org.apache.druid.storage;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Provider;
 
 import java.io.File;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-public interface ExportStorageProvider
+public interface ExportStorageProvider extends Provider<StorageConnector>
 {
   String getResourceType();
 
@@ -36,4 +37,10 @@ public interface ExportStorageProvider
   String getFilePathForManifest(String fileName);
 
   StorageConnector createStorageConnector(File taskTempDir);
+
+  @Override
+  default StorageConnector get()
+  {
+    return createStorageConnector(null);
+  }
 }

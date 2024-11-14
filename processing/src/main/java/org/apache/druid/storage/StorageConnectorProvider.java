@@ -20,11 +20,12 @@
 package org.apache.druid.storage;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Provider;
 
 import java.io.File;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-public interface StorageConnectorProvider
+public interface StorageConnectorProvider extends Provider<StorageConnector>
 {
   /**
    * Returns the storage connector. Takes a parameter defaultTempDir to be possibly used as the temporary directory, if the
@@ -36,4 +37,10 @@ public interface StorageConnectorProvider
    * task id, and such dynamic task specific bindings is not possible on indexers.
    */
   StorageConnector createStorageConnector(File defaultTempDir);
+
+  @Override
+  default StorageConnector get()
+  {
+    return createStorageConnector(null);
+  }
 }
