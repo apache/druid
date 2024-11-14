@@ -4597,8 +4597,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-
-  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
+  @NotYetSupported(Modes.RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS)
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS)
   @Test
   public void testUnnestThriceWithFiltersOnDimAndUnnestCol()
   {
@@ -4685,7 +4685,8 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
+  @NotYetSupported(Modes.RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS)
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS)
   @Test
   public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumns()
   {

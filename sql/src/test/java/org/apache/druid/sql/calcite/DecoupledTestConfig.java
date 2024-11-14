@@ -53,7 +53,11 @@ public @interface DecoupledTestConfig
     /**
      * An extra ScanQuery to service a Project and/or Filter was added.
      */
-    UNNEST_EXTRA_SCANQUERY;
+    UNNEST_EXTRA_SCANQUERY,
+    /**
+     * Occurs in tandem with {@link NotYetSupported.Modes.RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS}.
+     */
+    RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS;
 
     public boolean isPresent()
     {

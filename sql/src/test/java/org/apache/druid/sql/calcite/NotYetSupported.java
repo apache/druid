@@ -95,7 +95,8 @@ public @interface NotYetSupported
     REQUIRE_TIME_CONDITION(CannotBuildQueryException.class, "requireTimeCondition is enabled"),
     ERROR_CANNOT_TRANSLATE_COUNT_DISTINCT(AssertionError.class, "Cannot translate aggregator.COUNT.DISTINCT"),
     UNNEST_INLINED(Exception.class, "Missing conversion is Uncollect"),
-    UNNEST_RESULT_MISMATCH(AssertionError.class, "(Result count mismatch|column content mismatch)");
+    UNNEST_RESULT_MISMATCH(AssertionError.class, "(Result count mismatch|column content mismatch)"),
+    RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS(AssertionError.class, "(Result count mismatch|column content mismatch)");
     // @formatter:on
 
     public Class<? extends Throwable> throwableClass;
