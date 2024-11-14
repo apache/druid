@@ -115,9 +115,6 @@ import java.util.stream.Collectors;
  */
 public class TestDataBuilder
 {
-  private static final String D1 = "dbl1";
-  private static final String D2 = "dbl2";
-
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   public static final String TIMESTAMP_COLUMN = "t";
@@ -174,8 +171,8 @@ public class TestDataBuilder
                            "dim5",
                            "dim6"
                        )))
-                       .add(new DoubleDimensionSchema(D1))
-                       .add(new DoubleDimensionSchema(D2))
+                       .add(new DoubleDimensionSchema("dbl1"))
+                       .add(new DoubleDimensionSchema("dbl2"))
                        .add(new FloatDimensionSchema("f1"))
                        .add(new FloatDimensionSchema("f2"))
                        .add(new LongDimensionSchema("l1"))
@@ -393,7 +390,7 @@ public class TestDataBuilder
                   .put("t", "2000-01-01")
                   .put("m1", "1.0")
                   .put("m2", "1.0")
-                  .put(D1, 1.0)
+                  .put("dbl1", 1.0)
                   .put("f1", 1.0f)
                   .put("l1", 7L)
                   .put("dim1", "")
@@ -407,8 +404,8 @@ public class TestDataBuilder
                   .put("t", "2000-01-02")
                   .put("m1", "2.0")
                   .put("m2", "2.0")
-                  .put(D1, 1.7)
-                  .put(D2, 1.7)
+                  .put("dbl1", 1.7)
+                  .put("dbl2", 1.7)
                   .put("f1", 0.1f)
                   .put("f2", 0.1f)
                   .put("l1", 325323L)
@@ -424,8 +421,8 @@ public class TestDataBuilder
                   .put("t", "2000-01-03")
                   .put("m1", "3.0")
                   .put("m2", "3.0")
-                  .put(D1, 0.0)
-                  .put(D2, 0.0)
+                  .put("dbl1", 0.0)
+                  .put("dbl2", 0.0)
                   .put("f1", 0.0)
                   .put("f2", 0.0)
                   .put("l1", 0)
@@ -597,8 +594,8 @@ public class TestDataBuilder
           x.get("dim3"),
           x.get("dim4"),
           x.get("dim5"),
-          x.get(D1),
-          x.get(D2),
+          x.get("dbl1"),
+          x.get("dbl2"),
           x.get("f1"),
           x.get("f2"),
           x.get("l1"),
@@ -610,8 +607,8 @@ public class TestDataBuilder
                   .add("dim3", ColumnType.STRING)
                   .add("dim4", ColumnType.STRING)
                   .add("dim5", ColumnType.STRING)
-                  .add(D1, ColumnType.DOUBLE)
-                  .add(D2, ColumnType.DOUBLE)
+                  .add("dbl1", ColumnType.DOUBLE)
+                  .add("dbl2", ColumnType.DOUBLE)
                   .add("f1", ColumnType.FLOAT)
                   .add("f2", ColumnType.FLOAT)
                   .add("l1", ColumnType.LONG)
