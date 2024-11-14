@@ -294,7 +294,6 @@ public final class DictionaryIdLookup implements Closeable
   private File makeTempDir(String fileName)
   {
     try {
-      // creates files in temp path in the form of 'name.partName.tmp'
       final File f = new File(tempBasePath, StringUtils.urlEncode(fileName));
       FileUtils.mkdirp(f);
       closer.register(() -> FileUtils.deleteDirectory(f));
