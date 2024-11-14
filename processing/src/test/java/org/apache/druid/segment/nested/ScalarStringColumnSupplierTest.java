@@ -150,7 +150,7 @@ public class ScalarStringColumnSupplierTest extends InitializedNullHandlingTest
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);
 
-      serializer.openDictionaryWriter(tempFolder.newFolder().toPath());
+      serializer.openDictionaryWriter(tempFolder.newFolder());
       serializer.serializeDictionaries(
           globalDictionarySortedCollector.getSortedStrings(),
           globalDictionarySortedCollector.getSortedLongs(),

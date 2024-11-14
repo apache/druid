@@ -34,9 +34,9 @@ import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
-import java.nio.file.Path;
 
 /**
  * Serializer for a {@link ScalarDoubleColumn}
@@ -66,7 +66,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
   }
 
   @Override
-  public void openDictionaryWriter(Path segmentBasePath) throws IOException
+  public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
     dictionaryWriter = new FixedIndexedWriter<>(
         segmentWriteOutMedium,
@@ -79,7 +79,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
     dictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
-            segmentBasePath,
+            segmentBaseDir,
             null,
             null,
             dictionaryWriter,
@@ -136,8 +136,8 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
   @Override
   protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
   {
-    if (dictionaryIdLookup.getDoubleBuffer() != null) {
-      writeInternal(smoosher, dictionaryIdLookup.getDoubleBuffer(), ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
+    if (dictionaryIdLookup.getDoubleBufferMapper() != null) {
+      copyFromTempSmoosh(smoosher, dictionaryIdLookup.getDoubleBufferMapper());
     } else {
       writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
     }

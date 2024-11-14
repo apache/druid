@@ -50,7 +50,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
-import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -89,7 +88,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   private boolean isVariantType = false;
   private byte variantTypeByte = 0x00;
 
-  private final Path segmentBasePath;
+  private final File segmentBaseDir;
 
   /**
    * @param name                  column name
@@ -119,7 +118,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
     this.castToType = castToType;
     this.indexSpec = indexSpec;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
-    this.segmentBasePath = segmentBaseDir.toPath();
+    this.segmentBaseDir = segmentBaseDir;
     this.closer = closer;
   }
 
@@ -271,7 +270,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         );
       }
 
-      serializer.openDictionaryWriter(segmentBasePath);
+      serializer.openDictionaryWriter(segmentBaseDir);
       serializer.serializeFields(mergedFields);
 
       int stringCardinality;

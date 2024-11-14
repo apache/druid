@@ -26,8 +26,11 @@ import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.data.VByte;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -64,12 +67,6 @@ public class ColumnSerializerUtils
     smoosher.serializeAs(getInternalFileName(columnName, fileName), serializer);
   }
 
-  public static void writeInternal(FileSmoosher smoosher, ByteBuffer buffer, String columnName, String fileName)
-      throws IOException
-  {
-    smoosher.add(getInternalFileName(columnName, fileName), buffer);
-  }
-
   public static String getInternalFileName(String fileNameBase, String field)
   {
     return fileNameBase + "." + field;
@@ -89,5 +86,28 @@ public class ColumnSerializerUtils
     buffer.put(bytes);
     buffer.flip();
     return buffer;
+  }
+
+  /**
+   * Writes a {@link Serializer} to a 'smoosh file' which contains the contents of this single serializer, with the
+   * serializer writing to an internal file specified by the name argument, returning a {@link SmooshedFileMapper}
+   */
+  public static SmooshedFileMapper mapSerializer(File smooshFile, Serializer writer, String name)
+  {
+    try (
+        final FileSmoosher smoosher = new FileSmoosher(smooshFile);
+        final SmooshedWriter smooshedWriter = smoosher.addWithSmooshedWriter(
+            name,
+            writer.getSerializedSize()
+        )
+    ) {
+      writer.writeTo(smooshedWriter, smoosher);
+      smooshedWriter.close();
+      smoosher.close();
+      return SmooshedFileMapper.load(smooshFile);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

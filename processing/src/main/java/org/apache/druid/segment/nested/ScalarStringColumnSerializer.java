@@ -33,8 +33,8 @@ import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 
 /**
  * Serializer for a string {@link NestedCommonFormatColumn} that can be read with
@@ -62,7 +62,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
   }
 
   @Override
-  public void openDictionaryWriter(Path segmentBasePath) throws IOException
+  public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
     dictionaryWriter = StringEncodingStrategies.getStringDictionaryWriter(
         indexSpec.getStringDictionaryEncoding(),
@@ -73,7 +73,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
     dictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
-            segmentBasePath,
+            segmentBaseDir,
             dictionaryWriter,
             null,
             null,

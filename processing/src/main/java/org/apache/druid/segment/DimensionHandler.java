@@ -104,6 +104,9 @@ public interface DimensionHandler
 
   /**
    * @deprecated use {@link #makeMerger(String, IndexSpec, SegmentWriteOutMedium, ColumnCapabilities, ProgressIndicator, File, Closer)}
+   *
+   * This method exists for backwards compatiblity with older versions of Druid since this is an unofficial extension
+   * point that must be implemented to create custom dimension types, and will be removed in a future release.
    */
   @Deprecated
   default DimensionMergerV9 makeMerger(

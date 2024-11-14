@@ -26,14 +26,13 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.common.utils.SerializerUtils;
-import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -55,7 +54,7 @@ import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
 import org.apache.druid.segment.data.V3CompressedVSizeColumnarMultiIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.VSizeColumnarMultiIntsSerializer;
-import org.apache.druid.segment.nested.DictionaryIdLookup;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
@@ -69,10 +68,7 @@ import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
-import java.nio.MappedByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -117,6 +113,13 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
   protected T firstDictionaryValue;
 
   protected File segmentBaseDir;
+
+  /**
+   * This becomes non-null if {@link #markAsParent()} is called indicating that this column is a base table 'parent'
+   * to some projection column, which requires persisting id conversion buffers to a temporary files. If there are no
+   * projections defined (or projections which reference this column) then id conversion buffers will be freed after
+   * calling {@link #writeIndexes(List)}
+   */
   @MonotonicNonNull
   protected PersistedIdConversions persistedIdConversions;
 
@@ -158,7 +161,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-    persistedIdConversions = closer.register(new PersistedIdConversions(tmpOutputFilesDir.toPath()));
+    persistedIdConversions = closer.register(new PersistedIdConversions(tmpOutputFilesDir));
   }
 
   @Override
@@ -767,6 +770,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     @Override
     public void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException
     {
+      // currently no support for id conversion buffers larger than 2gb
       buffer.position(0);
       while (buffer.remaining() > 0) {
         scratch.position(0);
@@ -783,23 +787,22 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
    */
   protected static class PersistedIdConversions implements Closeable
   {
-    private final Path tempPath;
+    private final File tempDir;
     private final Closer closer;
 
-    protected PersistedIdConversions(Path tempPath)
+    protected PersistedIdConversions(File tempDir)
     {
-      this.tempPath = tempPath;
+      this.tempDir = tempDir;
       this.closer = Closer.create();
     }
 
     @Nullable
     public IntBuffer map(String name, IntBuffer intBuffer) throws IOException
     {
-      final Path path = Files.createTempFile(tempPath, name, null);
-      final IdConversionSerializer serializer = new IdConversionSerializer(
-          intBuffer
-      );
-      return closer.register(new PersistedIdConversion(path, serializer)).getBuffer();
+      final File bufferDir = new File(tempDir, name);
+      FileUtils.mkdirp(bufferDir);
+      final IdConversionSerializer serializer = new IdConversionSerializer(intBuffer);
+      return closer.register(new PersistedIdConversion(bufferDir, serializer)).getBuffer();
     }
 
     @Override
@@ -809,7 +812,7 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
         closer.close();
       }
       finally {
-        FileUtils.deleteDirectory(tempPath.toFile());
+        FileUtils.deleteDirectory(tempDir);
       }
     }
   }
@@ -824,17 +827,18 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
    */
   protected static class PersistedIdConversion implements Closeable
   {
-    private final Path idConversionFile;
-    private final MappedByteBuffer mappedBuffer;
-
+    private final File idConversionFile;
+    private final SmooshedFileMapper bufferMapper;
     private final IntBuffer buffer;
+
     private boolean isClosed;
 
-    protected PersistedIdConversion(Path idConversionFile, Serializer idConversionSerializer)
+    protected PersistedIdConversion(File idConversionDir, Serializer idConversionSerializer) throws IOException
     {
-      this.idConversionFile = idConversionFile;
-      this.mappedBuffer = SerializerUtils.mapSerializer(idConversionFile, idConversionSerializer);
-      this.mappedBuffer.order(ByteOrder.nativeOrder());
+      this.idConversionFile = idConversionDir;
+      this.bufferMapper = ColumnSerializerUtils.mapSerializer(idConversionDir, idConversionSerializer, idConversionDir.getName());
+      final ByteBuffer mappedBuffer = bufferMapper.mapFile(idConversionDir.getName());
+      mappedBuffer.order(ByteOrder.nativeOrder());
       this.buffer = mappedBuffer.asIntBuffer();
     }
 
@@ -848,11 +852,13 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
     }
 
     @Override
-    public void close()
+    public void close() throws IOException
     {
-      isClosed = true;
-      ByteBufferUtils.unmap(mappedBuffer);
-      DictionaryIdLookup.deleteTempFile(idConversionFile);
+      if (!isClosed) {
+        isClosed = true;
+        bufferMapper.close();
+        FileUtils.deleteDirectory(idConversionFile);
+      }
     }
   }
 }

@@ -42,7 +42,8 @@ public interface DimensionMergerV9 extends DimensionMerger
   /**
    * Sets this merger as the "parent" of another merger for a "projection", allowing for this merger to preserve any
    * state which might be required for the projection mergers to do their thing. This method MUST be called prior to
-   * performing any merge work
+   * performing any merge work. Typically, this method is only implemented if
+   * {@link #attachParent(DimensionMergerV9, List)} requires it.
    */
   default void markAsParent()
   {
@@ -51,10 +52,14 @@ public interface DimensionMergerV9 extends DimensionMerger
 
   /**
    * Attaches the {@link DimensionMergerV9} of a "projection" parent column so that stuff like value dictionaries can
-   * be shared between parent and child
+   * be shared between parent and child. This method is called during merging instead of {@link #writeMergedValueDictionary(List)} if
+   * the parent column exists.
+   * 
+   * @see IndexMergerV9#makeProjections 
    */
   default void attachParent(DimensionMergerV9 parent, List<IndexableAdapter> projectionAdapters) throws IOException
   {
-    // do nothing
+    // by default fall through to writing merged dictionary
+    writeMergedValueDictionary(projectionAdapters);
   }
 }
