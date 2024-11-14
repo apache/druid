@@ -20,20 +20,18 @@ SELECT t,d3 FROM (select FLOOR(__time to hour) t, dim3 from druid.numfoo where d
 (3 rows)
 
 !ok
-LogicalProject(t=[$0], d3=[$2])
-  LogicalUnnest(unnestExpr=[$1])
-    LogicalProject(t=[FLOOR($0, FLAG(HOUR))], $f2=[MV_TO_ARRAY($2)])
-      LogicalFilter(condition=[=($1, 'a')])
-        LogicalProject(__time=[$0], dim2=[$2], dim3=[$3])
-          LogicalTableScan(table=[[druid, numfoo]])
+LogicalProject(t=[$0], d3=[$3])
+  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($2)])
+    LogicalProject($f0=[FLOOR($0, FLAG(HOUR))], __time=[$0], dim3=[$3])
+      LogicalFilter(condition=[=($2, 'a')])
+        LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
-DruidProject(t=[$0], d3=[$2], druid=[logical])
-  DruidUnnest(unnestExpr=[$1])
-    DruidProject(t=[FLOOR($0, FLAG(HOUR))], $f2=[MV_TO_ARRAY($2)], druid=[logical])
-      DruidFilter(condition=[=($1, 'a')])
-        DruidProject(__time=[$0], dim2=[$2], dim3=[$3], druid=[logical])
-          DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+DruidProject(t=[$0], d3=[$3], druid=[logical])
+  DruidUnnest(unnestExpr=[MV_TO_ARRAY($2)])
+    DruidProject($f0=[FLOOR($0, FLAG(HOUR))], __time=[$0], dim3=[$3], druid=[logical])
+      DruidFilter(condition=[=($2, 'a')])
+        DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan
 {
@@ -57,11 +55,6 @@ DruidProject(t=[$0], d3=[$2], druid=[logical])
           "name" : "v0",
           "expression" : "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
           "outputType" : "LONG"
-        }, {
-          "type" : "expression",
-          "name" : "v1",
-          "expression" : "mv_to_array(\"dim3\")",
-          "outputType" : "ARRAY<STRING>"
         } ],
         "resultFormat" : "compactedList",
         "filter" : {
@@ -70,8 +63,8 @@ DruidProject(t=[$0], d3=[$2], druid=[logical])
           "matchValueType" : "STRING",
           "matchValue" : "a"
         },
-        "columns" : [ "v0", "v1" ],
-        "columnTypes" : [ "LONG", "ARRAY<STRING>" ],
+        "columns" : [ "v0", "__time", "dim3" ],
+        "columnTypes" : [ "LONG", "LONG", "STRING" ],
         "granularity" : {
           "type" : "all"
         },
@@ -81,7 +74,7 @@ DruidProject(t=[$0], d3=[$2], druid=[logical])
     "virtualColumn" : {
       "type" : "expression",
       "name" : "j0.unnest",
-      "expression" : "\"v1\"",
+      "expression" : "mv_to_array(\"dim3\")",
       "outputType" : "ARRAY<STRING>"
     },
     "unnestFilter" : null

@@ -48,12 +48,13 @@ import java.util.Set;
 public class DruidRelFieldTrimmer extends RelFieldTrimmer
 {
   private RelBuilder relBuilder;
-  private boolean trimTableScan = true;
+  private boolean trimTableScan;
 
-  public DruidRelFieldTrimmer(@Nullable SqlValidator validator, RelBuilder relBuilder)
+  public DruidRelFieldTrimmer(@Nullable SqlValidator validator, RelBuilder relBuilder, boolean trimTableScan)
   {
     super(validator, relBuilder);
     this.relBuilder = relBuilder;
+    this.trimTableScan= trimTableScan;
   }
 
   @Override
