@@ -30,10 +30,9 @@ LogicalAggregate(group=[{0, 1}], EXPR$2=[ANY_VALUE($2, $3)])
       LogicalProject(__time=[$0], dim3=[$3], m1=[$5], $f3=[+(CAST(TIME_FLOOR($0, 'PT1H')):BIGINT NOT NULL, 1)])
         LogicalTableScan(table=[[druid, foo]])
       LogicalAggregate(group=[{0}], t2=[MIN($1)])
-        LogicalProject(t1=[+(CAST(TIME_FLOOR($0, 'PT1H')):BIGINT NOT NULL, 1)], m1=[$2])
-          LogicalFilter(condition=[AND(=($1, 'b'), SEARCH($0, Sarg[[1994-04-29 00:00:00:TIMESTAMP(3)..2020-01-11 00:00:00:TIMESTAMP(3)]]:TIMESTAMP(3)))])
-            LogicalProject(__time=[$0], dim3=[$3], m1=[$5])
-              LogicalTableScan(table=[[druid, foo]])
+        LogicalProject(t1=[+(CAST(TIME_FLOOR($0, 'PT1H')):BIGINT NOT NULL, 1)], m1=[$5])
+          LogicalFilter(condition=[AND(=($3, 'b'), SEARCH($0, Sarg[[1994-04-29 00:00:00:TIMESTAMP(3)..2020-01-11 00:00:00:TIMESTAMP(3)]]:TIMESTAMP(3)))])
+            LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidAggregate(group=[{0, 1}], EXPR$2=[ANY_VALUE($2, $3)], druid=[logical])
@@ -42,10 +41,9 @@ DruidAggregate(group=[{0, 1}], EXPR$2=[ANY_VALUE($2, $3)], druid=[logical])
       DruidProject(__time=[$0], dim3=[$3], m1=[$5], $f3=[+(CAST(TIME_FLOOR($0, 'PT1H')):BIGINT NOT NULL, 1)], druid=[logical])
         DruidTableScan(table=[[druid, foo]], druid=[logical])
       DruidAggregate(group=[{0}], t2=[MIN($1)], druid=[logical])
-        DruidProject(t1=[+(CAST(TIME_FLOOR($0, 'PT1H')):BIGINT NOT NULL, 1)], m1=[$2], druid=[logical])
-          DruidFilter(condition=[AND(=($1, 'b'), SEARCH($0, Sarg[[1994-04-29 00:00:00:TIMESTAMP(3)..2020-01-11 00:00:00:TIMESTAMP(3)]]:TIMESTAMP(3)))])
-            DruidProject(__time=[$0], dim3=[$3], m1=[$5], druid=[logical])
-              DruidTableScan(table=[[druid, foo]], druid=[logical])
+        DruidProject(t1=[+(CAST(TIME_FLOOR($0, 'PT1H')):BIGINT NOT NULL, 1)], m1=[$5], druid=[logical])
+          DruidFilter(condition=[AND(=($3, 'b'), SEARCH($0, Sarg[[1994-04-29 00:00:00:TIMESTAMP(3)..2020-01-11 00:00:00:TIMESTAMP(3)]]:TIMESTAMP(3)))])
+            DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
 {

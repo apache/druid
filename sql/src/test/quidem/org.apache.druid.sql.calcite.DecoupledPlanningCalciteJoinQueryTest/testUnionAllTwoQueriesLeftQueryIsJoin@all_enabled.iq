@@ -28,9 +28,8 @@ LogicalUnion(all=[true])
         LogicalTableScan(table=[[druid, foo]])
       LogicalProject(k=[$0])
         LogicalTableScan(table=[[lookup, lookyloo]])
-  LogicalAggregate(group=[{}], EXPR$0=[SUM($0)])
-    LogicalProject(cnt=[$4])
-      LogicalTableScan(table=[[druid, foo]])
+  LogicalAggregate(group=[{}], EXPR$0=[SUM($4)])
+    LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidUnion(all=[true])
@@ -40,9 +39,8 @@ DruidUnion(all=[true])
         DruidTableScan(table=[[druid, foo]], druid=[logical])
       DruidProject(k=[$0], druid=[logical])
         DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
-  DruidAggregate(group=[{}], EXPR$0=[SUM($0)], druid=[logical])
-    DruidProject(cnt=[$4], druid=[logical])
-      DruidTableScan(table=[[druid, foo]], druid=[logical])
+  DruidAggregate(group=[{}], EXPR$0=[SUM($4)], druid=[logical])
+    DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
 {
