@@ -466,6 +466,16 @@
     <cve>CVE-2023-3635</cve>  <!-- Suppressed since okio requests in Druid are internal, and not user-facing -->
   </suppress>
 
+  <!-- Suppressed since this is a compile-time dependency for software.amazon.glue:schema-registry-serde,
+    ~ and the latest release for software.amazon.glue:schema-registry-serde (1.1.21) still has the vulnerability.-->
+  <suppress>
+    <notes><![CDATA[
+    file names: okio-fakefilesystem-3.2.0.jar, okio-fakefilesystem-jvm-3.2.0.jar
+  ]]></notes>
+    <packageUrl regex="true">^pkg:maven/com\.squareup\.okio/okio\-fakefilesystem(-jvm)?@.*$</packageUrl>
+    <cve>CVE-2023-3635</cve>
+  </suppress>
+
   <!-- CVE-2022-4244 is affecting plexus-utils package, plexus-interpolation is wrongly matched - https://github.com/jeremylong/DependencyCheck/issues/5973 -->
   <suppress base="true">
     <packageUrl regex="true">^pkg:maven/org\.codehaus\.plexus/plexus-interpolation@.*$</packageUrl>
