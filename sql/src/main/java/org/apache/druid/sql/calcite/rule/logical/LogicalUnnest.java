@@ -34,8 +34,16 @@ public class LogicalUnnest extends Unnest
   }
 
   @Override
-  protected RelNode copy(RelTraitSet traitSet, RelNode input)
+  public RelNode copy(RelTraitSet traitSet, RelNode input)
   {
     return new LogicalUnnest(getCluster(), traitSet, input, unnestExpr, unnestFieldType, filter);
   }
+
+
+  public LogicalUnnest copy(RelTraitSet traitSet, RelNode input, RexNode newUnnestExpr, RexNode newFilter)
+  {
+    return new LogicalUnnest(getCluster(), traitSet, input, newUnnestExpr, unnestFieldType, newFilter);
+  }
+
+
 }

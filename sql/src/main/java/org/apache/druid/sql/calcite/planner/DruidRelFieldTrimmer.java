@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import com.google.common.collect.ImmutableList;
+import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelHomogeneousShuttle;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.CorrelationId;
@@ -30,7 +32,9 @@ import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexCorrelVariable;
 import org.apache.calcite.rex.RexFieldAccess;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexPermuteInputsShuttle;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.rex.RexVisitor;
 import org.apache.calcite.sql.validate.SqlValidator;
 import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.RelBuilder;
@@ -39,6 +43,7 @@ import org.apache.calcite.util.mapping.IntPair;
 import org.apache.calcite.util.mapping.Mapping;
 import org.apache.calcite.util.mapping.MappingType;
 import org.apache.calcite.util.mapping.Mappings;
+import org.apache.druid.sql.calcite.rule.logical.LogicalUnnest;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
@@ -54,25 +59,26 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
   {
     super(validator, relBuilder);
     this.relBuilder = relBuilder;
-    this.trimTableScan= trimTableScan;
+    this.trimTableScan = trimTableScan;
   }
 
   @Override
   protected TrimResult dummyProject(int fieldCount, RelNode input)
   {
     Mapping mapping = Mappings.createIdentity(input.getRowType().getFieldCount());
-//    mapping = Mappings.create(
-//        MappingType.INVERSE_SURJECTION,
-//        fieldCount,
-//        0
-//    );
+    // mapping = Mappings.create(
+    // MappingType.INVERSE_SURJECTION,
+    // fieldCount,
+    // 0
+    // );
     return result(input, mapping);
   }
 
   public TrimResult trimFields(
       final TableScan tableAccessRel,
       ImmutableBitSet fieldsUsed,
-      Set<RelDataTypeField> extraFields) {
+      Set<RelDataTypeField> extraFields)
+  {
     if (trimTableScan) {
       return super.trimFields(tableAccessRel, fieldsUsed, extraFields);
     } else {
@@ -80,7 +86,6 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
       return result(tableAccessRel, mapping, tableAccessRel);
     }
   }
-
 
   public TrimResult trimFields(LogicalCorrelate correlate,
       ImmutableBitSet fieldsUsed,
@@ -148,6 +153,60 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
         correlate.getCorrelationId(),
         correlate.getRequiredColumns().permute(mapping),
         correlate.getJoinType()
+    );
+
+    return result(newCorrelate, mapping);
+  }
+
+  public TrimResult trimFields(LogicalUnnest correlate,
+      ImmutableBitSet fieldsUsed,
+      Set<RelDataTypeField> extraFields)
+  {
+    if (!extraFields.isEmpty()) {
+      // bail out with generic trim
+      return trimFields((RelNode) correlate, fieldsUsed, extraFields);
+    }
+    RelOptUtil.InputFinder inputFinder = new RelOptUtil.InputFinder(extraFields);
+
+    correlate.getUnnestExpr().accept(inputFinder);
+    if (correlate.getFilter() != null) {
+      correlate.getFilter().accept(inputFinder);
+    }
+
+    ImmutableBitSet finderFields = inputFinder.build();
+
+    ImmutableBitSet inputFieldsUsed = ImmutableBitSet.builder()
+        .addAll(fieldsUsed.clear(correlate.getRowType().getFieldCount() - 1))
+        .addAll(finderFields)
+        .build();
+
+    RelNode input = correlate.getInput();
+    // Create input with trimmed columns.
+    TrimResult trimResult = trimChild(correlate, input, inputFieldsUsed, extraFields);
+
+    RelNode newInput = trimResult.left;
+    final Mapping inputMapping = trimResult.right;
+
+    if (newInput == input) {
+      return result(correlate, Mappings.createIdentity(correlate.getRowType().getFieldCount()));
+
+    }
+
+    Mapping mapping = makeMapping(ImmutableList.of(inputMapping, Mappings.createIdentity(1)));
+
+    final RexVisitor<RexNode> shuttle = new RexPermuteInputsShuttle(inputMapping, newInput);
+
+    RexNode newUnnestExpr = correlate.getUnnestExpr().accept(shuttle);
+    RexNode newFilterExpr = null;
+    if (correlate.getFilter() != null) {
+      newFilterExpr = correlate.getFilter().accept(shuttle);
+    }
+
+    final LogicalUnnest newCorrelate = correlate.copy(
+        correlate.getTraitSet(),
+        newInput,
+        newUnnestExpr,
+        newFilterExpr
     );
 
     return result(newCorrelate, mapping);

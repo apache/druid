@@ -297,7 +297,8 @@ public class CalciteRulesManager
     return Programs.sequence(
         Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
         new DruidTrimFieldsProgram(false),
-        Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE)
+        Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE),
+        new DruidTrimFieldsProgram(false)
     );
   }
 

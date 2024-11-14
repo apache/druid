@@ -20,16 +20,16 @@ SELECT t,d3 FROM (select FLOOR(__time to hour) t, dim3 from druid.numfoo where d
 (3 rows)
 
 !ok
-LogicalProject(t=[$0], d3=[$3])
-  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($2)])
-    LogicalProject($f0=[FLOOR($0, FLAG(HOUR))], __time=[$0], dim3=[$3])
+LogicalProject(t=[$0], d3=[$2])
+  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($1)])
+    LogicalProject($f0=[FLOOR($0, FLAG(HOUR))], dim3=[$3])
       LogicalFilter(condition=[SEARCH($2, Sarg['a':VARCHAR, 'b':VARCHAR]:VARCHAR)])
         LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
-DruidProject(t=[$0], d3=[$3], druid=[logical])
-  DruidUnnest(unnestExpr=[MV_TO_ARRAY($2)])
-    DruidProject($f0=[FLOOR($0, FLAG(HOUR))], __time=[$0], dim3=[$3], druid=[logical])
+DruidProject(t=[$0], d3=[$2], druid=[logical])
+  DruidUnnest(unnestExpr=[MV_TO_ARRAY($1)])
+    DruidProject($f0=[FLOOR($0, FLAG(HOUR))], dim3=[$3], druid=[logical])
       DruidFilter(condition=[SEARCH($2, Sarg['a':VARCHAR, 'b':VARCHAR]:VARCHAR)])
         DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
@@ -63,8 +63,8 @@ DruidProject(t=[$0], d3=[$3], druid=[logical])
           "matchValueType" : "STRING",
           "sortedValues" : [ "a", "b" ]
         },
-        "columns" : [ "v0", "__time", "dim3" ],
-        "columnTypes" : [ "LONG", "LONG", "STRING" ],
+        "columns" : [ "v0", "dim3" ],
+        "columnTypes" : [ "LONG", "STRING" ],
         "granularity" : {
           "type" : "all"
         },

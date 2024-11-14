@@ -61,6 +61,11 @@ public abstract class Unnest extends SingleRel
     return unnestExpr;
   }
 
+  public RexNode getFilter()
+  {
+    return filter;
+  }
+
   @Override
   public RelWriter explainTerms(RelWriter pw)
   {
