@@ -38,7 +38,14 @@ public interface ExportStorageProvider extends Provider<StorageConnector>
 
   StorageConnector createStorageConnector(File taskTempDir);
 
+  /**
+   * It is the responsibilty of the caller to have the tempDir configured through runtime properties. If tempDir not configured,
+   * usages of {@link StorageConnector} might throw exception.
+   * <br></br>
+   * Deprecated in favour of {@link ExportStorageProvider#createStorageConnector(File)}.
+   */
   @Override
+  @Deprecated
   default StorageConnector get()
   {
     return createStorageConnector(null);
