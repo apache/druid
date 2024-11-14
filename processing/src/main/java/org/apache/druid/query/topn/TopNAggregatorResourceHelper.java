@@ -26,33 +26,36 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class TopNAggregatorResourceHelper
 {
-  public static class Config
-  {
-    public final long maxAggregatorHeapSize;
-
-    public Config(final long maxAggregatorHeapSize)
-    {
-      this.maxAggregatorHeapSize = maxAggregatorHeapSize;
-    }
-  }
-
-  private final Config config;
+  private final long maxAggregatorHeapSizeBytes;
   private final long newAggregatorEstimatedMemorySize;
-  private final AtomicLong used = new AtomicLong(0);
+  private final AtomicLong used;
 
-  TopNAggregatorResourceHelper(final long newAggregatorEstimatedMemorySize, final Config config)
+  TopNAggregatorResourceHelper(final long newAggregatorEstimatedMemorySize, final long maxAggregatorHeapSizeBytes)
   {
     this.newAggregatorEstimatedMemorySize = newAggregatorEstimatedMemorySize;
-    this.config = config;
+    this.maxAggregatorHeapSizeBytes = maxAggregatorHeapSizeBytes;
+    this.used = new AtomicLong(0);
+  }
+
+  // A ctor for updating estimated memory size + max memory size while preserving count
+  TopNAggregatorResourceHelper(
+      final long newAggregatorEstimatedMemorySize,
+      final long maxAggregatorHeapSizeBytes,
+      final TopNAggregatorResourceHelper other
+  )
+  {
+    this.newAggregatorEstimatedMemorySize = newAggregatorEstimatedMemorySize;
+    this.maxAggregatorHeapSizeBytes = maxAggregatorHeapSizeBytes;
+    this.used = other.used;
   }
 
   public void addAggregatorMemory()
   {
     final long newTotal = used.addAndGet(newAggregatorEstimatedMemorySize);
-    if (newTotal > config.maxAggregatorHeapSize) {
+    if (newTotal > maxAggregatorHeapSizeBytes) {
       throw new ResourceLimitExceededException(StringUtils.format(
           "Query ran out of memory. Maximum allowed bytes=[%d], Hit bytes=[%d]",
-          config.maxAggregatorHeapSize,
+          maxAggregatorHeapSizeBytes,
           newTotal
       ));
     }

@@ -82,6 +82,7 @@ public class TopNQueryBuilder
   private List<AggregatorFactory> aggregatorSpecs;
   private List<PostAggregator> postAggregatorSpecs;
   private Map<String, Object> context;
+  private TopNAggregatorResourceHelper helper;
 
   public TopNQueryBuilder()
   {
@@ -96,6 +97,7 @@ public class TopNQueryBuilder
     aggregatorSpecs = new ArrayList<>();
     postAggregatorSpecs = new ArrayList<>();
     context = null;
+    helper = null;
   }
 
   public TopNQueryBuilder(final TopNQuery query)
@@ -111,6 +113,7 @@ public class TopNQueryBuilder
     this.aggregatorSpecs = query.getAggregatorSpecs();
     this.postAggregatorSpecs = query.getPostAggregatorSpecs();
     this.context = query.getContext();
+    this.helper = query.getAggregatorHelper();
   }
 
   public TopNQuery build()
@@ -126,7 +129,8 @@ public class TopNQueryBuilder
         granularity,
         aggregatorSpecs,
         postAggregatorSpecs,
-        context
+        context,
+        helper
     );
   }
 
@@ -150,7 +154,8 @@ public class TopNQueryBuilder
         .granularity(builder.granularity)
         .aggregators(builder.aggregatorSpecs)
         .postAggregators(builder.postAggregatorSpecs)
-        .context(builder.context);
+        .context(builder.context)
+        .helper(builder.helper);
   }
 
   public TopNQueryBuilder dataSource(String d)
@@ -282,6 +287,12 @@ public class TopNQueryBuilder
   public TopNQueryBuilder context(Map<String, Object> c)
   {
     this.context = c;
+    return this;
+  }
+
+  public TopNQueryBuilder helper(TopNAggregatorResourceHelper helper)
+  {
+    this.helper = helper;
     return this;
   }
 
