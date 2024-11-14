@@ -30,18 +30,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.nio.file.StandardOpenOption;
-import java.util.EnumSet;
 
 public class SerializerUtils
 {
-  private static final EnumSet<StandardOpenOption> MAP_SERIALIZER_OPTIONS = EnumSet.of(
-      StandardOpenOption.READ,
-      StandardOpenOption.WRITE,
-      StandardOpenOption.CREATE,
-      StandardOpenOption.TRUNCATE_EXISTING
-  );
-
   public <T extends OutputStream> void writeString(T out, String name) throws IOException
   {
     byte[] nameBytes = StringUtils.toUtf8(name);
