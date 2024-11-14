@@ -30,8 +30,8 @@ SELECT
 +-------+----+
 | t1    | t2 |
 +-------+----+
-| dummy |    |
 | dummy | b  |
+| dummy |    |
 +-------+----+
 (2 rows)
 
@@ -39,17 +39,15 @@ SELECT
 LogicalProject(t1=['dummy'], t2=[$0])
   LogicalAggregate(group=[{0}])
     LogicalProject(t2=[CASE(=($0, 'b'), $0, null:VARCHAR)])
-      LogicalAggregate(group=[{0}])
-        LogicalProject(dim4=[$4])
-          LogicalTableScan(table=[[druid, numfoo]])
+      LogicalAggregate(group=[{4}])
+        LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
 DruidProject(t1=['dummy'], t2=[$0], druid=[logical])
   DruidAggregate(group=[{0}], druid=[logical])
     DruidProject(t2=[CASE(=($0, 'b'), $0, null:VARCHAR)], druid=[logical])
-      DruidAggregate(group=[{0}], druid=[logical])
-        DruidProject(dim4=[$4], druid=[logical])
-          DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+      DruidAggregate(group=[{4}], druid=[logical])
+        DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan
 {

@@ -22,16 +22,14 @@ SELECT dim2, dim1, SUM(cnt) FROM druid.foo GROUP BY dim2, dim1 ORDER BY dim1 LIM
 !ok
 LogicalProject(dim2=[$1], dim1=[$0], EXPR$2=[$2])
   LogicalSort(sort0=[$0], dir0=[ASC], fetch=[4])
-    LogicalAggregate(group=[{0, 1}], EXPR$2=[SUM($2)])
-      LogicalProject(dim1=[$1], dim2=[$2], cnt=[$4])
-        LogicalTableScan(table=[[druid, foo]])
+    LogicalAggregate(group=[{1, 2}], EXPR$2=[SUM($4)])
+      LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidProject(dim2=[$1], dim1=[$0], EXPR$2=[$2], druid=[logical])
   DruidSort(sort0=[$0], dir0=[ASC], fetch=[4], druid=[logical])
-    DruidAggregate(group=[{0, 1}], EXPR$2=[SUM($2)], druid=[logical])
-      DruidProject(dim1=[$1], dim2=[$2], cnt=[$4], druid=[logical])
-        DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidAggregate(group=[{1, 2}], EXPR$2=[SUM($4)], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
 {
