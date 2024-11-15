@@ -296,9 +296,9 @@ public class CalciteRulesManager
     builder2.addRuleInstance(CoreRules.PROJECT_MERGE);
     return Programs.sequence(
         Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
-        new DruidTrimFieldsProgram(false),
-        Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE),
-        new DruidTrimFieldsProgram(false)
+        new DruidTrimFieldsProgram(true),
+        Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE)
+//        new DruidTrimFieldsProgram(false)
     );
   }
 
