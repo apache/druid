@@ -484,8 +484,11 @@ public class DruidQueryGenerator
 
       private boolean mayDiscardSelectProject()
       {
-        if(!partialDruidQuery.getSelectProject().isMapping()) {
+        if (!partialDruidQuery.getSelectProject().isMapping()) {
           return false;
+        }
+        if (!tweaks.isParentUnion) {
+          return true;
         }
         SourceDesc src = getSource();
         List<String> inputFieldNames = src.rowSignature.getColumnNames();
