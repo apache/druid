@@ -220,7 +220,7 @@ public class DruidQueryGenerator
     static VertexTweaks analyze(DruidNodeStack stack)
     {
       JoinPosition joinType = JoinPosition.analyze(stack);
-      boolean isParentUnion = stack.size()>2 && stack.parentNode()  instanceof DruidUnion;
+      boolean isParentUnion = stack.size() > 2 && stack.parentNode() instanceof DruidUnion;
       return new VertexTweaks(joinType, isParentUnion);
     }
 
@@ -494,7 +494,7 @@ public class DruidQueryGenerator
         List<String> inputFieldNames = src.rowSignature.getColumnNames();
         List<String> outputFieldNames = partialDruidQuery.getRowType().getFieldNames();
 
-        if(!isNameConsistentMapping(partialDruidQuery.getSelectProject(), inputFieldNames, outputFieldNames)) {
+        if (!isNameConsistentMapping(partialDruidQuery.getSelectProject(), inputFieldNames, outputFieldNames)) {
           return false;
         }
 
