@@ -367,28 +367,38 @@ libraries:
 
 ---
 
-name: Guice
+name: Guice Core and Extensions
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.2
+version: 5.1.0
 libraries:
   - com.google.inject: guice
-  - com.google.inject.extensions: guice-multibindings
   - com.google.inject.extensions: guice-servlet
   - com.google.inject.extensions: guice-assistedinject
 notices:
   - guice: |
       Google Guice - Core Library
       Copyright 2006-2016 Google, Inc.
-  - guice-multibindings: |
-      Google Guice - Extensions - MultiBindings
-      Copyright 2006-2016 Google, Inc.
   - guice-servlet: |
       Google Guice - Extensions - Servlet
       Copyright 2006-2016 Google, Inc.
   - guice-assistedinject: |
       Google Guice - Extensions - AssistedInject
+      Copyright 2006-2016 Google, Inc.
+
+---
+
+name: Guice MultiBindings Extension
+license_category: binary
+module: java-core
+license_name: Apache License version 2.0
+version: 4.2.2
+libraries:
+  - com.google.inject.extensions: guice-multibindings
+notices:
+  - guice-multibindings: |
+      Google Guice - Extensions - MultiBindings
       Copyright 2006-2016 Google, Inc.
 
 ---
