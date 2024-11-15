@@ -173,6 +173,7 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
     // Create input with trimmed columns.
     TrimResult trimResult = trimChild(correlate, input, inputFieldsUsed, extraFields);
 
+
     RelNode newInput = trimResult.left;
     final Mapping inputMapping = trimResult.right;
 

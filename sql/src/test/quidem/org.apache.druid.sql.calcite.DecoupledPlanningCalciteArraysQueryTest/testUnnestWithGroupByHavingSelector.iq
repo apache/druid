@@ -18,18 +18,16 @@ SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3)
 (1 row)
 
 !ok
-LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
-  LogicalProject(EXPR$0=[$2])
-    LogicalUnnest(unnestExpr=[MV_TO_ARRAY($1)], filter=[=($0, 'b')])
-      LogicalProject(__time=[$0], dim3=[$3])
-        LogicalTableScan(table=[[druid, numfoo]])
+LogicalAggregate(group=[{2}], EXPR$1=[COUNT()])
+  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($1)], filter=[=($0, 'b')])
+    LogicalProject(__time=[$0], dim3=[$3])
+      LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
-DruidAggregate(group=[{0}], EXPR$1=[COUNT()], druid=[logical])
-  DruidProject(EXPR$0=[$2], druid=[logical])
-    DruidUnnest(unnestExpr=[MV_TO_ARRAY($1)], filter=[=($0, 'b')])
-      DruidProject(__time=[$0], dim3=[$3], druid=[logical])
-        DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+DruidAggregate(group=[{2}], EXPR$1=[COUNT()], druid=[logical])
+  DruidUnnest(unnestExpr=[MV_TO_ARRAY($1)], filter=[=($0, 'b')])
+    DruidProject(__time=[$0], dim3=[$3], druid=[logical])
+      DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan
 {

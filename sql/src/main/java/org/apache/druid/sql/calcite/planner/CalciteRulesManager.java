@@ -35,6 +35,7 @@ import org.apache.calcite.plan.volcano.VolcanoPlanner;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.RelFactories;
 import org.apache.calcite.rel.metadata.DefaultRelMetadataProvider;
+import org.apache.calcite.rel.rules.AggregateProjectMergeRule;
 import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.calcite.rel.rules.DateRangeRules;
 import org.apache.calcite.rel.rules.FilterCorrelateRule;
@@ -294,11 +295,13 @@ public class CalciteRulesManager
     builder2.addRuleInstance(new UnnestInputCleanupRule());
     builder2.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     builder2.addRuleInstance(CoreRules.PROJECT_MERGE);
+    builder2.addRuleInstance(AggregateProjectMergeRule.Config.DEFAULT.toRule());
     return Programs.sequence(
         Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
         new DruidTrimFieldsProgram(true),
+        Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE),
+        new DruidTrimFieldsProgram(false),
         Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE)
-//        new DruidTrimFieldsProgram(false)
     );
   }
 
