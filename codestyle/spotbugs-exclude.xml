@@ -137,15 +137,4 @@
     <Bug pattern="SWL_SLEEP_WITH_LOCK_HELD"/>
     <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH"/>
     <Bug pattern="URF_UNREAD_FIELD"/>
-    <!-- The following patterns have been excluded as part of upgrading to Java 17 as there were 100s of occurrences.
-         We should revisit these later.  -->
-    <Bug pattern="CT_CONSTRUCTOR_THROW"/>
-    <Bug pattern="SING_SINGLETON_HAS_NONPRIVATE_CONSTRUCTOR"/>
-    <Bug pattern="DCN_NULLPOINTER_EXCEPTION"/>
-    <Bug pattern="SING_SINGLETON_INDIRECTLY_IMPLEMENTS_CLONEABLE"/>
-    <Bug pattern="MS_EXPOSE_REP"/>
-    <Bug pattern="PA_PUBLIC_PRIMITIVE_ATTRIBUTE"/>
-    <Bug pattern="EI_EXPOSE_STATIC_REP2"/>
-    <Bug pattern="SS_SHOULD_BE_STATIC"/>
-    <Bug pattern="SING_SINGLETON_IMPLEMENTS_SERIALIZABLE"/>
 </FindBugsFilter>
