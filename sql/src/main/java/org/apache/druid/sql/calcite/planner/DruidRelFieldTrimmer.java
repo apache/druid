@@ -52,13 +52,11 @@ import java.util.Set;
 
 public class DruidRelFieldTrimmer extends RelFieldTrimmer
 {
-  private RelBuilder relBuilder;
   private boolean trimTableScan;
 
   public DruidRelFieldTrimmer(@Nullable SqlValidator validator, RelBuilder relBuilder, boolean trimTableScan)
   {
     super(validator, relBuilder);
-    this.relBuilder = relBuilder;
     this.trimTableScan = trimTableScan;
   }
 
@@ -123,12 +121,14 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
     }
 
     Mapping mapping = makeMapping(inputMappings);
+    RexBuilder rexBuilder = correlate.getCluster().getRexBuilder();
+
     final LogicalCorrelate newCorrelate = correlate.copy(
         correlate.getTraitSet(),
         newInputs.get(0),
         newInputs.get(1).accept(
             new RelVistatorRelShuttle(
-                new CorrelateExprMapping(correlate.getCorrelationId(), newInputs.get(0).getRowType(), mapping)
+                new CorrelateExprMapping(correlate.getCorrelationId(), newInputs.get(0).getRowType(), mapping, rexBuilder)
             )
         ),
         correlate.getCorrelationId(),
@@ -233,31 +233,27 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
   class CorrelateExprMapping extends RexShuttle
   {
     private final CorrelationId correlationId;
-    private Mapping mapping;
-    private RelDataType newCorrelRowType;
+    private final Mapping mapping;
+    private final RelDataType newCorrelRowType;
+    private final RexBuilder rexBuilder;
 
-    public CorrelateExprMapping(final CorrelationId correlationId, RelDataType newCorrelRowType, Mapping mapping)
+    public CorrelateExprMapping(final CorrelationId correlationId, RelDataType newCorrelRowType, Mapping mapping, RexBuilder rexBuilder)
     {
       this.correlationId = correlationId;
       this.newCorrelRowType = newCorrelRowType;
       this.mapping = mapping;
+      this.rexBuilder = rexBuilder;
     }
 
     @Override
     public RexNode visitFieldAccess(final RexFieldAccess fieldAccess)
     {
-      RexNode referenceExpr1 = fieldAccess.getReferenceExpr();
-      if (referenceExpr1 instanceof RexCorrelVariable) {
-        RexCorrelVariable referenceExpr = (RexCorrelVariable) referenceExpr1;
+      if (fieldAccess.getReferenceExpr() instanceof RexCorrelVariable) {
+        RexCorrelVariable referenceExpr = (RexCorrelVariable) fieldAccess.getReferenceExpr();
         final RexCorrelVariable encounteredCorrelationId = referenceExpr;
         if (encounteredCorrelationId.id.equals(correlationId)) {
-
-          RexBuilder rb = relBuilder.getRexBuilder();
           int sourceIndex = fieldAccess.getField().getIndex();
-          ;
-          RexFieldAccess a = (RexFieldAccess) rb.makeFieldAccess(map(referenceExpr), mapping.getTarget(sourceIndex));
-
-          return a;
+          return rexBuilder.makeFieldAccess(map(referenceExpr), mapping.getTarget(sourceIndex));
         }
       }
       return super.visitFieldAccess(fieldAccess);
@@ -265,9 +261,7 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
 
     private RexNode map(RexCorrelVariable referenceExpr)
     {
-      RexBuilder rb = relBuilder.getRexBuilder();
-      return rb.makeCorrel(newCorrelRowType, referenceExpr.id);
-
+      return rexBuilder.makeCorrel(newCorrelRowType, referenceExpr.id);
     }
   }
 
