@@ -158,7 +158,7 @@ If your Kafka cluster enables consumer group ACLs, you can set `group.id` in `co
 In some cases, you may need to retrieve consumer properties at runtime. For example, when `bootstrap.servers` is unknown or not static. To enable SSL connections, you must provide passwords for `keystore`, `truststore`, and `key` confidentially. You can specify these settings in the `jaas.conf` login configuration file or in `consumerProperties` with `sasl.jaas.config`.
 
 To protect sensitive information, use the [environment variable dynamic config provider](../operations/dynamic-config-provider.md#environment-variable-dynamic-config-provider) to store credentials in system environment variables instead of plain text.
-You can also use the [password provider](../operations/password-provider.md) interface to set `keystore`, `truststore`, and `key` properties, but this feature is deprecated.
+Although you can also use the [password provider](../operations/password-provider.md) interface to specify TLS configs for Kafka ingestion, consider using the dynamic config provider as this feature is deprecated.
 
 For example, when using SASL and SSL with Kafka, set the following environment variables for the Druid user on machines running the Overlord and Peon services. Replace the values to match your environment configurations.
 
