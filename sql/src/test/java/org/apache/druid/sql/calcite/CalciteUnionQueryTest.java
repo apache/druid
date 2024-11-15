@@ -277,7 +277,7 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testUnionIsUnplannable() // FIXME rename
+  public void testUnionIsUnplannableInNative()
   {
     String sql = "SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo";
     if (testBuilder().isDecoupledMode()) {
