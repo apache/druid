@@ -1661,9 +1661,13 @@ public class DruidQuery
 
     if (!plannerContext.featureAvailable(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
       if (orderByColumns.size() > 1
-          || orderByColumns.stream()
-              .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME))) {
-        return null;
+          || orderByColumns.stream().anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME))) {
+        if(plannerContext.queryContext().isDecoupledMode()) {
+          return null;
+        } else {
+          setPlanningErrorOrderByNonTimeIsUnsupported();
+        }
+
       }
     }
 
