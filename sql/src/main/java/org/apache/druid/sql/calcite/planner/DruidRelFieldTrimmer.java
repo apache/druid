@@ -196,8 +196,12 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
   /**
    * Concatenates multiple mapping.
    *
-   * [ 1:0, 2:1] // sourceCount:100 [ 1:0, 2:1] // sourceCount:100 output: [
-   * 1:0, 2:1, 101:2, 102:3 ] ; sourceCount:200
+   * <pre>
+   * [ 1:0, 2:1] // sourceCount:100
+   * [ 1:0, 2:1] // sourceCount:100
+   * output:
+   * [ 1:0, 2:1, 101:2, 102:3 ] ; sourceCount:200
+   * </pre>
    */
   private Mapping makeMapping(List<Mapping> inputMappings)
   {
