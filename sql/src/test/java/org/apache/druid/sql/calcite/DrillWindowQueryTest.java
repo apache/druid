@@ -79,6 +79,7 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * These test cases are borrowed from the drill-test-framework at
@@ -113,8 +114,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void ensureAllDeclared() throws Exception
   {
+    assumeTrue(DrillWindowQueryTest.class.equals(getClass()));
+
     final URL windowQueriesUrl = ClassLoader.getSystemResource("drill/window/queries/");
     Path windowFolder = new File(windowQueriesUrl.toURI()).toPath();
+
 
     Set<String> allCases = FileUtils
         .streamFiles(windowFolder.toFile(), true, "q")
