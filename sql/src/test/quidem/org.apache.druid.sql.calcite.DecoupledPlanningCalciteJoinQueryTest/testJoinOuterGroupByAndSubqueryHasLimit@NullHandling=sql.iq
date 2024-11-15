@@ -81,8 +81,8 @@ DruidAggregate(group=[{0}], EXPR$1=[AVG($2)], druid=[logical])
       },
       "resultFormat" : "compactedList",
       "limit" : 10,
-      "columns" : [ "dim2", "j0.m1", "m1", "m2" ],
-      "columnTypes" : [ "STRING", "FLOAT", "FLOAT", "DOUBLE" ],
+      "columns" : [ "dim2", "m1", "m2", "j0.m1" ],
+      "columnTypes" : [ "STRING", "FLOAT", "DOUBLE", "FLOAT" ],
       "granularity" : {
         "type" : "all"
       },

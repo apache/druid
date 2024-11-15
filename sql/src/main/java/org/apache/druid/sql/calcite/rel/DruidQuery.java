@@ -113,12 +113,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
@@ -1673,8 +1672,8 @@ public class DruidQuery
       }
     }
 
-    // Compute the list of columns to select, sorted and deduped.
-    final SortedSet<String> scanColumns = new TreeSet<>(outputRowSignature.getColumnNames());
+    // Deduplicate column list
+    final Set<String> scanColumns = new LinkedHashSet<>(outputRowSignature.getColumnNames());
     orderByColumns.forEach(column -> scanColumns.add(column.getColumnName()));
 
     final VirtualColumns virtualColumns = getVirtualColumns(true);
