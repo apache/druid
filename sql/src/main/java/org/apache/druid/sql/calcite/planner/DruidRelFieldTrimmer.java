@@ -60,6 +60,13 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
     this.trimTableScan = trimTableScan;
   }
 
+  @Override
+  protected TrimResult dummyProject(int fieldCount, RelNode input)
+  {
+    Mapping mapping = Mappings.createIdentity(input.getRowType().getFieldCount());
+    return result(input, mapping);
+  }
+
   public TrimResult trimFields(
       final TableScan tableAccessRel,
       ImmutableBitSet fieldsUsed,
