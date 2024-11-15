@@ -62,18 +62,6 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
     this.trimTableScan = trimTableScan;
   }
 
-  @Override
-  protected TrimResult dummyProject(int fieldCount, RelNode input)
-  {
-    Mapping mapping = Mappings.createIdentity(input.getRowType().getFieldCount());
-    // mapping = Mappings.create(
-    // MappingType.INVERSE_SURJECTION,
-    // fieldCount,
-    // 0
-    // );
-    return result(input, mapping);
-  }
-
   public TrimResult trimFields(
       final TableScan tableAccessRel,
       ImmutableBitSet fieldsUsed,
@@ -91,13 +79,6 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
       ImmutableBitSet fieldsUsed,
       Set<RelDataTypeField> extraFields)
   {
-
-    // final RelDataType rowType = correlate.getRowType();
-    // final int fieldCount = rowType.getFieldCount();
-    // final RelNode left = correlate.getLeft();
-    // final RelNode right = correlate.getRight();
-    // final RelDataType rightRowType = right.getRowType();
-    // final int rightFieldCount = rightRowType.getFieldCount();
     if (!extraFields.isEmpty()) {
       // bail out with generic trim
       return trimFields((RelNode) correlate, fieldsUsed, extraFields);
@@ -137,7 +118,7 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
       offset += inputFieldCount;
     }
 
-    if (changeCount < -1) {
+    if (changeCount == 0) {
       return result(correlate, Mappings.createIdentity(correlate.getRowType().getFieldCount()));
     }
 
@@ -181,6 +162,7 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
         .build();
 
     RelNode input = correlate.getInput();
+
     // Create input with trimmed columns.
     TrimResult trimResult = trimChild(correlate, input, inputFieldsUsed, extraFields);
 
@@ -189,7 +171,6 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
 
     if (newInput == input) {
       return result(correlate, Mappings.createIdentity(correlate.getRowType().getFieldCount()));
-
     }
 
     Mapping mapping = makeMapping(ImmutableList.of(inputMapping, Mappings.createIdentity(1)));
@@ -197,7 +178,7 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
     final RexVisitor<RexNode> shuttle = new RexPermuteInputsShuttle(inputMapping, newInput);
 
     RexNode newUnnestExpr = correlate.getUnnestExpr().accept(shuttle);
-    RexNode newFilterExpr = null;
+    RexNode newFilterExpr = correlate.getFilter();
     if (correlate.getFilter() != null) {
       newFilterExpr = correlate.getFilter().accept(shuttle);
     }
