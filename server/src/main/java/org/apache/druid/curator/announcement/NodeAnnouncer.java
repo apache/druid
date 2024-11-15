@@ -20,6 +20,7 @@
 package org.apache.druid.curator.announcement;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.recipes.cache.ChildData;
@@ -35,7 +36,6 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 
-import javax.annotation.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -49,13 +49,9 @@ import java.util.concurrent.ConcurrentMap;
  * and monitors its existence to ensure that it remains active until it is
  * explicitly unannounced or the object is closed.
  *
- * <p>This class provides methods to announce and update the content of the
- * node as well as handle path creation if required.</p>
- *
  * <p>Use this class when you need to manage the lifecycle of a standalone
- * node without concerns about its children or siblings. Should your use case
- * involve the management of child nodes under a specific parent path in a
- * ZooKeeper ensemble, see {@link Announcer}.</p>
+ * node. Should your use case involve watching all child nodes of your specified
+ * path in a ZooKeeper ensemble, see {@link Announcer}.</p>
  */
 public class NodeAnnouncer
 {

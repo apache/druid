@@ -20,6 +20,7 @@
 package org.apache.druid.curator.announcement;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.transaction.CuratorTransaction;
 import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
@@ -39,7 +40,6 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.data.Stat;
 
-import javax.annotation.concurrent.GuardedBy;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,13 +54,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * The {@link Announcer} class manages the announcement of multiple child nodes
- * under a specified parent path in a ZooKeeper ensemble. It monitors these nodes
+ * The {@link Announcer} class manages the announcement of a node, and watches all child
+ * nodes under the specified path in a ZooKeeper ensemble. It monitors these nodes
  * to ensure their existence and manage their lifecycle collectively.
  *
- * <p>Utilize this class when you need to handle complex node structures,
- * including relationships between multiple child nodes. Should your use case
- * involve the management of a standalone node instead, see {@link NodeAnnouncer}.</p>
+ * <p>Use this class when you need to manage the lifecycle of all child nodes under the
+ * specified path. Should your use case involve the management of a standalone node
+ * instead, see {@link NodeAnnouncer}.</p>
  */
 public class Announcer
 {
