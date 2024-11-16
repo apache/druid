@@ -24,12 +24,10 @@ import com.google.common.collect.Maps;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprEval;
@@ -51,6 +49,7 @@ import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -201,7 +200,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
   }
 
   @Override
-  public void openDictionaryWriter() throws IOException
+  public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
     fieldsWriter = new GenericIndexedWriter<>(segmentWriteOutMedium, name, GenericIndexed.STRING_STRATEGY);
     fieldsWriter.open();
@@ -243,7 +242,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     globalDictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
-            FileUtils.getTempDir(),
+            segmentBaseDir,
             dictionaryWriter,
             longDictionaryWriter,
             doubleDictionaryWriter,
@@ -440,37 +439,22 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
 
     if (writeDictionary) {
       if (globalDictionaryIdLookup.getStringBufferMapper() != null) {
-        SmooshedFileMapper fileMapper = globalDictionaryIdLookup.getStringBufferMapper();
-        for (String internalName : fileMapper.getInternalFilenames()) {
-          smoosher.add(internalName, fileMapper.mapFile(internalName));
-        }
+        copyFromTempSmoosh(smoosher, globalDictionaryIdLookup.getStringBufferMapper());
       } else {
         writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME);
       }
-      if (globalDictionaryIdLookup.getLongBuffer() != null) {
-        writeInternal(
-            smoosher,
-            globalDictionaryIdLookup.getLongBuffer(),
-            ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME
-        );
+      if (globalDictionaryIdLookup.getLongBufferMapper() != null) {
+        copyFromTempSmoosh(smoosher, globalDictionaryIdLookup.getLongBufferMapper());
       } else {
         writeInternal(smoosher, longDictionaryWriter, ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
       }
-      if (globalDictionaryIdLookup.getDoubleBuffer() != null) {
-        writeInternal(
-            smoosher,
-            globalDictionaryIdLookup.getDoubleBuffer(),
-            ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
-        );
+      if (globalDictionaryIdLookup.getDoubleBufferMapper() != null) {
+        copyFromTempSmoosh(smoosher, globalDictionaryIdLookup.getDoubleBufferMapper());
       } else {
         writeInternal(smoosher, doubleDictionaryWriter, ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
       }
-      if (globalDictionaryIdLookup.getArrayBuffer() != null) {
-        writeInternal(
-            smoosher,
-            globalDictionaryIdLookup.getArrayBuffer(),
-            ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME
-        );
+      if (globalDictionaryIdLookup.getArrayBufferMapper() != null) {
+        copyFromTempSmoosh(smoosher, globalDictionaryIdLookup.getArrayBufferMapper());
       } else {
         writeInternal(smoosher, arrayDictionaryWriter, ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME);
       }

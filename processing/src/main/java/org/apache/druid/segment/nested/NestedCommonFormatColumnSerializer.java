@@ -21,11 +21,13 @@ package org.apache.druid.segment.nested;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.data.VByte;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.Serializer;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -53,7 +55,7 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
   public static final String RAW_FILE_NAME = "__raw";
   public static final String NESTED_FIELD_PREFIX = "__field_";
 
-  public abstract void openDictionaryWriter() throws IOException;
+  public abstract void openDictionaryWriter(File segmentBaseDir) throws IOException;
 
   public void serializeFields(SortedMap<String, FieldTypeInfo.MutableTypeSet> fields) throws IOException
   {
@@ -80,9 +82,11 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
     ColumnSerializerUtils.writeInternal(smoosher, serializer, getColumnName(), fileName);
   }
 
-  protected void writeInternal(FileSmoosher smoosher, ByteBuffer buffer, String fileName) throws IOException
+  protected void copyFromTempSmoosh(FileSmoosher smoosher, SmooshedFileMapper fileMapper) throws IOException
   {
-    ColumnSerializerUtils.writeInternal(smoosher, buffer, getColumnName(), fileName);
+    for (String internalName : fileMapper.getInternalFilenames()) {
+      smoosher.add(internalName, fileMapper.mapFile(internalName));
+    }
   }
 
   protected void writeV0Header(WritableByteChannel channel, ByteBuffer columnNameBuffer) throws IOException
