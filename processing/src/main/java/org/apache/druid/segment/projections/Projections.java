@@ -89,7 +89,7 @@ public class Projections
         if (name != null && !name.equals(spec.getSchema().getName())) {
           continue;
         }
-        ProjectionMatch match = spec.getSchema().matches(cursorBuildSpec, physicalChecker);
+        final ProjectionMatch match = spec.getSchema().matches(cursorBuildSpec, physicalChecker);
         if (match != null) {
           if (cursorBuildSpec.getQueryMetrics() != null) {
             cursorBuildSpec.getQueryMetrics().projection(spec.getSchema().getName());
