@@ -52,7 +52,6 @@ jobs:
         run: |
           ./it.sh ci
 
-  # This test also validates building Druid on Java 21, and running it on Java 17.
   integration-index-tests-middleManager:
     strategy:
       fail-fast: false
@@ -61,8 +60,8 @@ jobs:
     uses: ./.github/workflows/reusable-standard-its.yml
     needs: build
     with:
-      build_jdk: 21.0.4
-      runtime_jdk: 17
+      build_jdk: 17
+      runtime_jdk: 21.0.4
       testing_groups: -Dgroups=${{ matrix.testing_group }}
       use_indexer: middleManager
       group: ${{ matrix.testing_group }}
