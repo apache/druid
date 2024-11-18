@@ -372,7 +372,7 @@
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-servlet</artifactId>
-            <scope>provided</scope>
+            <version>${guice.version}</version>
         </dependency>
         <dependency>
             <groupId>io.confluent</groupId>

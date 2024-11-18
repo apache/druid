@@ -48,18 +48,19 @@
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
+            <version>${guice.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>aopalliance</groupId>
                     <artifactId>aopalliance</artifactId>
                 </exclusion>
             </exclusions>
-            <scope>provided</scope>
             <!--$NO-MVN-MAN-VER$ -->
         </dependency>
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-multibindings</artifactId>
+            <version>${guice.version}</version>
             <scope>provided</scope>
             <!--$NO-MVN-MAN-VER$ -->
         </dependency>
