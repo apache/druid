@@ -191,6 +191,9 @@ public class MultiStageQueryContext
 
   public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "maxRowsMaterializedInWindow";
 
+  // This flag ensures backward compatibility and will be removed in Druid 33, with the default behavior as enabled.
+  public static final String WINDOW_FUNCTION_OPERATOR_TRANSFORMATION = "windowFunctionOperatorTransformation";
+
   public static final String CTX_SKIP_TYPE_VERIFICATION = "skipTypeVerification";
 
   /**
@@ -214,6 +217,14 @@ public class MultiStageQueryContext
     return queryContext.getInt(
         MAX_ROWS_MATERIALIZED_IN_WINDOW,
         Limits.MAX_ROWS_MATERIALIZED_IN_WINDOW
+    );
+  }
+
+  public static boolean isWindowFunctionOperatorTransformationEnabled(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        WINDOW_FUNCTION_OPERATOR_TRANSFORMATION,
+        false
     );
   }
 

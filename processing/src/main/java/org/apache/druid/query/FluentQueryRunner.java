@@ -64,7 +64,7 @@ public class FluentQueryRunner<T> implements QueryRunner<T>
 
   public FluentQueryRunner<T> applyPreMergeDecoration()
   {
-    return from(new UnionQueryRunner<>(toolChest.preMergeQueryDecoration(baseRunner)));
+    return from(new UnionDataSourceQueryRunner<>(toolChest.preMergeQueryDecoration(baseRunner)));
   }
 
   public FluentQueryRunner<T> emitCPUTimeMetric(ServiceEmitter emitter)

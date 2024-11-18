@@ -599,6 +599,40 @@ Druid selects the pod templates as follows:
 In this example, if there is an `index_kafka` task for the `wikipedia` datasource with the tag `userProvidedTag: tag1`,
 Druid selects the pod template `podSpecWithHighMemRequests.yaml`.
 
+In the above example, for selection key `podSpec1` we didn't specify task `type`. This is equivalent to setting `type` to `null` or an empty array.
+All three examples below are equivalent.
+
+- Not setting `type`
+    ```json
+    {
+      "selectionKey": "podSpec1",
+      "context.tags": { "userProvidedTag": ["tag1", "tag2"] },
+      "dataSource": ["wikipedia"]
+    }
+    ```
+
+- Setting `type` to `null`
+    ```json
+    {
+      "selectionKey": "podSpec1",
+      "context.tags": { "userProvidedTag": ["tag1", "tag2"] },
+      "dataSource": ["wikipedia"],
+      "type": null
+    }
+    ```
+
+- Setting `type` to an empty array
+    ```json
+    {
+      "selectionKey": "podSpec1",
+      "context.tags": { "userProvidedTag": ["tag1", "tag2"] },
+      "dataSource": ["wikipedia"],
+      "type": []
+    }
+    ```
+
+In all the above cases, Druid will match the selector to any value of task type. Druid applies similar logic for `dataSource`. For `context.tags` setting `null` or an empty object `{}` is equivalent. 
+
 ### Properties
 |Property| Possible Values | Description                                                                                                                                                                                                                                      |Default|required|
 |--------|-----------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------|--------|
@@ -610,6 +644,7 @@ Druid selects the pod template `podSpecWithHighMemRequests.yaml`.
 |`druid.indexer.runner.maxTaskDuration`| `Duration`      | Max time a task is allowed to run for before getting killed                                                                                                                                                                                      |`PT4H`|No|
 |`druid.indexer.runner.taskCleanupDelay`| `Duration`      | How long do jobs stay around before getting reaped from K8s                                                                                                                                                                                      |`P2D`|No|
 |`druid.indexer.runner.taskCleanupInterval`| `Duration`      | How often to check for jobs to be reaped                                                                                                                                                                                                         |`PT10M`|No|
+|`druid.indexer.runner.taskJoinTimeout`| `Duration`      | Timeout for gathering metadata about existing tasks on startup                                                                                                                                                                                                         |`PT1M`|No|
 |`druid.indexer.runner.K8sjobLaunchTimeout`| `Duration`      | How long to wait to launch a K8s task before marking it as failed, on a resource constrained cluster it may take some time.                                                                                                                      |`PT1H`|No|
 |`druid.indexer.runner.javaOptsArray`| `JsonArray`     | java opts for the task.                                                                                                                                                                                                                          |`-Xmx1g`|No|
 |`druid.indexer.runner.labels`| `JsonObject`    | Additional labels you want to add to peon pod                                                                                                                                                                                                    |`{}`|No|

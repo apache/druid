@@ -30,7 +30,6 @@ import org.checkerframework.checker.nullness.qual.Nullable;
 
 public class DruidUnionRule extends ConverterRule
 {
-
   public DruidUnionRule(Class<? extends RelNode> clazz, RelTrait in, RelTrait out, String descriptionPrefix)
   {
     super(

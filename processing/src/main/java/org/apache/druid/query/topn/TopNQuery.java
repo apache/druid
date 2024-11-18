@@ -185,7 +185,8 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     topNMetricSpec.initTopNAlgorithmSelector(selector);
   }
 
-  public RowSignature getResultSignature(final RowSignature.Finalization finalization)
+  @Override
+  public RowSignature getResultRowSignature(final RowSignature.Finalization finalization)
   {
     return RowSignature.builder()
                        .addTimeColumn()
