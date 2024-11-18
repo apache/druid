@@ -479,6 +479,9 @@
                      <plugin>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <version>3.0.0-M7</version>
+                         <configuration>
+                             <argLine>--add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+                         </configuration>
                         <dependencies>
                           <!-- Required to force Failsafe to use JUnit instead of TestNG.
                                junit47 is required to use test categories. -->
