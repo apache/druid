@@ -1546,8 +1546,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         "0"
     );
 
-    Assert.assertNull(id1.getStatus());
-
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
 
     Collection workItems = new ArrayList<>();

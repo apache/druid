@@ -308,9 +308,6 @@ public class CliPeon extends GuiceRunnable
             builder.put(DruidMetrics.DATASOURCE, task.getDataSource());
             builder.put(DruidMetrics.TASK_TYPE, task.getType());
             builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
-            if (task.getStatus() != null) {
-              builder.put(DruidMetrics.TASK_STATUS, task.getStatus());
-            }
             Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
             if (tags != null && !tags.isEmpty()) {
               builder.put(DruidMetrics.TAGS, tags);

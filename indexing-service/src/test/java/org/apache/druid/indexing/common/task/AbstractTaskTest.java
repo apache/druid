@@ -305,11 +305,4 @@ public class AbstractTaskTest
     Assert.assertEquals(AbstractTask.IngestionMode.NONE, ingestionMode);
   }
 
-  @Test
-  public void testGetStatus()
-  {
-    AbstractTask task = new NoopTask("myID", null, null, 1, 0, null);
-    Assert.assertNull(task.getStatus());
-  }
-
 }

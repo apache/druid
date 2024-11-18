@@ -180,13 +180,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     return (queryPlus, responseContext) -> queryPlus.run(getRunner().getAppenderator(), responseContext);
   }
 
-  @Nullable
-  @Override
-  public String getStatus()
-  {
-    return (getRunner() != null && getRunner().getStatus() != null) ? getRunner().getStatus().toString() : null;
-  }
-
   public Appenderator newAppenderator(
       TaskToolbox toolbox,
       SegmentGenerationMetrics metrics,
