@@ -54,6 +54,7 @@
                     <artifactId>aopalliance</artifactId>
                 </exclusion>
             </exclusions>
+            <scope>provided</scope>
             <!--$NO-MVN-MAN-VER$ -->
         </dependency>
         <dependency>
