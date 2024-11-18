@@ -71,8 +71,7 @@
 
     <properties>
         <java.version>11</java.version>
-        <maven.compiler.source>${java.version}</maven.compiler.source>
-        <maven.compiler.target>${java.version}</maven.compiler.target>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.5.0</apache.curator.version>
@@ -1564,7 +1563,7 @@
                     <bundledSignatures>
                         <!--
                           This will automatically choose the right
-                          signatures based on 'maven.compiler.target':
+                          signatures based on 'maven.compiler.release':
                         -->
                         <bundledSignature>jdk-unsafe</bundledSignature>
                     </bundledSignatures>
@@ -1937,8 +1936,7 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.11.0</version>
                     <configuration>
-                        <source>${maven.compiler.source}</source>
-                        <target>${maven.compiler.target}</target>
+                        <release>${maven.compiler.release}</release>
                     </configuration>
                 </plugin>
               <plugin>
