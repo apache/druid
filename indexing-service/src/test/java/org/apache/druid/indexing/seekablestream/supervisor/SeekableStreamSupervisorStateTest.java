@@ -2807,7 +2807,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           true,
           minimumMessageTime,
           maximumMessageTime,
-          ioConfig.getInputFormat()
+          ioConfig.getInputFormat(),
+          ioConfig.getTaskDuration().getStandardMinutes()
       )
       {
       };
@@ -3166,7 +3167,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             true,
             minimumMessageTime,
             maximumMessageTime,
-            ioConfig.getInputFormat()
+            ioConfig.getInputFormat(),
+            ioConfig.getTaskDuration().getStandardMinutes()
     )
     {
     };

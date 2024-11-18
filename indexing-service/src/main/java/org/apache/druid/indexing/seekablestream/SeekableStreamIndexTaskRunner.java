@@ -76,6 +76,7 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
@@ -246,6 +247,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   private final Map<PartitionIdType, Long> partitionsThroughput = new HashMap<>();
 
+  private volatile DateTime minMessageTime;
+  private volatile DateTime maxMessageTime;
+
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
       @Nullable final InputRowParser<ByteBuffer> parser,
@@ -267,6 +271,18 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.ingestionState = IngestionState.NOT_STARTED;
     this.lockGranularityToUse = lockGranularityToUse;
 
+    minMessageTime = ioConfig.getMinimumMessageTime().or(DateTimes.MIN);
+    maxMessageTime = ioConfig.getMaximumMessageTime().or(DateTimes.MAX);
+
+    if (ioConfig.getRefreshRejectionPeriodsInMinutes() != null) {
+      Execs.scheduledSingleThreaded("RejectionPeriodUpdater-Exec--%d")
+           .scheduleWithFixedDelay(
+               this::refreshMinMaxMessageTime,
+               ioConfig.getRefreshRejectionPeriodsInMinutes(),
+               ioConfig.getRefreshRejectionPeriodsInMinutes(),
+               TimeUnit.MINUTES
+        );
+    }
     resetNextCheckpointTime();
   }
 
@@ -388,7 +404,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         inputRowSchema,
         task.getDataSchema().getTransformSpec(),
         toolbox.getIndexingTmpDir(),
-        row -> row != null && task.withinMinMaxRecordTime(row),
+        row -> row != null && withinMinMaxRecordTime(row),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -2092,4 +2108,35 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   protected abstract boolean isEndOffsetExclusive();
 
   protected abstract TypeReference<List<SequenceMetadata<PartitionIdType, SequenceOffsetType>>> getSequenceMetadataTypeReference();
+
+  private void refreshMinMaxMessageTime()
+  {
+    minMessageTime = minMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes().intValue());
+    maxMessageTime = maxMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes().intValue());
+
+    log.info(StringUtils.format("Updated min and max messsage times to %s and %s respectively.", minMessageTime, maxMessageTime));
+  }
+
+  public boolean withinMinMaxRecordTime(final InputRow row)
+  {
+    final boolean beforeMinimumMessageTime = minMessageTime.isAfter(row.getTimestamp());
+    final boolean afterMaximumMessageTime = maxMessageTime.isBefore(row.getTimestamp());
+
+    if (log.isDebugEnabled()) {
+      if (beforeMinimumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
+            row.getTimestamp(),
+            minMessageTime
+        );
+      } else if (afterMaximumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
+            row.getTimestamp(),
+            maxMessageTime
+        );
+      }
+    }
+    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
+  }
 }
