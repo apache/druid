@@ -396,7 +396,7 @@ public class NodeAnnouncer
       curator.transaction().forOperations(curator.transactionOp().delete().forPath(path));
     }
     catch (KeeperException.NoNodeException e) {
-      log.info("node[%s] didn't exist anyway...", path);
+      log.info("Unannounced node[%s] that does not exist.", path);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
