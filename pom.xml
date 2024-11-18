@@ -1543,6 +1543,7 @@
                     <excludeRoots>
                         <excludeRoot>target/generated-sources/</excludeRoot>
                     </excludeRoots>
+                    <targetJdk>${maven.compiler.release}</targetJdk>
                 </configuration>
                 <executions>
                     <execution>
