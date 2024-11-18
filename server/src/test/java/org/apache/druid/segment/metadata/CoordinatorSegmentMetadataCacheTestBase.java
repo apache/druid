@@ -81,7 +81,6 @@ public class CoordinatorSegmentMetadataCacheTestBase extends SegmentMetadataCach
             return 0L;
           }
         },
-        queryToolChestWarehouse,
         new ServerConfig(),
         new NoopServiceEmitter(),
         conglomerate,

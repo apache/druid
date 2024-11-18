@@ -26,6 +26,7 @@ import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.SegmentWrangler;
@@ -51,6 +52,42 @@ public class DruidBinders
         new TypeLiteral<QueryToolChest>() {}
     );
   }
+
+  public static MapBinder<Class<? extends Query>, QueryLogic> queryLogicBinderType(Binder binder)
+  {
+    return MapBinder.newMapBinder(
+        binder,
+        new TypeLiteral<Class<? extends Query>>() {},
+        new TypeLiteral<QueryLogic>() {}
+    );
+  }
+
+  public static QueryLogicBinder queryLogicBinder(Binder binder)
+  {
+    return new QueryLogicBinder(binder);
+  }
+
+  public static class QueryLogicBinder
+  {
+    private MapBinder<Class<? extends Query>, QueryLogic> queryLogicMapBinder;
+    private Binder binder;
+
+    public QueryLogicBinder(Binder binder)
+    {
+      this.binder = binder;
+      queryLogicMapBinder = DruidBinders.queryLogicBinderType(binder);
+    }
+
+    QueryLogicBinder bindQueryLogic(
+        Class<? extends Query> queryTypeClazz,
+        Class<? extends QueryLogic> queryLogicClazz)
+    {
+      queryLogicMapBinder.addBinding(queryTypeClazz).to(queryLogicClazz);
+      binder.bind(queryLogicClazz).in(LazySingleton.class);
+      return this;
+    }
+  }
+
 
   public static Multibinder<KeyHolder<DruidNode>> discoveryAnnouncementBinder(Binder binder)
   {

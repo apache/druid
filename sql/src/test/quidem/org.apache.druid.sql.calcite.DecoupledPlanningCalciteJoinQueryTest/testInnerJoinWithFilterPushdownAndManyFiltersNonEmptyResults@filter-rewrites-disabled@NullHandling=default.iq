@@ -266,7 +266,7 @@ DruidProject(m1=[$2], m10=[$3], druid=[logical])
     "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
   },
   "resultFormat" : "compactedList",
-  "columns" : [ "j0.m1", "m1" ],
+  "columns" : [ "m1", "j0.m1" ],
   "columnTypes" : [ "FLOAT", "FLOAT" ],
   "granularity" : {
     "type" : "all"

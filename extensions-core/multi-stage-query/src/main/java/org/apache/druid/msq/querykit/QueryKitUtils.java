@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.MSQException;
-import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
@@ -191,11 +191,11 @@ public class QueryKitUtils
    * @throws IllegalArgumentException if the provided granularity is not supported
    */
   @Nullable
-  public static VirtualColumn makeSegmentGranularityVirtualColumn(final ObjectMapper jsonMapper, final Query<?> query)
+  public static VirtualColumn makeSegmentGranularityVirtualColumn(final ObjectMapper jsonMapper, final QueryContext queryContext)
   {
     final Granularity segmentGranularity =
-        QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, query.getContext());
-    final String timeColumnName = query.context().getString(QueryKitUtils.CTX_TIME_COLUMN_NAME);
+        QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryContext.asMap());
+    final String timeColumnName = queryContext.getString(QueryKitUtils.CTX_TIME_COLUMN_NAME);
 
     if (timeColumnName == null || Granularities.ALL.equals(segmentGranularity)) {
       return null;
