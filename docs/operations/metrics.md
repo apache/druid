@@ -86,6 +86,7 @@ Most metric values reset each emission period, as specified in `druid.monitoring
 |`subquery/fallback/unknownReason/count`|Number of subqueries which cannot be materialized as frames due other reasons.|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |
 |`query/rowLimit/exceeded/count`|Number of queries whose inlined subquery results exceeded the given row limit|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |
 |`query/byteLimit/exceeded/count`|Number of queries whose inlined subquery results exceeded the given byte limit|This metric is only available if the `SubqueryCountStatsMonitor` module is included.| |
+|`httpClient/channelAcquire/timeNs`|Time in nanoseconds spent by the httpclient to acquire the channel.|`server`| few milliseconds|
 
 ### Historical
 

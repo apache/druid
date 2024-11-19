@@ -61,10 +61,12 @@ public class JettyHttpClientModule implements Module
           .annotatedWith(annotationClazz)
           .toProvider(new HttpClientProvider(annotationClazz))
           .in(LazySingleton.class);
+
   }
 
   public static class HttpClientProvider extends AbstractHttpClientProvider<HttpClient>
   {
+
     public HttpClientProvider(Class<? extends Annotation> annotation)
     {
       super(annotation);
