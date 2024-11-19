@@ -207,8 +207,14 @@ public class NodeAnnouncer
     byte[] announcedPayload = announcedPaths.get(path);
 
     if (announcedPayload == null) {
+      boolean buildParentPath = false;
       // Payload does not exist. We have yet to announce this path. Check if we need to build a parent path.
-      boolean shouldBuildParentPath = canBuildParentPath(parentPath);
+      try {
+        buildParentPath = curator.checkExists().forPath(parentPath) == null;
+      }
+      catch (Exception e) {
+        log.debug(e, "Failed to check existence of parent path. Proceeding without creating parent path.");
+      }
 
       // Synchronize to make sure that I only create a listener once.
       synchronized (toAnnounce) {
@@ -216,7 +222,7 @@ public class NodeAnnouncer
           final NodeCache cache = setupNodeCache(path);
 
           if (started) {
-            if (shouldBuildParentPath) {
+            if (buildParentPath) {
               createPath(parentPath, removeParentIfCreated);
             }
             startCache(cache);
@@ -235,17 +241,6 @@ public class NodeAnnouncer
       catch (Exception e) {
         throw new RuntimeException(e);
       }
-    }
-  }
-
-  private boolean canBuildParentPath(String parentPath)
-  {
-    try {
-      return (curator.checkExists().forPath(parentPath) == null);
-    }
-    catch (Exception e) {
-      log.debug(e, "Failed to check existence of parent path. Proceeding without creating parent path.");
-      return false;
     }
   }
 
