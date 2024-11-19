@@ -60,6 +60,7 @@ import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -96,6 +97,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   private final ServiceEmitter emitter;
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private final Pattern pattern;
+  private Map<KafkaTopicPartition, Long> previousLatestSequenceFromStream;
   private volatile Map<KafkaTopicPartition, Long> latestSequenceFromStream;
 
 
@@ -275,6 +277,29 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     }
 
     return getRecordLagPerPartitionInLatestSequences(highestCurrentOffsets);
+  }
+
+  @Nullable
+  @Override
+  @SuppressWarnings("SSBasedInspection")
+  protected Map<KafkaTopicPartition, Long> getPartitionProductionRate()
+  {
+    Map<KafkaTopicPartition, Long> diff = calculateDiff(
+        latestSequenceFromStream,
+        previousLatestSequenceFromStream
+    );
+
+    previousLatestSequenceFromStream = latestSequenceFromStream
+        .entrySet()
+        .stream()
+        .collect(
+            Collectors.toMap(
+                Entry::getKey,
+                Entry::getValue
+            )
+        );
+
+    return diff;
   }
 
   @Nullable
@@ -523,5 +548,24 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         : getIoConfig().getStream().equals(streamMatchValue);
 
     return match ? new KafkaTopicPartition(isMultiTopic(), streamMatchValue, kafkaTopicPartition.partition()) : null;
+  }
+
+  @SuppressWarnings("SSBasedInspection")
+  private Map<KafkaTopicPartition, Long> calculateDiff(
+      @Nonnull Map<KafkaTopicPartition, Long> left,
+      @Nonnull Map<KafkaTopicPartition, Long> right
+  )
+  {
+    return left
+        .entrySet()
+        .stream()
+        .collect(
+            Collectors.toMap(
+                Entry::getKey,
+                e -> e.getValue() != null
+                     ? e.getValue() - Optional.ofNullable(right.get(e.getKey())).orElse(0L)
+                     : 0
+            )
+        );
   }
 }

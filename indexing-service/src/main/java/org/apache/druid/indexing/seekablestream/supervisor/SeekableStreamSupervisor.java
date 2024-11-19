@@ -4126,6 +4126,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   @Nullable
   protected abstract Map<PartitionIdType, Long> getPartitionTimeLag();
 
+  @Nullable
+  protected Map<PartitionIdType, Long> getPartitionProductionRate()
+  {
+    return null;
+  }
+
   /**
    * Gets highest current offsets of all the tasks (actively reading and publishing) for all partitions of the stream.
    * In case if no task is reading for a partition, returns offset stored in metadata storage for that partition.
@@ -4509,6 +4515,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     try {
       Map<PartitionIdType, Long> partitionRecordLags = getPartitionRecordLag();
       Map<PartitionIdType, Long> partitionTimeLags = getPartitionTimeLag();
+      Map<PartitionIdType, Long> partitionProductionRate = getPartitionProductionRate();
 
       if (partitionRecordLags == null && partitionTimeLags == null) {
         throw new ISE("Latest offsets have not been fetched");
@@ -4573,9 +4580,41 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         );
       };
 
+        if (productionRates == null) {
+          return;
+        }
+
+        Map<String, Object> metricTags = spec.getContextValue(DruidMetrics.TAGS);
+        for (Map.Entry<PartitionIdType, Long> entry : productionRates.entrySet()) {
+          emitter.emit(
+              ServiceMetricEvent.builder()
+                                .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                                .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                                .setDimension(DruidMetrics.PARTITION, entry.getKey())
+                                .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
+                                .setMetric(
+                                    StringUtils.format("ingest/%s/partitionProduction%s", type, suffix),
+                                    entry.getValue()
+                                )
+          );
+        }
+        emitter.emit(
+            ServiceMetricEvent.builder()
+                              .setDimension(DruidMetrics.DATASOURCE, dataSource)
+                              .setDimension(DruidMetrics.STREAM, getIoConfig().getStream())
+                              .setDimensionIfNotNull(DruidMetrics.TAGS, metricTags)
+                              .setMetric(
+                                  StringUtils.format("ingest/%s/production%s", type, suffix),
+                                  productionRates.values().stream().mapToLong(e -> e).sum()
+                              )
+        );
+      };
+
       // this should probably really be /count or /records or something.. but keeping like this for backwards compat
       emitFn.accept(partitionRecordLags, "");
       emitFn.accept(partitionTimeLags, "/time");
+
+      productionEmitFn.accept(partitionProductionRate, "");
     }
     catch (Exception e) {
       log.warn(e, "Unable to compute lag");
