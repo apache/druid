@@ -772,6 +772,7 @@
                                 </property>
                             </properties>
                             <argLine>
+                                ${jdk.strong.encapsulation.argLine}
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.type=configFile
