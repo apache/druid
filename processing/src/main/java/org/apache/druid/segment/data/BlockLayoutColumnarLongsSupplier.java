@@ -43,6 +43,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
   // The number of longs per buffer.
   private final int sizePer;
   private final CompressionFactory.LongEncodingReader baseReader;
+  private final CompressionStrategy strategy;
 
   public BlockLayoutColumnarLongsSupplier(
       int totalSize,
@@ -53,6 +54,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
       CompressionStrategy strategy
   )
   {
+    this.strategy = strategy;
     this.baseLongBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(order, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
@@ -124,7 +126,8 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
     }
   }
 
-  private class BlockLayoutColumnarLongs implements ColumnarLongs
+  // This needs to be a public class so that SemanticCreator is able to call it.
+  public class BlockLayoutColumnarLongs implements ColumnarLongs
   {
     final CompressionFactory.LongEncodingReader reader = baseReader.duplicate();
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedLongBuffers = baseLongBuffers.singleThreaded();
@@ -139,6 +142,16 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
      */
     @Nullable
     LongBuffer longBuffer;
+
+    public CompressionFactory.LongEncodingStrategy getEncodingStrategy()
+    {
+      return baseReader.getStrategy();
+    }
+
+    public CompressionStrategy getCompressionStrategy()
+    {
+      return strategy;
+    }
 
     @Override
     public int size()

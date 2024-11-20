@@ -24,6 +24,7 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.data.VByte;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,6 +34,7 @@ import java.nio.channels.WritableByteChannel;
 
 public class SerializerUtils
 {
+
   public <T extends OutputStream> void writeString(T out, String name) throws IOException
   {
     byte[] nameBytes = StringUtils.toUtf8(name);
@@ -44,6 +46,13 @@ public class SerializerUtils
   {
     byte[] nameBytes = StringUtils.toUtf8(name);
     writeInt(out, nameBytes.length);
+    Channels.writeFully(out, ByteBuffer.wrap(nameBytes));
+  }
+
+  public void writeVByteString(WritableByteChannel out, String name) throws IOException
+  {
+    byte[] nameBytes = StringUtils.toUtf8(name);
+    VByte.writeInt(out, nameBytes.length);
     Channels.writeFully(out, ByteBuffer.wrap(nameBytes));
   }
 
@@ -222,5 +231,11 @@ public class SerializerUtils
   public int getSerializedStringByteSize(String str)
   {
     return Integer.BYTES + StringUtils.toUtf8(str).length;
+  }
+
+  public int getSerializedStringVByteSize(String str)
+  {
+    final int stringSize = StringUtils.toUtf8(str).length;
+    return VByte.computeIntSize(stringSize) + stringSize;
   }
 }

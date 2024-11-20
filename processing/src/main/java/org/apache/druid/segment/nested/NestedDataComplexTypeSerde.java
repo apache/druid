@@ -22,7 +22,7 @@ package org.apache.druid.segment.nested;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.NestedDataColumnHandlerV4;
@@ -117,29 +117,14 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
       @Override
       public Object fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
-        final byte[] bytes = new byte[numBytes];
-        buffer.get(bytes, 0, numBytes);
-        try {
-          return ColumnSerializerUtils.SMILE_MAPPER.readValue(bytes, StructuredData.class);
-        }
-        catch (IOException e) {
-          throw new ISE(e, "Unable to deserialize value");
-        }
+        return deserializeBuffer(buffer, numBytes);
       }
 
       @Nullable
       @Override
       public byte[] toBytes(@Nullable Object val)
       {
-        if (val == null) {
-          return new byte[0];
-        }
-        try {
-          return ColumnSerializerUtils.SMILE_MAPPER.writeValueAsBytes(val);
-        }
-        catch (JsonProcessingException e) {
-          throw new ISE(e, "Unable to serialize value [%s]", val);
-        }
+        return serializeToBytes(val);
       }
 
       @Override
@@ -148,6 +133,53 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
         return false;
       }
     };
+  }
+
+  public static StructuredData deserializeBuffer(ByteBuffer buf)
+  {
+    return deserializeBuffer(buf, buf.remaining());
+  }
+
+  public static StructuredData deserializeBuffer(ByteBuffer buf, int numBytes)
+  {
+    if (numBytes == 0) {
+      return null;
+    }
+
+    final byte[] bytes = new byte[numBytes];
+    buf.get(bytes, 0, numBytes);
+    return deserializeBytes(bytes);
+  }
+
+  public static StructuredData deserializeBytes(byte[] bytes)
+  {
+    return deserializeBytes(bytes, 0, bytes.length);
+  }
+
+  public static StructuredData deserializeBytes(byte[] bytes, int offset, int len)
+  {
+    if (len == 0) {
+      return null;
+    }
+    try {
+      return ColumnSerializerUtils.SMILE_MAPPER.readValue(bytes, offset, len, StructuredData.class);
+    }
+    catch (IOException e) {
+      throw DruidException.defensive(e, "Unable to deserialize value");
+    }
+  }
+
+  public static byte[] serializeToBytes(@Nullable Object val)
+  {
+    if (val == null) {
+      return new byte[0];
+    }
+    try {
+      return ColumnSerializerUtils.SMILE_MAPPER.writeValueAsBytes(val);
+    }
+    catch (JsonProcessingException e) {
+      throw DruidException.defensive(e, "Unable to serialize value [%s]", val);
+    }
   }
 
   @Override

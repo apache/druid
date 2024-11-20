@@ -349,6 +349,12 @@ public class StringUtils
     return toUtf8(string);
   }
 
+  @Nullable
+  public static String nullableValueOf(@Nullable final Object obj)
+  {
+    return obj == null ? null : obj.toString();
+  }
+
   /**
    * Equivalent of String.format(Locale.ENGLISH, message, formatArgs).
    */
