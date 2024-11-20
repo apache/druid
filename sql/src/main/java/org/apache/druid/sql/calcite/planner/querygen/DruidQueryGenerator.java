@@ -285,8 +285,8 @@ public class DruidQueryGenerator
 
     Vertex createVertex(DruidNodeStack stack, PartialDruidQuery partialDruidQuery, List<Vertex> inputs)
     {
-      VertexTweaks jst = VertexTweaks.analyze(stack);
-      return new PDQVertex(partialDruidQuery, inputs, jst);
+      VertexTweaks tweaks = VertexTweaks.analyze(stack);
+      return new PDQVertex(partialDruidQuery, inputs, tweaks);
     }
 
     public class PDQVertex implements Vertex
@@ -296,11 +296,11 @@ public class DruidQueryGenerator
       final VertexTweaks tweaks;
       private SourceDesc source;
 
-      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, VertexTweaks jst)
+      public PDQVertex(PartialDruidQuery partialDruidQuery, List<Vertex> inputs, VertexTweaks tweaks)
       {
         this.partialDruidQuery = partialDruidQuery;
         this.inputs = inputs;
-        this.tweaks = jst;
+        this.tweaks = tweaks;
       }
 
       @Override

@@ -805,7 +805,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   {
     testBuilder()
         .plannerConfig(plannerConfig)
-        .queryContext(QUERY_CONTEXT_DEFAULT)
         .sql(sql)
         .authResult(authenticationResult)
         .expectedQueries(expectedQueries)
