@@ -275,7 +275,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
           closer
       );
 
-      serializer.openDictionaryWriter();
+      serializer.openDictionaryWriter(tempFolder.newFolder());
       serializer.serializeDictionaries(
           globalDictionarySortedCollector.getSortedStrings(),
           globalDictionarySortedCollector.getSortedLongs(),
