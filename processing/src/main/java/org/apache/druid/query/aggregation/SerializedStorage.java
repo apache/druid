@@ -175,7 +175,7 @@ public class SerializedStorage<T>
         } else {
           if (itemStartOffset != rowChunkOffsets.getLong(chunkId - 1)) {
             throw DruidException.defensive(
-                "Should have read up to the start of the offsets [,d], "
+                "Should have read up to the start of the offsets [%,d], "
                 + "but for some reason the values [%,d] don't align.  Possible corruption?",
                 rowChunkOffsets.getLong(chunkId - 1),
                 itemStartOffset
