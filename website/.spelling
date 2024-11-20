@@ -1284,6 +1284,7 @@ ComplexMetrics
 DataSegmentArchiver
 DataSegmentKiller
 DataSegmentMover
+DataSegmentCopier
 URIDataPuller
 DataSegmentPusher
 DruidModule
