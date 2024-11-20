@@ -719,6 +719,7 @@ public class IndexIO
 
         if (groupingColumn.equals(projectionSpec.getSchema().getTimeColumnName())) {
           projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(groupingColumn));
+          projectionColumns.remove(groupingColumn);
         }
       }
       for (AggregatorFactory aggregator : projectionSpec.getSchema().getAggregators()) {

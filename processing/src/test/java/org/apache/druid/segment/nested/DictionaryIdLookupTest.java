@@ -38,7 +38,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
-import java.nio.file.Path;
 
 public class DictionaryIdLookupTest extends InitializedNullHandlingTest
 {
@@ -92,12 +91,12 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
         4
     );
 
-    Path dictTempPath = temp.newFolder().toPath();
+    File dictTempDir = temp.newFolder();
 
     // make lookup with references to writers
     DictionaryIdLookup idLookup = new DictionaryIdLookup(
         "test",
-        dictTempPath,
+        dictTempDir,
         stringWriter,
         longWriter,
         doubleWriter,
@@ -110,7 +109,7 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
     doubleWriter.open();
     arrayWriter.open();
 
-    File tempDir = dictTempPath.toFile();
+    File tempDir = dictTempDir;
     Assert.assertEquals(0, tempDir.listFiles().length);
 
     for (String s : sortedValueDictionary.getSortedStrings()) {
