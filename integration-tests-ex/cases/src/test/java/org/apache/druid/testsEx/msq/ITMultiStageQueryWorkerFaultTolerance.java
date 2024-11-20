@@ -157,21 +157,17 @@ public class ITMultiStageQueryWorkerFaultTolerance
       }
       String pidToKill = stdOut.lhs.trim();
       if (pidToKill.length() != 0) {
-        LOG.info("Found PID to kill %s", pidToKill);
-        // kill worker after 5 seconds
-        Thread.sleep(5000);
         LOG.info("Killing pid %s", pidToKill);
-        druidClusterAdminClient.runCommandInMiddleManagerContainer(
+        final Pair<String, String> killResult = druidClusterAdminClient.runCommandInMiddleManagerContainer(
             "/bin/bash",
             "-c",
             "kill -9 " + pidToKill
         );
+        LOG.info(StringUtils.format("Kill command stdout: %s, stderr: %s", killResult.lhs, killResult.rhs));
         return true;
       } else {
         return false;
       }
-    }, true, 6000, 50, StringUtils.format("Figuring out PID for task[%s] to kill abruptly", taskIdToKill));
-
-
+    }, true, 2000, 100, StringUtils.format("Figuring out PID for task[%s] to kill abruptly", taskIdToKill));
   }
 }

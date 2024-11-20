@@ -190,7 +190,6 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
           throw new TaskStillRunningException();
         },
         (Throwable t) -> t instanceof TaskStillRunningException,
-        99,
         100
     );
   }
