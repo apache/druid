@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite.planner;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelHomogeneousShuttle;
 import org.apache.calcite.rel.RelNode;
@@ -47,21 +48,49 @@ import org.apache.druid.sql.calcite.rule.logical.LogicalUnnest;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 public class DruidRelFieldTrimmer extends RelFieldTrimmer
 {
-  private boolean trimTableScan;
+  private final boolean trimTableScan;
+  private final RelBuilder relBuilder;
 
   public DruidRelFieldTrimmer(@Nullable SqlValidator validator, RelBuilder relBuilder, boolean trimTableScan)
   {
     super(validator, relBuilder);
+    this.relBuilder = relBuilder;
     this.trimTableScan = trimTableScan;
   }
 
   @Override
   protected TrimResult dummyProject(int fieldCount, RelNode input)
+  {
+    return makeIdentityMapping(input);
+  }
+
+  protected TrimResult dummyProject(int fieldCount, RelNode input,
+      @Nullable RelNode originalRelNode)
+  {
+    final RelOptCluster cluster = input.getCluster();
+    final Mapping mapping =
+        Mappings.create(MappingType.INVERSE_SURJECTION, fieldCount, 0);
+    if (input.getRowType().getFieldCount() == 0) {
+      // Input already has one field (and may in fact be a dummy project we
+      // created for the child). We can't do better.
+      return result(input, mapping);
+    }
+    relBuilder.push(input);
+    relBuilder.project(Collections.emptyList(), Collections.emptyList());
+    RelNode newProject = relBuilder.build();
+    if (originalRelNode != null) {
+      newProject = RelOptUtil.propagateRelHints(originalRelNode, newProject);
+    }
+    return result(newProject, mapping);
+  }
+
+  private TrimResult makeIdentityMapping(RelNode input)
   {
     Mapping mapping = Mappings.createIdentity(input.getRowType().getFieldCount());
     return result(input, mapping);
