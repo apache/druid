@@ -61,7 +61,6 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
    * should eventually work.
    */
   @Test
-  @Override
   public void testUnionIsUnplannable()
   {
     assertQueryIsUnplannable(
