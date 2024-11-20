@@ -19,9 +19,7 @@
 
 package org.apache.druid.segment.data;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.WritableByteChannel;
 
 public class VByte
 {
@@ -97,40 +95,6 @@ public class VByte
       buffer.put((byte) (extract7bitsmaskless(4, (val)) | (1 << 7)));
     }
     return buffer.position() - pos;
-  }
-
-  public static int writeInt(WritableByteChannel out, int val) throws IOException
-  {
-    final byte[] bytes = new byte[5];
-    final int numBytes;
-    if (val < (1 << 7)) {
-      bytes[0] = (byte) (val | (1 << 7));
-      numBytes = 1;
-    } else if (val < (1 << 14)) {
-      bytes[0] = extract7bits(0, val);
-      bytes[1] = (byte) (extract7bitsmaskless(1, (val)) | (1 << 7));
-      numBytes = 2;
-    } else if (val < (1 << 21)) {
-      bytes[0] = extract7bits(0, val);
-      bytes[1] = extract7bits(1, val);
-      bytes[2] = (byte) (extract7bitsmaskless(2, (val)) | (1 << 7));
-      numBytes = 3;
-    } else if (val < (1 << 28)) {
-      bytes[0] = extract7bits(0, val);
-      bytes[1] = extract7bits(1, val);
-      bytes[2] = extract7bits(2, val);
-      bytes[3] = (byte) (extract7bitsmaskless(3, (val)) | (1 << 7));
-      numBytes = 4;
-    } else {
-      bytes[0] = extract7bits(0, val);
-      bytes[1] = extract7bits(1, val);
-      bytes[2] = extract7bits(2, val);
-      bytes[3] = extract7bits(3, val);
-      bytes[4] = (byte) (extract7bitsmaskless(4, (val)) | (1 << 7));
-      numBytes = 5;
-    }
-    out.write(ByteBuffer.wrap(bytes, 0, numBytes));
-    return numBytes;
   }
 
   /**
