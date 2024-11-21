@@ -20,6 +20,8 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
@@ -31,6 +33,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -50,6 +53,7 @@ import java.util.function.Function;
  * putting more work to be done at the broker level. This pushes the operations down to the
  * segments and is more performant.
  */
+@JsonInclude(Include.NON_NULL)
 public class FilteredDataSource implements DataSource
 {
   private final DataSource base;
@@ -66,6 +70,12 @@ public class FilteredDataSource implements DataSource
   public DimFilter getFilter()
   {
     return filter;
+  }
+
+  @JsonProperty("virtualColumns")
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
   }
 
   private FilteredDataSource(DataSource base, @Nullable DimFilter filter, VirtualColumns virtualColumns)
@@ -159,9 +169,10 @@ public class FilteredDataSource implements DataSource
   public String toString()
   {
     return "FilteredDataSource{" +
-           "base=" + base +
-           ", filter='" + filter + '\'' +
-           '}';
+        "base=" + base +
+        ", filter='" + filter + "'" +
+        ", virtualColumns=" + virtualColumns +
+        '}';
   }
 
   @Override
@@ -187,12 +198,14 @@ public class FilteredDataSource implements DataSource
       return false;
     }
     FilteredDataSource that = (FilteredDataSource) o;
-    return Objects.equals(base, that.base) && Objects.equals(filter, that.filter);
+    return Objects.equals(base, that.base) &&
+        Objects.equals(filter, that.filter) &&
+        Objects.equals(virtualColumns, that.virtualColumns);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(base, filter);
+    return Objects.hash(base, filter, virtualColumns);
   }
 }
