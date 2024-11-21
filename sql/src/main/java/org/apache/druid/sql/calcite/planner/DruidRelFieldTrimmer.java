@@ -72,6 +72,10 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
   protected TrimResult dummyProject(int fieldCount, RelNode input,
       @Nullable RelNode originalRelNode)
   {
+    if (fieldCount != 0) {
+      return super.dummyProject(fieldCount, input, originalRelNode);
+    }
+    // workaround to support fieldCount == 0 projections
     final Mapping mapping = Mappings.create(MappingType.INVERSE_SURJECTION, fieldCount, 0);
     if (input.getRowType().getFieldCount() == 0) {
       // there is no need to do anything
