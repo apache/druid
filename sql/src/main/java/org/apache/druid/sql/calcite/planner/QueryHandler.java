@@ -678,9 +678,10 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                           .build(exception, "Unhandled Query Planning Failure, see broker logs for details");
     } else {
       // Planning errors are more like hints: it isn't guaranteed that the planning error is actually what went wrong.
-      // For this reason, we consider these as targetting a more expert persona, i.e. the admin instead of the actual
-      // user.
-      throw DruidException.forPersona(DruidException.Persona.ADMIN)
+      // Even though the errors could be targetted to a more expert persona the errors aren't leaking any privileged
+      // information about the cluster that an admin might care about. The errors that are user resolvable are worth
+      // the potential confusion that a user might face with one that requires an expert persona.
+      throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build(
                               exception,

@@ -37,6 +37,7 @@ public class GoogleOutputConfig
   @JsonProperty
   private final String prefix;
 
+  @Nullable
   @JsonProperty
   private final File tempDir;
 
@@ -58,7 +59,7 @@ public class GoogleOutputConfig
   public GoogleOutputConfig(
       final String bucket,
       final String prefix,
-      final File tempDir,
+      @Nullable final File tempDir,
       @Nullable final HumanReadableBytes chunkSize,
       @Nullable final Integer maxRetry
   )
@@ -82,6 +83,7 @@ public class GoogleOutputConfig
     return prefix;
   }
 
+  @Nullable
   public File getTempDir()
   {
     return tempDir;
@@ -95,6 +97,11 @@ public class GoogleOutputConfig
   public Integer getMaxRetry()
   {
     return maxRetry;
+  }
+
+  public GoogleOutputConfig withTempDir(File tempDir)
+  {
+    return new GoogleOutputConfig(bucket, prefix, tempDir, chunkSize, maxRetry);
   }
 
   private void validateFields()

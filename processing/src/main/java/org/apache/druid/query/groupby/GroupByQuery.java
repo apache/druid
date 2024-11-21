@@ -330,11 +330,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return subtotalsSpec;
   }
 
-  /**
-   * Equivalent to {@code getResultRowSignature(Finalization.UNKNOWN)}.
-   *
-   * @see ResultRow for documentation about the order that fields will be in
-   */
+  @Override
   public RowSignature getResultRowSignature()
   {
     return resultRowSignature;
@@ -350,6 +346,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
    *
    * @see ResultRow for documentation about the order that fields will be in
    */
+  @Override
   public RowSignature getResultRowSignature(final RowSignature.Finalization finalization)
   {
     if (finalization == RowSignature.Finalization.UNKNOWN) {

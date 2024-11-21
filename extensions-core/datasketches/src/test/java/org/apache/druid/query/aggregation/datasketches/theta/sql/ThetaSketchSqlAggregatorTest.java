@@ -1108,6 +1108,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 ))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .columns("v0")
+                .columnTypes(ColumnType.DOUBLE)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
