@@ -19,12 +19,11 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.filter.AndFilter;
+import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
 
@@ -45,21 +44,17 @@ public class FilteredCursorFactory implements CursorFactory
   {
     final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
     final Filter newFilter;
-    if (spec.getFilter() == null) {
-      if (filter != null) {
-        newFilter = filter.toFilter();
-      } else {
-        newFilter = null;
-      }
-    } else {
-      if (filter != null) {
-        newFilter = new AndFilter(ImmutableList.of(spec.getFilter(), filter.toFilter()));
-      } else {
-        newFilter = spec.getFilter();
-      }
-    }
+    newFilter = Filters.conjunction(spec.getFilter(), getFilter());
     buildSpecBuilder.setFilter(newFilter);
     return delegate.makeCursorHolder(buildSpecBuilder.build());
+  }
+
+  private Filter getFilter()
+  {
+    if (filter == null) {
+      return null;
+    }
+    return filter.toFilter();
   }
 
   @Override
