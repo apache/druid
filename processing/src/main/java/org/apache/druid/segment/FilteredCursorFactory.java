@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.Iterables;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -27,25 +28,39 @@ import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
 
+import java.util.Arrays;
+
 public class FilteredCursorFactory implements CursorFactory
 {
   private final CursorFactory delegate;
   @Nullable
   private final DimFilter filter;
+  private final VirtualColumns virtualColumns;
 
-  public FilteredCursorFactory(CursorFactory delegate, @Nullable DimFilter filter)
+  public FilteredCursorFactory(
+      CursorFactory delegate,
+      @Nullable DimFilter filter,
+      @Nullable VirtualColumns virtualColumns)
   {
     this.delegate = delegate;
     this.filter = filter;
+    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
   }
 
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
-    final Filter newFilter;
-    newFilter = Filters.conjunction(spec.getFilter(), getFilter());
-    buildSpecBuilder.setFilter(newFilter);
+    // FIXME maybeAnd
+    buildSpecBuilder.setFilter(Filters.conjunction(spec.getFilter(), getFilter()));
+    buildSpecBuilder.setVirtualColumns(
+        VirtualColumns.fromIterable(
+            Iterables.concat(
+                Arrays.asList(spec.getVirtualColumns().getVirtualColumns()),
+                Arrays.asList(virtualColumns.getVirtualColumns())
+            )
+        )
+    );
     return delegate.makeCursorHolder(buildSpecBuilder.build());
   }
 
