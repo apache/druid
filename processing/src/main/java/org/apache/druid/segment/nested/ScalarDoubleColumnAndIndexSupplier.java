@@ -51,7 +51,9 @@ import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarDoubles;
+import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.CompressedColumnarDoublesSuppliers;
+import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
@@ -109,6 +111,11 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
             columnName,
             ColumnSerializerUtils.DOUBLE_VALUE_COLUMN_FILE_NAME
         );
+        final ByteBuffer encodedValuesBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME
+        );
 
         final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
         if (parent != null) {
@@ -128,6 +135,12 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
           );
         }
 
+        final CompressedVSizeColumnarIntsSupplier encodedCol = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
+            encodedValuesBuffer,
+            byteOrder,
+            columnBuilder.getFileMapper()
+        );
+
         final Supplier<ColumnarDoubles> doubles = CompressedColumnarDoublesSuppliers.fromByteBuffer(
             doublesValueColumn,
             byteOrder
@@ -144,6 +157,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         );
         return new ScalarDoubleColumnAndIndexSupplier(
             doubleDictionarySupplier,
+            encodedCol,
             doubles,
             rBitmaps,
             bitmapSerdeFactory.getBitmapFactory(),
@@ -160,6 +174,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
   private final Supplier<FixedIndexed<Double>> doubleDictionarySupplier;
 
+  private final Supplier<ColumnarInts> encodedValuesSupplier;
   private final Supplier<ColumnarDoubles> valueColumnSupplier;
 
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
@@ -170,6 +185,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
   private ScalarDoubleColumnAndIndexSupplier(
       Supplier<FixedIndexed<Double>> longDictionary,
+      Supplier<ColumnarInts> encodedValuesSupplier,
       Supplier<ColumnarDoubles> valueColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
       BitmapFactory bitmapFactory,
@@ -177,6 +193,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
   )
   {
     this.doubleDictionarySupplier = longDictionary;
+    this.encodedValuesSupplier = encodedValuesSupplier;
     this.valueColumnSupplier = valueColumnSupplier;
     this.valueIndexes = valueIndexes;
     this.bitmapFactory = bitmapFactory;
@@ -189,8 +206,10 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
   {
     return new ScalarDoubleColumn(
         doubleDictionarySupplier.get(),
+        encodedValuesSupplier,
         valueColumnSupplier.get(),
-        nullValueBitmap
+        nullValueBitmap,
+        bitmapFactory
     );
   }
 

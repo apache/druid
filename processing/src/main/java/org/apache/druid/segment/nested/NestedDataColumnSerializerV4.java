@@ -200,7 +200,7 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
     globalDictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
-            FileUtils.getTempDir(),
+            FileUtils.getTempDir().toFile(),
             dictionaryWriter,
             longDictionaryWriter,
             doubleDictionaryWriter,

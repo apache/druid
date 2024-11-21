@@ -1051,6 +1051,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .columns("v0", "v1", "v2", "v3")
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -1089,6 +1090,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 ))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .columns("v0", "v1")
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),

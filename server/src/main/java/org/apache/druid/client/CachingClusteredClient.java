@@ -65,9 +65,9 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
@@ -117,7 +117,7 @@ import java.util.stream.Collectors;
 public class CachingClusteredClient implements QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(CachingClusteredClient.class);
-  private final QueryToolChestWarehouse warehouse;
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final TimelineServerView serverView;
   private final Cache cache;
   private final ObjectMapper objectMapper;
@@ -131,7 +131,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
   @Inject
   public CachingClusteredClient(
-      QueryToolChestWarehouse warehouse,
+      QueryRunnerFactoryConglomerate conglomerate,
       TimelineServerView serverView,
       Cache cache,
       @Smile ObjectMapper objectMapper,
@@ -144,7 +144,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       ServiceEmitter emitter
   )
   {
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.serverView = serverView;
     this.cache = cache;
     this.objectMapper = objectMapper;
@@ -274,7 +274,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.queryPlus = queryPlus;
       this.responseContext = responseContext;
       this.query = queryPlus.getQuery();
-      this.toolChest = warehouse.getToolChest(query);
+      this.toolChest = conglomerate.getToolChest(query);
       this.strategy = toolChest.getCacheStrategy(query, objectMapper);
       this.dataSourceAnalysis = query.getDataSource().getAnalysis();
 

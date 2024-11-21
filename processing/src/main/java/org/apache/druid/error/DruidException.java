@@ -523,5 +523,4 @@ public class DruidException extends RuntimeException
 
     protected abstract DruidException makeException(DruidExceptionBuilder bob);
   }
-
 }

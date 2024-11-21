@@ -96,7 +96,6 @@ public class OverlordCompactionSchedulerTest
   private CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig;
 
   private TaskMaster taskMaster;
-  private TaskRunner taskRunner;
   private TaskQueue taskQueue;
   private BlockingExecutorService executor;
 
@@ -109,11 +108,20 @@ public class OverlordCompactionSchedulerTest
   @Before
   public void setUp()
   {
-    taskRunner = Mockito.mock(TaskRunner.class);
+    final TaskRunner taskRunner = Mockito.mock(TaskRunner.class);
     taskQueue = Mockito.mock(TaskQueue.class);
 
     taskMaster = new TaskMaster(null, null);
-    taskMaster.becomeLeader(taskRunner, taskQueue);
+    Assert.assertFalse(taskMaster.isHalfOrFullLeader());
+    Assert.assertFalse(taskMaster.isFullLeader());
+
+    taskMaster.becomeHalfLeader(taskRunner, taskQueue);
+    Assert.assertTrue(taskMaster.isHalfOrFullLeader());
+    Assert.assertFalse(taskMaster.isFullLeader());
+
+    taskMaster.becomeFullLeader();
+    Assert.assertTrue(taskMaster.isHalfOrFullLeader());
+    Assert.assertTrue(taskMaster.isFullLeader());
 
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
 
