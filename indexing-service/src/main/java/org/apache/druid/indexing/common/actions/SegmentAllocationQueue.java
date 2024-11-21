@@ -87,7 +87,7 @@ public class SegmentAllocationQueue
   private final ConcurrentHashMap<AllocateRequestKey, AllocateRequestBatch> keyToBatch = new ConcurrentHashMap<>();
   private final BlockingDeque<AllocateRequestBatch> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
 
-  private final boolean skipSegmentPayloadFetchForAllocation;
+  private final boolean reduceMetadataIO;
 
   @Inject
   public SegmentAllocationQueue(
@@ -102,7 +102,7 @@ public class SegmentAllocationQueue
     this.taskLockbox = taskLockbox;
     this.metadataStorage = metadataStorage;
     this.maxWaitTimeMillis = taskLockConfig.getBatchAllocationWaitTime();
-    this.skipSegmentPayloadFetchForAllocation = taskLockConfig.isBatchAllocationReduceMetadataIO();
+    this.reduceMetadataIO = taskLockConfig.isBatchAllocationReduceMetadataIO();
 
     this.executor = taskLockConfig.isBatchSegmentAllocation()
                     ? executorFactory.create(1, "SegmentAllocQueue-%s") : null;
@@ -386,7 +386,7 @@ public class SegmentAllocationQueue
     return metadataStorage.getSegmentTimelineForAllocation(
         key.dataSource,
         key.preferredAllocationInterval,
-        (key.lockGranularity == LockGranularity.TIME_CHUNK) && skipSegmentPayloadFetchForAllocation
+        (key.lockGranularity == LockGranularity.TIME_CHUNK) && reduceMetadataIO
     ).findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
   }
 
@@ -495,7 +495,7 @@ public class SegmentAllocationQueue
         tryInterval,
         requestKey.skipSegmentLineageCheck,
         requestKey.lockGranularity,
-        skipSegmentPayloadFetchForAllocation
+        reduceMetadataIO
     );
 
     int successfulRequests = 0;

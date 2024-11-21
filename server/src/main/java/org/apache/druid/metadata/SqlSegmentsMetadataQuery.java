@@ -36,7 +36,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
@@ -250,27 +249,18 @@ public class SqlSegmentsMetadataQuery
       final Interval interval
   )
   {
-    return retrieveSegmentIds(dataSource, Collections.singletonList(interval));
-  }
-
-  private Set<SegmentId> retrieveSegmentIds(
-      final String dataSource,
-      final Collection<Interval> intervals
-  )
-  {
-    if (CollectionUtils.isNullOrEmpty(intervals)) {
-      return Collections.emptySet();
-    }
-
-    // Check if the intervals all support comparing as strings. If so, bake them into the SQL.
-    final boolean compareAsString = intervals.stream().allMatch(Intervals::canCompareEndpointsAsStrings);
-
     final StringBuilder sb = new StringBuilder();
     sb.append("SELECT id FROM %s WHERE used = :used AND dataSource = :dataSource");
 
+    // If the interval supports comparing as a string, bake it into the SQL
+    final boolean compareAsString = Intervals.canCompareEndpointsAsStrings(interval);
     if (compareAsString) {
       sb.append(
-          getConditionForIntervalsAndMatchMode(intervals, IntervalMode.OVERLAPS, connector.getQuoteString())
+          getConditionForIntervalsAndMatchMode(
+              Collections.singletonList(interval),
+              IntervalMode.OVERLAPS,
+              connector.getQuoteString()
+          )
       );
     }
 
@@ -283,7 +273,7 @@ public class SqlSegmentsMetadataQuery
               .bind("dataSource", dataSource);
 
           if (compareAsString) {
-            bindIntervalsToQuery(sql, intervals);
+            bindIntervalsToQuery(sql, Collections.singletonList(interval));
           }
 
           final Set<SegmentId> segmentIds = new HashSet<>();
@@ -297,10 +287,8 @@ public class SqlSegmentsMetadataQuery
                     id, dataSource
                 );
               }
-              for (Interval interval : intervals) {
-                if (IntervalMode.OVERLAPS.apply(interval, segmentId.getInterval())) {
-                  segmentIds.add(segmentId);
-                }
+              if (IntervalMode.OVERLAPS.apply(interval, segmentId.getInterval())) {
+                segmentIds.add(segmentId);
               }
             }
           }

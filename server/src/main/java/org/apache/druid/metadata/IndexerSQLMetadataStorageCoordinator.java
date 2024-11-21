@@ -2936,11 +2936,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Interval interval
   )
   {
-    final Set<SegmentId> overlappingSegmentIds = SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
-                                                                         .retrieveUsedSegmentIds(
-                                                                             dataSource,
-                                                                             interval
-                                                                         );
+    final Set<SegmentId> overlappingSegmentIds
+        = SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                  .retrieveUsedSegmentIds(dataSource, interval);
     // Map from version -> interval -> segmentId with the smallest partitionNum
     Map<String, Map<Interval, SegmentId>> versionIntervalToSmallestSegmentId = new HashMap<>();
     for (SegmentId segmentId : overlappingSegmentIds) {
@@ -2967,13 +2965,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
     if (!retrievedIds.equals(segmentIdsToRetrieve)) {
       throw DruidException.defensive(
-          "Cannot create DataSegments for segment allocations."
-          + "The used segments may have changed for dataSource[%s] and interval[%s].",
+          "Used segment IDs for dataSource[%s] and interval[%s] have changed in the metadata store.",
           dataSource, interval
       );
     }
 
-    // Populate the dummy segment info
+    // Create dummy segments for each segmentId with only the shard spec populated
     Set<DataSegment> segmentsWithAllocationInfo = new HashSet<>();
     for (SegmentId id : overlappingSegmentIds) {
       final int corePartitions = versionIntervalToNumCorePartitions.get(id.getVersion()).get(id.getInterval());
