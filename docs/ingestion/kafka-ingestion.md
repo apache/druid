@@ -143,41 +143,54 @@ Similarly, you can use `metrics-.*` as the value for `topicPattern` if you want 
 
 #### Consumer properties
 
-Consumer properties control how a supervisor reads and processes event messages from a Kafka stream. For more information about consumers, refer to the [Apache Kafka documentation](https://kafka.apache.org/documentation/#consumerconfigs).
+Consumer properties control how a supervisor reads and processes event messages from a Kafka stream. For more information about consumer configuration and advanced use cases, refer to the [Kafka documentation](https://kafka.apache.org/documentation/#consumerconfigs).
 
-The `consumerProperties` object must contain a  `bootstrap.servers` property with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
-By default, `isolation.level` is set to `read_committed`.
+You must include `bootstrap.servers` in consumer properties with a list of Kafka brokers in the format `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
+In some cases, you may need to retrieve consumer properties at runtime. For example, when `bootstrap.servers` is unknown or not static.
 
-If you use older versions of Kafka servers without transactions support or don't want Druid to consume only committed transactions, set `isolation.level` to `read_uncommitted`. If you need Druid to consume older versions of Kafka, make sure offsets are sequential, since there is no offset gap check in Druid.
+The `isolation.level` property in `consumerProperties` determines how Druid reads messages written transactionally.
+If you use older versions of Kafka servers without transaction support or you don't want Druid to consume only committed transactions, set `isolation.level` to `read_uncommitted`.
+With `read_uncommitted`, which is the default setting, Druid reads all messages, including aborted transactional messages.
+Make sure offsets are sequential, since there is no offset gap check in Druid.
+For Druid to consume only committed transactional messages, set `isolation.level` to `read_committed`.
 
-If your Kafka cluster enables consumer-group based ACLs, you can set `group.id` in `consumerProperties` to override the default auto generated group ID.
+If your Kafka cluster enables consumer group ACLs, you can set `group.id` in `consumerProperties` to override the default auto generated group ID.
 
-In some cases, you may need to fetch consumer properties at runtime. For example, when `bootstrap.servers` is not known upfront or is not static. To enable SSL connections, you must provide passwords for `keystore`, `truststore`, and `key` secretly. You can provide configurations at runtime with a dynamic config provider implementation like the environment variable config provider that comes with Druid. For more information, see [Dynamic config provider](../operations/dynamic-config-provider.md).
+To enable SSL connections, you must provide passwords for `keystore`, `truststore`, and `key` confidentially. You can specify these settings in the `jaas.conf` login configuration file or in `consumerProperties` with `sasl.jaas.config`.
+To protect sensitive information, use the [environment variable dynamic config provider](../operations/dynamic-config-provider.md#environment-variable-dynamic-config-provider) to store credentials in system environment variables instead of plain text.
+Although you can also use the [password provider](../operations/password-provider.md) interface to specify SSL configuration for Kafka ingestion, consider using the dynamic config provider as this feature is deprecated.
 
-For example, if you are using SASL and SSL with Kafka, set the following environment variables for the Druid user on the machines running the Overlord and the Peon services:
+For example, when using SASL and SSL with Kafka, set the following environment variables for the Druid user on machines running the Overlord and Peon services. Replace the values to match your environment configurations.
 
 ```
-export KAFKA_JAAS_CONFIG="org.apache.kafka.common.security.plain.PlainLoginModule required username='admin_user' password='admin_password';"
+export KAFKA_JAAS_CONFIG="org.apache.kafka.common.security.plain.PlainLoginModule required username='accesskey' password='secret key';"
 export SSL_KEY_PASSWORD=mysecretkeypassword
 export SSL_KEYSTORE_PASSWORD=mysecretkeystorepassword
 export SSL_TRUSTSTORE_PASSWORD=mysecrettruststorepassword
 ```
 
+When you define the consumer properties in the supervisor spec, use the dynamic config provider to refer to the environment variables:
+
 ```json
-"druid.dynamic.config.provider": {
-  "type": "environment",
-  "variables": {
-    "sasl.jaas.config": "KAFKA_JAAS_CONFIG",
-    "ssl.key.password": "SSL_KEY_PASSWORD",
-    "ssl.keystore.password": "SSL_KEYSTORE_PASSWORD",
-    "ssl.truststore.password": "SSL_TRUSTSTORE_PASSWORD"
+"consumerProperties": {
+  "bootstrap.servers": "localhost:9092",
+  "security.protocol": "SASL_SSL", 
+  "sasl.mechanism": "PLAIN", 
+  "ssl.keystore.location": "/opt/kafka/config/kafka01.keystore.jks",
+  "ssl.truststore.location": "/opt/kafka/config/kafka.truststore.jks",
+  "druid.dynamic.config.provider": {
+    "type": "environment",
+    "variables": {
+      "sasl.jaas.config": "KAFKA_JAAS_CONFIG",
+      "ssl.key.password": "SSL_KEY_PASSWORD",
+      "ssl.keystore.password": "SSL_KEYSTORE_PASSWORD",
+      "ssl.truststore.password": "SSL_TRUSTSTORE_PASSWORD"
+    }
   }
 }
 ```
 
-Verify that you've changed the values for all configurations to match your own environment. In the Druid data loader interface, you can use the environment variable config provider syntax in the **Consumer properties** field on the **Connect tab**. When connecting to Kafka, Druid replaces the environment variables with their corresponding values.
-
-You can provide SSL connections with [Password provider](../operations/password-provider.md) interface to define the `keystore`, `truststore`, and `key`, but this feature is deprecated.
+When connecting to Kafka, Druid replaces the environment variables with their corresponding values.
 
 #### Idle configuration
 
