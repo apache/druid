@@ -143,9 +143,10 @@ Similarly, you can use `metrics-.*` as the value for `topicPattern` if you want 
 
 #### Consumer properties
 
-Consumer properties control how a supervisor reads and processes event messages from a Kafka stream. For more information about consumer configs and advanced use cases, refer to the [Kafka documentation](https://kafka.apache.org/documentation/#consumerconfigs).
+Consumer properties control how a supervisor reads and processes event messages from a Kafka stream. For more information about consumer configuration and advanced use cases, refer to the [Kafka documentation](https://kafka.apache.org/documentation/#consumerconfigs).
 
 You must include `bootstrap.servers` in consumer properties with a list of Kafka brokers in the format `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.
+In some cases, you may need to retrieve consumer properties at runtime. For example, when `bootstrap.servers` is unknown or not static.
 
 The `isolation.level` property in `consumerProperties` determines how Druid reads messages written transactionally.
 If you use older versions of Kafka servers without transaction support or you don't want Druid to consume only committed transactions, set `isolation.level` to `read_uncommitted`.
@@ -155,10 +156,9 @@ For Druid to consume only committed transactional messages, set `isolation.level
 
 If your Kafka cluster enables consumer group ACLs, you can set `group.id` in `consumerProperties` to override the default auto generated group ID.
 
-In some cases, you may need to retrieve consumer properties at runtime. For example, when `bootstrap.servers` is unknown or not static. To enable SSL connections, you must provide passwords for `keystore`, `truststore`, and `key` confidentially. You can specify these settings in the `jaas.conf` login configuration file or in `consumerProperties` with `sasl.jaas.config`.
-
+To enable SSL connections, you must provide passwords for `keystore`, `truststore`, and `key` confidentially. You can specify these settings in the `jaas.conf` login configuration file or in `consumerProperties` with `sasl.jaas.config`.
 To protect sensitive information, use the [environment variable dynamic config provider](../operations/dynamic-config-provider.md#environment-variable-dynamic-config-provider) to store credentials in system environment variables instead of plain text.
-Although you can also use the [password provider](../operations/password-provider.md) interface to specify TLS configs for Kafka ingestion, consider using the dynamic config provider as this feature is deprecated.
+Although you can also use the [password provider](../operations/password-provider.md) interface to specify SSL configuration for Kafka ingestion, consider using the dynamic config provider as this feature is deprecated.
 
 For example, when using SASL and SSL with Kafka, set the following environment variables for the Druid user on machines running the Overlord and Peon services. Replace the values to match your environment configurations.
 
