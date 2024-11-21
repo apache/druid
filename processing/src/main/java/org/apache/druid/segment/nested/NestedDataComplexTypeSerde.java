@@ -135,11 +135,19 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     };
   }
 
+  /**
+   * Reads numBytes from the position to the limit of the byte buffer argument and deserailizes it into
+   * a {@link StructuredData} object using {@link ColumnSerializerUtils#SMILE_MAPPER}.
+   */
   public static StructuredData deserializeBuffer(ByteBuffer buf)
   {
     return deserializeBuffer(buf, buf.remaining());
   }
 
+  /**
+   * Reads numBytes from the byte buffer argument and deserailizes it into a {@link StructuredData} object
+   * using {@link ColumnSerializerUtils#SMILE_MAPPER}.
+   */
   public static StructuredData deserializeBuffer(ByteBuffer buf, int numBytes)
   {
     if (numBytes == 0) {
@@ -151,11 +159,18 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     return deserializeBytes(bytes);
   }
 
+  /**
+   * Converts the bytes array into a {@link StructuredData} object using {@link ColumnSerializerUtils#SMILE_MAPPER}.
+   */
   public static StructuredData deserializeBytes(byte[] bytes)
   {
     return deserializeBytes(bytes, 0, bytes.length);
   }
 
+  /**
+   * Reads the bytes between offset and len from the byte array and deserializes a {@link StructuredData} object from
+   * it, using {@link ColumnSerializerUtils#SMILE_MAPPER}.
+   */
   public static StructuredData deserializeBytes(byte[] bytes, int offset, int len)
   {
     if (len == 0) {
@@ -169,6 +184,9 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     }
   }
 
+  /**
+   * Returns a byte array containing the val as serialized by {@link ColumnSerializerUtils#SMILE_MAPPER}.
+   */
   public static byte[] serializeToBytes(@Nullable Object val)
   {
     if (val == null) {
