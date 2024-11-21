@@ -423,8 +423,9 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
   }
 
   /**
-   * Internal serializer used to serailize a {@link VariantColumn}. Contains the logic to write out the column to a
-   * {@link FileSmoosher}. Created by {@link VariantColumnSerializer} once it is closed for writes.
+   * Internal serializer used to serialize a {@link VariantColumn}. Encapsulates just the logic to write out the column
+   * to a {@link FileSmoosher} without the parts to update the dictionaries themselves, so that it can be reused.
+   * Created by {@link VariantColumnSerializer} once it is closed for writes.
    */
   public static class InternalSerializer implements Serializer
   {
@@ -475,18 +476,20 @@ public class VariantColumnSerializer extends NestedCommonFormatColumnSerializer
       this.writeDictionary = writeDictionary;
       this.dictionaryIdLookup = dictionaryIdLookup;
 
-      boolean[] dictionariesSorted = new boolean[]{
-          dictionaryWriter.isSorted(),
-          longDictionaryWriter.isSorted(),
-          doubleDictionaryWriter.isSorted(),
-          arrayDictionaryWriter.isSorted()
-      };
-      for (boolean sorted : dictionariesSorted) {
-        if (writeDictionary && !sorted) {
-          throw DruidException.defensive(
-              "Dictionary is not sorted? [%s]  Should always be sorted",
-              Arrays.toString(dictionariesSorted)
-          );
+      if (writeDictionary) {
+        boolean[] dictionariesSorted = new boolean[]{
+            dictionaryWriter.isSorted(),
+            longDictionaryWriter.isSorted(),
+            doubleDictionaryWriter.isSorted(),
+            arrayDictionaryWriter.isSorted()
+        };
+        for (boolean sorted : dictionariesSorted) {
+          if (!sorted) {
+            throw DruidException.defensive(
+                "Dictionary is not sorted? [%s]  Should always be sorted",
+                Arrays.toString(dictionariesSorted)
+            );
+          }
         }
       }
     }

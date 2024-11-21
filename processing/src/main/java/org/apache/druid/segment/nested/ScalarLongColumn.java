@@ -55,21 +55,21 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
   private final FixedIndexed<Long> longDictionary;
   private final Supplier<ColumnarInts> encodedValuesSupplier;
   private final ColumnarLongs valueColumn;
-  private final ImmutableBitmap nullValueBitmap;
+  private final ImmutableBitmap nullValueIndex;
   private final BitmapFactory bitmapFactory;
 
   public ScalarLongColumn(
       FixedIndexed<Long> longDictionary,
       Supplier<ColumnarInts> encodedValuesSupplier,
       ColumnarLongs valueColumn,
-      ImmutableBitmap nullValueBitmap,
+      ImmutableBitmap nullValueIndex,
       BitmapFactory bitmapFactory
   )
   {
     this.longDictionary = longDictionary;
     this.encodedValuesSupplier = encodedValuesSupplier;
     this.valueColumn = valueColumn;
-    this.nullValueBitmap = nullValueBitmap;
+    this.nullValueIndex = nullValueIndex;
     this.bitmapFactory = bitmapFactory;
   }
 
@@ -91,7 +91,7 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
   {
     return new LongColumnSelector()
     {
-      private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+      private PeekableIntIterator nullIterator = nullValueIndex.peekableIterator();
       private int nullMark = -1;
       private int offsetMark = -1;
 
@@ -105,7 +105,7 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         inspector.visit("longColumn", valueColumn);
-        inspector.visit("nullBitmap", nullValueBitmap);
+        inspector.visit("nullBitmap", nullValueIndex);
       }
 
       @Override
@@ -118,7 +118,7 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
         if (i < offsetMark) {
           // offset was reset, reset iterator state
           nullMark = -1;
-          nullIterator = nullValueBitmap.peekableIterator();
+          nullIterator = nullValueIndex.peekableIterator();
         }
         offsetMark = i;
         if (nullMark < i) {
@@ -143,7 +143,7 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
       private int id = ReadableVectorInspector.NULL_ID;
 
       @Nullable
-      private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+      private PeekableIntIterator nullIterator = nullValueIndex.peekableIterator();
       private int offsetMark = -1;
 
       @Override
@@ -172,14 +172,14 @@ public class ScalarLongColumn implements NestedCommonFormatColumn
 
         if (offset.isContiguous()) {
           if (offset.getStartOffset() < offsetMark) {
-            nullIterator = nullValueBitmap.peekableIterator();
+            nullIterator = nullValueIndex.peekableIterator();
           }
           offsetMark = offset.getStartOffset() + offset.getCurrentVectorSize();
           valueColumn.get(valueVector, offset.getStartOffset(), offset.getCurrentVectorSize());
         } else {
           final int[] offsets = offset.getOffsets();
           if (offsets[offsets.length - 1] < offsetMark) {
-            nullIterator = nullValueBitmap.peekableIterator();
+            nullIterator = nullValueIndex.peekableIterator();
           }
           offsetMark = offsets[offsets.length - 1];
           valueColumn.get(valueVector, offsets, offset.getCurrentVectorSize());
