@@ -460,12 +460,14 @@ public class TaskLockbox
    * successfully and others failed. In that case, only the failed ones should be
    * retried.
    *
-   * @param requests                List of allocation requests
-   * @param dataSource              Datasource for which segment is to be allocated.
-   * @param interval                Interval for which segment is to be allocated.
-   * @param skipSegmentLineageCheck Whether lineage check is to be skipped
-   *                                (this is true for streaming ingestion)
-   * @param lockGranularity         Granularity of task lock
+   * @param requests                             List of allocation requests
+   * @param dataSource                           Datasource for which segment is to be allocated.
+   * @param interval                             Interval for which segment is to be allocated.
+   * @param skipSegmentLineageCheck              Whether lineage check is to be skipped
+   *                                             (this is true for streaming ingestion)
+   * @param lockGranularity                      Granularity of task lock
+   * @param skipSegmentPayloadFetchForAllocation Whether to skip fetching payloads for all used
+   *                                             segments and rely on their ids instead.
    * @return List of allocation results in the same order as the requests.
    */
   public List<SegmentAllocateResult> allocateSegments(
@@ -473,7 +475,8 @@ public class TaskLockbox
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
-      LockGranularity lockGranularity
+      LockGranularity lockGranularity,
+      boolean skipSegmentPayloadFetchForAllocation
   )
   {
     log.info("Allocating [%d] segments for datasource [%s], interval [%s]", requests.size(), dataSource, interval);
@@ -487,9 +490,15 @@ public class TaskLockbox
       if (isTimeChunkLock) {
         // For time-chunk locking, segment must be allocated only after acquiring the lock
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, true));
-        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
+        allocateSegmentIds(
+            dataSource,
+            interval,
+            skipSegmentLineageCheck,
+            holderList.getPending(),
+            skipSegmentPayloadFetchForAllocation
+        );
       } else {
-        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
+        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending(), false);
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, false));
       }
       holderList.getPending().forEach(SegmentAllocationHolder::markSucceeded);
@@ -702,12 +711,12 @@ public class TaskLockbox
    * for the given requests. Updates the holder with the allocated segment if
    * the allocation succeeds, otherwise marks it as failed.
    */
-  @VisibleForTesting
-  void allocateSegmentIds(
+  private void allocateSegmentIds(
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
-      Collection<SegmentAllocationHolder> holders
+      Collection<SegmentAllocationHolder> holders,
+      boolean skipSegmentPayloadFetchForAllocation
   )
   {
     if (holders.isEmpty()) {
@@ -724,7 +733,8 @@ public class TaskLockbox
             dataSource,
             interval,
             skipSegmentLineageCheck,
-            createRequests
+            createRequests,
+            skipSegmentPayloadFetchForAllocation
         );
 
     for (SegmentAllocationHolder holder : holders) {

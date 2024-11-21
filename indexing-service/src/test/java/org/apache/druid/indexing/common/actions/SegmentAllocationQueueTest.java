@@ -73,6 +73,12 @@ public class SegmentAllocationQueueTest
       {
         return 0;
       }
+
+      @Override
+      public boolean isBatchAllocationReduceMetadataIO()
+      {
+        return true;
+      }
     };
 
     allocationQueue = new SegmentAllocationQueue(
