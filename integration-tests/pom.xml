@@ -281,6 +281,7 @@
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-multibindings</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -371,7 +372,6 @@
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-servlet</artifactId>
-            <version>${guice.version}</version>
         </dependency>
         <dependency>
             <groupId>io.confluent</groupId>
@@ -772,6 +772,7 @@
                                 </property>
                             </properties>
                             <argLine>
+                                ${jdk.strong.encapsulation.argLine}
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.type=configFile

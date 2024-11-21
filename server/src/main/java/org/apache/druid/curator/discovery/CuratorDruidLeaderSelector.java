@@ -37,6 +37,7 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -58,7 +59,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   private final AtomicReference<LeaderLatch> leaderLatch = new AtomicReference<>();
 
   private volatile boolean leader = false;
-  private volatile int term = 0;
+  private final AtomicInteger term = new AtomicInteger(0);
 
   public CuratorDruidLeaderSelector(CuratorFramework curator, @Self DruidNode self, String latchPath)
   {
@@ -99,7 +100,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               }
 
               leader = true;
-              term++;
+              term.incrementAndGet();
               listener.becomeLeader();
             }
             catch (Exception ex) {
@@ -161,7 +162,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   @Override
   public int localTerm()
   {
-    return term;
+    return term.get();
   }
 
   @Override

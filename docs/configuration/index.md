@@ -195,9 +195,9 @@ and `druid.tlsPort` properties on each service. Please see `Configuration` secti
 
 Druid uses Jetty as an embedded web server. To learn more about TLS/SSL, certificates, and related concepts in Jetty, including explanations of the configuration settings below, see "Configuring SSL/TLS KeyStores" in the [Jetty Operations Guide](https://www.eclipse.org/jetty/documentation.php).
 
-For information about TLS/SSL support in Java in general, see the [Java Secure Socket Extension (JSSE) Reference Guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
+For information about TLS/SSL support in Java in general, see the [Java Secure Socket Extension (JSSE) Reference Guide](https://docs.oracle.com/en/java/javase/11/security/java-secure-socket-extension-jsse-reference-guide.html).
 The [Java Cryptography Architecture
-Standard Algorithm Name Documentation for JDK 8](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all possible
+Standard Algorithm Name Documentation for JDK 11](https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html) lists all possible
 values for the following properties, among others provided by the Java implementation.
 
 |Property|Description|Default|Required|
@@ -230,7 +230,7 @@ These properties apply to the SSLContext that will be provided to the internal H
 |`druid.client.https.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate certificate chains|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|no|
 |`druid.client.https.trustStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Trust Store.|none|yes|
 
-This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
+This [document](https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html) lists all the possible
 values for the above mentioned configs among others provided by Java implementation.
 
 ### Authentication and authorization
