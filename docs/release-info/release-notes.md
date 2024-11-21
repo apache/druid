@@ -86,7 +86,7 @@ The community extension for Delta Lake has been improved to support [complex typ
 
 ### Iceberg improvements
 
-The community extension for Iceberg has been improved. For more information, see [Iceberg improvements](#iceberg-improvements)
+The community extension for Iceberg has been improved. For more information, see [Iceberg improvements](#improved-iceberg-input-source-support).
 
 ### Projections (experimental)
 
