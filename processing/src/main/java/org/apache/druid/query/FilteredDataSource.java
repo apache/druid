@@ -27,6 +27,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.FilteredSegment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -53,6 +54,7 @@ public class FilteredDataSource implements DataSource
 {
   private final DataSource base;
   private final DimFilter filter;
+  private final VirtualColumns virtualColumns;
 
   @JsonProperty("base")
   public DataSource getBase()
@@ -66,19 +68,29 @@ public class FilteredDataSource implements DataSource
     return filter;
   }
 
-  private FilteredDataSource(DataSource base, @Nullable DimFilter filter)
+  private FilteredDataSource(DataSource base, @Nullable DimFilter filter, VirtualColumns virtualColumns)
   {
     this.base = base;
     this.filter = filter;
+    this.virtualColumns = virtualColumns;
   }
 
   @JsonCreator
   public static FilteredDataSource create(
       @JsonProperty("base") DataSource base,
-      @JsonProperty("filter") @Nullable DimFilter f
+      @JsonProperty("filter") @Nullable DimFilter filter,
+      @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns
   )
   {
-    return new FilteredDataSource(base, f);
+    return new FilteredDataSource(base, filter, virtualColumns);
+  }
+
+  public static FilteredDataSource create(
+      DataSource base,
+      @Nullable DimFilter filter
+  )
+  {
+    return Druids.filteredDataSource(base, filter);
   }
 
   @Override
@@ -100,7 +112,7 @@ public class FilteredDataSource implements DataSource
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
 
-    return new FilteredDataSource(children.get(0), filter);
+    return new FilteredDataSource(children.get(0), filter, virtualColumns);
   }
 
   @Override
@@ -133,14 +145,14 @@ public class FilteredDataSource implements DataSource
     );
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter)
+        () -> baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter, virtualColumns)
     );
   }
 
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return new FilteredDataSource(newSource, filter);
+    return new FilteredDataSource(newSource, filter, virtualColumns);
   }
 
   @Override
