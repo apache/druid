@@ -66,6 +66,9 @@
   "ingest/kinesis/partitionLag/time" : { "dimensions" : ["dataSource", "stream", "partition"], "type" : "gauge" },
 
   "ingest/notices/time" : { "dimensions" : ["dataSource", "noticeType"], "type" : "timer" },
+  "ingest/notices/queueSize" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+
+  "ingest/pause/time" : { "dimensions" : ["dataSource", "taskId"], "type" : "timer" },
 
   "task/success/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "task/failed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
