@@ -72,7 +72,7 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
   protected TrimResult dummyProject(int fieldCount, RelNode input,
       @Nullable RelNode originalRelNode)
   {
-    if (fieldCount != 0) {
+    if (fieldCount != 0 && trimTableScan) {
       return super.dummyProject(fieldCount, input, originalRelNode);
     }
     // workaround to support fieldCount == 0 projections
