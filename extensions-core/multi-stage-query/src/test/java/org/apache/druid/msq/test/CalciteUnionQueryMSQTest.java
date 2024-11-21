@@ -61,13 +61,12 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
    * should eventually work.
    */
   @Test
-  public void testUnionIsUnplannable()
+  public void testUnionIsUnplannableInNative()
   {
     assertQueryIsUnplannable(
         "SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo",
         "SQL requires union between two tables and column names queried for each table are different Left: [dim2, dim1, m1], Right: [dim1, dim2, m1]."
     );
-
   }
 
   @Disabled("Ignored till MSQ can plan UNION ALL with any operand")
