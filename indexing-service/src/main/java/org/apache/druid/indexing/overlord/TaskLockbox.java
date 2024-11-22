@@ -460,14 +460,14 @@ public class TaskLockbox
    * successfully and others failed. In that case, only the failed ones should be
    * retried.
    *
-   * @param requests                             List of allocation requests
-   * @param dataSource                           Datasource for which segment is to be allocated.
-   * @param interval                             Interval for which segment is to be allocated.
-   * @param skipSegmentLineageCheck              Whether lineage check is to be skipped
-   *                                             (this is true for streaming ingestion)
-   * @param lockGranularity                      Granularity of task lock
-   * @param skipSegmentPayloadFetchForAllocation Whether to skip fetching payloads for all used
-   *                                             segments and rely on their ids instead.
+   * @param requests                List of allocation requests
+   * @param dataSource              Datasource for which segment is to be allocated.
+   * @param interval                Interval for which segment is to be allocated.
+   * @param skipSegmentLineageCheck Whether lineage check is to be skipped
+   *                                (this is true for streaming ingestion)
+   * @param lockGranularity         Granularity of task lock
+   * @param reduceMetadataIO        Whether to skip fetching payloads for all used
+   *                                segments and rely on their IDs instead.
    * @return List of allocation results in the same order as the requests.
    */
   public List<SegmentAllocateResult> allocateSegments(
@@ -476,7 +476,7 @@ public class TaskLockbox
       Interval interval,
       boolean skipSegmentLineageCheck,
       LockGranularity lockGranularity,
-      boolean skipSegmentPayloadFetchForAllocation
+      boolean reduceMetadataIO
   )
   {
     log.info("Allocating [%d] segments for datasource [%s], interval [%s]", requests.size(), dataSource, interval);
@@ -495,7 +495,7 @@ public class TaskLockbox
             interval,
             skipSegmentLineageCheck,
             holderList.getPending(),
-            skipSegmentPayloadFetchForAllocation
+            reduceMetadataIO
         );
       } else {
         allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending(), false);
@@ -716,7 +716,7 @@ public class TaskLockbox
       Interval interval,
       boolean skipSegmentLineageCheck,
       Collection<SegmentAllocationHolder> holders,
-      boolean skipSegmentPayloadFetchForAllocation
+      boolean reduceMetadataIO
   )
   {
     if (holders.isEmpty()) {
@@ -734,7 +734,7 @@ public class TaskLockbox
             interval,
             skipSegmentLineageCheck,
             createRequests,
-            skipSegmentPayloadFetchForAllocation
+            reduceMetadataIO
         );
 
     for (SegmentAllocationHolder holder : holders) {

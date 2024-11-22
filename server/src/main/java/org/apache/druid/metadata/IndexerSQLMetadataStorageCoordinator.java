@@ -720,7 +720,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       Interval allocateInterval,
       boolean skipSegmentLineageCheck,
       List<SegmentCreateRequest> requests,
-      boolean skipSegmentPayloadFetch
+      boolean reduceMetadataIO
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
@@ -734,7 +734,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             interval,
             skipSegmentLineageCheck,
             requests,
-            skipSegmentPayloadFetch
+            reduceMetadataIO
         )
     );
   }
@@ -1015,12 +1015,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public SegmentTimeline getSegmentTimelineForAllocation(
       String dataSource,
       Interval interval,
-      boolean skipSegmentPayloadFetchForAllocation
+      boolean reduceMetadataIO
   )
   {
     return connector.retryWithHandle(
         handle -> {
-          if (skipSegmentPayloadFetchForAllocation) {
+          if (reduceMetadataIO) {
             return SegmentTimeline.forSegments(retrieveUsedSegmentsForAllocation(handle, dataSource, interval));
           } else {
             return getTimelineForIntervalsWithHandle(handle, dataSource, Collections.singletonList(interval));
@@ -1035,15 +1035,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Interval interval,
       final boolean skipSegmentLineageCheck,
       final List<SegmentCreateRequest> requests,
-      final boolean skipSegmentPayloadFetch
+      final boolean reduceMetadataIO
   ) throws IOException
   {
     // Get the time chunk and associated data segments for the given interval, if any
-    final List<TimelineObjectHolder<String, DataSegment>> existingChunks = getSegmentTimelineForAllocation(
-        dataSource,
-        interval,
-        skipSegmentPayloadFetch
-    ).lookup(interval);
+    final List<TimelineObjectHolder<String, DataSegment>> existingChunks
+        = getSegmentTimelineForAllocation(dataSource, interval, reduceMetadataIO).lookup(interval);
     if (existingChunks.size() > 1) {
       log.warn(
           "Cannot allocate new segments for dataSource[%s], interval[%s] as interval already has [%,d] chunks.",
