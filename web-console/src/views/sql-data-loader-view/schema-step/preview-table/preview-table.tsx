@@ -77,7 +77,7 @@ export const PreviewTable = React.memo(function PreviewTable(props: PreviewTable
   const { queryResult, onQueryAction, columnFilter, selectedColumnIndex, onEditColumn } = props;
   const [showValue, setShowValue] = useState<string>();
 
-  const parsedQuery: SqlQuery = queryResult.sqlQuery!;
+  const parsedQuery = queryResult.sqlQuery;
   if (!parsedQuery) return null;
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
