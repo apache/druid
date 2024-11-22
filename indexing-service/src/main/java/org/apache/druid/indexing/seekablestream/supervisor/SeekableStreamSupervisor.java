@@ -4580,6 +4580,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         );
       };
 
+      BiConsumer<Map<PartitionIdType, Long>, String> productionEmitFn = (productionRates, suffix) -> {
         if (productionRates == null) {
           return;
         }
