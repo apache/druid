@@ -55,21 +55,21 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
   private final FixedIndexed<Double> doubleDictionary;
   private final Supplier<ColumnarInts> encodedValuesSupplier;
   private final ColumnarDoubles valueColumn;
-  private final ImmutableBitmap nullValueBitmap;
+  private final ImmutableBitmap nullValueIndex;
   private final BitmapFactory bitmapFactory;
 
   public ScalarDoubleColumn(
       FixedIndexed<Double> doubleDictionary,
       Supplier<ColumnarInts> encodedValuesSupplier,
       ColumnarDoubles valueColumn,
-      ImmutableBitmap nullValueBitmap,
+      ImmutableBitmap nullValueIndex,
       BitmapFactory bitmapFactory
   )
   {
     this.doubleDictionary = doubleDictionary;
     this.encodedValuesSupplier = encodedValuesSupplier;
     this.valueColumn = valueColumn;
-    this.nullValueBitmap = nullValueBitmap;
+    this.nullValueIndex = nullValueIndex;
     this.bitmapFactory = bitmapFactory;
   }
 
@@ -90,7 +90,7 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
   {
     return new DoubleColumnSelector()
     {
-      private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
+      private PeekableIntIterator nullIterator = nullValueIndex.peekableIterator();
       private int nullMark = -1;
       private int offsetMark = -1;
 
@@ -104,7 +104,7 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         inspector.visit("doubleColumn", valueColumn);
-        inspector.visit("nullBitmap", nullValueBitmap);
+        inspector.visit("nullBitmap", nullValueIndex);
       }
 
       @Override
@@ -117,7 +117,7 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
         if (i < offsetMark) {
           // offset was reset, reset iterator state
           nullMark = -1;
-          nullIterator = nullValueBitmap.peekableIterator();
+          nullIterator = nullValueIndex.peekableIterator();
         }
         offsetMark = i;
         if (nullMark < i) {
@@ -142,7 +142,7 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
       private int id = ReadableVectorInspector.NULL_ID;
 
       @Nullable
-      private PeekableIntIterator nullIterator = nullValueBitmap != null ? nullValueBitmap.peekableIterator() : null;
+      private PeekableIntIterator nullIterator = nullValueIndex != null ? nullValueIndex.peekableIterator() : null;
       private int offsetMark = -1;
 
       @Override
@@ -171,14 +171,14 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
 
         if (offset.isContiguous()) {
           if (offset.getStartOffset() < offsetMark) {
-            nullIterator = nullValueBitmap.peekableIterator();
+            nullIterator = nullValueIndex.peekableIterator();
           }
           offsetMark = offset.getStartOffset() + offset.getCurrentVectorSize();
           valueColumn.get(valueVector, offset.getStartOffset(), offset.getCurrentVectorSize());
         } else {
           final int[] offsets = offset.getOffsets();
           if (offsets[offsets.length - 1] < offsetMark) {
-            nullIterator = nullValueBitmap.peekableIterator();
+            nullIterator = nullValueIndex.peekableIterator();
           }
           offsetMark = offsets[offsets.length - 1];
           valueColumn.get(valueVector, offsets, offset.getCurrentVectorSize());
