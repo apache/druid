@@ -27,7 +27,7 @@ description: How to use EXTERN to export query results.
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This tutorial demonstrates how to use the [EXTERN](..multi-stage-query/reference#extern-function) function Apache Druid&circledR; to export data.
+This tutorial demonstrates how to use the [EXTERN](../multi-stage-query/reference.md#extern-function) function Apache Druid&circledR; to export data.
 
 ## Prerequisites
 
