@@ -24,6 +24,9 @@ description: How to use EXTERN to export query results.
   ~ under the License.
   -->
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 This tutorial demonstrates how to use the [EXTERN](..multi-stage-query/reference#extern-function) function Apache Druid&circledR; to export data.
 
 ## Prerequisites
@@ -140,11 +143,66 @@ Run the following comannd to list the contents of
 ls '/tmp/druid/wiki_example'
 ```
 
-The results are a csv file export of the data and a directory   
+The results are a csv file export of the data and a directory
+
+## Export query results to cloud storage
+
+The steps to export to cloud storage are similar to exporting to the local file system.
+Druid supports Amazon S3 or Google GCS as cloud export storage destinations.
+
+1. Enable the extension for your cloud storage destination:
+   - **Amazon S3**: `druid-s3-extensions`
+   - **Google GCS**: `google-extensions`
+  See [Loading core extensions](../configuration/extensions.md#loading-core-extensions).
+1. Configure the additional properties for your cloud storage destination. Replace {CLOUD} with `s3` or `google` accordingly:
+   - `druid.export.storage.{CLOUD}.tempLocalDir`:  The local temp directory where the query engine stages files to export.
+   - `druid.export.storage.{CLOUD}.allowedExportPaths`: The s3 or GS prefixes allowed as Druid export locations. For example `[\"s3://bucket1/export/\",\"s3://bucket2/export/\"]` or `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]`
+   - `druid.export.storage.{CLOUD}.maxRetry`: The maximum number times to attempt cloud API calls to avoid failures from transient errors.
+   - `druid.export.storage.s3.chunkSize`: The maximum size of individual data chunks to store in the temp directory.'
+1. Verify the instance role has the correct permissions to the bucket and folders: read, write, create, and delete. See [Permissions for durable storage](../multi-stage-query/security.md#permissions-for-durable-storage).
+1. Use the query syntax for your cloud storage type. For example:
+
+   <Tabs>
+
+   <TabItem value="1" label="S3">
+
+    ```sql
+    INSERT INTO
+    EXTERN(
+      s3(bucket => 'your_bucket', prefix => 'prefix/to/files'))
+    AS CSV
+    SELECT "channel",
+    SUM("delta") AS "changes"
+    FROM "wikipedia"
+    GROUP BY 1
+    LIMIT 10
+    ```
+
+  </TabItem>
+
+   <TabItem value="2" label="GCS">
+
+   ```sql
+   INSERT INTO
+   EXTERN
+    google(bucket => 'your_bucket', prefix => 'prefix/to/files')
+   AS CSV
+   SELECT "channel",
+   SUM("delta") AS "changes"
+   FROM "wikipedia"
+   GROUP BY 1
+   LIMIT 10
+   ``` 
+
+   </TabItem>
+
+   </Tabs>
+
+1. When querying, use the `rowsPerPage` query context parameter to restrict the output file size. It is possible to add very large LIMIT to the end of your query to force Druid to create one file, however this  technique is not recommended. 
 
 ## Learn more
 
 See the following topics for more information:
 
-* [Update data](./tutorial-update-data.md) for a tutorial on updating data in Druid.
-* [Data updates](../data-management/update.md) for an overview of updating data in Druid.
+* [Export to a destination](../multi-stage-query/reference.md#extern-to-export-to-a-destination) for a reference of the EXTERN
+* [SQL-based ingestion security](../multi-stage-query/security.md/#permissions-for-durable-storage) for cloud permission requirements for MSQ.

@@ -131,7 +131,10 @@ FROM <table>
 
 ##### S3 - Amazon S3
 
-To export results to S3, pass the `s3()` function as an argument to the EXTERN function. S3 export requires the `druid-s3-extensions`.
+To export results to S3, pass the `s3()` function as an argument to the EXTERN function.
+Export to S3 requires the `druid-s3-extensions`.
+For a list of S3 permissions the MSQ task engine needs to perform export, see [Permissions for durable storage](./security.md#s3).
+
 The `s3()` function configures the connection to AWS.
 Pass all arguments for `s3()` as named parameters with the value in single quote. For example:
 
@@ -166,7 +169,8 @@ Configure following runtime parameters to export to an S3 destination:
 ##### GOOGLE - Google Cloud Storage
 
 To export query results to Google Cloud Storage (GCS), pass the `google()` function as an argument to the `EXTERN` function.
-This requires the `druid-google-extensions`.
+Export to GCS requires the `druid-google-extensions`.
+
 The `google()` function configures the connection to Google Cloud Storage. Pass the arguments for `google()` as named parameters with the value in single quotes. For example:
 
 ```sql
@@ -202,8 +206,8 @@ You can export queryies to local storage, which writes the results to the filesy
 This is useful in a single node setup or for testing but is not suitable for production use cases.
 
 To export results to local storage, passing the `LOCAL()` function as an argument to the EXTERN function.
-You must configure the runtime property `druid.export.storage.baseDir` must be configured as an absolute path on the Indexer/Middle Manager to use local storage as an export destination.
-You can exporting data to paths that match this value as a prefix.
+You must configure the runtime property `druid.export.storage.baseDir` as an absolute path on the Indexer/Middle Manager to use local storage as an export destination.
+You can export data to paths that match this value as a prefix.
 Pass all arguments to `LOCAL()` as named parameters with the value in single quotes. For example:
 
 ```sql
