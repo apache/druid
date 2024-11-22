@@ -160,8 +160,8 @@ Configure following runtime parameters to export to an S3 destination:
 
 | Runtime Parameter | Required | Description | Default |
 |---|---|---|---|
-| `druid.export.storage.s3.tempLocalDir` | Yes | Directory for local storage where the worker stores temporary files before uploading the data to S3. | n/a |
 | `druid.export.storage.s3.allowedExportPaths` | Yes | Array of S3 prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For eample: `[\"s3://bucket1/export/\", \"s3://bucket2/export/\"]` | n/a |
+| `druid.export.storage.s3.tempLocalDir` | No | Directory for local storage where the worker stores temporary files before uploading the data to S3. | n/a |
 | `druid.export.storage.s3.maxRetry` | No | The maximum number of  attempts for S3 API calls to avoid failures due to transient errors. | 10 |
 | `druid.export.storage.s3.chunkSize` | No | Individual chunk size to  store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to S3, but require more disk space to store temporary chunks. | 100MiB |
 
@@ -195,8 +195,8 @@ Configure the following runtime parameters to export query results to a GCS dest
 
 | Runtime Parameter | Required | Description | Default |
 |---|---|---|---|
-| `druid.export.storage.google.tempLocalDir` | Yes | Directory for local storage where the worker stores temporary files before uploading the data to GCS | n/a |
 | `druid.export.storage.google.allowedExportPaths` | Yes | Array of GCS prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For eample: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
+| `druid.export.storage.google.tempLocalDir` | No | Directory for local storage where the worker stores temporary files before uploading the data to GCS | n/a |
 | `druid.export.storage.google.maxRetry` | No | The maximum number of  attempts for GCS API calls to avoid failures due to transient errors | 10 |
 | `druid.export.storage.google.chunkSize` | No | Individual chunk size to  store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks | 4 MiB |
 
@@ -227,7 +227,7 @@ Supported arguments to the function:
 |---|---|---|---|---|
 | `exportPath`  | Yes | Absolute path to a subdirectory of `druid.export.storage.baseDir` where Druid exports the querey results. The destination must be empty. If the location includes other files or directories, the query will fail. | n/a |
 
-For more information, see [Read external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
+For more information, see [Export external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
 
 ### `INSERT`
 
