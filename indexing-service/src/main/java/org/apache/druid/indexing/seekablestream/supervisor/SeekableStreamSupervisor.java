@@ -36,7 +36,6 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import io.vavr.collection.Seq;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -1997,25 +1996,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public boolean canPublishSegments(Integer taskGroupId, String taskId) {
-    log.info("Checking if publishing is allowed for [%s] [%s]", taskGroupId, taskId);
+  public boolean canPublishSegments(Integer taskGroupId, String taskId)
+  {
     CopyOnWriteArrayList<TaskGroup> pendingCompletionTasksForGroup = pendingCompletionTaskGroups.get(taskGroupId);
     TaskGroup taskGroupToCheck = pendingCompletionTasksForGroup.stream().filter(taskGroup -> taskGroup.taskIds().contains(taskId)).findFirst().orElse(null);
     if (taskGroupToCheck == null) {
       // This function is called by the SegmentTransactionAppendAction.
       // This is only triggered after a task has already started publishing so this shouldn't really happen.
       // It's okay to just let the task try publishing in this case.
-      log.info("Did not find a task group to check for publishing");
+      log.warn("Did not find task group [%s] to check for publishing.", taskGroupId);
       return true;
     }
-    log.info("Found a task group to check for publishing [%s]", taskGroupToCheck);
+
     for (TaskGroup taskGroup : pendingCompletionTasksForGroup) {
       if (!taskGroup.startingSequences.equals(taskGroupToCheck.startingSequences)) {
-        log.info("Found a task group with different starting sequences [%s]", taskGroup.startingSequences);
         for (PartitionIdType sequence : taskGroup.startingSequences.keySet()) {
           SequenceOffsetType publishingGroupOffset = taskGroupToCheck.startingSequences.getOrDefault(sequence, null);
           SequenceOffsetType taskGroupOffset = taskGroup.startingSequences.getOrDefault(sequence, null);
           if (publishingGroupOffset != null && taskGroupOffset != null) {
+            // The group that is trying to publish is ahead of a task that is still publishing. It should wait to publish.
             if (publishingGroupOffset.compareTo(taskGroupOffset) > 0) {
               return false;
             }

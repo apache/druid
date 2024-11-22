@@ -22,7 +22,6 @@ package org.apache.druid.indexing.overlord.supervisor;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
-import org.apache.druid.java.util.common.Pair;
 
 import java.util.List;
 

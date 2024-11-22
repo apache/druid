@@ -150,15 +150,14 @@ public class SupervisorManager
 
   public boolean canPublishSegments(String id, Integer taskGroupId, String taskId)
   {
-    log.info("Supervisor ids [%s]", supervisors.keys().toString());
-    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
-    if (supervisor == null || supervisor.lhs == null) {
-      log.info("Could not find supervisor [%s]", id);
+    try {
+      final StreamSupervisor streamSupervisor = requireStreamSupervisor(id, "publishSegments");
+      return streamSupervisor.canPublishSegments(taskGroupId, taskId);
+    }
+    catch (Exception e) {
+      // If the publishing task is not a streaming task for whatever reason, allow it to publish.
       return true;
     }
-    log.info("Found supervisor [%s]", id);
-    final StreamSupervisor streamSupervisor = requireStreamSupervisor(id, "publishSegments");
-    return streamSupervisor.canPublishSegments(taskGroupId, taskId);
   }
 
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)

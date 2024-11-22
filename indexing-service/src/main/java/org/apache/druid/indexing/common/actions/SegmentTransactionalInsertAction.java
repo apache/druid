@@ -218,18 +218,16 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       }
     }
     String dataSourceToInsert = segments.stream().findFirst().get().getDataSource();
-    log.info("dataSource [%s]", dataSourceToInsert);
     if (task instanceof SeekableStreamIndexTask) {
       SeekableStreamIndexTask seekableStreamIndexTask = (SeekableStreamIndexTask) task;
-      log.info("Running transactional append for streaming task [%s].", seekableStreamIndexTask.getId());
-      if (!toolbox.getSupervisorManager().canPublishSegments(segments.stream().findFirst().get().getDataSource(), seekableStreamIndexTask.getIOConfig().getTaskGroupId(), task.getId())) {
+      if (!toolbox.getSupervisorManager().canPublishSegments(dataSourceToInsert, seekableStreamIndexTask.getIOConfig().getTaskGroupId(), task.getId())) {
         log.warn("Streaming task [%s] is not currently publishable.", task.getId());
         throw DruidException
             .forPersona(DruidException.Persona.DEVELOPER)
             .ofCategory(DruidException.Category.SERVICE_UNAVAILABLE)
             .build("Cannot append segments to [%s] right now." +
                     "There might be another task waiting to publish its segments. Check the overlord logs for details.",
-                dataSource
+                dataSourceToInsert
             );
       }
     }
