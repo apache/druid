@@ -37,6 +37,7 @@ import org.apache.druid.indexing.overlord.SpecificSegmentLockRequest;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -67,7 +68,8 @@ public class TaskLocksTest
     final TaskStorage taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
     lockbox = new TaskLockbox(
         taskStorage,
-        new TestIndexerMetadataStorageCoordinator()
+        new TestIndexerMetadataStorageCoordinator(),
+        new TaskLockConfig()
     );
     task = NoopTask.create();
     taskStorage.insert(task, TaskStatus.running(task.getId()));

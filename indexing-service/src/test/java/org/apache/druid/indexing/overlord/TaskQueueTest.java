@@ -543,7 +543,7 @@ public class TaskQueueTest extends IngestionTestBase
         taskStorage,
         EasyMock.createMock(HttpRemoteTaskRunner.class),
         createActionClientFactory(),
-        new TaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator()),
+        new TaskLockbox(taskStorage, new TestIndexerMetadataStorageCoordinator(), new TaskLockConfig()),
         new StubServiceEmitter("druid/overlord", "testHost"),
         mapper,
         new NoopTaskContextEnricher()

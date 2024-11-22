@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.task.TaskLockHelper;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
+import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
@@ -213,18 +214,25 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       }
     }
 
+    final TaskLockbox lockbox = toolbox.getTaskLockbox();
     try {
-      retVal = toolbox.getTaskLockbox().doInCriticalSection(
+      retVal = lockbox.doInCriticalSection(
           task,
           allSegments.stream().map(DataSegment::getInterval).collect(Collectors.toSet()),
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
-                  () -> toolbox.getIndexerMetadataStorageCoordinator().commitSegmentsAndMetadata(
-                      segments,
-                      startMetadata,
-                      endMetadata,
-                      segmentSchemaMapping
-                  )
+                  () -> {
+                    SegmentPublishResult result =
+                        toolbox.getIndexerMetadataStorageCoordinator()
+                               .commitSegmentsAndMetadata(
+                                   segments,
+                                   startMetadata,
+                                   endMetadata,
+                                   segmentSchemaMapping
+                               );
+                    lockbox.cacheSegmentPublishResults(task, result.getSegments());
+                    return result;
+                  }
               )
               .onInvalidLocks(
                   () -> SegmentPublishResult.fail(

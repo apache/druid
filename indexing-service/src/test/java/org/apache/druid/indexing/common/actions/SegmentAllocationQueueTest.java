@@ -46,6 +46,7 @@ import java.util.concurrent.TimeoutException;
 
 public class SegmentAllocationQueueTest
 {
+
   @Rule
   public TaskActionTestKit taskActionTestKit = new TaskActionTestKit();
 
@@ -72,6 +73,12 @@ public class SegmentAllocationQueueTest
       public long getBatchAllocationWaitTime()
       {
         return 0;
+      }
+
+      @Override
+      public boolean isSegmentAllocationReduceMetadataIO()
+      {
+        return true;
       }
     };
 

@@ -56,7 +56,8 @@ public class TaskActionTestKit extends ExternalResource
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskActionToolbox taskActionToolbox;
   private SegmentSchemaManager segmentSchemaManager;
-  private SegmentSchemaCache segmentSchemaCache;
+
+  private boolean skipSegmentPayloadFetchForAllocation = new TaskLockConfig().isSegmentAllocationReduceMetadataIO();
 
   public TaskLockbox getTaskLockbox()
   {
@@ -76,6 +77,11 @@ public class TaskActionTestKit extends ExternalResource
   public TaskActionToolbox getTaskActionToolbox()
   {
     return taskActionToolbox;
+  }
+
+  public void setSkipSegmentPayloadFetchForAllocation(boolean skipSegmentPayloadFetchForAllocation)
+  {
+    this.skipSegmentPayloadFetchForAllocation = skipSegmentPayloadFetchForAllocation;
   }
 
   @Override
@@ -102,17 +108,6 @@ public class TaskActionTestKit extends ExternalResource
         return 2;
       }
     };
-    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
-    segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
-    segmentsMetadataManager = new SqlSegmentsMetadataManager(
-        objectMapper,
-        Suppliers.ofInstance(new SegmentsMetadataManagerConfig()),
-        Suppliers.ofInstance(metadataStorageTablesConfig),
-        testDerbyConnector,
-        segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create(),
-        NoopServiceEmitter.instance()
-    );
     final TaskLockConfig taskLockConfig = new TaskLockConfig()
     {
       @Override
@@ -126,8 +121,25 @@ public class TaskActionTestKit extends ExternalResource
       {
         return 10L;
       }
+
+      @Override
+      public boolean isSegmentAllocationReduceMetadataIO()
+      {
+        return skipSegmentPayloadFetchForAllocation;
+      }
     };
 
+    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
+    SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
+    segmentsMetadataManager = new SqlSegmentsMetadataManager(
+        objectMapper,
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig()),
+        Suppliers.ofInstance(metadataStorageTablesConfig),
+        testDerbyConnector,
+        segmentSchemaCache,
+        CentralizedDatasourceSchemaConfig.create(),
+        NoopServiceEmitter.instance()
+    );
     taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         taskStorage,

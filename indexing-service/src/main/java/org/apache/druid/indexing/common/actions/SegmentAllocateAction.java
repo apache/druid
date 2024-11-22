@@ -32,6 +32,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.LockRequestForNewSegment;
 import org.apache.druid.indexing.overlord.LockResult;
 import org.apache.druid.indexing.overlord.Segments;
+import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -219,6 +220,25 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       );
     }
     int attempt = 0;
+    final TaskLockbox lockbox = toolbox.getTaskLockbox();
+    if (lockbox.canAllocateSegmentWithReducedMetadataIO(getLockGranularity(), getTaskLockType())) {
+      LockResult result = lockbox.allocateSegmentWithReducedMetadataIO(
+          task,
+          taskLockType,
+          timestamp,
+          queryGranularity,
+          preferredSegmentGranularity,
+          sequenceName,
+          previousSegmentId,
+          skipSegmentLineageCheck,
+          partialShardSpec
+      );
+      if (result.isOk()) {
+        return result.getNewSegmentId();
+      } else {
+        return null;
+      }
+    }
     while (true) {
       attempt++;
 

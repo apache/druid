@@ -25,7 +25,6 @@ import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
-import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.java.util.common.ISE;
@@ -41,6 +40,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.Partitions;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -87,6 +87,8 @@ public class SegmentAllocationQueue
   private final ConcurrentHashMap<AllocateRequestKey, AllocateRequestBatch> keyToBatch = new ConcurrentHashMap<>();
   private final BlockingDeque<AllocateRequestBatch> processingQueue = new LinkedBlockingDeque<>(MAX_QUEUE_SIZE);
 
+  private final boolean skipSegmentPayloadFetchForAllocation;
+
   @Inject
   public SegmentAllocationQueue(
       TaskLockbox taskLockbox,
@@ -100,6 +102,7 @@ public class SegmentAllocationQueue
     this.taskLockbox = taskLockbox;
     this.metadataStorage = metadataStorage;
     this.maxWaitTimeMillis = taskLockConfig.getBatchAllocationWaitTime();
+    this.skipSegmentPayloadFetchForAllocation = taskLockConfig.isSegmentAllocationReduceMetadataIO();
 
     this.executor = taskLockConfig.isBatchSegmentAllocation()
                     ? executorFactory.create(1, "SegmentAllocQueue-%s") : null;
@@ -380,13 +383,11 @@ public class SegmentAllocationQueue
 
   private Set<DataSegment> retrieveUsedSegments(AllocateRequestKey key)
   {
-    return new HashSet<>(
-        metadataStorage.retrieveUsedSegmentsForInterval(
-            key.dataSource,
-            key.preferredAllocationInterval,
-            Segments.ONLY_VISIBLE
-        )
-    );
+    return metadataStorage.getSegmentTimelineForAllocation(
+        key.dataSource,
+        key.preferredAllocationInterval,
+        (key.lockGranularity == LockGranularity.TIME_CHUNK) && skipSegmentPayloadFetchForAllocation
+    ).findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
   }
 
   private int allocateSegmentsForBatch(AllocateRequestBatch requestBatch, Set<DataSegment> usedSegments)
@@ -493,7 +494,8 @@ public class SegmentAllocationQueue
         requestKey.dataSource,
         tryInterval,
         requestKey.skipSegmentLineageCheck,
-        requestKey.lockGranularity
+        requestKey.lockGranularity,
+        skipSegmentPayloadFetchForAllocation
     );
 
     int successfulRequests = 0;

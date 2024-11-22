@@ -74,6 +74,7 @@ import org.apache.druid.indexing.overlord.MetadataTaskStorage;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestDataSegmentAnnouncer;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
@@ -598,7 +599,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
-    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator, new TaskLockConfig());
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         taskStorage,

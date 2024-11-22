@@ -57,6 +57,7 @@ import org.apache.druid.indexing.overlord.TaskRunnerListener;
 import org.apache.druid.indexing.overlord.TaskRunnerWorkItem;
 import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.java.util.common.ISE;
@@ -165,7 +166,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         CentralizedDatasourceSchemaConfig.create(),
         NoopServiceEmitter.instance()
     );
-    lockbox = new TaskLockbox(taskStorage, storageCoordinator);
+    lockbox = new TaskLockbox(taskStorage, storageCoordinator, new TaskLockConfig());
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
     reportsFile = temporaryFolder.newFile();
     dataSegmentKiller = new TestDataSegmentKiller();

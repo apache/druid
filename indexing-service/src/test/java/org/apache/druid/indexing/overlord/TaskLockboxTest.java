@@ -44,6 +44,7 @@ import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.TaskLockbox.TaskLockPosse;
+import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -90,6 +91,7 @@ public class TaskLockboxTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derby = new TestDerbyConnector.DerbyConnectorRule();
 
+  private final TaskLockConfig taskLockConfig = new TaskLockConfig();
   private ObjectMapper objectMapper;
   private TaskStorage taskStorage;
   private IndexerMetadataStorageCoordinator metadataStorageCoordinator;
@@ -136,7 +138,7 @@ public class TaskLockboxTest
         CentralizedDatasourceSchemaConfig.create()
     );
 
-    lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
     validator = new TaskLockboxValidator(lockbox, taskStorage);
   }
 
@@ -332,7 +334,7 @@ public class TaskLockboxTest
   @Test
   public void testSyncFromStorage()
   {
-    final TaskLockbox originalBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final TaskLockbox originalBox = new TaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
     for (int i = 0; i < 5; i++) {
       final Task task = NoopTask.create();
       taskStorage.insert(task, TaskStatus.running(task.getId()));
@@ -354,7 +356,7 @@ public class TaskLockboxTest
                                                            .flatMap(task -> taskStorage.getLocks(task.getId()).stream())
                                                            .collect(Collectors.toList());
 
-    final TaskLockbox newBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final TaskLockbox newBox = new TaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
     newBox.syncFromStorage();
 
     Assert.assertEquals(originalBox.getAllLocks(), newBox.getAllLocks());
@@ -381,7 +383,7 @@ public class TaskLockboxTest
                                                            .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
                                                            .collect(Collectors.toList());
 
-    final TaskLockbox lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final TaskLockbox lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
     lockbox.syncFromStorage();
 
     final List<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
@@ -412,7 +414,7 @@ public class TaskLockboxTest
                                                            .flatMap(t -> taskStorage.getLocks(t.getId()).stream())
                                                            .collect(Collectors.toList());
 
-    final TaskLockbox lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final TaskLockbox lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
     lockbox.syncFromStorage();
 
     final List<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
@@ -439,7 +441,7 @@ public class TaskLockboxTest
         )
     );
 
-    final TaskLockbox lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final TaskLockbox lockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
     TaskLockboxSyncResult result = lockbox.syncFromStorage();
     Assert.assertEquals(1, result.getTasksToFail().size());
     Assert.assertTrue(result.getTasksToFail().contains(task));
@@ -470,8 +472,8 @@ public class TaskLockboxTest
         CentralizedDatasourceSchemaConfig.create()
     );
 
-    TaskLockbox theBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
-    TaskLockbox loadedBox = new TaskLockbox(loadedTaskStorage, loadedMetadataStorageCoordinator);
+    TaskLockbox theBox = new TaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
+    TaskLockbox loadedBox = new TaskLockbox(loadedTaskStorage, loadedMetadataStorageCoordinator, taskLockConfig);
 
     Task aTask = NoopTask.create();
     taskStorage.insert(aTask, TaskStatus.running(aTask.getId()));
@@ -496,7 +498,7 @@ public class TaskLockboxTest
   @Test
   public void testRevokedLockSyncFromStorage()
   {
-    final TaskLockbox originalBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final TaskLockbox originalBox = new TaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
 
     final Task task1 = NoopTask.ofPriority(10);
     taskStorage.insert(task1, TaskStatus.running(task1.getId()));
@@ -522,7 +524,7 @@ public class TaskLockboxTest
     Assert.assertEquals(1, task2Locks.size());
     Assert.assertTrue(task2Locks.get(0).isRevoked());
 
-    final TaskLockbox newBox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
+    final TaskLockbox newBox = new TaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
     newBox.syncFromStorage();
 
     final Set<TaskLock> afterLocksInStorage = taskStorage.getActiveTasks().stream()
@@ -583,7 +585,7 @@ public class TaskLockboxTest
     Assert.assertTrue(
         lockbox.doInCriticalSection(
             task,
-            Collections.singleton(interval),
+            Collections.singleton(smallInterval),
             CriticalAction.<Boolean>builder().onValidLocks(() -> true).onInvalidLocks(() -> false).build()
         )
     );
@@ -1857,7 +1859,7 @@ public class TaskLockboxTest
     taskStorage.insert(taskWithFailingLockAcquisition1, TaskStatus.running(taskWithFailingLockAcquisition1.getId()));
     taskStorage.insert(taskWithSuccessfulLockAcquisition, TaskStatus.running(taskWithSuccessfulLockAcquisition.getId()));
 
-    TaskLockbox testLockbox = new NullLockPosseTaskLockbox(taskStorage, metadataStorageCoordinator);
+    TaskLockbox testLockbox = new NullLockPosseTaskLockbox(taskStorage, metadataStorageCoordinator, taskLockConfig);
     testLockbox.add(taskWithFailingLockAcquisition0);
     testLockbox.add(taskWithFailingLockAcquisition1);
     testLockbox.add(taskWithSuccessfulLockAcquisition);
@@ -2012,7 +2014,7 @@ public class TaskLockboxTest
             .andReturn(0).once();
     EasyMock.replay(coordinator);
 
-    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, coordinator);
+    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage, coordinator, taskLockConfig);
 
     taskLockbox.add(replaceTask);
     taskLockbox.tryLock(
@@ -2263,10 +2265,11 @@ public class TaskLockboxTest
   {
     public NullLockPosseTaskLockbox(
         TaskStorage taskStorage,
-        IndexerMetadataStorageCoordinator metadataStorageCoordinator
+        IndexerMetadataStorageCoordinator metadataStorageCoordinator,
+        TaskLockConfig taskLockConfig
     )
     {
-      super(taskStorage, metadataStorageCoordinator);
+      super(taskStorage, metadataStorageCoordinator, taskLockConfig);
     }
 
     @Override
