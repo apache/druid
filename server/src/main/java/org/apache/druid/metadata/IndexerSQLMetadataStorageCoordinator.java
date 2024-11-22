@@ -31,7 +31,6 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
-import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -1327,7 +1326,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     {
       this.interval = interval;
       this.sequenceName = request.getSequenceName();
-      this.previousSegmentId = request.getPreviousSegmentId();
+      // Even if the previousSegmentId is set, disregard it when skipping lineage check for streaming ingestion
+      this.previousSegmentId = skipSegmentLineageCheck ? null : request.getPreviousSegmentId();
       this.skipSegmentLineageCheck = skipSegmentLineageCheck;
 
       this.hashCode = Objects.hash(interval, sequenceName, previousSegmentId, skipSegmentLineageCheck);
@@ -2533,7 +2533,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     List<List<DataSegment>> segmentsLists = Lists.partition(new ArrayList<>(segments), MAX_NUM_SEGMENTS_TO_ANNOUNCE_AT_ONCE);
     for (List<DataSegment> segmentList : segmentsLists) {
       String segmentIds = segmentList.stream()
-          .map(segment -> "'" + StringEscapeUtils.escapeSql(segment.getId().toString()) + "'")
+          .map(segment -> "'" + StringUtils.escapeSql(segment.getId().toString()) + "'")
           .collect(Collectors.joining(","));
       List<String> existIds = handle.createQuery(StringUtils.format("SELECT id FROM %s WHERE id in (%s)", dbTables.getSegmentsTable(), segmentIds))
           .mapTo(String.class)

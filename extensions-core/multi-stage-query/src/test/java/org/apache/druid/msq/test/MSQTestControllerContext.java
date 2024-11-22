@@ -37,6 +37,7 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -60,7 +61,10 @@ import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
@@ -103,6 +107,7 @@ public class MSQTestControllerContext implements ControllerContext
 
   private Controller controller;
   private final WorkerMemoryParameters workerMemoryParameters;
+  private final TaskLockType taskLockType;
   private final QueryContext queryContext;
 
   public MSQTestControllerContext(
@@ -111,6 +116,7 @@ public class MSQTestControllerContext implements ControllerContext
       TaskActionClient taskActionClient,
       WorkerMemoryParameters workerMemoryParameters,
       List<ImmutableSegmentLoadInfo> loadedSegments,
+      TaskLockType taskLockType,
       QueryContext queryContext
   )
   {
@@ -131,6 +137,7 @@ public class MSQTestControllerContext implements ControllerContext
                                              .collect(Collectors.toList())
     );
     this.workerMemoryParameters = workerMemoryParameters;
+    this.taskLockType = taskLockType;
     this.queryContext = queryContext;
   }
 
@@ -274,6 +281,23 @@ public class MSQTestControllerContext implements ControllerContext
   }
 
   @Override
+  public QueryKitSpec makeQueryKitSpec(
+      final QueryKit<Query<?>> queryKit,
+      final String queryId,
+      final MSQSpec querySpec,
+      final ControllerQueryKernelConfig queryKernelConfig
+  )
+  {
+    return new QueryKitSpec(
+        queryKit,
+        queryId,
+        querySpec.getTuningConfig().getMaxNumWorkers(),
+        querySpec.getTuningConfig().getMaxNumWorkers(),
+        1
+    );
+  }
+
+  @Override
   public void emitMetric(String metric, Number value)
   {
   }
@@ -300,6 +324,12 @@ public class MSQTestControllerContext implements ControllerContext
   public TaskActionClient taskActionClient()
   {
     return taskActionClient;
+  }
+
+  @Override
+  public TaskLockType taskLockType()
+  {
+    return taskLockType;
   }
 
   @Override
@@ -340,11 +370,5 @@ public class MSQTestControllerContext implements ControllerContext
   public WorkerClient newWorkerClient()
   {
     return new MSQTestWorkerClient(inMemoryWorkers);
-  }
-
-  @Override
-  public int defaultTargetPartitionsPerWorker()
-  {
-    return 1;
   }
 }

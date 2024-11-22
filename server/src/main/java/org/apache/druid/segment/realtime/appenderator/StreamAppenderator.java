@@ -36,7 +36,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.commons.lang.mutable.MutableLong;
+import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -1647,7 +1647,7 @@ public class StreamAppenderator implements Appenderator
 
       try {
         final long startTime = System.nanoTime();
-        int numRows = indexToPersist.getIndex().size();
+        int numRows = indexToPersist.getIndex().numRows();
 
         final File persistedFile;
         final File persistDir = createPersistDirIfNeeded(identifier);

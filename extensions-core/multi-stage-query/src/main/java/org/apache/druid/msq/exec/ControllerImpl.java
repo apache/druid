@@ -152,6 +152,7 @@ import org.apache.druid.msq.kernel.controller.ControllerStagePhase;
 import org.apache.druid.msq.kernel.controller.WorkerInputs;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
@@ -432,8 +433,10 @@ public class ControllerImpl implements Controller
       }
     }
     if (queryKernel != null && queryKernel.isSuccess()) {
-      // If successful, encourage the tasks to exit successfully.
-      postFinishToAllTasks();
+      // If successful, encourage workers to exit successfully.
+      // Only send this command to participating workers. For task-based queries, this is all tasks, since tasks
+      // are launched only when needed. For Dart, this is any servers that were actually assigned work items.
+      postFinishToWorkers(queryKernel.getAllParticipatingWorkers());
       workerManager.stop(false);
     } else {
       // If not successful, cancel running tasks.
@@ -567,14 +570,9 @@ public class ControllerImpl implements Controller
 
     final QueryContext queryContext = querySpec.getQuery().context();
     final QueryDefinition queryDef = makeQueryDefinition(
-        queryId(),
-        makeQueryControllerToolKit(),
+        context.makeQueryKitSpec(makeQueryControllerToolKit(), queryId, querySpec, queryKernelConfig),
         querySpec,
         context.jsonMapper(),
-        MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
-            queryContext,
-            context.defaultTargetPartitionsPerWorker()
-        ),
         resultsContext
     );
 
@@ -637,7 +635,8 @@ public class ControllerImpl implements Controller
     this.workerSketchFetcher = new WorkerSketchFetcher(
         netClient,
         workerManager,
-        queryKernelConfig.isFaultTolerant()
+        queryKernelConfig.isFaultTolerant(),
+        MultiStageQueryContext.getSketchEncoding(querySpec.getQuery().context())
     );
     closer.register(workerSketchFetcher::close);
 
@@ -930,7 +929,7 @@ public class ControllerImpl implements Controller
           destination,
           partitionBoundaries,
           keyReader,
-          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(querySpec.getQuery().getContext()), false),
+          context.taskLockType(),
           isStageOutputEmpty
       );
     }
@@ -1177,6 +1176,16 @@ public class ControllerImpl implements Controller
     return workerManager.getWorkerIds();
   }
 
+  @Override
+  public boolean hasWorker(String workerId)
+  {
+    if (workerManager == null) {
+      return false;
+    }
+
+    return workerManager.getWorkerNumber(workerId) != WorkerManager.UNKNOWN_WORKER_NUMBER;
+  }
+
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Nullable
   private Int2ObjectMap<Object> makeWorkerFactoryInfosForStage(
@@ -1201,7 +1210,7 @@ public class ControllerImpl implements Controller
   }
 
   @SuppressWarnings("rawtypes")
-  private QueryKit makeQueryControllerToolKit()
+  private QueryKit<Query<?>> makeQueryControllerToolKit()
   {
     final Map<Class<? extends Query>, QueryKit> kitMap =
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
@@ -1338,10 +1347,7 @@ public class ControllerImpl implements Controller
         (DataSourceMSQDestination) querySpec.getDestination();
     final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
     int numTombstones = 0;
-    final TaskLockType taskLockType = MultiStageQueryContext.validateAndGetTaskLockType(
-        QueryContext.of(querySpec.getQuery().getContext()),
-        destination.isReplaceTimeChunks()
-    );
+    final TaskLockType taskLockType = context.taskLockType();
 
     if (destination.isReplaceTimeChunks()) {
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
@@ -1458,15 +1464,15 @@ public class ControllerImpl implements Controller
     return IntervalUtils.difference(replaceIntervals, publishIntervals);
   }
 
-  private CounterSnapshotsTree getCountersFromAllTasks()
+  private CounterSnapshotsTree fetchCountersFromWorkers(final IntSet workers)
   {
     final CounterSnapshotsTree retVal = new CounterSnapshotsTree();
     final List<String> taskList = getWorkerIds();
 
     final List<ListenableFuture<CounterSnapshotsTree>> futures = new ArrayList<>();
 
-    for (String taskId : taskList) {
-      futures.add(netClient.getCounters(taskId));
+    for (int workerNumber : workers) {
+      futures.add(netClient.getCounters(taskList.get(workerNumber)));
     }
 
     final List<CounterSnapshotsTree> snapshotsTrees =
@@ -1479,14 +1485,14 @@ public class ControllerImpl implements Controller
     return retVal;
   }
 
-  private void postFinishToAllTasks()
+  private void postFinishToWorkers(final IntSet workers)
   {
     final List<String> taskList = getWorkerIds();
 
     final List<ListenableFuture<Void>> futures = new ArrayList<>();
 
-    for (String taskId : taskList) {
-      futures.add(netClient.postFinish(taskId));
+    for (int workerNumber : workers) {
+      futures.add(netClient.postFinish(taskList.get(workerNumber)));
     }
 
     FutureUtils.getUnchecked(MSQFutureUtils.allAsList(futures, true), true);
@@ -1501,7 +1507,7 @@ public class ControllerImpl implements Controller
   private CounterSnapshotsTree getFinalCountersSnapshot(@Nullable final ControllerQueryKernel queryKernel)
   {
     if (queryKernel != null && queryKernel.isSuccess()) {
-      return getCountersFromAllTasks();
+      return fetchCountersFromWorkers(queryKernel.getAllParticipatingWorkers());
     } else {
       return makeCountersSnapshotForLiveReports();
     }
@@ -1725,11 +1731,9 @@ public class ControllerImpl implements Controller
 
   @SuppressWarnings("unchecked")
   private static QueryDefinition makeQueryDefinition(
-      final String queryId,
-      @SuppressWarnings("rawtypes") final QueryKit toolKit,
+      final QueryKitSpec queryKitSpec,
       final MSQSpec querySpec,
       final ObjectMapper jsonMapper,
-      final int targetPartitionsPerWorker,
       final ResultsContext resultsContext
   )
   {
@@ -1773,13 +1777,10 @@ public class ControllerImpl implements Controller
     final QueryDefinition queryDef;
 
     try {
-      queryDef = toolKit.makeQueryDefinition(
-          queryId,
+      queryDef = queryKitSpec.getQueryKit().makeQueryDefinition(
+          queryKitSpec,
           queryToPlan,
-          toolKit,
           resultShuffleSpecFactory,
-          tuningConfig.getMaxNumWorkers(),
-          targetPartitionsPerWorker,
           0
       );
     }
@@ -1808,7 +1809,7 @@ public class ControllerImpl implements Controller
 
       // Add all query stages.
       // Set shuffleCheckHasMultipleValues on the stage that serves as input to the final segment-generation stage.
-      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
+      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
 
       for (final StageDefinition stageDef : queryDef.getStageDefinitions()) {
         if (stageDef.equals(finalShuffleStageDef)) {
@@ -1834,7 +1835,7 @@ public class ControllerImpl implements Controller
       // attaching new query results stage if the final stage does sort during shuffle so that results are ordered.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
       if (finalShuffleStageDef.doesSortDuringShuffle()) {
-        final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
+        final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
         builder.addAll(queryDef);
         builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
                                    .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
@@ -1871,7 +1872,7 @@ public class ControllerImpl implements Controller
       }
 
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
-      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
+      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
       builder.addAll(queryDef);
       builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
                                  .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
@@ -1879,7 +1880,7 @@ public class ControllerImpl implements Controller
                                  .signature(queryDef.getFinalStageDefinition().getSignature())
                                  .shuffleSpec(null)
                                  .processorFactory(new ExportResultsFrameProcessorFactory(
-                                     queryId,
+                                     queryKitSpec.getQueryId(),
                                      exportStorageProvider,
                                      resultFormat,
                                      columnMappings,

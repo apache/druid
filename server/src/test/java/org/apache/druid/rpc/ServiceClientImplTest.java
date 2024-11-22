@@ -686,14 +686,6 @@ public class ServiceClientImplTest
   }
 
   @Test
-  public void test_normalizeHost()
-  {
-    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceClientImpl.sanitizeHost("[1:2:3:4:5:6:7:8]"));
-    Assert.assertEquals("1:2:3:4:5:6:7:8", ServiceClientImpl.sanitizeHost("1:2:3:4:5:6:7:8"));
-    Assert.assertEquals("1.2.3.4", ServiceClientImpl.sanitizeHost("1.2.3.4"));
-  }
-
-  @Test
   public void test_isRedirect()
   {
     Assert.assertTrue(ServiceClientImpl.isRedirect(HttpResponseStatus.FOUND));

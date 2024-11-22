@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -84,10 +85,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 /**
  * Implementation of {@link NestedDataComplexColumn} which uses a {@link CompressedVariableSizedBlobColumn} for the
@@ -104,6 +107,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class CompressedNestedDataComplexColumn<TStringDictionary extends Indexed<ByteBuffer>>
     extends NestedDataComplexColumn implements NestedCommonFormatColumn
 {
+  private static final Map<Class<?>, Function<CompressedNestedDataComplexColumn, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(CompressedNestedDataComplexColumn.class);
+
   private static final ObjectStrategy<Object> STRATEGY = NestedDataComplexTypeSerde.INSTANCE.getObjectStrategy();
   public static final IntTypeStrategy INT_TYPE_STRATEGY = new IntTypeStrategy();
   private final ColumnConfig columnConfig;
@@ -901,6 +907,15 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       return true;
     }
     return getColumnHolder(field, fieldIndex).getCapabilities().isNumeric();
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(Class<? extends T> clazz)
+  {
+    //noinspection ReturnOfNull
+    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
   }
 
   private ColumnHolder getColumnHolder(String field, int fieldIndex)

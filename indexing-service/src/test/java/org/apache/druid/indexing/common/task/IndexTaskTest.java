@@ -163,7 +163,8 @@ public class IndexTaskTest extends IngestionTestBase
       null,
       null,
       false,
-      0
+      0,
+      null
   );
 
   private static final DataSchema DATA_SCHEMA =
@@ -473,7 +474,7 @@ public class IndexTaskTest extends IngestionTestBase
       indexIngestionSpec = createIngestionSpec(
           DEFAULT_TIMESTAMP_SPEC,
           dimensionsSpec,
-          new CsvInputFormat(columns, listDelimiter, null, false, 0),
+          new CsvInputFormat(columns, listDelimiter, null, false, 0, null),
           transformSpec,
           null,
           tuningConfig,
@@ -901,7 +902,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           timestampSpec,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(null, null, null, true, 0),
+          new CsvInputFormat(null, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -941,7 +942,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           timestampSpec,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1180,7 +1181,7 @@ public class IndexTaskTest extends IngestionTestBase
     EasyMock.expect(mockToolbox.getSegmentHandoffNotifierFactory()).andReturn(mockFactory).once();
     EasyMock.expect(mockToolbox.getEmitter()).andReturn(new NoopServiceEmitter()).anyTimes();
     EasyMock.expect(mockDataSegment1.getDataSource()).andReturn("MockDataSource").once();
-    EasyMock.expect(mockFactory.createSegmentHandoffNotifier("MockDataSource")).andReturn(mockNotifier).once();
+    EasyMock.expect(mockFactory.createSegmentHandoffNotifier("MockDataSource", indexTask.getId())).andReturn(mockNotifier).once();
     mockNotifier.start();
     EasyMock.expectLastCall().once();
     mockNotifier.registerSegmentHandoffCallback(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
@@ -1341,7 +1342,7 @@ public class IndexTaskTest extends IngestionTestBase
       parseExceptionIgnoreSpec = createIngestionSpec(
           timestampSpec,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1391,7 +1392,7 @@ public class IndexTaskTest extends IngestionTestBase
       indexIngestionSpec = createIngestionSpec(
           timestampSpec,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1632,7 +1633,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           timestampSpec,
           dimensionsSpec,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1751,7 +1752,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           timestampSpec,
           dimensionsSpec,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1845,7 +1846,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           DEFAULT_TIMESTAMP_SPEC,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(null, null, null, true, 0),
+          new CsvInputFormat(null, null, null, true, 0, null),
           null,
           null,
           tuningConfig,
@@ -1915,7 +1916,7 @@ public class IndexTaskTest extends IngestionTestBase
       ingestionSpec = createIngestionSpec(
           DEFAULT_TIMESTAMP_SPEC,
           DimensionsSpec.EMPTY,
-          new CsvInputFormat(columns, null, null, true, 0),
+          new CsvInputFormat(columns, null, null, true, 0, null),
           null,
           null,
           tuningConfig,

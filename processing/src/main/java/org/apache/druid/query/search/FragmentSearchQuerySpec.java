@@ -85,7 +85,7 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
       return containsAny(target, dimVal);
     }
     for (String search : target) {
-      if (!org.apache.commons.lang.StringUtils.containsIgnoreCase(dimVal, search)) {
+      if (!org.apache.commons.lang3.StringUtils.containsIgnoreCase(dimVal, search)) {
         return false;
       }
     }

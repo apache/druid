@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Tab, Tabs } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Tab, Tabs, TabsExpander } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
@@ -83,7 +83,7 @@ export const HistoryDialog = React.memo(function HistoryDialog(props: HistoryDia
             />
           );
         })}
-        <Tabs.Expander />
+        <TabsExpander />
       </Tabs>
     );
   }

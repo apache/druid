@@ -28,6 +28,7 @@ import {
   downloadQueryResults,
   formatDurationHybrid,
   formatInteger,
+  oneOf,
   pluralIfNeeded,
 } from '../../../utils';
 import { DestinationPagesDialog } from '../destination-pages-dialog/destination-pages-dialog';
@@ -95,7 +96,7 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
         }
         onClick={() => {
           if (!execution) return;
-          if (execution.engine === 'sql-msq-task') {
+          if (oneOf(execution.engine, 'sql-msq-task', 'sql-msq-dart')) {
             onExecutionDetail();
           }
         }}
@@ -104,6 +105,7 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
         <Button
           key="download"
           icon={IconNames.DOWNLOAD}
+          data-tooltip="Download data"
           minimal
           onClick={() => setShowDestinationPages(true)}
         />
@@ -129,14 +131,22 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
           }
           position={Position.BOTTOM_RIGHT}
         >
-          <Button icon={IconNames.DOWNLOAD} minimal />
+          <Button icon={IconNames.DOWNLOAD} data-tooltip="Download data in view" minimal />
         </Popover>
       ),
     );
   }
 
   if (onReset) {
-    buttons.push(<Button key="reset" icon={IconNames.CROSS} minimal onClick={onReset} />);
+    buttons.push(
+      <Button
+        key="reset"
+        icon={IconNames.CROSS}
+        data-tooltip="Clear output pane"
+        minimal
+        onClick={onReset}
+      />,
+    );
   }
 
   return (

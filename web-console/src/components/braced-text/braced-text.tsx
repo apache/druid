@@ -84,7 +84,7 @@ function hideThousandsSeparator(text: string) {
 }
 
 export const BracedText = React.memo(function BracedText(props: BracedTextProps) {
-  const { className, text, braces, padFractionalPart, unselectableThousandsSeparator, title } =
+  const { className, text, braces, padFractionalPart, unselectableThousandsSeparator, ...rest } =
     props;
 
   let effectiveBraces = braces.concat(text);
@@ -115,7 +115,7 @@ export const BracedText = React.memo(function BracedText(props: BracedTextProps)
   }
 
   return (
-    <span className={classNames('braced-text', className)} title={title}>
+    <span className={classNames('braced-text', className)} {...rest}>
       <span className="brace-text">{findMostNumbers(effectiveBraces)}</span>
       <span className="real-text">
         {unselectableThousandsSeparator ? hideThousandsSeparator(text) : text}

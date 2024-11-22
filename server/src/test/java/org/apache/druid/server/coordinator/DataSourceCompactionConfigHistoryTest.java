@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator;
 
 import org.apache.druid.audit.AuditInfo;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.TestDataSource;
 import org.joda.time.DateTime;
@@ -178,7 +177,7 @@ public class DataSourceCompactionConfigHistoryTest
     wikiAuditHistory.add(originalConfig, auditInfo, DateTimes.nowUtc());
 
     final DruidCompactionConfig updatedConfig = originalConfig.withClusterConfig(
-        new ClusterCompactionConfig(null, null, null, CompactionEngine.MSQ, null)
+        new ClusterCompactionConfig(0.2, null, null, null)
     );
     wikiAuditHistory.add(updatedConfig, auditInfo, DateTimes.nowUtc());
 

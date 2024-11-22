@@ -22,7 +22,7 @@ package org.apache.druid.indexing.input;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.data.input.BytesCountingInputEntity;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntity;

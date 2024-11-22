@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -30,7 +31,8 @@ import org.apache.druid.msq.input.table.SegmentsInputSlice;
 import org.apache.druid.msq.input.table.TableInputSpec;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.querykit.QueryKit;
-import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.msq.querykit.QueryKitSpec;
+import org.apache.druid.query.Query;
 import org.apache.druid.server.DruidNode;
 
 /**
@@ -83,6 +85,11 @@ public interface ControllerContext
   TaskActionClient taskActionClient();
 
   /**
+   * Task lock type.
+   */
+  TaskLockType taskLockType();
+
+  /**
    * Provides services about workers: starting, canceling, obtaining status.
    *
    * @param queryId               query ID
@@ -103,8 +110,13 @@ public interface ControllerContext
   WorkerClient newWorkerClient();
 
   /**
-   * Default target partitions per worker for {@link QueryKit#makeQueryDefinition}. Can be overridden using
-   * {@link MultiStageQueryContext#CTX_TARGET_PARTITIONS_PER_WORKER}.
+   * Create a {@link QueryKitSpec}. This method provides controller contexts a way to customize parameters around the
+   * number of workers and partitions.
    */
-  int defaultTargetPartitionsPerWorker();
+  QueryKitSpec makeQueryKitSpec(
+      QueryKit<Query<?>> queryKit,
+      String queryId,
+      MSQSpec querySpec,
+      ControllerQueryKernelConfig queryKernelConfig
+  );
 }
