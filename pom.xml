@@ -70,9 +70,8 @@
     </scm>
 
     <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <java.version>8</java.version>
+        <java.version>11</java.version>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
         <project.build.resourceEncoding>UTF-8</project.build.resourceEncoding>
         <aether.version>0.9.0.M2</aether.version>
         <apache.curator.version>5.5.0</apache.curator.version>
@@ -96,7 +95,7 @@
         <errorprone.version>2.35.1</errorprone.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>32.0.1-jre</guava.version>
-        <guice.version>4.1.0</guice.version>
+        <guice.version>4.2.2</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
         <jetty.version>9.4.56.v20240826</jetty.version>
         <jersey.version>1.19.4</jersey.version>
@@ -131,7 +130,33 @@
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
         <com.google.cloud.storage.version>2.29.1</com.google.cloud.storage.version>
-        <jdk.strong.encapsulation.argLine><!-- empty placeholder --></jdk.strong.encapsulation.argLine>
+        <jdk.strong.encapsulation.argLine>
+            <!-- Strong encapsulation parameters -->
+            <!-- When updating this list, update all four locations: -->
+            <!--  1) ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES -->
+            <!--  2) docs/operations/java.md, "Strong encapsulation" section -->
+            <!--  3) pom.xml, jdk.strong.encapsulation.argLine (here) -->
+            <!--  4) examples/bin/run-java script -->
+
+            <!-- required for DataSketches Memory -->
+            --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
+            --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
+            --add-opens=java.base/java.nio=ALL-UNNAMED
+            --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
+            --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
+
+            <!-- required for NativeIO#getfd -->
+            --add-opens=java.base/java.io=ALL-UNNAMED
+
+            <!-- required for Guice -->
+            --add-opens=java.base/java.lang=ALL-UNNAMED
+
+            <!-- required for metrics -->
+            --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
+
+            <!-- required for certain EqualsVerifier tests (not required in production) -->
+            --add-opens=java.base/java.util=ALL-UNNAMED
+        </jdk.strong.encapsulation.argLine>
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
@@ -270,6 +295,16 @@
             <snapshots>
                <enabled>false</enabled>
             </snapshots>
+        </repository>
+
+        <!--
+        maven-dependency-plugin:3.1.2 seems to have updated HTTP repository access behavior.
+        We get the following error "Blocked mirror for repositories: [twitter (http://maven.twttr.com, default, releases+snapshots)]"
+        The suggested action step is to add the mirror: https://maven.apache.org/docs/3.8.1/release-notes.html#how-to-fix-when-i-get-a-http-repository-blocked
+        -->
+        <repository>
+            <id>twitter</id>
+            <url>https://maven.twttr.com</url>
         </repository>
     </repositories>
 
@@ -1507,13 +1542,13 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.2.0</version>
+                <version>4.8.6.6</version>
                 <dependencies>
                     <!-- overwrite dependency on spotbugs if you want to specify the version of spotbugs -->
                     <dependency>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs</artifactId>
-                        <version>4.2.2</version>
+                        <version>4.8.6</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -1524,7 +1559,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-pmd-plugin</artifactId>
-                <version>3.16.0</version>
+                <version>3.26.0</version>
                 <configuration>
                     <linkXRef>false</linkXRef> <!-- prevent "Unable to locate Source XRef to link to" warning -->
                     <printFailingErrors>true</printFailingErrors>
@@ -1534,6 +1569,7 @@
                     <excludeRoots>
                         <excludeRoot>target/generated-sources/</excludeRoot>
                     </excludeRoots>
+                    <targetJdk>${maven.compiler.release}</targetJdk>
                 </configuration>
                 <executions>
                     <execution>
@@ -1554,7 +1590,7 @@
                     <bundledSignatures>
                         <!--
                           This will automatically choose the right
-                          signatures based on 'maven.compiler.target':
+                          signatures based on 'maven.compiler.release':
                         -->
                         <bundledSignature>jdk-unsafe</bundledSignature>
                     </bundledSignatures>
@@ -1622,6 +1658,16 @@
                                 <ignore>sun.misc.Unsafe</ignore>
                                 <!-- ignore java reflection polymorphic api signatures -->
                                 <ignore>java.lang.invoke.MethodHandle</ignore>
+                                <!--
+                                 For the following java.nio.* classes, we get errors like: "Undefined reference: java.nio.ByteBuffer java.nio.ByteBuffer.clear()"
+                                 GitHub issue: https://github.com/mojohaus/animal-sniffer/issues/4
+                                 -->
+                                <ignore>java.nio.ByteBuffer</ignore>
+                                <ignore>java.nio.IntBuffer</ignore>
+                                <ignore>java.nio.CharBuffer</ignore>
+                                <ignore>java.nio.FloatBuffer</ignore>
+                                <ignore>java.nio.DoubleBuffer</ignore>
+                                <ignore>java.nio.MappedByteBuffer</ignore>
                             </ignores>
                         </configuration>
                     </execution>
@@ -1830,7 +1876,12 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.1.1</version>
+                    <version>3.3.0</version>
+                    <configuration>
+                        <ignoredNonTestScopedDependencies>
+                            <ignoredNonTestScopedDependency>*</ignoredNonTestScopedDependency>
+                        </ignoredNonTestScopedDependencies>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
@@ -1916,9 +1967,9 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.11.0</version>
+                    <inherited>true</inherited>
                     <configuration>
-                        <source>${maven.compiler.source}</source>
-                        <target>${maven.compiler.target}</target>
+                        <release>${maven.compiler.release}</release>
                     </configuration>
                 </plugin>
               <plugin>
@@ -1956,54 +2007,6 @@
                 </jdk.security.manager.allow.argLine>
             </properties>
         </profile>
-        <profile>
-            <id>java-9+</id>
-            <activation>
-                <jdk>[9,)</jdk>
-            </activation>
-            <properties>
-                <jdk.strong.encapsulation.argLine>
-                    <!-- Strong encapsulation parameters -->
-                    <!-- When updating this list, update all four locations: -->
-                    <!--  1) ForkingTaskRunner#STRONG_ENCAPSULATION_PROPERTIES -->
-                    <!--  2) docs/operations/java.md, "Strong encapsulation" section -->
-                    <!--  3) pom.xml, jdk.strong.encapsulation.argLine (here) -->
-                    <!--  4) examples/bin/run-java script -->
-
-                    <!-- required for DataSketches Memory -->
-                    --add-exports=java.base/jdk.internal.ref=ALL-UNNAMED
-                    --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED
-                    --add-opens=java.base/java.nio=ALL-UNNAMED
-                    --add-opens=java.base/sun.nio.ch=ALL-UNNAMED
-                    --add-opens=java.base/jdk.internal.ref=ALL-UNNAMED
-
-                    <!-- required for NativeIO#getfd -->
-                    --add-opens=java.base/java.io=ALL-UNNAMED
-
-                    <!-- required for Guice -->
-                    --add-opens=java.base/java.lang=ALL-UNNAMED
-
-                    <!-- required for metrics -->
-                    --add-opens=jdk.management/com.sun.management.internal=ALL-UNNAMED
-
-                    <!-- required for certain EqualsVerifier tests (not required in production) -->
-                    --add-opens=java.base/java.util=ALL-UNNAMED
-                </jdk.strong.encapsulation.argLine>
-            </properties>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-compiler-plugin</artifactId>
-                        <inherited>true</inherited>
-                        <!-- prefer release instead of source/target in JDK 9 and above -->
-                        <configuration>
-                            <release>${java.version}</release>
-                        </configuration>
-                    </plugin>
-                </plugins>
-            </build>
-          </profile>
           <profile>
             <id>strict</id>
             <activation>
@@ -2034,9 +2037,10 @@
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED</arg>
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED</arg>
                                 <arg>-J--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED</arg>
+                                <arg>-J--add-exports=java.base/sun.nio.ch=ALL-UNNAMED</arg>
                                 <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED</arg>
                                 <arg>-J--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED</arg>
-                              </compilerArgs>
+                            </compilerArgs>
                               <annotationProcessorPaths>
                                 <path>
                                   <groupId>com.google.errorprone</groupId>

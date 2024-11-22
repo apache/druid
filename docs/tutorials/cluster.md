@@ -133,7 +133,7 @@ The [basic cluster tuning guide](../operations/basic-cluster-tuning.md) has info
 
 We recommend running your favorite Linux distribution. You will also need 
 
-* [Java 8u92+, 11, or 17](../operations/java.md)
+* [Java 11 or 17](../operations/java.md)
 * Python 2 or Python 3
 
 :::info
@@ -141,8 +141,8 @@ We recommend running your favorite Linux distribution. You will also need
  `DRUID_JAVA_HOME` or `JAVA_HOME`. For more details run the `bin/verify-java` script.
 :::
 
-For information about installing Java, see the documentation for your OS package manager. If your Ubuntu-based OS does not have a recent enough version of Java, WebUpd8 offers [packages for those
-OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html).
+For information about installing Java, see the documentation for your OS package manager. If your Ubuntu-based OS does not have a recent enough version of Java, Linux Uprising offers [packages for those
+OSes](https://launchpad.net/~linuxuprising/+archive/ubuntu/java).
 
 ## Download the distribution
 
