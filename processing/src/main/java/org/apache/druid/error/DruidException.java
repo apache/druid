@@ -398,7 +398,12 @@ public class DruidException extends RuntimeException
      * A catch-all for any time when we cannot come up with a meaningful categorization.  This is hopefully only
      * used when converting generic exceptions from frameworks and libraries that we do not control into DruidExceptions
      */
-    UNCATEGORIZED(500);
+    UNCATEGORIZED(500),
+
+    /**
+     * Indicates the druid service is not available. This error code is retriable.
+     */
+    SERVICE_UNAVAILABLE(503);
 
     private final int expectedStatus;
 

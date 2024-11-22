@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.supervisor;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
+import org.apache.druid.java.util.common.Pair;
 
 import java.util.List;
 
@@ -68,5 +69,10 @@ public interface StreamSupervisor extends Supervisor
   default void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
   {
     throw new UnsupportedOperationException("Supervisor does not have the feature to handoff task groups early implemented");
+  }
+
+  default boolean canPublishSegments(Integer taskGroupId, String taskId)
+  {
+    return true;
   }
 }

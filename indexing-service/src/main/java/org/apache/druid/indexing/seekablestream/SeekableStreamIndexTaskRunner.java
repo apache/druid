@@ -975,7 +975,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   private void publishAndRegisterHandoff(SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceMetadata)
   {
-    log.debug("Publishing segments for sequence [%s].", sequenceMetadata);
+    log.info("Publishing segments for sequence [%s].", sequenceMetadata);
+    try {
+      Thread.sleep(5000);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
 
     final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transform(
         driver.publish(

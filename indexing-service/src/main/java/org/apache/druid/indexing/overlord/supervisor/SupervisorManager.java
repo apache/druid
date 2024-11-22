@@ -148,6 +148,19 @@ public class SupervisorManager
     return true;
   }
 
+  public boolean canPublishSegments(String id, Integer taskGroupId, String taskId)
+  {
+    log.info("Supervisor ids [%s]", supervisors.keys().toString());
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    if (supervisor == null || supervisor.lhs == null) {
+      log.info("Could not find supervisor [%s]", id);
+      return true;
+    }
+    log.info("Found supervisor [%s]", id);
+    final StreamSupervisor streamSupervisor = requireStreamSupervisor(id, "publishSegments");
+    return streamSupervisor.canPublishSegments(taskGroupId, taskId);
+  }
+
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
