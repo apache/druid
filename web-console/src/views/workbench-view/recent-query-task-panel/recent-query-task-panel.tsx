@@ -217,7 +217,9 @@ LIMIT 100`,
             return (
               <Popover className="work-entry" key={w.taskId} position="left" content={menu}>
                 <div
-                  data-tooltip={w.errorMessage}
+                  data-tooltip={
+                    `ID: ${w.taskId}` + (w.errorMessage ? `\n\nError:\n${w.errorMessage}` : '')
+                  }
                   onDoubleClick={() => onExecutionDetails(w.taskId)}
                 >
                   <div className="line1">
