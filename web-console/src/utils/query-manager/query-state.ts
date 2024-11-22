@@ -29,8 +29,8 @@ export interface QueryStateOptions<T, E extends Error = Error, I = never> {
 }
 
 export class QueryState<T, E extends Error = Error, I = never> {
-  static INIT: QueryState<any, any> = new QueryState({});
-  static LOADING: QueryState<any> = new QueryState({ loading: true });
+  static INIT = new QueryState<any, any>({});
+  static LOADING = new QueryState<any>({ loading: true });
 
   public state: QueryStateState = 'init';
   public intermediate?: I;

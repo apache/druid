@@ -78,8 +78,8 @@ DruidAggregate(group=[{0}], druid=[logical])
               "dimension" : "dim1",
               "value" : "10.1"
             },
-            "columns" : [ "__time", "v0" ],
-            "columnTypes" : [ "LONG", "STRING" ],
+            "columns" : [ "v0", "__time" ],
+            "columnTypes" : [ "STRING", "LONG" ],
             "granularity" : {
               "type" : "all"
             },

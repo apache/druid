@@ -17,7 +17,7 @@
  */
 
 import { InputGroup } from '@blueprintjs/core';
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 function utcParseDate(dateString: string): Date | undefined {
   const dateParts = dateString.split(/[-T:. ]/g);

@@ -79,7 +79,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ '8', '11', '17', '21' ]
+        # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
+        jdk: [ '11', '17', '21.0.4' ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout branch
@@ -160,7 +161,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [ 11, 17, 21 ]
+        # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
+        jdk: [ '11', '21.0.4' ]
     name: "unit tests (jdk${{ matrix.jdk }}, sql-compat=true)"
     uses: ./.github/workflows/unit-tests.yml
     needs: unit-tests
@@ -174,11 +176,11 @@ jobs:
       fail-fast: false
       matrix:
         sql_compatibility: [ false, true ]
-    name: "unit tests (jdk8, sql-compat=${{ matrix.sql_compatibility }})"
+    name: "unit tests (jdk17, sql-compat=${{ matrix.sql_compatibility }})"
     uses: ./.github/workflows/unit-tests.yml
     needs: build
     with:
-      jdk: 8
+      jdk: 17
       sql_compatibility: ${{ matrix.sql_compatibility }}
 
   standard-its:

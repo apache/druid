@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.nested;
 
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.semantic.SemanticUtils;
@@ -27,6 +28,7 @@ import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ColumnarDoubles;
+import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.ReadableOffset;
@@ -40,6 +42,7 @@ import org.roaringbitmap.PeekableIntIterator;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * {@link NestedCommonFormatColumn} for {@link ColumnType#DOUBLE}
@@ -50,18 +53,24 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
       SemanticUtils.makeAsMap(ScalarDoubleColumn.class);
 
   private final FixedIndexed<Double> doubleDictionary;
+  private final Supplier<ColumnarInts> encodedValuesSupplier;
   private final ColumnarDoubles valueColumn;
-  private final ImmutableBitmap nullValueIndex;
+  private final ImmutableBitmap nullValueBitmap;
+  private final BitmapFactory bitmapFactory;
 
   public ScalarDoubleColumn(
       FixedIndexed<Double> doubleDictionary,
+      Supplier<ColumnarInts> encodedValuesSupplier,
       ColumnarDoubles valueColumn,
-      ImmutableBitmap nullValueIndex
+      ImmutableBitmap nullValueBitmap,
+      BitmapFactory bitmapFactory
   )
   {
     this.doubleDictionary = doubleDictionary;
+    this.encodedValuesSupplier = encodedValuesSupplier;
     this.valueColumn = valueColumn;
-    this.nullValueIndex = nullValueIndex;
+    this.nullValueBitmap = nullValueBitmap;
+    this.bitmapFactory = bitmapFactory;
   }
 
   @Override
@@ -81,7 +90,7 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
   {
     return new DoubleColumnSelector()
     {
-      private PeekableIntIterator nullIterator = nullValueIndex.peekableIterator();
+      private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
       private int nullMark = -1;
       private int offsetMark = -1;
 
@@ -95,7 +104,7 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
         inspector.visit("doubleColumn", valueColumn);
-        inspector.visit("nullBitmap", nullValueIndex);
+        inspector.visit("nullBitmap", nullValueBitmap);
       }
 
       @Override
@@ -108,7 +117,7 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
         if (i < offsetMark) {
           // offset was reset, reset iterator state
           nullMark = -1;
-          nullIterator = nullValueIndex.peekableIterator();
+          nullIterator = nullValueBitmap.peekableIterator();
         }
         offsetMark = i;
         if (nullMark < i) {
@@ -133,7 +142,7 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
       private int id = ReadableVectorInspector.NULL_ID;
 
       @Nullable
-      private PeekableIntIterator nullIterator = nullValueIndex != null ? nullValueIndex.peekableIterator() : null;
+      private PeekableIntIterator nullIterator = nullValueBitmap != null ? nullValueBitmap.peekableIterator() : null;
       private int offsetMark = -1;
 
       @Override
@@ -162,14 +171,14 @@ public class ScalarDoubleColumn implements NestedCommonFormatColumn
 
         if (offset.isContiguous()) {
           if (offset.getStartOffset() < offsetMark) {
-            nullIterator = nullValueIndex.peekableIterator();
+            nullIterator = nullValueBitmap.peekableIterator();
           }
           offsetMark = offset.getStartOffset() + offset.getCurrentVectorSize();
           valueColumn.get(valueVector, offset.getStartOffset(), offset.getCurrentVectorSize());
         } else {
           final int[] offsets = offset.getOffsets();
           if (offsets[offsets.length - 1] < offsetMark) {
-            nullIterator = nullValueIndex.peekableIterator();
+            nullIterator = nullValueBitmap.peekableIterator();
           }
           offsetMark = offsets[offsets.length - 1];
           valueColumn.get(valueVector, offsets, offset.getCurrentVectorSize());

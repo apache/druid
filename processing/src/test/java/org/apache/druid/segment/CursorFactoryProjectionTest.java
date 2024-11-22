@@ -99,15 +99,15 @@ import java.util.stream.Collectors;
 public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 {
   private static final Closer CLOSER = Closer.create();
-  private static final DateTime TIMESTAMP = Granularities.DAY.bucket(DateTimes.nowUtc()).getStart();
+  static final DateTime TIMESTAMP = Granularities.DAY.bucket(DateTimes.nowUtc()).getStart();
 
-  private static final RowSignature ROW_SIGNATURE = RowSignature.builder()
+  static final RowSignature ROW_SIGNATURE = RowSignature.builder()
                                                                 .add("a", ColumnType.STRING)
                                                                 .add("b", ColumnType.STRING)
                                                                 .add("c", ColumnType.LONG)
                                                                 .add("d", ColumnType.DOUBLE)
                                                                 .build();
-  private static final List<InputRow> ROWS = Arrays.asList(
+  static final List<InputRow> ROWS = Arrays.asList(
       new ListBasedInputRow(
           ROW_SIGNATURE,
           TIMESTAMP,
@@ -1110,7 +1110,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
     Assert.assertEquals(2, results.size());
-    final RowSignature querySignature = query.getResultSignature(RowSignature.Finalization.YES);
+    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
     Assert.assertArrayEquals(new Object[]{TIMESTAMP, 16L}, getResultArray(results.get(0), querySignature));
     Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusHours(1), 3L}, getResultArray(results.get(1), querySignature));
   }
@@ -1147,7 +1147,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
     Assert.assertEquals(1, results.size());
-    final RowSignature querySignature = query.getResultSignature(RowSignature.Finalization.YES);
+    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
     Assert.assertArrayEquals(new Object[]{TIMESTAMP, 19L}, getResultArray(results.get(0), querySignature));
   }
 
@@ -1183,7 +1183,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     final List<Result<TimeseriesResultValue>> results = resultRows.toList();
     Assert.assertEquals(8, results.size());
-    final RowSignature querySignature = query.getResultSignature(RowSignature.Finalization.YES);
+    final RowSignature querySignature = query.getResultRowSignature(RowSignature.Finalization.YES);
     Assert.assertArrayEquals(new Object[]{TIMESTAMP, 1L}, getResultArray(results.get(0), querySignature));
     Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusMinutes(2), 1L}, getResultArray(results.get(1), querySignature));
     Assert.assertArrayEquals(new Object[]{TIMESTAMP.plusMinutes(4), 2L}, getResultArray(results.get(2), querySignature));

@@ -19,12 +19,10 @@
 
 package org.apache.druid.msq.querykit;
 
-import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.query.Query;
-
-import java.util.List;
 
 /**
  * Collection of parameters for {@link QueryKit#makeQueryDefinition}.
@@ -42,9 +40,9 @@ public class QueryKitSpec
    *                                  {@link org.apache.druid.query.QueryDataSource}. Typically a {@link MultiQueryKit}.
    * @param queryId                   queryId of the resulting {@link QueryDefinition}
    * @param maxLeafWorkerCount        maximum number of workers for leaf stages: becomes
-   *                                  {@link org.apache.druid.msq.kernel.StageDefinition#getMaxWorkerCount()}
+   *                                  {@link StageDefinition#getMaxWorkerCount()}
    * @param maxNonLeafWorkerCount     maximum number of workers for non-leaf stages: becomes
-   *                                  {@link org.apache.druid.msq.kernel.StageDefinition#getMaxWorkerCount()}
+   *                                  {@link StageDefinition#getMaxWorkerCount()}
    * @param targetPartitionsPerWorker preferred number of partitions per worker for subqueries
    */
   public QueryKitSpec(
@@ -79,20 +77,15 @@ public class QueryKitSpec
   }
 
   /**
-   * Maximum worker count for a stage with the given inputs. Will use {@link #maxNonLeafWorkerCount} if there are
-   * any stage inputs, {@link #maxLeafWorkerCount} otherwise.
+   * Maximum number of workers for leaf stages. See {@link InputSpecs#hasLeafInputs}.
    */
-  public int getMaxWorkerCount(final List<InputSpec> inputSpecs)
+  public int getMaxLeafWorkerCount()
   {
-    if (InputSpecs.getStageNumbers(inputSpecs).isEmpty()) {
-      return maxLeafWorkerCount;
-    } else {
-      return maxNonLeafWorkerCount;
-    }
+    return maxLeafWorkerCount;
   }
 
   /**
-   * Maximum number of workers for non-leaf stages (where there are some stage inputs).
+   * Maximum number of workers for non-leaf stages. See {@link InputSpecs#hasLeafInputs}.
    */
   public int getMaxNonLeafWorkerCount()
   {

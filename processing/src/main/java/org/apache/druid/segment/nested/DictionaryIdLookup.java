@@ -19,15 +19,11 @@
 
 package org.apache.druid.segment.nested;
 
-import com.google.common.primitives.Ints;
-import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.data.DictionaryWriter;
@@ -35,6 +31,7 @@ import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.serde.ColumnSerializerUtils;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -42,13 +39,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.channels.GatheringByteChannel;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.util.EnumSet;
 
 /**
  * Value to dictionary id lookup, backed with memory mapped dictionaries populated lazily by the supplied
@@ -56,36 +46,38 @@ import java.util.EnumSet;
  */
 public final class DictionaryIdLookup implements Closeable
 {
+
   private final String name;
-  private final Path tempBasePath;
+  private final File tempBasePath;
 
   @Nullable
   private final DictionaryWriter<String> stringDictionaryWriter;
-  private Path stringDictionaryFile = null;
+  private File stringDictionaryFile = null;
   private SmooshedFileMapper stringBufferMapper = null;
   private Indexed<ByteBuffer> stringDictionary = null;
 
   @Nullable
   private final DictionaryWriter<Long> longDictionaryWriter;
-  private Path longDictionaryFile = null;
-  private MappedByteBuffer longBuffer = null;
+  private File longDictionaryFile = null;
+  private SmooshedFileMapper longBufferMapper = null;
   private FixedIndexed<Long> longDictionary = null;
 
   @Nullable
   private final DictionaryWriter<Double> doubleDictionaryWriter;
-  private Path doubleDictionaryFile = null;
-  MappedByteBuffer doubleBuffer = null;
+  private File doubleDictionaryFile = null;
+  SmooshedFileMapper doubleBufferMapper = null;
   FixedIndexed<Double> doubleDictionary = null;
 
   @Nullable
   private final DictionaryWriter<int[]> arrayDictionaryWriter;
-  private Path arrayDictionaryFile = null;
-  private MappedByteBuffer arrayBuffer = null;
+  private File arrayDictionaryFile = null;
+  private SmooshedFileMapper arrayBufferMapper = null;
   private FrontCodedIntArrayIndexed arrayDictionary = null;
+  private final Closer closer = Closer.create();
 
   public DictionaryIdLookup(
       String name,
-      Path tempBasePath,
+      File tempBaseDir,
       @Nullable DictionaryWriter<String> stringDictionaryWriter,
       @Nullable DictionaryWriter<Long> longDictionaryWriter,
       @Nullable DictionaryWriter<Double> doubleDictionaryWriter,
@@ -93,7 +85,7 @@ public final class DictionaryIdLookup implements Closeable
   )
   {
     this.name = name;
-    this.tempBasePath = tempBasePath;
+    this.tempBasePath = tempBaseDir;
     this.stringDictionaryWriter = stringDictionaryWriter;
     this.longDictionaryWriter = longDictionaryWriter;
     this.doubleDictionaryWriter = doubleDictionaryWriter;
@@ -172,42 +164,27 @@ public final class DictionaryIdLookup implements Closeable
   }
 
   @Nullable
-  public ByteBuffer getLongBuffer()
+  public SmooshedFileMapper getLongBufferMapper()
   {
-    return longBuffer;
+    return longBufferMapper;
   }
 
   @Nullable
-  public ByteBuffer getDoubleBuffer()
+  public SmooshedFileMapper getDoubleBufferMapper()
   {
-    return doubleBuffer;
+    return doubleBufferMapper;
   }
 
   @Nullable
-  public ByteBuffer getArrayBuffer()
+  public SmooshedFileMapper getArrayBufferMapper()
   {
-    return arrayBuffer;
+    return arrayBufferMapper;
   }
 
   @Override
   public void close()
   {
-    if (stringBufferMapper != null) {
-      stringBufferMapper.close();
-      deleteTempFile(stringDictionaryFile);
-    }
-    if (longBuffer != null) {
-      ByteBufferUtils.unmap(longBuffer);
-      deleteTempFile(longDictionaryFile);
-    }
-    if (doubleBuffer != null) {
-      ByteBufferUtils.unmap(doubleBuffer);
-      deleteTempFile(doubleDictionaryFile);
-    }
-    if (arrayBuffer != null) {
-      ByteBufferUtils.unmap(arrayBuffer);
-      deleteTempFile(arrayDictionaryFile);
-    }
+    CloseableUtils.closeAndWrapExceptions(closer);
   }
 
   private int longOffset()
@@ -228,28 +205,16 @@ public final class DictionaryIdLookup implements Closeable
   private void ensureStringDictionaryLoaded()
   {
     if (stringDictionary == null) {
-      // GenericIndexed v2 can write to multiple files if the dictionary is larger than 2gb, so we use a smooshfile
-      // for strings because of this. if other type dictionary writers could potentially use multiple internal files
-      // in the future, we should transition them to using this approach as well (or build a combination smoosher and
-      // mapper so that we can have a mutable smoosh)
-      File stringSmoosh = FileUtils.createTempDirInLocation(tempBasePath, StringUtils.urlEncode(name) + "__stringTempSmoosh");
-      stringDictionaryFile = stringSmoosh.toPath();
       final String fileName = ColumnSerializerUtils.getInternalFileName(
           name,
           ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
       );
+      stringDictionaryFile = makeTempDir(fileName);
+      stringBufferMapper = closer.register(
+          ColumnSerializerUtils.mapSerializer(stringDictionaryFile, stringDictionaryWriter, fileName)
+      );
 
-      try (
-          final FileSmoosher smoosher = new FileSmoosher(stringSmoosh);
-          final SmooshedWriter writer = smoosher.addWithSmooshedWriter(
-              fileName,
-              stringDictionaryWriter.getSerializedSize()
-          )
-      ) {
-        stringDictionaryWriter.writeTo(writer, smoosher);
-        writer.close();
-        smoosher.close();
-        stringBufferMapper = SmooshedFileMapper.load(stringSmoosh);
+      try {
         final ByteBuffer stringBuffer = stringBufferMapper.mapFile(fileName);
         stringDictionary = StringEncodingStrategies.getStringDictionarySupplier(
             stringBufferMapper,
@@ -266,146 +231,77 @@ public final class DictionaryIdLookup implements Closeable
   private void ensureLongDictionaryLoaded()
   {
     if (longDictionary == null) {
-      longDictionaryFile = makeTempFile(name + ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME);
-      longBuffer = mapWriter(longDictionaryFile, longDictionaryWriter);
-      longDictionary = FixedIndexed.read(longBuffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES).get();
-      // reset position
-      longBuffer.position(0);
+      final String fileName = ColumnSerializerUtils.getInternalFileName(
+          name,
+          ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME
+      );
+      longDictionaryFile = makeTempDir(fileName);
+      longBufferMapper = closer.register(
+          ColumnSerializerUtils.mapSerializer(longDictionaryFile, longDictionaryWriter, fileName)
+      );
+      try {
+        final ByteBuffer buffer = longBufferMapper.mapFile(fileName);
+        longDictionary = FixedIndexed.read(buffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES).get();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
   private void ensureDoubleDictionaryLoaded()
   {
     if (doubleDictionary == null) {
-      doubleDictionaryFile = makeTempFile(name + ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
-      doubleBuffer = mapWriter(doubleDictionaryFile, doubleDictionaryWriter);
-      doubleDictionary = FixedIndexed.read(
-          doubleBuffer,
-          TypeStrategies.DOUBLE,
-          ByteOrder.nativeOrder(),
-          Double.BYTES
-      ).get();
-      // reset position
-      doubleBuffer.position(0);
+      final String fileName = ColumnSerializerUtils.getInternalFileName(
+          name,
+          ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
+      );
+      doubleDictionaryFile = makeTempDir(fileName);
+      doubleBufferMapper = closer.register(
+          ColumnSerializerUtils.mapSerializer(doubleDictionaryFile, doubleDictionaryWriter, fileName)
+      );
+      try {
+        final ByteBuffer buffer = doubleBufferMapper.mapFile(fileName);
+        doubleDictionary = FixedIndexed.read(buffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Long.BYTES).get();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
   private void ensureArrayDictionaryLoaded()
   {
     if (arrayDictionary == null && arrayDictionaryWriter != null) {
-      arrayDictionaryFile = makeTempFile(name + ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME);
-      arrayBuffer = mapWriter(arrayDictionaryFile, arrayDictionaryWriter);
-      arrayDictionary = FrontCodedIntArrayIndexed.read(arrayBuffer, ByteOrder.nativeOrder()).get();
-      // reset position
-      arrayBuffer.position(0);
+      final String fileName = ColumnSerializerUtils.getInternalFileName(
+          name,
+          ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME
+      );
+      arrayDictionaryFile = makeTempDir(fileName);
+      arrayBufferMapper = closer.register(
+          ColumnSerializerUtils.mapSerializer(arrayDictionaryFile, arrayDictionaryWriter, fileName)
+      );
+      try {
+        final ByteBuffer buffer = arrayBufferMapper.mapFile(fileName);
+        arrayDictionary = FrontCodedIntArrayIndexed.read(buffer, ByteOrder.nativeOrder()).get();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
-  private Path makeTempFile(String name)
+  private File makeTempDir(String fileName)
   {
     try {
-      return Files.createTempFile(tempBasePath, StringUtils.urlEncode(name), null);
+      final File f = new File(tempBasePath, StringUtils.urlEncode(fileName));
+      FileUtils.mkdirp(f);
+      closer.register(() -> FileUtils.deleteDirectory(f));
+      return f;
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  private void deleteTempFile(Path path)
-  {
-    try {
-      final File file = path.toFile();
-      if (file.isDirectory()) {
-        FileUtils.deleteDirectory(file);
-      } else {
-        Files.delete(path);
-      }
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  @SuppressFBWarnings("NP_NONNULL_PARAM_VIOLATION")
-  private MappedByteBuffer mapWriter(Path path, DictionaryWriter<?> writer)
-  {
-    final EnumSet<StandardOpenOption> options = EnumSet.of(
-        StandardOpenOption.READ,
-        StandardOpenOption.WRITE,
-        StandardOpenOption.CREATE,
-        StandardOpenOption.TRUNCATE_EXISTING
-    );
-
-    try (FileChannel fileChannel = FileChannel.open(path, options);
-         GatheringByteChannel smooshChannel = makeWriter(fileChannel, writer.getSerializedSize())) {
-      //noinspection DataFlowIssue
-      writer.writeTo(smooshChannel, null);
-      return fileChannel.map(FileChannel.MapMode.READ_ONLY, 0, writer.getSerializedSize());
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private GatheringByteChannel makeWriter(FileChannel channel, long size)
-  {
-    // basically same code as smooshed writer, can't use channel directly because copying between channels
-    // doesn't handle size of source channel correctly
-    return new GatheringByteChannel()
-    {
-      private boolean isClosed = false;
-      private long currOffset = 0;
-
-      @Override
-      public boolean isOpen()
-      {
-        return !isClosed;
-      }
-
-      @Override
-      public void close() throws IOException
-      {
-        channel.close();
-        isClosed = true;
-      }
-
-      public int bytesLeft()
-      {
-        return (int) (size - currOffset);
-      }
-
-      @Override
-      public int write(ByteBuffer buffer) throws IOException
-      {
-        return addToOffset(channel.write(buffer));
-      }
-
-      @Override
-      public long write(ByteBuffer[] srcs, int offset, int length) throws IOException
-      {
-        return addToOffset(channel.write(srcs, offset, length));
-      }
-
-      @Override
-      public long write(ByteBuffer[] srcs) throws IOException
-      {
-        return addToOffset(channel.write(srcs));
-      }
-
-      public int addToOffset(long numBytesWritten)
-      {
-        if (numBytesWritten > bytesLeft()) {
-          throw DruidException.defensive(
-              "Wrote more bytes[%,d] than available[%,d]. Don't do that.",
-              numBytesWritten,
-              bytesLeft()
-          );
-        }
-        currOffset += numBytesWritten;
-
-        return Ints.checkedCast(numBytesWritten);
-      }
-    };
   }
 
   public int getStringCardinality()

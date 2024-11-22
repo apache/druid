@@ -64,8 +64,8 @@ DruidProject(d3=[$3], druid=[logical])
           "dimension" : "dim2",
           "value" : "a"
         },
-        "columns" : [ "__time", "dim3", "v0" ],
-        "columnTypes" : [ "LONG", "STRING", "STRING" ],
+        "columns" : [ "v0", "dim3", "__time" ],
+        "columnTypes" : [ "STRING", "STRING", "LONG" ],
         "granularity" : {
           "type" : "all"
         },

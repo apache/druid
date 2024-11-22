@@ -451,6 +451,7 @@ public class CliCoordinator extends ServerRunnable
       final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder =
           DruidBinders.queryRunnerFactoryBinder(binder);
       queryFactoryBinder.addBinding(SegmentMetadataQuery.class).to(SegmentMetadataQueryRunnerFactory.class);
+      DruidBinders.queryLogicBinder(binder);
       binder.bind(SegmentMetadataQueryRunnerFactory.class).in(LazySingleton.class);
 
       binder.bind(GenericQueryMetricsFactory.class).to(DefaultGenericQueryMetricsFactory.class);

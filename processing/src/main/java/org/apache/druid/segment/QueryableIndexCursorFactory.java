@@ -37,10 +37,24 @@ import java.util.List;
 public class QueryableIndexCursorFactory implements CursorFactory
 {
   private final QueryableIndex index;
+  private final TimeBoundaryInspector timeBoundaryInspector;
 
-  public QueryableIndexCursorFactory(QueryableIndex index)
+  /**
+   * Constructor that accepts a {@link QueryableIndexTimeBoundaryInspector} that is in use elsewhere, promoting
+   * efficient re-use.
+   */
+  public QueryableIndexCursorFactory(QueryableIndex index, TimeBoundaryInspector timeBoundaryInspector)
   {
     this.index = index;
+    this.timeBoundaryInspector = timeBoundaryInspector;
+  }
+
+  /**
+   * Constructor that creates a new {@link QueryableIndexTimeBoundaryInspector}.
+   */
+  public QueryableIndexCursorFactory(QueryableIndex index)
+  {
+    this(index, QueryableIndexTimeBoundaryInspector.create(index));
   }
 
   @Override
@@ -48,7 +62,11 @@ public class QueryableIndexCursorFactory implements CursorFactory
   {
     QueryableProjection<QueryableIndex> projection = index.getProjection(spec);
     if (projection != null) {
-      return new QueryableIndexCursorHolder(projection.getRowSelector(), projection.getCursorBuildSpec())
+      return new QueryableIndexCursorHolder(
+          projection.getRowSelector(),
+          projection.getCursorBuildSpec(),
+          timeBoundaryInspector
+      )
       {
         @Override
         protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
@@ -86,7 +104,7 @@ public class QueryableIndexCursorFactory implements CursorFactory
         }
       };
     }
-    return new QueryableIndexCursorHolder(index, CursorBuildSpec.builder(spec).build());
+    return new QueryableIndexCursorHolder(index, CursorBuildSpec.builder(spec).build(), timeBoundaryInspector);
   }
 
   @Override

@@ -19,14 +19,12 @@
 import { Button, ButtonGroup, Intent, Label, MenuItem, Switch, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { C, L, SqlComparison, SqlExpression } from '@druid-toolkit/query';
-import classNames from 'classnames';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
 import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
-  type TableColumnSelectorColumn,
   ACTION_COLUMN_ID,
   ACTION_COLUMN_LABEL,
   ACTION_COLUMN_WIDTH,
@@ -35,8 +33,10 @@ import {
   MoreButton,
   RefreshButton,
   SegmentTimeline,
+  SplitterLayout,
   TableClickableCell,
   TableColumnSelector,
+  type TableColumnSelectorColumn,
   TableFilterableCell,
   ViewControlBar,
 } from '../../components';
@@ -255,7 +255,7 @@ END AS "time_span"`,
 
     this.segmentsQueryManager = new QueryManager({
       debounceIdle: 500,
-      processQuery: async (query: SegmentsQuery, _cancelToken, setIntermediateQuery) => {
+      processQuery: async (query: SegmentsQuery, cancelToken, setIntermediateQuery) => {
         const { page, pageSize, filtered, sorted, visibleColumns, capabilities, groupByInterval } =
           query;
 
@@ -356,10 +356,10 @@ END AS "time_span"`,
           }
           const sqlQuery = queryParts.join('\n');
           setIntermediateQuery(sqlQuery);
-          return await queryDruidSql({ query: sqlQuery });
+          return await queryDruidSql({ query: sqlQuery }, cancelToken);
         } else if (capabilities.hasCoordinatorAccess()) {
           let datasourceList: string[] = (
-            await Api.instance.get('/druid/coordinator/v1/metadata/datasources')
+            await Api.instance.get('/druid/coordinator/v1/metadata/datasources', { cancelToken })
           ).data;
 
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
@@ -383,6 +383,7 @@ END AS "time_span"`,
             const segments = (
               await Api.instance.get(
                 `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
+                { cancelToken },
               )
             ).data?.segments;
             if (!Array.isArray(segments)) continue;
@@ -482,6 +483,7 @@ END AS "time_span"`,
   private renderFilterableCell(field: string, enableComparisons = false) {
     const { filters, onFiltersChange } = this.props;
 
+    // eslint-disable-next-line react/display-name
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
@@ -967,65 +969,68 @@ END AS "time_span"`,
     const { groupByInterval } = this.state;
 
     return (
-      <>
-        <div
-          className={classNames('segments-view app-view', {
-            'show-segment-timeline': showSegmentTimeline,
-          })}
+      <div className="segments-view app-view">
+        <ViewControlBar label="Segments">
+          <RefreshButton
+            onRefresh={auto => {
+              if (auto && hasPopoverOpen()) return;
+              this.segmentsQueryManager.rerunLastQuery(auto);
+            }}
+            localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
+          />
+          <Label>Group by</Label>
+          <ButtonGroup>
+            <Button
+              active={!groupByInterval}
+              onClick={() => {
+                this.setState({ groupByInterval: false });
+                this.fetchData(false);
+              }}
+            >
+              None
+            </Button>
+            <Button
+              active={groupByInterval}
+              onClick={() => {
+                this.setState({ groupByInterval: true });
+                this.fetchData(true);
+              }}
+            >
+              Interval
+            </Button>
+          </ButtonGroup>
+          {this.renderBulkSegmentsActions()}
+          <Switch
+            checked={showSegmentTimeline}
+            label="Show segment timeline"
+            onChange={() => this.setState({ showSegmentTimeline: !showSegmentTimeline })}
+            disabled={!capabilities.hasSqlOrCoordinatorAccess()}
+          />
+          <TableColumnSelector
+            columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()]}
+            onChange={column =>
+              this.setState(prevState => ({
+                visibleColumns: prevState.visibleColumns.toggle(column),
+              }))
+            }
+            onClose={added => {
+              if (!added) return;
+              this.fetchData(groupByInterval);
+            }}
+            tableColumnsHidden={visibleColumns.getHiddenColumns()}
+          />
+        </ViewControlBar>
+        <SplitterLayout
+          vertical
+          percentage
+          secondaryInitialSize={35}
+          primaryIndex={1}
+          primaryMinSize={20}
+          secondaryMinSize={10}
         >
-          <ViewControlBar label="Segments">
-            <RefreshButton
-              onRefresh={auto => {
-                if (auto && hasPopoverOpen()) return;
-                this.segmentsQueryManager.rerunLastQuery(auto);
-              }}
-              localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
-            />
-            <Label>Group by</Label>
-            <ButtonGroup>
-              <Button
-                active={!groupByInterval}
-                onClick={() => {
-                  this.setState({ groupByInterval: false });
-                  this.fetchData(false);
-                }}
-              >
-                None
-              </Button>
-              <Button
-                active={groupByInterval}
-                onClick={() => {
-                  this.setState({ groupByInterval: true });
-                  this.fetchData(true);
-                }}
-              >
-                Interval
-              </Button>
-            </ButtonGroup>
-            {this.renderBulkSegmentsActions()}
-            <Switch
-              checked={showSegmentTimeline}
-              label="Show segment timeline"
-              onChange={() => this.setState({ showSegmentTimeline: !showSegmentTimeline })}
-              disabled={!capabilities.hasSqlOrCoordinatorAccess()}
-            />
-            <TableColumnSelector
-              columns={TABLE_COLUMNS_BY_MODE[capabilities.getMode()]}
-              onChange={column =>
-                this.setState(prevState => ({
-                  visibleColumns: prevState.visibleColumns.toggle(column),
-                }))
-              }
-              onClose={added => {
-                if (!added) return;
-                this.fetchData(groupByInterval);
-              }}
-              tableColumnsHidden={visibleColumns.getHiddenColumns()}
-            />
-          </ViewControlBar>
           {showSegmentTimeline && <SegmentTimeline capabilities={capabilities} />}
           {this.renderSegmentsTable()}
-        </div>
+        </SplitterLayout>
         {this.renderTerminateSegmentAction()}
         {segmentTableActionDialogId && datasourceTableActionDialogId && (
           <SegmentTableActionDialog
@@ -1042,7 +1047,7 @@ END AS "time_span"`,
             onClose={() => this.setState({ showFullShardSpec: undefined })}
           />
         )}
-      </>
+      </div>
     );
   }
 }

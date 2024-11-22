@@ -48,6 +48,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Builder;
+import org.apache.druid.segment.column.RowSignature.Finalization;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -462,7 +463,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
            Objects.equals(resultFormat, scanQuery.resultFormat) &&
            Objects.equals(dimFilter, scanQuery.dimFilter) &&
            Objects.equals(columns, scanQuery.columns) &&
-           Objects.equals(orderBys, scanQuery.orderBys);
+           Objects.equals(columnTypes, scanQuery.columnTypes) &&
+           Objects.equals(orderBys, scanQuery.orderBys) &&
+           Objects.equals(timeOrder, scanQuery.timeOrder);
   }
 
   @Override
@@ -477,7 +480,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
         scanRowsLimit,
         dimFilter,
         columns,
-        orderBys
+        columnTypes,
+        orderBys,
+        timeOrder
     );
   }
 
@@ -494,6 +499,7 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
            ", limit=" + scanRowsLimit +
            ", dimFilter=" + dimFilter +
            ", columns=" + columns +
+           ", columnTypes=" + columnTypes +
            (orderBys.isEmpty() ? "" : ", orderBy=" + orderBys) +
            ", context=" + getContext() +
            '}';
@@ -611,6 +617,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     }
   }
 
+  @Override
+  public RowSignature getResultRowSignature(Finalization finalization)
+  {
+    return getRowSignature();
+  }
 
   /**
    * Returns the RowSignature.

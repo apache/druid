@@ -45,36 +45,6 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   public void setup()
   {
     task = NoopTask.create();
-    workItem = new KubernetesWorkItem(task, null);
-  }
-
-  @Test
-  public void test_setKubernetesPeonLifecycleTwice_throwsIllegalStateException()
-  {
-    workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
-        task,
-        null,
-        null,
-        null,
-        null
-    ));
-
-    Assert.assertThrows(
-        IllegalStateException.class,
-        () -> workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
-            task,
-            null,
-            null,
-            null,
-            null
-        ))
-    );
-  }
-
-  @Test
-  public void test_shutdown_withoutKubernetesPeonLifecycle()
-  {
-    workItem.shutdown();
   }
 
   @Test
@@ -86,7 +56,11 @@ public class KubernetesWorkItemTest extends EasyMockSupport
     EasyMock.expectLastCall();
 
     replayAll();
-    workItem.setKubernetesPeonLifecycle(kubernetesPeonLifecycle);
+    workItem = new KubernetesWorkItem(
+        task,
+        null,
+        kubernetesPeonLifecycle
+    );
 
     workItem.shutdown();
     verifyAll();
@@ -95,7 +69,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Test
   public void test_isPending_withTaskStateWaiting_returnsFalse()
   {
-    workItem = new KubernetesWorkItem(task, null) {
+    workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
       {
@@ -108,7 +82,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Test
   public void test_isPending_withTaskStatePending_returnsTrue()
   {
-    workItem = new KubernetesWorkItem(task, null) {
+    workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
       {
@@ -121,7 +95,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Test
   public void test_isRunning_withTaskStateWaiting_returnsFalse()
   {
-    workItem = new KubernetesWorkItem(task, null) {
+    workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
       {
@@ -134,7 +108,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Test
   public void test_isRunning_withTaskStatePending_returnsTrue()
   {
-    workItem = new KubernetesWorkItem(task, null) {
+    workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle) {
       @Override
       protected RunnerTaskState getRunnerTaskState()
       {
@@ -145,21 +119,16 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   }
 
   @Test
-  public void test_getRunnerTaskState_withoutKubernetesPeonLifecycle_returnsPending()
-  {
-    Assert.assertEquals(RunnerTaskState.PENDING, workItem.getRunnerTaskState());
-  }
-
-  @Test
   public void test_getRunnerTaskState_withKubernetesPeonLifecycle_returnsPending()
   {
-    workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
         null,
         null,
         null,
         null
-    ));
+    );
+    workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
     Assert.assertEquals(RunnerTaskState.PENDING, workItem.getRunnerTaskState());
   }
@@ -181,7 +150,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
       }
     };
 
-    workItem.setKubernetesPeonLifecycle(peonLifecycle);
+    workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
     Assert.assertEquals(RunnerTaskState.PENDING, workItem.getRunnerTaskState());
   }
@@ -203,7 +172,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
       }
     };
 
-    workItem.setKubernetesPeonLifecycle(peonLifecycle);
+    workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
     Assert.assertEquals(RunnerTaskState.RUNNING, workItem.getRunnerTaskState());
   }
@@ -225,46 +194,36 @@ public class KubernetesWorkItemTest extends EasyMockSupport
       }
     };
 
-    workItem.setKubernetesPeonLifecycle(peonLifecycle);
+    workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
     Assert.assertEquals(RunnerTaskState.NONE, workItem.getRunnerTaskState());
   }
 
   @Test
-  public void test_streamTaskLogs_withoutKubernetesPeonLifecycle()
-  {
-    Assert.assertFalse(workItem.streamTaskLogs().isPresent());
-  }
-
-  @Test
   public void test_streamTaskLogs_withKubernetesPeonLifecycle()
   {
-    workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
         null,
         null,
         null,
         null
-    ));
+    );
+    workItem = new KubernetesWorkItem(task, null, peonLifecycle);
     Assert.assertFalse(workItem.streamTaskLogs().isPresent());
-  }
-
-  @Test
-  public void test_getLocation_withoutKubernetesPeonLifecycle()
-  {
-    Assert.assertEquals(TaskLocation.unknown(), workItem.getLocation());
   }
 
   @Test
   public void test_getLocation_withKubernetesPeonLifecycle()
   {
-    workItem.setKubernetesPeonLifecycle(new KubernetesPeonLifecycle(
+    KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
         null,
         null,
         null,
         null
-    ));
+    );
+    workItem = new KubernetesWorkItem(task, null, peonLifecycle);
 
     Assert.assertEquals(TaskLocation.unknown(), workItem.getLocation());
   }
@@ -272,18 +231,28 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   @Test
   public void test_getTaskType()
   {
+    workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle);
     Assert.assertEquals(task.getType(), workItem.getTaskType());
   }
 
   @Test
   public void test_getDataSource()
   {
+    workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle);
     Assert.assertEquals(task.getDataSource(), workItem.getDataSource());
   }
 
   @Test
   public void test_getTask()
   {
+    workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle);
     Assert.assertEquals(task, workItem.getTask());
+  }
+
+  @Test
+  public void test_peonLifeycle()
+  {
+    workItem = new KubernetesWorkItem(task, null, kubernetesPeonLifecycle);
+    Assert.assertEquals(kubernetesPeonLifecycle, workItem.getPeonLifeycle());
   }
 }

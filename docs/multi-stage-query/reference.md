@@ -165,7 +165,6 @@ Configure following runtime parameters to export to an S3 destination:
 | `druid.export.storage.s3.maxRetry` | No | The maximum number of  attempts for S3 API calls to avoid failures due to transient errors. | 10 |
 | `druid.export.storage.s3.chunkSize` | No | Individual chunk size to  store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to S3, but require more disk space to store temporary chunks. | 100MiB |
 
-
 ##### GOOGLE - Google Cloud Storage
 
 To export query results to Google Cloud Storage (GCS), pass the `google()` function as an argument to the `EXTERN` function.
@@ -198,7 +197,8 @@ Configure the following runtime parameters to export query results to a GCS dest
 | `druid.export.storage.google.allowedExportPaths` | Yes | Array of GCS prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For eample: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
 | `druid.export.storage.google.tempLocalDir` | No | Directory for local storage where the worker stores temporary files before uploading the data to GCS | n/a |
 | `druid.export.storage.google.maxRetry` | No | The maximum number of  attempts for GCS API calls to avoid failures due to transient errors | 10 |
-| `druid.export.storage.google.chunkSize` | No | Individual chunk size to  store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks | 4 MiB |
+| `druid.export.storage.google.chunkSize` | No | Individual chunk size to store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks | 4 MiB |
+
 
 ##### LOCAL - local file storage
 
@@ -538,7 +538,7 @@ Common properties to configure the behavior of durable storage
 |--|--|--|
 |`druid.msq.intermediate.storage.enable`  | Yes |  Whether to enable durable storage for the cluster. Set it to true to enable durable storage. For more information about enabling durable storage, see [Durable storage](../operations/durable-storage.md). | false | 
 |`druid.msq.intermediate.storage.type` |  Yes | The type of storage to use. Set it to `s3` for S3, `azure` for Azure and `google` for Google | n/a |
-|`druid.msq.intermediate.storage.tempDir`| Yes |  Directory path on the local disk to store temporary files required while uploading and downloading the data  | n/a |
+|`druid.msq.intermediate.storage.tempDir`| Yes |  Directory path on the local disk to store temporary files required while uploading and downloading the data. If the property is not configured on the indexer or middle manager, it defaults to using the task temporary directory. | n/a |
 |`druid.msq.intermediate.storage.maxRetry` |  No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 10 |
 |`druid.msq.intermediate.storage.chunkSize` | No | Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls made to the durable storage, however it requires more disk space to store the temporary chunks. Druid uses a default of 100MiB if the value is not provided.| 100MiB | 
 

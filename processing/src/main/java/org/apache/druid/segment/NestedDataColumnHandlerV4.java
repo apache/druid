@@ -30,6 +30,7 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import java.io.File;
 import java.util.Comparator;
 
 public class NestedDataColumnHandlerV4 implements DimensionHandler<StructuredData, StructuredData, StructuredData>
@@ -78,6 +79,7 @@ public class NestedDataColumnHandlerV4 implements DimensionHandler<StructuredDat
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
+      File segmentBaseDir,
       Closer closer
   )
   {

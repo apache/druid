@@ -319,10 +319,13 @@ export class DruidError extends Error {
   }
 }
 
-export async function queryDruidRune(runeQuery: Record<string, any>): Promise<any> {
+export async function queryDruidRune(
+  runeQuery: Record<string, any>,
+  cancelToken?: CancelToken,
+): Promise<any> {
   let runeResultResp: AxiosResponse;
   try {
-    runeResultResp = await Api.instance.post('/druid/v2', runeQuery);
+    runeResultResp = await Api.instance.post('/druid/v2', runeQuery, { cancelToken });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }

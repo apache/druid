@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.metadata;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.client.CachingClusteredClientTest.ServerExpectation;
 import org.apache.druid.client.CachingClusteredClientTest.ServerExpectations;
@@ -38,22 +37,17 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.MapQueryToolChestWarehouse;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
-import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import org.apache.druid.query.metadata.metadata.AllColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -67,6 +61,7 @@ import org.easymock.IAnswer;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -86,24 +81,16 @@ import java.util.stream.Collectors;
 public class SegmentMetadataQuerySegmentWalkerTest
 {
   private final String DATASOURCE = "testDatasource";
-  private QueryToolChestWarehouse warehouse;
   private DruidHttpClientConfig httpClientConfig;
   private DruidServer[] servers;
   private Random random;
 
+  @ClassRule
+  public static QueryStackTests.Junit4ConglomerateRule conglomerateRule = new QueryStackTests.Junit4ConglomerateRule();
+
   @Before
   public void setUp()
   {
-    warehouse = new MapQueryToolChestWarehouse(
-        ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-                    .put(
-                        SegmentMetadataQuery.class,
-                        new SegmentMetadataQueryQueryToolChest(
-                            new SegmentMetadataQueryConfig("P1W")
-
-                        )
-                    ).build());
-
     httpClientConfig = new DruidHttpClientConfig()
     {
       @Override
@@ -169,7 +156,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
     SegmentMetadataQuerySegmentWalker walker = new SegmentMetadataQuerySegmentWalker(
         new TestCoordinatorServerView(timelines, queryRunnerMap),
         httpClientConfig,
-        warehouse,
+        conglomerateRule.getConglomerate(),
         new ServerConfig(),
         new NoopServiceEmitter()
     );
@@ -264,7 +251,7 @@ public class SegmentMetadataQuerySegmentWalkerTest
     SegmentMetadataQuerySegmentWalker walker = new SegmentMetadataQuerySegmentWalker(
         new TestCoordinatorServerView(timelines, queryRunnerMap),
         httpClientConfig,
-        warehouse,
+        conglomerateRule.getConglomerate(),
         new ServerConfig(),
         new NoopServiceEmitter()
     );
