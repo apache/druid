@@ -48,6 +48,7 @@ import org.apache.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
@@ -84,10 +85,11 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
+      File segmentBaseDir,
       Closer closer
   )
   {
-    super(dimensionName, outputName, indexSpec, segmentWriteOutMedium, capabilities, progress, closer);
+    super(dimensionName, outputName, indexSpec, segmentWriteOutMedium, capabilities, progress, segmentBaseDir, closer);
   }
 
   @Override

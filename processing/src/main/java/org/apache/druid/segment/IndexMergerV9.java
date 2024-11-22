@@ -227,10 +227,22 @@ public class IndexMergerV9 implements IndexMerger
             segmentWriteOutMedium,
             dimFormats.get(i).toColumnCapabilities(),
             progress,
+            outDir,
             closer
         );
         mergers.add(merger);
         mergersMap.put(mergedDimensions.get(i), merger);
+      }
+
+      if (segmentMetadata != null && segmentMetadata.getProjections() != null) {
+        for (AggregateProjectionMetadata projectionMetadata : segmentMetadata.getProjections()) {
+          for (String dimension : projectionMetadata.getSchema().getGroupingColumns()) {
+            DimensionMergerV9 merger = mergersMap.get(dimension);
+            if (merger != null) {
+              merger.markAsParent();
+            }
+          }
+        }
       }
 
       /************* Setup Dim Conversions **************/
@@ -302,6 +314,7 @@ public class IndexMergerV9 implements IndexMerger
             indexSpec,
             segmentWriteOutMedium,
             progress,
+            outDir,
             closer,
             mergersMap,
             segmentMetadata
@@ -356,6 +369,7 @@ public class IndexMergerV9 implements IndexMerger
       final IndexSpec indexSpec,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final ProgressIndicator progress,
+      final File segmentBaseDir,
       final Closer closer,
       final Map<String, DimensionMergerV9> parentMergers,
       final Metadata segmentMetadata
@@ -389,6 +403,7 @@ public class IndexMergerV9 implements IndexMerger
             segmentWriteOutMedium,
             dimensionFormat.toColumnCapabilities(),
             progress,
+            segmentBaseDir,
             closer
         );
         if (parentMergers.containsKey(dimension)) {

@@ -197,7 +197,7 @@ public class NestedDataColumnSupplierTest extends InitializedNullHandlingTest
       SortedValueDictionary globalDictionarySortedCollector = mergable.getValueDictionary();
       mergable.mergeFieldsInto(sortedFields);
 
-      serializer.openDictionaryWriter();
+      serializer.openDictionaryWriter(tempFolder.newFolder());
       serializer.serializeFields(sortedFields);
       serializer.serializeDictionaries(
           globalDictionarySortedCollector.getSortedStrings(),
