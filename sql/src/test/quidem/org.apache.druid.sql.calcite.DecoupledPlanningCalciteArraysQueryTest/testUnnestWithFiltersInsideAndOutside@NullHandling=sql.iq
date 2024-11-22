@@ -25,14 +25,14 @@ AND unnested.d3 <> 'b';
 !ok
 LogicalProject(d3=[$18])
   LogicalUnnest(unnestExpr=[MV_TO_ARRAY($3)], filter=[<>($0, 'b')])
-    LogicalProject(__time=[$0], dim1=[$1], $f2=[CAST('a':VARCHAR):VARCHAR], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], d1=[$7], d2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0])
+    LogicalProject(__time=[$0], dim1=[$1], $f2=[CAST('a':VARCHAR):VARCHAR], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0])
       LogicalFilter(condition=[AND(=($2, 'a'), <>($1, 'foo'))])
         LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
 DruidProject(d3=[$18], druid=[logical])
   DruidUnnest(unnestExpr=[MV_TO_ARRAY($3)], filter=[<>($0, 'b')])
-    DruidProject(__time=[$0], dim1=[$1], $f2=[CAST('a':VARCHAR):VARCHAR], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], d1=[$7], d2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0], druid=[logical])
+    DruidProject(__time=[$0], dim1=[$1], $f2=[CAST('a':VARCHAR):VARCHAR], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0], druid=[logical])
       DruidFilter(condition=[AND(=($2, 'a'), <>($1, 'foo'))])
         DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
@@ -77,7 +77,7 @@ DruidProject(d3=[$18], druid=[logical])
             }
           } ]
         },
-        "columns" : [ "__time", "dim1", "v0", "dim3", "dim4", "dim5", "dim6", "d1", "d2", "f1", "f2", "l1", "l2", "cnt", "m1", "m2", "unique_dim1" ],
+        "columns" : [ "__time", "dim1", "v0", "dim3", "dim4", "dim5", "dim6", "dbl1", "dbl2", "f1", "f2", "l1", "l2", "cnt", "m1", "m2", "unique_dim1" ],
         "columnTypes" : [ "LONG", "STRING", "STRING", "STRING", "STRING", "STRING", "STRING", "DOUBLE", "DOUBLE", "FLOAT", "FLOAT", "LONG", "LONG", "LONG", "FLOAT", "DOUBLE", "COMPLEX<hyperUnique>" ],
         "granularity" : {
           "type" : "all"
