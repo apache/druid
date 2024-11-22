@@ -674,12 +674,12 @@ GROUP BY 1, 2`;
     const { showSegmentTimeline } = this.state;
     if (showSegmentTimeline) {
       // Create a new capabilities object to force the segment timeline to re-render
-      this.setState({
+      this.setState(({ showSegmentTimeline }) => ({
         showSegmentTimeline: {
           ...showSegmentTimeline,
           capabilities: this.props.capabilities.clone(),
         },
-      });
+      }));
     }
   };
 
