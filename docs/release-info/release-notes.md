@@ -24,7 +24,7 @@ title: "Release notes"
 
 <!--Replace {{DRUIDVERSION}} with the correct Druid version.-->
 
-Apache Druid 31.0.1 is a patch release that contains an important fix for the new complex metric column compression feature introduced in Druid 31.0.1. It also contains fixes for the web console, the new projections feature, and a fix for a minor performance regression.
+Apache Druid 31.0.1 is a patch release that contains an important fix for the new complex metric column compression feature introduced in Druid 31.0.0. It also contains fixes for the web console, the new projections feature, and a fix for a minor performance regression.
 
 ## Bug fixes
 
