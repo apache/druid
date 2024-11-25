@@ -47,11 +47,12 @@ import {
   uniq,
 } from '../../utils';
 import type { Margin, Stage } from '../../utils/stage';
+import type { PortalBubbleOpenOn } from '../portal-bubble/portal-bubble';
+import { PortalBubble } from '../portal-bubble/portal-bubble';
 
 import { ChartAxis } from './chart-axis';
 import type { IntervalBar, IntervalRow, IntervalStat, TrimmedIntervalRow } from './common';
 import { aggregateSegmentStats, formatIntervalStat, formatIsoDateOnly } from './common';
-import { PortalBubble } from './portal-bubble';
 
 import './segment-bar-chart-render.scss';
 
@@ -543,7 +544,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
     };
   }
 
-  let hoveredOpenOn: { x: number; y: number; title?: string; text: ReactNode } | undefined;
+  let hoveredOpenOn: PortalBubbleOpenOn | undefined;
   if (svgRef.current) {
     const rect = svgRef.current.getBoundingClientRect();
 
@@ -594,7 +595,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
           rect.x +
           CHART_MARGIN.left +
           timeScale(new Date((bubbleInfo.start.valueOf() + bubbleInfo.end.valueOf()) / 2)),
-        y: rect.y + CHART_MARGIN.top - 10,
+        y: rect.y + CHART_MARGIN.top,
         title,
         text,
       };
@@ -611,7 +612,7 @@ export const SegmentBarChartRender = function SegmentBarChartRender(
           rect.x +
           CHART_MARGIN.left +
           timeScale(new Date((selection.start.valueOf() + selection.end.valueOf()) / 2)),
-        y: rect.y + CHART_MARGIN.top - 10,
+        y: rect.y + CHART_MARGIN.top,
         title: `${formatIsoDateOnly(selection.start)} → ${formatIsoDateOnly(selection.end)}`,
         text: (
           <>

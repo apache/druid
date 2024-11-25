@@ -27,9 +27,18 @@ import { clamp } from '../../utils';
 
 import './portal-bubble.scss';
 
-interface PortalBubbleProps {
+const SHPITZ_SIZE = 10;
+
+export interface PortalBubbleOpenOn {
+  x: number;
+  y: number;
+  title?: string;
+  text: ReactNode;
+}
+
+export interface PortalBubbleProps {
   className?: string;
-  openOn: { x: number; y: number; title?: string; text: ReactNode } | undefined;
+  openOn: PortalBubbleOpenOn | undefined;
   direction?: 'up' | 'down';
   onClose?(): void;
   mute?: boolean;
@@ -55,7 +64,10 @@ export const PortalBubble = function PortalBubble(props: PortalBubbleProps) {
         if (!element) return;
         setMyWidth(element.offsetWidth);
       }}
-      style={{ left: x, top: openOn.y }}
+      style={{
+        left: x,
+        top: openOn.y + (minimal ? 0 : direction === 'up' ? -SHPITZ_SIZE : SHPITZ_SIZE),
+      }}
     >
       {(openOn.title || onClose) && (
         <div className={classNames('bubble-title-bar', { 'with-close': Boolean(onClose) })}>

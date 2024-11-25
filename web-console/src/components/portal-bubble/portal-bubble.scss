@@ -18,7 +18,7 @@
 
 @import '../../variables';
 
-$shpitz-size: 10px;
+$shpitz-size: 9px;
 
 .portal-bubble {
   position: absolute;
@@ -44,11 +44,18 @@ $shpitz-size: 10px;
     content: '';
     position: absolute;
     transform: translate(-50%, 0);
-    bottom: -$shpitz-size;
-    border-top: $shpitz-size solid $dark-gray1;
     border-right: $shpitz-size solid transparent;
     border-left: $shpitz-size solid transparent;
-    border-bottom: none;
+  }
+
+  &.up > .shpitz {
+    bottom: -$shpitz-size;
+    border-top: $shpitz-size solid $dark-gray1;
+  }
+
+  &.down > .shpitz {
+    top: -$shpitz-size;
+    border-bottom: $shpitz-size solid $dark-gray1;
   }
 
   & > .bubble-title-bar {
