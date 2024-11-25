@@ -51,8 +51,8 @@ jobs:
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
-      build_jdk: 8
-      runtime_jdk: 8
+      build_jdk: 17
+      runtime_jdk: 17
       testing_groups: -Dgroups=${{ matrix.testing_group }}
       override_config_path: ./environment-configs/test-groups/prepopulated-data
       use_indexer: middleManager
@@ -67,8 +67,8 @@ jobs:
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
-      build_jdk: 8
-      runtime_jdk: 8
+      build_jdk: 17
+      runtime_jdk: 17
       testing_groups: -Dgroups=${{ matrix.testing_group }}
       use_indexer: indexer
       group: ${{ matrix.testing_group }}
@@ -82,8 +82,8 @@ jobs:
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
-      build_jdk: 8
-      runtime_jdk: 8
+      build_jdk: 17
+      runtime_jdk: 17
       testing_groups: -Dgroups=${{ matrix.testing_group }}
       use_indexer: middleManager
       override_config_path: ./environment-configs/test-groups/prepopulated-data
@@ -94,7 +94,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        jdk: [8, 17, 21]
+        jdk: [11, 17, 21]
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
@@ -115,8 +115,8 @@ jobs:
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
-      build_jdk: 8
-      runtime_jdk: 8
+      build_jdk: 17
+      runtime_jdk: 17
       testing_groups: -Dgroups=shuffle-deep-store
       use_indexer: ${{ matrix.indexer }}
       override_config_path: ./environment-configs/test-groups/shuffle-deep-store
@@ -127,8 +127,8 @@ jobs:
     uses: ./.github/workflows/reusable-standard-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
-      build_jdk: 8
-      runtime_jdk: 8
+      build_jdk: 17
+      runtime_jdk: 17
       testing_groups: -Dgroups=custom-coordinator-duties
       use_indexer: middleManager
       override_config_path: ./environment-configs/test-groups/custom-coordinator-duties
@@ -136,7 +136,7 @@ jobs:
 
   integration-k8s-leadership-tests:
     needs: changes
-    name: (Compile=openjdk8, Run=openjdk8, Cluster Build On K8s) ITNestedQueryPushDownTest integration test
+    name: (Compile=openjdk17, Run=openjdk17, Cluster Build On K8s) ITNestedQueryPushDownTest integration test
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     runs-on: ubuntu-22.04
     env:
@@ -154,7 +154,7 @@ jobs:
       - name: setup java
         uses: actions/setup-java@v4
         with:
-          java-version: '8'
+          java-version: '17'
           distribution: 'zulu'
 
       # the build step produces SNAPSHOT artifacts into the local maven repository,
@@ -195,8 +195,8 @@ jobs:
         indexer: [middleManager, indexer]
     uses: ./.github/workflows/reusable-standard-its.yml
     with:
-      build_jdk: 8
-      runtime_jdk: 8
+      build_jdk: 17
+      runtime_jdk: 17
       testing_groups: -DexcludedGroups=batch-index,input-format,input-source,perfect-rollup-parallel-batch-index,kafka-index,query,query-retry,query-error,realtime-index,security,ldap-security,s3-deep-storage,gcs-deep-storage,azure-deep-storage,hdfs-deep-storage,s3-ingestion,kinesis-index,kinesis-data-format,kafka-transactional-index,kafka-index-slow,kafka-transactional-index-slow,kafka-data-format,hadoop-s3-to-s3-deep-storage,hadoop-s3-to-hdfs-deep-storage,hadoop-azure-to-azure-deep-storage,hadoop-azure-to-hdfs-deep-storage,hadoop-gcs-to-gcs-deep-storage,hadoop-gcs-to-hdfs-deep-storage,aliyun-oss-deep-storage,append-ingestion,compaction,high-availability,upgrade,shuffle-deep-store,custom-coordinator-duties,centralized-datasource-schema,cds-task-schema-publish-disabled,cds-coordinator-metadata-query-disabled
       use_indexer: ${{ matrix.indexer }}
       group: other

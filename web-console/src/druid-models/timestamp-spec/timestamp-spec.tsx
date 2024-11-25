@@ -136,7 +136,7 @@ export const TIMESTAMP_SPEC_FIELDS: Field<TimestampSpec>[] = [
     info: (
       <p>
         Specify your timestamp format by using the suggestions menu or typing in a{' '}
-        <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter">
+        <ExternalLink href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/time/format/DateTimeFormatter.html">
           format string
         </ExternalLink>
         .

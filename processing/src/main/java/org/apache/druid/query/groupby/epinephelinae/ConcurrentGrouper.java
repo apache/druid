@@ -38,6 +38,7 @@ import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
 
@@ -94,6 +95,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
   @Nullable
   private final ParallelCombiner<KeyType> parallelCombiner;
   private final boolean mergeThreadLocal;
+  private final GroupByStatsProvider.PerQueryStats perQueryStats;
 
   private volatile boolean initialized = false;
 
@@ -113,7 +115,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final ListeningExecutorService executor,
       final int priority,
       final boolean hasQueryTimeout,
-      final long queryTimeoutAt
+      final long queryTimeoutAt,
+      final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
     this(
@@ -137,7 +140,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
         queryTimeoutAt,
         groupByQueryConfig.getIntermediateCombineDegree(),
         groupByQueryConfig.getNumParallelCombineThreads(),
-        groupByQueryConfig.isMergeThreadLocal()
+        groupByQueryConfig.isMergeThreadLocal(),
+        perQueryStats
     );
   }
 
@@ -162,7 +166,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
       final long queryTimeoutAt,
       final int intermediateCombineDegree,
       final int numParallelCombineThreads,
-      final boolean mergeThreadLocal
+      final boolean mergeThreadLocal,
+      final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
     Preconditions.checkArgument(concurrencyHint > 0, "concurrencyHint > 0");
@@ -212,6 +217,7 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
     }
 
     this.mergeThreadLocal = mergeThreadLocal;
+    this.perQueryStats = perQueryStats;
   }
 
   @Override
@@ -238,7 +244,8 @@ public class ConcurrentGrouper<KeyType> implements Grouper<KeyType>
                 false,
                 limitSpec,
                 sortHasNonGroupingFields,
-                sliceSize
+                sliceSize,
+                perQueryStats
             );
             grouper.init();
             groupers.add(grouper);

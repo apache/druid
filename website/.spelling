@@ -562,6 +562,7 @@ timestamps
 to_json_string
 tradeoffs
 transformSpec
+transactionally
 try_parse_json
 tsv
 ulimit

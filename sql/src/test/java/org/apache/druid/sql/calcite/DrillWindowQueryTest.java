@@ -55,6 +55,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,6 +80,7 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * These test cases are borrowed from the drill-test-framework at
@@ -113,8 +115,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void ensureAllDeclared() throws Exception
   {
+    assumeTrue(DrillWindowQueryTest.class.equals(getClass()));
+
     final URL windowQueriesUrl = ClassLoader.getSystemResource("drill/window/queries/");
     Path windowFolder = new File(windowQueriesUrl.toURI()).toPath();
+
 
     Set<String> allCases = FileUtils
         .streamFiles(windowFolder.toFile(), true, "q")
