@@ -37,7 +37,7 @@ public class TaskLockConfig
   private long batchAllocationWaitTime = 0L;
 
   @JsonProperty
-  private boolean batchAllocationReduceMetadataIO = false;
+  private boolean batchAllocationReduceMetadataIO = true;
 
   public boolean isForceTimeChunkLock()
   {
