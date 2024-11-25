@@ -100,4 +100,69 @@ public class StreamSupervisorTest
         ex.getMessage()
     );
   }
+
+  @Test
+  public void testDefaultCanPublishSegments()
+  {
+    // Create an instance of stream supervisor without overriding handoffTaskGroupsEarly().
+    final StreamSupervisor streamSupervisor = new StreamSupervisor()
+    {
+
+      @Override
+      public void start()
+      {
+
+      }
+
+      @Override
+      public void stop(boolean stopGracefully)
+      {
+
+      }
+
+      @Override
+      public SupervisorReport getStatus()
+      {
+        return null;
+      }
+
+      @Override
+      public SupervisorStateManager.State getState()
+      {
+        return null;
+      }
+
+      @Override
+      public void reset(@Nullable DataSourceMetadata dataSourceMetadata)
+      {
+
+      }
+
+      @Override
+      public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
+      {
+
+      }
+
+      @Override
+      public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
+      {
+
+      }
+
+      @Override
+      public LagStats computeLagStats()
+      {
+        return null;
+      }
+
+      @Override
+      public int getActiveTaskGroupsCount()
+      {
+        return 0;
+      }
+    };
+
+    Assert.assertTrue(streamSupervisor.canPublishSegments(1, "taskId"));
+  }
 }

@@ -225,7 +225,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
         throw DruidException
             .forPersona(DruidException.Persona.DEVELOPER)
             .ofCategory(DruidException.Category.SERVICE_UNAVAILABLE)
-            .build("Cannot append segments to [%s] right now." +
+            .build("Cannot append segments to [%s] right now. " +
                     "There might be another task waiting to publish its segments. Check the overlord logs for details.",
                 dataSourceToInsert
             );

@@ -292,6 +292,52 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testCanPublishSegments_returnsFalse()
+  {
+    String taskId = "id1";
+    String supervisorId = "supervisor-id";
+    Integer groupId = 1;
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        supervisorId, new TestSupervisorSpec(supervisorId, supervisor1)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.canPublishSegments(groupId, taskId)).andReturn(false);
+
+    replayAll();
+
+    manager.start();
+
+    Assert.assertFalse(manager.canPublishSegments(supervisorId, groupId, taskId));
+
+    verifyAll();
+  }
+
+  @Test
+  public void testCanPublishSegments_throwsException_returnsTrue()
+  {
+    String taskId = "id1";
+    String supervisorId = "supervisor-id";
+    Integer groupId = 1;
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        supervisorId, new TestSupervisorSpec(supervisorId, supervisor1)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    EasyMock.expect(supervisor1.canPublishSegments(groupId, taskId)).andThrow(new RuntimeException());
+
+    replayAll();
+
+    manager.start();
+
+    Assert.assertTrue(manager.canPublishSegments(supervisorId, groupId, taskId));
+
+    verifyAll();
+  }
+
+  @Test
   public void testStartAlreadyStarted()
   {
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
