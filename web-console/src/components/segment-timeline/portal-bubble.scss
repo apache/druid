@@ -18,6 +18,8 @@
 
 @import '../../variables';
 
+$shpitz-size: 10px;
+
 .portal-bubble {
   position: absolute;
   @include card-like;
@@ -38,9 +40,21 @@
     pointer-events: none;
   }
 
+  & > .shpitz {
+    content: '';
+    position: absolute;
+    transform: translate(-50%, 0);
+    bottom: -$shpitz-size;
+    border-top: $shpitz-size solid $dark-gray1;
+    border-right: $shpitz-size solid transparent;
+    border-left: $shpitz-size solid transparent;
+    border-bottom: none;
+  }
+
   & > .bubble-title-bar {
     position: relative;
     padding: 5px 5px 0 5px;
+    white-space: nowrap;
     font-weight: bold;
 
     &.with-close {

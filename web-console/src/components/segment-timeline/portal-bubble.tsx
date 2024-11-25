@@ -20,7 +20,7 @@ import { Button } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import type { ReactNode } from 'react';
-import { useRef } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 
 import { clamp } from '../../utils';
@@ -33,24 +33,28 @@ interface PortalBubbleProps {
   direction?: 'up' | 'down';
   onClose?(): void;
   mute?: boolean;
+  minimal?: boolean;
 }
 
 export const PortalBubble = function PortalBubble(props: PortalBubbleProps) {
-  const { className, openOn, direction = 'up', onClose, mute } = props;
-  const ref = useRef<HTMLDivElement | null>(null);
+  const { className, openOn, direction = 'up', onClose, mute, minimal } = props;
+  const [myWidth, setMyWidth] = useState(200);
   if (!openOn) return null;
 
-  const div: HTMLDivElement | null = ref.current;
-  const myWidth = div ? div.offsetWidth : 200;
+  const halfMyWidth = myWidth / 2;
 
-  const x = clamp(openOn.x, myWidth / 2, window.innerWidth - myWidth / 2);
+  const x = clamp(openOn.x, halfMyWidth, window.innerWidth - halfMyWidth);
+  const offset = clamp(x - openOn.x, -halfMyWidth, halfMyWidth);
 
   return createPortal(
     <div
       className={classNames('portal-bubble', className, direction, {
         mute: mute && !onClose,
       })}
-      ref={ref}
+      ref={element => {
+        if (!element) return;
+        setMyWidth(element.offsetWidth);
+      }}
       style={{ left: x, top: openOn.y }}
     >
       {(openOn.title || onClose) && (
@@ -68,6 +72,9 @@ export const PortalBubble = function PortalBubble(props: PortalBubbleProps) {
         </div>
       )}
       <div className="bubble-content">{openOn.text}</div>
+      {!minimal && (
+        <div className="shpitz" style={{ left: offset ? `calc(50% - ${offset}px)` : '50%' }} />
+      )}
     </div>,
     document.body,
   );
