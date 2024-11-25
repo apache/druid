@@ -29,7 +29,7 @@ import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
@@ -40,6 +40,7 @@ import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -167,17 +168,17 @@ public class AggregateProjectionMetadata
         @JsonProperty("name") String name,
         @JsonProperty("timeColumnName") @Nullable String timeColumnName,
         @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns,
-        @JsonProperty("groupingColumns") List<String> groupingColumns,
+        @JsonProperty("groupingColumns") @Nullable List<String> groupingColumns,
         @JsonProperty("aggregators") @Nullable AggregatorFactory[] aggregators,
         @JsonProperty("ordering") List<OrderBy> ordering
     )
     {
       this.name = name;
-      if (CollectionUtils.isNullOrEmpty(groupingColumns)) {
-        throw InvalidInput.exception("groupingColumns must not be null or empty");
+      if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
+        throw DruidException.defensive("groupingColumns and aggregators must not both be null or empty");
       }
       this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
-      this.groupingColumns = groupingColumns;
+      this.groupingColumns = groupingColumns == null ? Collections.emptyList() : groupingColumns;
       this.aggregators = aggregators == null ? new AggregatorFactory[0] : aggregators;
       this.ordering = ordering;
 
