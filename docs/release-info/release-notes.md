@@ -30,7 +30,7 @@ For information about new features in Druid 31, see the [Druid 31 release notes]
 
 ## Bug fixes
 
-* Fixed an issue with complex metric compression that caused some complex column data with compression enabled to be read incorrectly, resulting in segment data corruption or system instability due to out-of-memory exceptions. We recommend that you reingest data if you're using complex metric compression [#17422](https://github.com/apache/druid/pull/17422)
+* Fixes an issue with complex metric compression that caused some data to be read incorrectly, resulting in segment data corruption or system instability due to out-of-memory exceptions. We recommend that you reingest data if you use compression for complex metric columns [#17422](https://github.com/apache/druid/pull/17422)
 * Fixes an issue with projection segment merging [#17460](https://github.com/apache/druid/pull/17460)
 * Fixes web console progress indicator [#17334](https://github.com/apache/druid/pull/17334)
 * Fixes a minor performance regression with query processing [#17397](https://github.com/apache/druid/pull/17397)
