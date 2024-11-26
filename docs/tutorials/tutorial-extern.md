@@ -54,7 +54,7 @@ From the root of the Druid distribution, run the following:
 
 ```bash
 export export_path="/tmp/druid"
-sed -i -e $'$a\\\n\\\n\\\n#\\\n###Local export\\\n#\\\ndruid.export.storage.baseDir='$export_path conf/druid/auto/_common/common.runtime.properties
+sed -i -e $'$a\\\n\\\n\\\n#\\\n###Local export\\\n#\\\ndruid.export.storage.baseDir='$export_path' conf/druid/auto/_common/common.runtime.properties
 ```
 
 This adds the following section to the Druid quicstart `common.runtime.properties`:
@@ -68,53 +68,52 @@ druid.export.storage.baseDir=/tmp/druid/
 
 ### Start Druid and load sample data
 
-From the root of the Druid distribution, launch Druid as follows:
+1. From the root of the Druid distribution, launch Druid as follows:
 
-```bash
-./bin/start-druid
-```
-
-From the [Query view](http://localhost:8888/unified-console.html#workbench), run the following command to load the Wikipedia example data set:
-
-```sql
-REPLACE INTO "wikipedia" OVERWRITE ALL
-WITH "ext" AS (
-  SELECT *
-  FROM TABLE(
-    EXTERN(
-      '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
-      '{"type":"json"}'
-    )
-  ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR, "flags" VARCHAR, "isUnpatrolled" VARCHAR, "page" VARCHAR, "diffUrl" VARCHAR, "added" BIGINT, "comment" VARCHAR, "commentLength" BIGINT, "isNew" VARCHAR, "isMinor" VARCHAR, "delta" BIGINT, "isAnonymous" VARCHAR, "user" VARCHAR, "deltaBucket" BIGINT, "deleted" BIGINT, "namespace" VARCHAR, "cityName" VARCHAR, "countryName" VARCHAR, "regionIsoCode" VARCHAR, "metroCode" BIGINT, "countryIsoCode" VARCHAR, "regionName" VARCHAR)
-)
-SELECT
-  TIME_PARSE("timestamp") AS "__time",
-  "isRobot",
-  "channel",
-  "flags",
-  "isUnpatrolled",
-  "page",
-  "diffUrl",
-  "added",
-  "comment",
-  "commentLength",
-  "isNew",
-  "isMinor",
-  "delta",
-  "isAnonymous",
-  "user",
-  "deltaBucket",
-  "deleted",
-  "namespace",
-  "cityName",
-  "countryName",
-  "regionIsoCode",
-  "metroCode",
-  "countryIsoCode",
-  "regionName"
-FROM "ext"
-PARTITIONED BY DAY
-```
+     ```bash
+    ./bin/start-druid
+     ```
+1. After Druid starts, open http://localhost:8888/ in your browser to access the Web Console.
+1. From the [Query view](http://localhost:8888/unified-console.html#workbench), run the following command to load the Wikipedia example data set:
+     ```sql
+     REPLACE INTO "wikipedia" OVERWRITE ALL
+     WITH "ext" AS (
+       SELECT *
+       FROM TABLE(
+         EXTERN(
+           '{"type":"http","uris":["https://druid.apache.org/data/wikipedia.json.gz"]}',
+           '{"type":"json"}'
+         )
+       ) EXTEND ("isRobot" VARCHAR, "channel" VARCHAR, "timestamp" VARCHAR, "flags" VARCHAR, "isUnpatrolled" VARCHAR, "page" VARCHAR, "diffUrl" VARCHAR, "added" BIGINT, "comment" VARCHAR, "commentLength" BIGINT, "isNew" VARCHAR, "isMinor" VARCHAR, "delta" BIGINT, "isAnonymous" VARCHAR, "user" VARCHAR, "deltaBucket" BIGINT, "deleted" BIGINT, "namespace" VARCHAR, "cityName" VARCHAR, "countryName" VARCHAR, "regionIsoCode" VARCHAR, "metroCode" BIGINT, "countryIsoCode" VARCHAR, "regionName" VARCHAR)
+     )
+     SELECT
+       TIME_PARSE("timestamp") AS "__time",
+       "isRobot",
+       "channel",
+       "flags",
+       "isUnpatrolled",
+       "page",
+       "diffUrl",
+       "added",
+       "comment",
+       "commentLength",
+       "isNew",
+       "isMinor",
+       "delta",
+       "isAnonymous",
+       "user",
+       "deltaBucket",
+       "deleted",
+       "namespace",
+       "cityName",
+       "countryName",
+       "regionIsoCode",
+       "metroCode",
+       "countryIsoCode",
+       "regionName"
+     FROM "ext"
+     PARTITIONED BY DAY
+     ```
 
 ### Query to export data
 
@@ -136,7 +135,7 @@ GROUP BY 1
 LIMIT 10
 ```
 
-Druid exports the results of the qurey to the `/tmp/druid/wiki_example` dirctory.
+Druid exports the results of the query to the `/tmp/druid/wiki_example` dirctory.
 Run the following comannd to list the contents of 
 
 ```bash
@@ -150,15 +149,18 @@ The results are a csv file export of the data and a directory
 The steps to export to cloud storage are similar to exporting to the local file system.
 Druid supports Amazon S3 or Google GCS as cloud export storage destinations.
 
-1. Enable the extension for your cloud storage destination:
+1. Enable the extension for your cloud storage destination. See [Loading core extensions](../configuration/extensions.md#loading-core-extensions).
    - **Amazon S3**: `druid-s3-extensions`
    - **Google GCS**: `google-extensions`
-  See [Loading core extensions](../configuration/extensions.md#loading-core-extensions).
 1. Configure the additional properties for your cloud storage destination. Replace {CLOUD} with `s3` or `google` accordingly:
    - `druid.export.storage.{CLOUD}.tempLocalDir`:  The local temp directory where the query engine stages files to export.
-   - `druid.export.storage.{CLOUD}.allowedExportPaths`: The s3 or GS prefixes allowed as Druid export locations. For example `[\"s3://bucket1/export/\",\"s3://bucket2/export/\"]` or `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]`
+   - `druid.export.storage.{CLOUD}.allowedExportPaths`: The s3 or GS prefixes allowed as Druid export locations. For example:
+
+       **S3**:  `[\"s3://bucket1/export/\",\"s3://bucket2/export/\"]`
+
+       **GCS**: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]`
    - `druid.export.storage.{CLOUD}.maxRetry`: The maximum number times to attempt cloud API calls to avoid failures from transient errors.
-   - `druid.export.storage.s3.chunkSize`: The maximum size of individual data chunks to store in the temp directory.'
+   - `druid.export.storage.s3.chunkSize`: The maximum size of individual data chunks to store in the temp directory.
 1. Verify the instance role has the correct permissions to the bucket and folders: read, write, create, and delete. See [Permissions for durable storage](../multi-stage-query/security.md#permissions-for-durable-storage).
 1. Use the query syntax for your cloud storage type. For example:
 
