@@ -26,9 +26,11 @@ title: "Release notes"
 
 Apache Druid 31.0.1 is a patch release that contains an important fix for the new complex metric column compression feature introduced in Druid 31.0.0. It also contains fixes for the web console, the new projections feature, and a fix for a minor performance regression.
 
+For information about new features in Druid 31, see the [Druid 31 release notes](https://druid.apache.org/docs/31.0.0/release-info/release-notes/).
+
 ## Bug fixes
 
-* Fixes a byte order issue with compression complex metric feature [#17422](https://github.com/apache/druid/pull/17422)
+* Fixed an issue with complex metric compression that caused some complex column data with compression enabled to be read incorrectly, resulting in segment data corruption or system instability due to out-of-memory exceptions. We recommend that you reingest data if you're using complex metric compression [#17422](https://github.com/apache/druid/pull/17422)
 * Fixes an issue with projection segment merging [#17460](https://github.com/apache/druid/pull/17460)
 * Fixes web console progress indicator [#17334](https://github.com/apache/druid/pull/17334)
 * Fixes a minor performance regression with query processing [#17397](https://github.com/apache/druid/pull/17397)
