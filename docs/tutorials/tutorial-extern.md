@@ -73,7 +73,7 @@ druid.export.storage.baseDir=/tmp/druid/
      ```bash
     ./bin/start-druid
      ```
-1. After Druid starts, open http://localhost:8888/ in your browser to access the Web Console.
+1. After Druid starts, open [http://localhost:8888/](http://localhost:8888/) in your browser to access the Web Console.
 1. From the [Query view](http://localhost:8888/unified-console.html#workbench), run the following command to load the Wikipedia example data set:
      ```sql
      REPLACE INTO "wikipedia" OVERWRITE ALL
