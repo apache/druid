@@ -95,12 +95,10 @@ For more information, see [Read external data with EXTERN](concepts.md#read-exte
 #### `EXTERN` to export to a destination
 
 You can use `EXTERN` to specify a destination to export data.
-This variation of EXTERN:
-- accepts the details of the destination as the only argument
-- requires an `AS` clause to specify the format of the exported rows.
+This variation of `EXTERN` accepts the details of the destination as the only argument and requires an `AS` clause to specify the format of the exported rows.
 
-When you export data, Druid creates metadata files in a subdirectory of the destination directory named `_symlink_format_manifest`.
-The `manifest` file within that directory`_symlink_format_manifest/manifest` lists absolute paths to exported files using the symlink manifest format. For example:
+When you export data, Druid creates metadata files in a subdirectory named `_symlink_format_manifest`.
+Within the `_symlink_format_manifest/manifest` directory, the `manifest` file lists absolute paths to exported files using the symlink manifest format. For example:
 
 ```text
 s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker2-partition2.csv
@@ -131,12 +129,12 @@ FROM <table>
 
 ##### S3 - Amazon S3
 
-To export results to S3, pass the `s3()` function as an argument to the EXTERN function.
-Export to S3 requires the `druid-s3-extensions`.
-For a list of S3 permissions the MSQ task engine needs to perform export, see [Permissions for durable storage](./security.md#s3).
+To export results to S3, pass the `s3()` function as an argument to the `EXTERN` function.
+Export to S3 requires the `druid-s3-extensions` extension
+For a list of S3 permissions the MSQ task engine requires to perform export, see [Permissions for durable storage](./security.md#s3).
 
 The `s3()` function configures the connection to AWS.
-Pass all arguments for `s3()` as named parameters with the value in single quote. For example:
+Pass all arguments for `s3()` as named parameters with their values enclosed in single quotes. For example:
 
 ```sql
 INSERT INTO
@@ -153,22 +151,22 @@ Supported arguments for the function:
 
 | Parameter | Required | Description | Default |
 |---|---|---|---|
-| `bucket` | Yes  | S3 bucket destination for exported files. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths`. | n/a |
-| `prefix` | Yes  | Destination path in the bucket to create exported files. The export query expects the destination path to be empty. If the location includes other files, the query will fail. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths`. | n/a |
+| `bucket` | Yes  | S3 bucket destination for exported files. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths` allow list. | n/a |
+| `prefix` | Yes  | Destination path in the bucket to create exported files. The export query expects the destination path to be empty. If the location includes other files, the query will fail. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths` allow list. | n/a |
 
 Configure following runtime parameters to export to an S3 destination:
 
-| Runtime Parameter | Required | Description | Default |
+| Runtime parameter | Required | Description | Default |
 |---|---|---|---|
-| `druid.export.storage.s3.allowedExportPaths` | Yes | Array of S3 prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For eample: `[\"s3://bucket1/export/\", \"s3://bucket2/export/\"]` | n/a |
+| `druid.export.storage.s3.allowedExportPaths` | Yes | Array of S3 prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For example: `[\"s3://bucket1/export/\", \"s3://bucket2/export/\"]` | n/a |
 | `druid.export.storage.s3.tempLocalDir` | No | Directory for local storage where the worker stores temporary files before uploading the data to S3. | n/a |
-| `druid.export.storage.s3.maxRetry` | No | The maximum number of  attempts for S3 API calls to avoid failures due to transient errors. | 10 |
-| `druid.export.storage.s3.chunkSize` | No | Individual chunk size to  store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to S3, but require more disk space to store temporary chunks. | 100MiB |
+| `druid.export.storage.s3.maxRetry` | No | Maximum number of  attempts for S3 API calls to avoid failures due to transient errors. | 10 |
+| `druid.export.storage.s3.chunkSize` | No | Individual chunk size to store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to S3, but require more disk space to store temporary chunks. | 100MiB |
 
 ##### GOOGLE - Google Cloud Storage
 
 To export query results to Google Cloud Storage (GCS), pass the `google()` function as an argument to the `EXTERN` function.
-Export to GCS requires the `druid-google-extensions`.
+Export to GCS requires the `druid-google-extensions` extension.
 
 The `google()` function configures the connection to Google Cloud Storage. Pass the arguments for `google()` as named parameters with the value in single quotes. For example:
 
@@ -192,23 +190,23 @@ Supported arguments for the function:
 
 Configure the following runtime parameters to export query results to a GCS destination:
 
-| Runtime Parameter | Required | Description | Default |
+| Runtime parameter | Required | Description | Default |
 |---|---|---|---|
-| `druid.export.storage.google.allowedExportPaths` | Yes | Array of GCS prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For eample: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
-| `druid.export.storage.google.tempLocalDir` | No | Directory for local storage where the worker stores temporary files before uploading the data to GCS | n/a |
-| `druid.export.storage.google.maxRetry` | No | The maximum number of  attempts for GCS API calls to avoid failures due to transient errors | 10 |
-| `druid.export.storage.google.chunkSize` | No | Individual chunk size to store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks | 4 MiB |
+| `druid.export.storage.google.allowedExportPaths` | Yes | Array of GCS prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For example: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
+| `druid.export.storage.google.tempLocalDir` | No | Directory for local storage where the worker stores temporary files before uploading the data to GCS. | n/a |
+| `druid.export.storage.google.maxRetry` | No |  Maximum number of attempts for GCS API calls to avoid failures due to transient errors. | 10 |
+| `druid.export.storage.google.chunkSize` | No | Individual chunk size to store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks. | 4 MiB |
 
 
 ##### LOCAL - local file storage
 
-You can export queryies to local storage, which writes the results to the filesystem on the MSQ worker.
+You can export queries to local storage. This process writes the results to the filesystem on the MSQ worker.
 This is useful in a single node setup or for testing but is not suitable for production use cases.
 
-To export results to local storage, passing the `LOCAL()` function as an argument to the EXTERN function.
-You must configure the runtime property `druid.export.storage.baseDir` as an absolute path on the Indexer/Middle Manager to use local storage as an export destination.
+To export results to local storage, pass the `LOCAL()` function as an argument to the EXTERN function.
+You must configure the runtime property `druid.export.storage.baseDir` as an absolute path on the Indexer or Middle Manager to use local storage as an export destination.
 You can export data to paths that match this value as a prefix.
-Pass all arguments to `LOCAL()` as named parameters with the value in single quotes. For example:
+Pass all arguments to `LOCAL()` as named parameters with values enclosed in single quotes. For example:
 
 ```sql
 INSERT INTO
@@ -221,11 +219,11 @@ SELECT
 FROM <table>
 ```
 
-Supported arguments to the function:
+Supported arguments for the function:
 
 | Parameter | Required | Description | Default |
-|---|---|---|---|---|
-| `exportPath`  | Yes | Absolute path to a subdirectory of `druid.export.storage.baseDir` where Druid exports the querey results. The destination must be empty. If the location includes other files or directories, the query will fail. | n/a |
+|---|---|---|---|
+| `exportPath`  | Yes | Absolute path to a subdirectory of `druid.export.storage.baseDir` where Druid exports the query results. The destination must be empty. If the location includes other files or directories, the query will fail. | n/a |
 
 For more information, see [Export external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
 
