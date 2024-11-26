@@ -87,6 +87,7 @@ public class QueryContexts
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
+  public static final String MAX_TOP_N_AGGREGATOR_HEAP_SIZE_BYTES = "maxTopNAggregatorHeapSizeBytes";
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
 
   // projection context keys
