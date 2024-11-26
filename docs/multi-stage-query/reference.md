@@ -95,7 +95,7 @@ For more information, see [Read external data with EXTERN](concepts.md#read-exte
 #### `EXTERN` to export to a destination
 
 You can use `EXTERN` to specify a destination to export data.
-This variation of EXTERN:
+This variation of `EXTERN` accepts the details of the destination as the only argument and requires an `AS` clause to specify the format of the exported rows.
 - accepts the details of the destination as the only argument
 - requires an `AS` clause to specify the format of the exported rows.
 
