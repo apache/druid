@@ -190,23 +190,23 @@ Supported arguments for the function:
 
 Configure the following runtime parameters to export query results to a GCS destination:
 
-| Runtime Parameter | Required | Description | Default |
+| Runtime parameter | Required | Description | Default |
 |---|---|---|---|
-| `druid.export.storage.google.allowedExportPaths` | Yes | Array of GCS prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For eample: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
-| `druid.export.storage.google.tempLocalDir` | No | Directory for local storage where the worker stores temporary files before uploading the data to GCS | n/a |
-| `druid.export.storage.google.maxRetry` | No | The maximum number of  attempts for GCS API calls to avoid failures due to transient errors | 10 |
-| `druid.export.storage.google.chunkSize` | No | Individual chunk size to store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks | 4 MiB |
+| `druid.export.storage.google.allowedExportPaths` | Yes | Array of GCS prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For example: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
+| `druid.export.storage.google.tempLocalDir` | No | Directory for local storage where the worker stores temporary files before uploading the data to GCS. | n/a |
+| `druid.export.storage.google.maxRetry` | No |  Maximum number of attempts for GCS API calls to avoid failures due to transient errors. | 10 |
+| `druid.export.storage.google.chunkSize` | No | Individual chunk size to store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks. | 4 MiB |
 
 
 ##### LOCAL - local file storage
 
-You can export queryies to local storage, which writes the results to the filesystem on the MSQ worker.
+You can export queries to local storage. This process writes the results to the filesystem on the MSQ worker.
 This is useful in a single node setup or for testing but is not suitable for production use cases.
 
-To export results to local storage, passing the `LOCAL()` function as an argument to the EXTERN function.
-You must configure the runtime property `druid.export.storage.baseDir` as an absolute path on the Indexer/Middle Manager to use local storage as an export destination.
+To export results to local storage, pass the `LOCAL()` function as an argument to the EXTERN function.
+You must configure the runtime property `druid.export.storage.baseDir` as an absolute path on the Indexer or Middle Manager to use local storage as an export destination.
 You can export data to paths that match this value as a prefix.
-Pass all arguments to `LOCAL()` as named parameters with the value in single quotes. For example:
+Pass all arguments to `LOCAL()` as named parameters with values enclosed in single quotes. For example:
 
 ```sql
 INSERT INTO
@@ -219,11 +219,11 @@ SELECT
 FROM <table>
 ```
 
-Supported arguments to the function:
+Supported arguments for the function:
 
 | Parameter | Required | Description | Default |
-|---|---|---|---|---|
-| `exportPath`  | Yes | Absolute path to a subdirectory of `druid.export.storage.baseDir` where Druid exports the querey results. The destination must be empty. If the location includes other files or directories, the query will fail. | n/a |
+|---|---|---|---|
+| `exportPath`  | Yes | Absolute path to a subdirectory of `druid.export.storage.baseDir` where Druid exports the query results. The destination must be empty. If the location includes other files or directories, the query will fail. | n/a |
 
 For more information, see [Export external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
 

@@ -27,26 +27,25 @@ description: How to use EXTERN to export query results.
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
-This tutorial demonstrates how to use the [EXTERN](../multi-stage-query/reference.md#extern-function) function Apache Druid&circledR; to export data.
+This tutorial demonstrates how to use the Apache Druid&circledR; SQL [EXTERN](../multi-stage-query/reference.md#extern-function) function to export data.
 
 ## Prerequisites
 
 Before you follow the steps in this tutorial, download Druid as described in the [Local quickstart](index.md).
-Do not start Druid, you'll do that as part of the tutorial.
+Don't start Druid, you'll do that as part of the tutorial.
 
 You should be familiar with ingesting and querying data in Druid.
 If you haven't already, go through the [Query data](../tutorials/tutorial-query.md) tutorial first.
 
 ## Export query results to the local file system
 
-This example demonstrates how to configure Druid to export to the local file system.
-It is OK to learn about EXTERN syntax for exporting data.
-It is not suitable for production scenarios.
+This example demonstrates how to configure Druid to export data to the local file system.
+While you can use this approach to learn about EXTERN syntax for exporting data, it's not suitable for production scenarios.
 
 ### Configure Druid local export directory 
 
 The following commands set the base path for the Druid exports to `/tmp/druid/`.
-If the account running Druid does not have access to `/tmp/druid/`, change the path.
+If the account running Druid doesn't have access to `/tmp/druid/`, change the path.
 For example: `/Users/Example/druid`.
 If you change the path in this step, use the updated path in all subsequent steps.
 
@@ -57,7 +56,7 @@ export export_path="/tmp/druid"
 sed -i -e $'$a\\\n\\\n\\\n#\\\n###Local export\\\n#\\\ndruid.export.storage.baseDir='$export_path conf/druid/auto/_common/common.runtime.properties
 ```
 
-This adds the following section to the Druid quicstart `common.runtime.properties`:
+This adds the following section to the Druid `common.runtime.properties` configuration file located in `conf/druid/auto/_common`:
 
 ```
 #
@@ -118,7 +117,7 @@ PARTITIONED BY DAY
 
 ### Query to export data
 
-Run the following query to export query results to the path:
+Open a new tab and run the following query to export query results to the path:
 `/tmp/druid/wiki_example`.
 The path must be a subdirectory of the `druid.export.storage.baseDir`.
 
@@ -136,29 +135,29 @@ GROUP BY 1
 LIMIT 10
 ```
 
-Druid exports the results of the qurey to the `/tmp/druid/wiki_example` dirctory.
-Run the following comannd to list the contents of 
+Druid exports the results of the query to the `/tmp/druid/wiki_example` directory.
+Run the following command to list the contents of the directory.
 
 ```bash
-ls '/tmp/druid/wiki_example'
+ls /tmp/druid/wiki_example
 ```
 
-The results are a csv file export of the data and a directory
+The results are a CSV file export of the data and a directory.
 
 ## Export query results to cloud storage
 
 The steps to export to cloud storage are similar to exporting to the local file system.
-Druid supports Amazon S3 or Google GCS as cloud export storage destinations.
+Druid supports Amazon S3 or Google Cloud Storage (GCS) as cloud storage destinations.
 
 1. Enable the extension for your cloud storage destination:
    - **Amazon S3**: `druid-s3-extensions`
-   - **Google GCS**: `google-extensions`
-  See [Loading core extensions](../configuration/extensions.md#loading-core-extensions).
-1. Configure the additional properties for your cloud storage destination. Replace {CLOUD} with `s3` or `google` accordingly:
-   - `druid.export.storage.{CLOUD}.tempLocalDir`:  The local temp directory where the query engine stages files to export.
-   - `druid.export.storage.{CLOUD}.allowedExportPaths`: The s3 or GS prefixes allowed as Druid export locations. For example `[\"s3://bucket1/export/\",\"s3://bucket2/export/\"]` or `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]`
-   - `druid.export.storage.{CLOUD}.maxRetry`: The maximum number times to attempt cloud API calls to avoid failures from transient errors.
-   - `druid.export.storage.s3.chunkSize`: The maximum size of individual data chunks to store in the temp directory.'
+   - **GCS**: `google-extensions`
+  See [Loading core extensions](../configuration/extensions.md#loading-core-extensions) for more information.
+1. Configure the additional properties for your cloud storage destination. Replace `{CLOUD}` with `s3` or `google` accordingly:
+   - `druid.export.storage.{CLOUD}.tempLocalDir`:  Local temporary directory where the query engine stages files to export.
+   - `druid.export.storage.{CLOUD}.allowedExportPaths`: S3 or GS prefixes allowed as Druid export locations. For example `[\"s3://bucket1/export/\",\"s3://bucket2/export/\"]` or `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]`.
+   - `druid.export.storage.{CLOUD}.maxRetry`: Maximum number of times to attempt cloud API calls to avoid failures from transient errors.
+   - `druid.export.storage.s3.chunkSize`: Maximum size of individual data chunks to store in the temporary directory.
 1. Verify the instance role has the correct permissions to the bucket and folders: read, write, create, and delete. See [Permissions for durable storage](../multi-stage-query/security.md#permissions-for-durable-storage).
 1. Use the query syntax for your cloud storage type. For example:
 
@@ -198,11 +197,11 @@ Druid supports Amazon S3 or Google GCS as cloud export storage destinations.
 
    </Tabs>
 
-1. When querying, use the `rowsPerPage` query context parameter to restrict the output file size. It is possible to add very large LIMIT to the end of your query to force Druid to create one file, however this  technique is not recommended. 
+1. When querying, use the `rowsPerPage` query context parameter to restrict the output file size. While it's possible to add a very large LIMIT at the end of your query to force Druid to create a single file, we don't recommend this technique.
 
 ## Learn more
 
 See the following topics for more information:
 
-* [Export to a destination](../multi-stage-query/reference.md#extern-to-export-to-a-destination) for a reference of the EXTERN
+* [Export to a destination](../multi-stage-query/reference.md#extern-to-export-to-a-destination) for a reference of the EXTERN.
 * [SQL-based ingestion security](../multi-stage-query/security.md/#permissions-for-durable-storage) for cloud permission requirements for MSQ.
