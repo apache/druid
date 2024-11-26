@@ -372,6 +372,20 @@ public class QueryContextTest
     assertTrue(QueryContext.of(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)).isDebug());
   }
 
+  @Test
+  public void testDefaultIsDecoupled()
+  {
+    assertFalse(QueryContext.empty().isDecoupledMode());
+    assertTrue(
+        QueryContext.of(
+            ImmutableMap.of(
+                QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+                QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+            )
+        ).isDecoupledMode()
+    );
+  }
+
   // This test is a bit silly. It is retained because another test uses the
   // LegacyContextQuery test.
   @Test
