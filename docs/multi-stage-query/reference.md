@@ -130,7 +130,7 @@ FROM <table>
 ##### S3 - Amazon S3
 
 To export results to S3, pass the `s3()` function as an argument to the `EXTERN` function.
-Export to S3 requires the `druid-s3-extensions` extension
+Export to S3 requires the `druid-s3-extensions` extension.
 For a list of S3 permissions the MSQ task engine requires to perform export, see [Permissions for durable storage](./security.md#s3).
 
 The `s3()` function configures the connection to AWS.
