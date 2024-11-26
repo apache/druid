@@ -100,7 +100,7 @@ This variation of `EXTERN` accepts the details of the destination as the only ar
 - requires an `AS` clause to specify the format of the exported rows.
 
 When you export data, Druid creates metadata files in a subdirectory of the destination directory named `_symlink_format_manifest`.
-The `manifest` file within that directory`_symlink_format_manifest/manifest` lists absolute paths to exported files using the symlink manifest format. For example:
+Within the `_symlink_format_manifest/manifest` directory, the `manifest` file lists absolute paths to exported files using the symlink manifest format. For example:
 
 ```text
 s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker2-partition2.csv
