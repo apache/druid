@@ -1999,11 +1999,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public boolean canPublishSegments(Integer taskGroupId, String taskId)
   {
     CopyOnWriteArrayList<TaskGroup> pendingCompletionTasksForGroup = pendingCompletionTaskGroups.get(taskGroupId);
-    TaskGroup taskGroupToCheck = pendingCompletionTasksForGroup.stream().filter(taskGroup -> taskGroup.taskIds().contains(taskId)).findFirst().orElse(null);
-    if (taskGroupToCheck == null) {
+    if (pendingCompletionTasksForGroup == null) {
       // This function is called by the SegmentTransactionAppendAction.
       // This is only triggered after a task has already started publishing so this shouldn't really happen.
       // It's okay to just let the task try publishing in this case.
+      log.warn("Did not find task group [%s] to check for publishing.", taskGroupId);
+      return true;
+    }
+    TaskGroup taskGroupToCheck = pendingCompletionTasksForGroup.stream().filter(taskGroup -> taskGroup.taskIds().contains(taskId)).findFirst().orElse(null);
+    if (taskGroupToCheck == null) {
       log.warn("Did not find task group [%s] to check for publishing.", taskGroupId);
       return true;
     }
