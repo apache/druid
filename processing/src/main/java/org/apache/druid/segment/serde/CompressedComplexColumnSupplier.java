@@ -31,14 +31,15 @@ import org.apache.druid.segment.data.ObjectStrategy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
-public class CompressedComplexColumnSupplier implements Supplier<ComplexColumn>
+public class CompressedComplexColumnSupplier<T> implements Supplier<ComplexColumn>
 {
-  public static CompressedComplexColumnSupplier read(
+  public static <T> CompressedComplexColumnSupplier<T> read(
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
       String typeName,
-      ObjectStrategy objectStrategy
+      ObjectStrategy<T> objectStrategy
   )
   {
     final byte version = bb.get();
@@ -67,6 +68,9 @@ public class CompressedComplexColumnSupplier implements Supplier<ComplexColumn>
             ),
             fileBuffer,
             metadata.getByteOrder(),
+            // object strategies today assume that all buffers are big endian, so we hard-code the value buffer
+            // presented to the object strategy to always be big endian
+            ByteOrder.BIG_ENDIAN,
             objectStrategy.readRetainsBufferReference(),
             mapper
         );
@@ -83,7 +87,7 @@ public class CompressedComplexColumnSupplier implements Supplier<ComplexColumn>
           nullValues = metadata.getBitmapSerdeFactory().getBitmapFactory().makeEmptyImmutableBitmap();
         }
 
-        return new CompressedComplexColumnSupplier(typeName, objectStrategy, compressedColumnSupplier, nullValues);
+        return new CompressedComplexColumnSupplier<>(typeName, objectStrategy, compressedColumnSupplier, nullValues);
       }
       catch (IOException ex) {
         throw new RE(ex, "Failed to deserialize V%s column.", version);
@@ -93,13 +97,13 @@ public class CompressedComplexColumnSupplier implements Supplier<ComplexColumn>
   }
 
   private final String typeName;
-  private final ObjectStrategy objectStrategy;
+  private final ObjectStrategy<T> objectStrategy;
   private final CompressedVariableSizedBlobColumnSupplier compressedColumnSupplier;
   private final ImmutableBitmap nullValues;
 
   private CompressedComplexColumnSupplier(
       String typeName,
-      ObjectStrategy objectStrategy,
+      ObjectStrategy<T> objectStrategy,
       CompressedVariableSizedBlobColumnSupplier compressedColumnSupplier,
       ImmutableBitmap nullValues
   )
@@ -113,7 +117,7 @@ public class CompressedComplexColumnSupplier implements Supplier<ComplexColumn>
   @Override
   public ComplexColumn get()
   {
-    return new CompressedComplexColumn(typeName, compressedColumnSupplier.get(), nullValues, objectStrategy);
+    return new CompressedComplexColumn<>(typeName, compressedColumnSupplier.get(), nullValues, objectStrategy);
   }
 
   public ImmutableBitmap getNullValues()

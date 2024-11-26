@@ -220,6 +220,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
                                       .dataSource(CalciteTests.DATASOURCE1)
                                       .intervals(querySegmentSpec(Filtration.eternity()))
                                       .columns("cnt")
+                                      .columnTypes(ColumnType.LONG)
                                       .context(context)
                                       .build()
                               ),

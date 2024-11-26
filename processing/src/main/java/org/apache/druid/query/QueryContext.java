@@ -368,6 +368,11 @@ public class QueryContext
     return getBoolean(QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY, defaultUseNestedForUnkownTypeInSubquery);
   }
 
+  public boolean isUseNestedForUnknownTypeInSubquery()
+  {
+    return isUseNestedForUnknownTypeInSubquery(QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY);
+  }
+
   public int getUncoveredIntervalsLimit()
   {
     return getUncoveredIntervalsLimit(QueryContexts.DEFAULT_UNCOVERED_INTERVALS_LIMIT);

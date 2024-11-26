@@ -93,12 +93,12 @@
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>
         <dropwizard.metrics.version>4.2.22</dropwizard.metrics.version>
-        <errorprone.version>2.20.0</errorprone.version>
+        <errorprone.version>2.35.1</errorprone.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>32.0.1-jre</guava.version>
         <guice.version>4.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
-        <jetty.version>9.4.54.v20240208</jetty.version>
+        <jetty.version>9.4.56.v20240826</jetty.version>
         <jersey.version>1.19.4</jersey.version>
         <jackson.version>2.12.7.20221012</jackson.version>
         <codehaus.jackson.version>1.9.13</codehaus.jackson.version>
@@ -114,19 +114,19 @@
         <jna.version>5.13.0</jna.version>
         <jna-platform.version>5.13.0</jna-platform.version>
         <hadoop.compile.version>3.3.6</hadoop.compile.version>
-        <mockito.version>5.5.0</mockito.version>
+        <mockito.version>5.14.2</mockito.version>
         <!-- mockito-inline artifact was removed in mockito 5.3 (mockito 5.x is required for Java >17),
              however it is required in some cases when running against mockito 4.x (mockito 4.x is required for Java <11.
              We use the following property to pick the proper artifact based on Java version (see pre-java-11 profile) -->
         <mockito.inline.artifact>core</mockito.inline.artifact>
         <aws.sdk.version>1.12.638</aws.sdk.version>
         <caffeine.version>2.8.0</caffeine.version>
-        <jacoco.version>0.8.7</jacoco.version>
+        <jacoco.version>0.8.12</jacoco.version>
         <hibernate-validator.version>6.2.5.Final</hibernate-validator.version>
         <httpclient.version>4.5.13</httpclient.version>
         <!-- When upgrading ZK, edit docs and integration tests as well (integration-tests/docker-base/setup.sh) -->
         <zookeeper.version>3.8.4</zookeeper.version>
-        <checkerframework.version>2.5.7</checkerframework.version>
+        <checkerframework.version>3.48.1</checkerframework.version>
         <com.google.apis.client.version>2.2.0</com.google.apis.client.version>
         <com.google.http.client.apis.version>1.42.3</com.google.http.client.apis.version>
         <com.google.apis.compute.version>v1-rev20230606-2.0.0</com.google.apis.compute.version>
@@ -644,9 +644,9 @@
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>javax.xml.bind</groupId>
-                <artifactId>jaxb-api</artifactId>
-                <version>2.3.1</version>
+                <groupId>jakarta.xml.bind</groupId>
+                <artifactId>jakarta.xml.bind-api</artifactId>
+                <version>2.3.3</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish</groupId>
@@ -661,7 +661,7 @@
             <dependency>
                 <groupId>org.glassfish.jaxb</groupId>
                 <artifactId>jaxb-runtime</artifactId>
-                <version>2.3.1</version>
+                <version>2.3.3</version>
             </dependency>
             <dependency>
                 <groupId>org.jdbi</groupId>
@@ -1380,7 +1380,7 @@
             <plugin>
                 <groupId>org.openrewrite.maven</groupId>
                 <artifactId>rewrite-maven-plugin</artifactId>
-                <version>5.31.0</version>
+                <version>5.42.0</version>
                 <configuration>
                     <activeRecipes>
                         <recipe>org.apache.druid.RewriteRules</recipe>
@@ -1399,12 +1399,17 @@
                     <dependency>
                         <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-testing-frameworks</artifactId>
-                        <version>2.6.0</version>
+                        <version>2.20.0</version>
                     </dependency>
                     <dependency>
                         <groupId>org.openrewrite.recipe</groupId>
                         <artifactId>rewrite-apache</artifactId>
-                        <version>1.2.2</version>
+                        <version>1.8.0</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.openrewrite.recipe</groupId>
+                        <artifactId>rewrite-jackson</artifactId>
+                        <version>0.6.0</version>
                     </dependency>
                 </dependencies>
             </plugin>

@@ -201,7 +201,7 @@ public class DeltaInputRow implements InputRow
       }
       return String.valueOf(charArray);
     } else if (dataType instanceof DecimalType) {
-      return dataRow.getDecimal(columnOrdinal).longValue();
+      return dataRow.getDecimal(columnOrdinal);
     } else if (dataType instanceof StructType) {
       final io.delta.kernel.data.Row structRow = dataRow.getStruct(columnOrdinal);
       return RowSerde.convertRowToJsonObject(structRow);

@@ -16,7 +16,6 @@
  * limitations under the License.
  */
 
-import 'core-js/stable';
 import 'regenerator-runtime/runtime';
 import './bootstrap/ace';
 

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -150,67 +151,72 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
         temporaryFolder.newFolder(),
         1024 * 1024
     );
+    final ListeningExecutorService service = MoreExecutors.listeningDecorator(exec);
+    try {
+      final ConcurrentGrouper<LongKey> grouper = new ConcurrentGrouper<>(
+          bufferSupplier,
+          TEST_RESOURCE_HOLDER,
+          KEY_SERDE_FACTORY,
+          KEY_SERDE_FACTORY,
+          NULL_FACTORY,
+          new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+          1024,
+          0.7f,
+          1,
+          temporaryStorage,
+          new DefaultObjectMapper(),
+          concurrencyHint,
+          null,
+          false,
+          service,
+          0,
+          false,
+          0,
+          4,
+          parallelCombineThreads,
+          mergeThreadLocal
+      );
+      closer.register(grouper);
+      grouper.init();
 
-    final ConcurrentGrouper<LongKey> grouper = new ConcurrentGrouper<>(
-        bufferSupplier,
-        TEST_RESOURCE_HOLDER,
-        KEY_SERDE_FACTORY,
-        KEY_SERDE_FACTORY,
-        NULL_FACTORY,
-        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-        1024,
-        0.7f,
-        1,
-        temporaryStorage,
-        new DefaultObjectMapper(),
-        concurrencyHint,
-        null,
-        false,
-        MoreExecutors.listeningDecorator(exec),
-        0,
-        false,
-        0,
-        4,
-        parallelCombineThreads,
-        mergeThreadLocal
-    );
-    closer.register(grouper);
-    grouper.init();
+      final int numRows = 1000;
 
-    final int numRows = 1000;
+      Future<?>[] futures = new Future[concurrencyHint];
 
-    Future<?>[] futures = new Future[concurrencyHint];
-
-    for (int i = 0; i < concurrencyHint; i++) {
-      futures[i] = exec.submit(() -> {
-        for (long j = 0; j < numRows; j++) {
-          if (!grouper.aggregate(new LongKey(j)).isOk()) {
-            throw new ISE("Grouper is full");
+      for (int i = 0; i < concurrencyHint; i++) {
+        futures[i] = exec.submit(() -> {
+          for (long j = 0; j < numRows; j++) {
+            if (!grouper.aggregate(new LongKey(j)).isOk()) {
+              throw new ISE("Grouper is full");
+            }
           }
-        }
-      });
+        });
+      }
+
+      for (Future eachFuture : futures) {
+        eachFuture.get();
+      }
+
+      final List<Entry<LongKey>> expected = new ArrayList<>();
+      for (long i = 0; i < numRows; i++) {
+        expected.add(new ReusableEntry<>(new LongKey(i), new Object[]{(long) concurrencyHint}));
+      }
+
+      final CloseableIterator<Entry<LongKey>> iterator = closer.register(grouper.iterator(true));
+
+      if (parallelCombineThreads > 1 && (mergeThreadLocal || temporaryStorage.currentSize() > 0)) {
+        // Parallel combiner configured, and expected to actually be used due to thread-local merge (either explicitly
+        // configured, or due to spilling).
+        Assert.assertTrue(TEST_RESOURCE_HOLDER.taken);
+      } else {
+        Assert.assertFalse(TEST_RESOURCE_HOLDER.taken);
+      }
+
+      GrouperTestUtil.assertEntriesEquals(expected.iterator(), iterator);
     }
-
-    for (Future eachFuture : futures) {
-      eachFuture.get();
+    finally {
+      service.shutdownNow();
     }
-
-    final List<Entry<LongKey>> expected = new ArrayList<>();
-    for (long i = 0; i < numRows; i++) {
-      expected.add(new ReusableEntry<>(new LongKey(i), new Object[]{(long) concurrencyHint}));
-    }
-
-    final CloseableIterator<Entry<LongKey>> iterator = closer.register(grouper.iterator(true));
-
-    if (parallelCombineThreads > 1 && (mergeThreadLocal || temporaryStorage.currentSize() > 0)) {
-      // Parallel combiner configured, and expected to actually be used due to thread-local merge (either explicitly
-      // configured, or due to spilling).
-      Assert.assertTrue(TEST_RESOURCE_HOLDER.taken);
-    } else {
-      Assert.assertFalse(TEST_RESOURCE_HOLDER.taken);
-    }
-
-    GrouperTestUtil.assertEntriesEquals(expected.iterator(), iterator);
   }
 
   @Test
@@ -221,56 +227,62 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
       return;
     }
 
-    final ConcurrentGrouper<LongKey> grouper = new ConcurrentGrouper<>(
-        bufferSupplier,
-        TEST_RESOURCE_HOLDER,
-        KEY_SERDE_FACTORY,
-        KEY_SERDE_FACTORY,
-        NULL_FACTORY,
-        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-        1024,
-        0.7f,
-        1,
-        new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024),
-        new DefaultObjectMapper(),
-        concurrencyHint,
-        null,
-        false,
-        MoreExecutors.listeningDecorator(exec),
-        0,
-        true,
-        1,
-        4,
-        parallelCombineThreads,
-        mergeThreadLocal
-    );
-    closer.register(grouper);
-    grouper.init();
+    ListeningExecutorService service = MoreExecutors.listeningDecorator(exec);
+    try {
+      final ConcurrentGrouper<LongKey> grouper = new ConcurrentGrouper<>(
+          bufferSupplier,
+          TEST_RESOURCE_HOLDER,
+          KEY_SERDE_FACTORY,
+          KEY_SERDE_FACTORY,
+          NULL_FACTORY,
+          new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+          1024,
+          0.7f,
+          1,
+          new LimitedTemporaryStorage(temporaryFolder.newFolder(), 1024 * 1024),
+          new DefaultObjectMapper(),
+          concurrencyHint,
+          null,
+          false,
+          service,
+          0,
+          true,
+          1,
+          4,
+          parallelCombineThreads,
+          mergeThreadLocal
+      );
+      closer.register(grouper);
+      grouper.init();
 
-    final int numRows = 1000;
+      final int numRows = 1000;
 
-    Future<?>[] futures = new Future[concurrencyHint];
+      Future<?>[] futures = new Future[concurrencyHint];
 
-    for (int i = 0; i < concurrencyHint; i++) {
-      futures[i] = exec.submit(() -> {
-        for (long j = 0; j < numRows; j++) {
-          if (!grouper.aggregate(new LongKey(j)).isOk()) {
-            throw new ISE("Grouper is full");
+      for (int i = 0; i < concurrencyHint; i++) {
+        futures[i] = exec.submit(() -> {
+          for (long j = 0; j < numRows; j++) {
+            if (!grouper.aggregate(new LongKey(j)).isOk()) {
+              throw new ISE("Grouper is full");
+            }
           }
-        }
-      });
+        });
+      }
+
+      for (Future eachFuture : futures) {
+        eachFuture.get();
+      }
+
+      final QueryTimeoutException e = Assert.assertThrows(
+          QueryTimeoutException.class,
+          () -> closer.register(grouper.iterator(true))
+      );
+
+      Assert.assertEquals("Query timeout", e.getErrorCode());
     }
-
-    for (Future eachFuture : futures) {
-      eachFuture.get();
+    finally {
+      service.shutdownNow();
     }
-
-    final QueryTimeoutException e = Assert.assertThrows(
-        QueryTimeoutException.class,
-        () -> closer.register(grouper.iterator(true))
-    );
-
-    Assert.assertEquals("Query timeout", e.getErrorCode());
   }
 
   static class TestResourceHolder extends ReferenceCountingResourceHolder<ByteBuffer>
