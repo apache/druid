@@ -224,20 +224,18 @@ public class StreamAppenderatorTester implements AutoCloseable
           objectMapper,
           indexIO,
           indexMerger,
-          new DefaultQueryRunnerFactoryConglomerate(
-              ImmutableMap.of(
-                  TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
-                      new TimeseriesQueryQueryToolChest(),
-                      new TimeseriesQueryEngine(),
-                      QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                  ),
-                  ScanQuery.class, new ScanQueryRunnerFactory(
-                      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
-                      new ScanQueryEngine(),
-                      new ScanQueryConfig()
-                  )
+          DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
+              TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
+                  new TimeseriesQueryQueryToolChest(),
+                  new TimeseriesQueryEngine(),
+                  QueryRunnerTestHelper.NOOP_QUERYWATCHER
+              ),
+              ScanQuery.class, new ScanQueryRunnerFactory(
+                  new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
+                  new ScanQueryEngine(),
+                  new ScanQueryConfig()
               )
-          ),
+          )),
           announcer,
           emitter,
           new ForwardingQueryProcessingPool(queryExecutor),
@@ -268,20 +266,18 @@ public class StreamAppenderatorTester implements AutoCloseable
           objectMapper,
           indexIO,
           indexMerger,
-          new DefaultQueryRunnerFactoryConglomerate(
-              ImmutableMap.of(
-                  TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
-                      new TimeseriesQueryQueryToolChest(),
-                      new TimeseriesQueryEngine(),
-                      QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                  ),
-                  ScanQuery.class, new ScanQueryRunnerFactory(
-                      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
-                      new ScanQueryEngine(),
-                      new ScanQueryConfig()
-                  )
+          DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
+              TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
+                  new TimeseriesQueryQueryToolChest(),
+                  new TimeseriesQueryEngine(),
+                  QueryRunnerTestHelper.NOOP_QUERYWATCHER
+              ),
+              ScanQuery.class, new ScanQueryRunnerFactory(
+                  new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
+                  new ScanQueryEngine(),
+                  new ScanQueryConfig()
               )
-          ),
+          )),
           new NoopDataSegmentAnnouncer(),
           emitter,
           new ForwardingQueryProcessingPool(queryExecutor),
