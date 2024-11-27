@@ -373,7 +373,7 @@ public class QueryContextTest
   }
 
   @Test
-  public void testDefaultIsDecoupled()
+  public void testIsDecoupled()
   {
     assertFalse(QueryContext.empty().isDecoupledMode());
     assertTrue(
@@ -381,6 +381,14 @@ public class QueryContextTest
             ImmutableMap.of(
                 QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
                 QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+            )
+        ).isDecoupledMode()
+    );
+    assertFalse(
+        QueryContext.of(
+            ImmutableMap.of(
+                QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+                "garbage"
             )
         ).isDecoupledMode()
     );

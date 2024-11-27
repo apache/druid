@@ -29,7 +29,7 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
@@ -54,7 +54,7 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
   {
     super(cluster, traits, hints, inputs, all);
     if (!all) {
-      throw InvalidInput.exception("SQL requires 'UNION' but only 'UNION ALL' is supported.");
+      throw InvalidSqlInput.exception("SQL requires 'UNION' but only 'UNION ALL' is supported.");
     }
   }
 
