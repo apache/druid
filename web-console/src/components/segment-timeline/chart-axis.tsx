@@ -16,22 +16,22 @@
  * limitations under the License.
  */
 
-import type { Axis } from 'd3-axis';
 import { select } from 'd3-selection';
+import React from 'react';
 
 interface ChartAxisProps {
-  className?: string;
   transform?: string;
-  axis: Axis<any>;
+  scale: any;
+  className?: string;
 }
 
-export const ChartAxis = function ChartAxis(props: ChartAxisProps) {
-  const { transform, axis, className } = props;
+export const ChartAxis = React.memo(function ChartAxis(props: ChartAxisProps) {
+  const { transform, scale, className } = props;
   return (
     <g
       className={`chart-axis ${className}`}
       transform={transform}
-      ref={node => select(node).call(axis as any)}
+      ref={node => select(node).call(scale)}
     />
   );
-};
+});

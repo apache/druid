@@ -25,7 +25,8 @@ import type { CapacityInfo } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { getClusterCapacity } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
-import { getApiArray, groupByAsMap, lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';
+import { Api } from '../../../singletons';
+import { lookupBy, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 function getTaskStatus(d: any) {
@@ -61,12 +62,14 @@ GROUP BY 1`,
       x => x.count,
     );
   } else if (capabilities.hasOverlordAccess()) {
-    const tasks: any[] = await getApiArray('/druid/indexer/v1/tasks', cancelToken);
-    return groupByAsMap(
-      tasks,
-      d => getTaskStatus(d).toLowerCase(),
-      xs => xs.length,
-    );
+    const tasks: any[] = (await Api.instance.get('/druid/indexer/v1/tasks', { cancelToken })).data;
+    return {
+      success: tasks.filter(d => getTaskStatus(d) === 'SUCCESS').length,
+      failed: tasks.filter(d => getTaskStatus(d) === 'FAILED').length,
+      running: tasks.filter(d => getTaskStatus(d) === 'RUNNING').length,
+      pending: tasks.filter(d => getTaskStatus(d) === 'PENDING').length,
+      waiting: tasks.filter(d => getTaskStatus(d) === 'WAITING').length,
+    };
   } else {
     throw new Error(`must have SQL or overlord access`);
   }

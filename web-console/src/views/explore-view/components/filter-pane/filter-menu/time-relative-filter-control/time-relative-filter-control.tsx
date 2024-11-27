@@ -17,7 +17,7 @@
  */
 
 import { Button, ButtonGroup, FormGroup } from '@blueprintjs/core';
-import type { TimeRelativeFilterPattern } from 'druid-query-toolkit';
+import type { TimeRelativeFilterPattern } from '@druid-toolkit/query';
 import React from 'react';
 
 import type { QuerySource } from '../../../../models';

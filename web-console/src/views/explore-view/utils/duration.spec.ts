@@ -16,6 +16,24 @@
  * limitations under the License.
  */
 
-.segment-bar-chart {
-  position: relative;
-}
+import { formatDuration } from './duration';
+
+describe('formatDuration', () => {
+  it('works with 0', () => {
+    expect(formatDuration('PT0S')).toEqual('0 seconds');
+  });
+
+  it('works with single span', () => {
+    expect(formatDuration('P1D')).toEqual('1 day');
+    expect(formatDuration('PT1M')).toEqual('1 minute');
+  });
+
+  it('works with single span (compact)', () => {
+    expect(formatDuration('PT1M', true)).toEqual('minute');
+  });
+
+  it('works with multiple spans', () => {
+    expect(formatDuration('PT2H30M15S')).toEqual('2 hours, 30 minutes, 15 seconds');
+    expect(formatDuration('PT2H30M15S', true)).toEqual('2 hours, 30 minutes, 15 seconds');
+  });
+});

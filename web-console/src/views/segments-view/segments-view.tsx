@@ -18,11 +18,10 @@
 
 import { Button, ButtonGroup, Intent, Label, MenuItem, Switch, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { C, L, SqlComparison, SqlExpression } from 'druid-query-toolkit';
+import { C, L, SqlComparison, SqlExpression } from '@druid-toolkit/query';
 import * as JSONBig from 'json-bigint-native';
-import type { ReactNode } from 'react';
 import React from 'react';
-import type { Filter, SortingRule } from 'react-table';
+import type { Filter } from 'react-table';
 import ReactTable from 'react-table';
 
 import {
@@ -44,8 +43,7 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import { SegmentTableActionDialog } from '../../dialogs/segments-table-action-dialog/segment-table-action-dialog';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
-import type { QueryWithContext, ShardSpec } from '../../druid-models';
-import { computeSegmentTimeSpan, getDatasourceColor } from '../../druid-models';
+import type { QueryWithContext } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
 import {
   booleanCustomTableFilter,
@@ -58,14 +56,13 @@ import {
 import { Api } from '../../singletons';
 import type { NumberLike, TableState } from '../../utils';
 import {
-  applySorting,
   compact,
   countBy,
+  deepGet,
   filterMap,
   formatBytes,
   formatInteger,
-  getApiArray,
-  hasOverlayOpen,
+  hasPopoverOpen,
   isNumberLikeNaN,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -87,7 +84,7 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Start',
     'End',
     'Version',
-    'Time span',
+    { text: 'Time span', label: '𝑓(sys.segments)' },
     'Shard type',
     'Shard spec',
     'Partition',
@@ -102,13 +99,14 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Is published',
     'Is overshadowed',
   ],
+  'no-sql': ['Segment ID', 'Datasource', 'Start', 'End', 'Version', 'Partition', 'Size'],
   'no-proxy': [
     'Segment ID',
     'Datasource',
     'Start',
     'End',
     'Version',
-    'Time span',
+    { text: 'Time span', label: '𝑓(sys.segments)' },
     'Shard type',
     'Shard spec',
     'Partition',
@@ -123,70 +121,10 @@ const TABLE_COLUMNS_BY_MODE: Record<CapabilitiesMode, TableColumnSelectorColumn[
     'Is published',
     'Is overshadowed',
   ],
-  'no-sql': [
-    'Segment ID',
-    'Datasource',
-    'Start',
-    'End',
-    'Version',
-    'Time span',
-    'Shard type',
-    'Shard spec',
-    'Partition',
-    'Size',
-    'Replication factor',
-    'Is realtime',
-    'Is overshadowed',
-  ],
 };
-
-function maybeParseJsonBig(str: string): any {
-  try {
-    return JSONBig.parse(str);
-  } catch {
-    return undefined;
-  }
-}
 
 function formatRangeDimensionValue(dimension: any, value: any): string {
   return `${C(String(dimension))}=${L(String(value))}`;
-}
-
-function segmentFiltersToExpression(filters: Filter[]): SqlExpression {
-  return SqlExpression.and(
-    ...filterMap(filters, filter => {
-      if (filter.id === 'shard_type') {
-        // Special handling for shard_type that needs to be searched for in the shard_spec
-        // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
-        const modeAndNeedle = parseFilterModeAndNeedle(filter);
-        if (!modeAndNeedle) return;
-        const shardSpecColumn = C('shard_spec');
-        switch (modeAndNeedle.mode) {
-          case '=':
-            return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}"%`);
-
-          case '!=':
-            return SqlComparison.notLike(shardSpecColumn, `%"type":"${modeAndNeedle.needle}"%`);
-
-          default:
-            return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}%`);
-        }
-      } else if (filter.id.startsWith('is_')) {
-        switch (filter.value) {
-          case '=false':
-            return C(filter.id).equal(0);
-
-          case '=true':
-            return C(filter.id).equal(1);
-
-          default:
-            return;
-        }
-      } else {
-        return sqlQueryCustomTableFilter(filter);
-      }
-    }),
-  );
 }
 
 interface SegmentsQuery extends TableState {
@@ -202,7 +140,8 @@ interface SegmentQueryResultRow {
   interval: string;
   segment_id: string;
   version: string;
-  shard_spec: ShardSpec;
+  time_span: string;
+  shard_spec: string;
   partition_num: number;
   size: number;
   num_rows: NumberLike;
@@ -228,16 +167,11 @@ export interface SegmentsViewState {
   segmentTableActionDialogId?: string;
   datasourceTableActionDialogId?: string;
   actions: BasicAction[];
-
-  visibleColumns: LocalStorageBackedVisibility;
-  groupByInterval: boolean;
-  showSegmentTimeline?: { capabilities: Capabilities; datasource?: string };
-  page: number;
-  pageSize: number;
-  sorted: SortingRule[];
-
   terminateSegmentId?: string;
   terminateDatasourceId?: string;
+  visibleColumns: LocalStorageBackedVisibility;
+  groupByInterval: boolean;
+  showSegmentTimeline: boolean;
   showFullShardSpec?: string;
 }
 
@@ -249,6 +183,16 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       `"start"`,
       `"end"`,
       `"version"`,
+      visibleColumns.shown('Time span') &&
+        `CASE
+  WHEN "start" = '-146136543-09-08T08:23:32.096Z' AND "end" = '146140482-04-24T15:36:27.903Z' THEN 'All'
+  WHEN "start" LIKE '%-01-01T00:00:00.000Z' AND "end" LIKE '%-01-01T00:00:00.000Z' THEN 'Year'
+  WHEN "start" LIKE '%-01T00:00:00.000Z' AND "end" LIKE '%-01T00:00:00.000Z' THEN 'Month'
+  WHEN "start" LIKE '%T00:00:00.000Z' AND "end" LIKE '%T00:00:00.000Z' THEN 'Day'
+  WHEN "start" LIKE '%:00:00.000Z' AND "end" LIKE '%:00:00.000Z' THEN 'Hour'
+  WHEN "start" LIKE '%:00.000Z' AND "end" LIKE '%:00.000Z' THEN 'Minute'
+  ELSE 'Sub minute'
+END AS "time_span"`,
       visibleColumns.shown('Shard type', 'Shard spec') && `"shard_spec"`,
       visibleColumns.shown('Partition') && `"partition_num"`,
       visibleColumns.shown('Size') && `"size"`,
@@ -267,7 +211,33 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     return `WITH s AS (SELECT\n${columns.join(',\n')}\nFROM sys.segments)`;
   }
 
+  static computeTimeSpan(start: string, end: string): string {
+    if (start.endsWith('-01-01T00:00:00.000Z') && end.endsWith('-01-01T00:00:00.000Z')) {
+      return 'Year';
+    }
+
+    if (start.endsWith('-01T00:00:00.000Z') && end.endsWith('-01T00:00:00.000Z')) {
+      return 'Month';
+    }
+
+    if (start.endsWith('T00:00:00.000Z') && end.endsWith('T00:00:00.000Z')) {
+      return 'Day';
+    }
+
+    if (start.endsWith(':00:00.000Z') && end.endsWith(':00:00.000Z')) {
+      return 'Hour';
+    }
+
+    if (start.endsWith(':00.000Z') && end.endsWith(':00.000Z')) {
+      return 'Minute';
+    }
+
+    return 'Sub minute';
+  }
+
   private readonly segmentsQueryManager: QueryManager<SegmentsQuery, SegmentQueryResultRow[]>;
+
+  private lastTableState: TableState | undefined;
 
   constructor(props: SegmentsViewProps) {
     super(props);
@@ -277,16 +247,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       segmentsState: QueryState.INIT,
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.SEGMENT_TABLE_COLUMN_SELECTION,
-        ['Is published', 'Is overshadowed'],
+        ['Time span', 'Is published', 'Is overshadowed'],
       ),
       groupByInterval: false,
-      page: 0,
-      pageSize: STANDARD_TABLE_PAGE_SIZE,
-      sorted: [
-        props.capabilities.hasSql()
-          ? { id: 'start', desc: true }
-          : { id: 'datasource', desc: false },
-      ],
+      showSegmentTimeline: false,
     };
 
     this.segmentsQueryManager = new QueryManager({
@@ -296,11 +260,47 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           query;
 
         if (capabilities.hasSql()) {
-          const whereExpression = segmentFiltersToExpression(filtered);
+          const whereParts = filterMap(filtered, (f: Filter) => {
+            if (f.id === 'shard_type') {
+              // Special handling for shard_type that needs to be searched for in the shard_spec
+              // Creates filters like `shard_spec LIKE '%"type":"numbered"%'`
+              const modeAndNeedle = parseFilterModeAndNeedle(f);
+              if (!modeAndNeedle) return;
+              const shardSpecColumn = C('shard_spec');
+              switch (modeAndNeedle.mode) {
+                case '=':
+                  return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}"%`);
+
+                case '!=':
+                  return SqlComparison.notLike(
+                    shardSpecColumn,
+                    `%"type":"${modeAndNeedle.needle}"%`,
+                  );
+
+                default:
+                  return SqlComparison.like(shardSpecColumn, `%"type":"${modeAndNeedle.needle}%`);
+              }
+            } else if (f.id.startsWith('is_')) {
+              switch (f.value) {
+                case '=false':
+                  return C(f.id).equal(0);
+
+                case '=true':
+                  return C(f.id).equal(1);
+
+                default:
+                  return;
+              }
+            } else {
+              return sqlQueryCustomTableFilter(f);
+            }
+          });
+
+          let queryParts: string[];
 
           let filterClause = '';
-          if (whereExpression.toString() !== 'TRUE') {
-            filterClause = whereExpression.toString();
+          if (whereParts.length) {
+            filterClause = SqlExpression.and(...whereParts).toString();
           }
 
           let effectiveSorted = sorted;
@@ -317,7 +317,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           const base = SegmentsView.baseQuery(visibleColumns);
           const orderByClause = sortedToOrderByClause(effectiveSorted);
 
-          let queryParts: string[];
           if (groupByInterval) {
             const innerQuery = compact([
               `SELECT "start", "end"`,
@@ -357,71 +356,78 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           }
           const sqlQuery = queryParts.join('\n');
           setIntermediateQuery(sqlQuery);
-          let result = await queryDruidSql({ query: sqlQuery }, cancelToken);
-
-          if (visibleColumns.shown('Shard type', 'Shard spec')) {
-            result = result.map(sr => ({
-              ...sr,
-              shard_spec: maybeParseJsonBig(sr.shard_spec),
-            }));
-          }
-
-          return result as SegmentQueryResultRow[];
+          return await queryDruidSql({ query: sqlQuery }, cancelToken);
         } else if (capabilities.hasCoordinatorAccess()) {
-          let datasourceList: string[] = [];
+          let datasourceList: string[] = (
+            await Api.instance.get('/druid/coordinator/v1/metadata/datasources', { cancelToken })
+          ).data;
+
           const datasourceFilter = filtered.find(({ id }) => id === 'datasource');
           if (datasourceFilter) {
-            datasourceList = (
-              await getApiArray('/druid/coordinator/v1/metadata/datasources', cancelToken)
-            ).filter((datasource: string) =>
+            datasourceList = datasourceList.filter(datasource =>
               booleanCustomTableFilter(datasourceFilter, datasource),
             );
           }
 
-          let results = (
-            await getApiArray(
-              `/druid/coordinator/v1/metadata/segments?includeOvershadowedStatus&includeRealtimeSegments${datasourceList
-                .map(d => `&datasources=${Api.encodePath(d)}`)
-                .join('')}`,
-              cancelToken,
-            )
-          ).map((segment: any) => {
-            const [start, end] = segment.interval.split('/');
-            return {
-              segment_id: segment.identifier,
-              datasource: segment.dataSource,
-              start,
-              end,
-              interval: segment.interval,
-              version: segment.version,
-              shard_spec: segment.shardSpec,
-              partition_num: segment.shardSpec?.partitionNum || 0,
-              size: segment.size,
-              num_rows: -1,
-              avg_row_size: -1,
-              num_replicas: -1,
-              replication_factor: segment.replicationFactor,
-              is_available: -1,
-              is_active: -1,
-              is_realtime: Number(segment.realtime),
-              is_published: -1,
-              is_overshadowed: Number(segment.overshadowed),
-            };
-          });
-
-          if (filtered.length) {
-            results = results.filter((d: SegmentQueryResultRow) => {
-              return filtered.every(filter => {
-                return booleanCustomTableFilter(
-                  filter,
-                  d[filter.id as keyof SegmentQueryResultRow],
-                );
-              });
-            });
+          if (sorted.length && sorted[0].id === 'datasource') {
+            datasourceList.sort(
+              sorted[0].desc ? (d1, d2) => d1.localeCompare(d2) : (d1, d2) => d2.localeCompare(d1),
+            );
           }
 
           const maxResults = (page + 1) * pageSize;
-          return applySorting(results, sorted).slice(page * pageSize, maxResults);
+          let results: SegmentQueryResultRow[] = [];
+
+          const n = Math.min(datasourceList.length, maxResults);
+          for (let i = 0; i < n && results.length < maxResults; i++) {
+            const segments = (
+              await Api.instance.get(
+                `/druid/coordinator/v1/datasources/${Api.encodePath(datasourceList[i])}?full`,
+                { cancelToken },
+              )
+            ).data?.segments;
+            if (!Array.isArray(segments)) continue;
+
+            let segmentQueryResultRows: SegmentQueryResultRow[] = segments.map((segment: any) => {
+              const [start, end] = segment.interval.split('/');
+              return {
+                segment_id: segment.identifier,
+                datasource: segment.dataSource,
+                start,
+                end,
+                interval: segment.interval,
+                version: segment.version,
+                time_span: SegmentsView.computeTimeSpan(start, end),
+                shard_spec: deepGet(segment, 'shardSpec'),
+                partition_num: deepGet(segment, 'shardSpec.partitionNum') || 0,
+                size: segment.size,
+                num_rows: -1,
+                avg_row_size: -1,
+                num_replicas: -1,
+                replication_factor: -1,
+                is_available: -1,
+                is_active: -1,
+                is_realtime: -1,
+                is_published: -1,
+                is_overshadowed: -1,
+              };
+            });
+
+            if (filtered.length) {
+              segmentQueryResultRows = segmentQueryResultRows.filter((d: SegmentQueryResultRow) => {
+                return filtered.every(filter => {
+                  return booleanCustomTableFilter(
+                    filter,
+                    d[filter.id as keyof SegmentQueryResultRow],
+                  );
+                });
+              });
+            }
+
+            results = results.concat(segmentQueryResultRows);
+          }
+
+          return results.slice(page * pageSize, maxResults);
         } else {
           throw new Error('must have SQL or coordinator access to load this view');
         }
@@ -434,54 +440,20 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   }
 
-  componentDidMount() {
-    this.fetchData();
-  }
-
   componentWillUnmount(): void {
     this.segmentsQueryManager.terminate();
   }
 
-  componentDidUpdate(
-    prevProps: Readonly<SegmentsViewProps>,
-    prevState: Readonly<SegmentsViewState>,
-  ) {
-    const { filters } = this.props;
-    const { groupByInterval, page, pageSize, sorted } = this.state;
-    if (
-      !segmentFiltersToExpression(filters).equals(segmentFiltersToExpression(prevProps.filters)) ||
-      groupByInterval !== prevState.groupByInterval ||
-      page !== prevState.page ||
-      pageSize !== prevState.pageSize ||
-      sortedToOrderByClause(sorted) !== sortedToOrderByClause(prevState.sorted)
-    ) {
-      this.fetchData();
-    }
-  }
-
-  private readonly refresh = (auto: boolean): void => {
-    if (auto && hasOverlayOpen()) return;
-    this.segmentsQueryManager.rerunLastQuery(auto);
-
-    const { showSegmentTimeline } = this.state;
-    if (showSegmentTimeline) {
-      // Create a new capabilities object to force the segment timeline to re-render
-      this.setState(({ showSegmentTimeline }) => ({
-        showSegmentTimeline: {
-          ...showSegmentTimeline,
-          capabilities: this.props.capabilities.clone(),
-        },
-      }));
-    }
-  };
-
-  private readonly fetchData = () => {
-    const { capabilities, filters } = this.props;
-    const { visibleColumns, groupByInterval, page, pageSize, sorted } = this.state;
+  private readonly fetchData = (groupByInterval: boolean, tableState?: TableState) => {
+    const { capabilities } = this.props;
+    const { visibleColumns } = this.state;
+    if (tableState) this.lastTableState = tableState;
+    if (!this.lastTableState) return;
+    const { page, pageSize, filtered, sorted } = this.lastTableState;
     this.segmentsQueryManager.runQuery({
       page,
       pageSize,
-      filtered: filters,
+      filtered,
       sorted,
       visibleColumns,
       capabilities,
@@ -508,11 +480,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
     });
   }
 
-  private renderFilterableCell(
-    field: string,
-    enableComparisons = false,
-    valueFn: (value: string) => ReactNode = String,
-  ) {
+  private renderFilterableCell(field: string, enableComparisons = false) {
     const { filters, onFiltersChange } = this.props;
 
     // eslint-disable-next-line react/display-name
@@ -524,22 +492,14 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         onFiltersChange={onFiltersChange}
         enableComparisons={enableComparisons}
       >
-        {valueFn(row.value)}
+        {row.value}
       </TableFilterableCell>
     );
   }
 
   renderSegmentsTable() {
     const { capabilities, filters, onFiltersChange } = this.props;
-    const {
-      segmentsState,
-      visibleColumns,
-      groupByInterval,
-      page,
-      pageSize,
-      sorted,
-      showSegmentTimeline,
-    } = this.state;
+    const { segmentsState, visibleColumns, groupByInterval } = this.state;
 
     const segments = segmentsState.data || [];
 
@@ -572,27 +532,26 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         filterable
         filtered={filters}
         onFilteredChange={onFiltersChange}
-        sorted={sorted}
-        onSortedChange={sorted => this.setState({ sorted })}
-        page={page}
-        onPageChange={page => this.setState({ page })}
-        pageSize={pageSize}
-        onPageSizeChange={pageSize => this.setState({ pageSize })}
-        pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination
+        defaultSorted={[hasSql ? { id: 'start', desc: true } : { id: 'datasource', desc: false }]}
+        onFetchData={tableState => {
+          this.fetchData(groupByInterval, tableState);
+        }}
         showPageJump={false}
         ofText=""
         pivotBy={groupByInterval ? ['interval'] : []}
+        defaultPageSize={STANDARD_TABLE_PAGE_SIZE}
+        pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
+        showPagination
         columns={[
           {
             Header: 'Segment ID',
             show: visibleColumns.shown('Segment ID'),
             accessor: 'segment_id',
             width: 280,
+            sortable: hasSql,
             filterable: allowGeneralFilter,
             Cell: row => (
               <TableClickableCell
-                tooltip="Show detail"
                 onClick={() => this.onDetail(row.value, row.row.datasource)}
                 hoverIcon={IconNames.SEARCH_TEMPLATE}
               >
@@ -605,23 +564,14 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: visibleColumns.shown('Datasource'),
             accessor: 'datasource',
             width: 140,
-            Cell: this.renderFilterableCell(
-              'datasource',
-              false,
-              showSegmentTimeline
-                ? value => (
-                    <>
-                      <span style={{ color: getDatasourceColor(value) }}>&#9632;</span> {value}
-                    </>
-                  )
-                : String,
-            ),
+            Cell: this.renderFilterableCell('datasource'),
           },
           {
             Header: 'Interval',
             show: groupByInterval,
             accessor: 'interval',
             width: 120,
+            sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
             Cell: this.renderFilterableCell('interval'),
@@ -631,7 +581,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: visibleColumns.shown('Start'),
             accessor: 'start',
             headerClassName: 'enable-comparisons',
-            width: 180,
+            width: 160,
+            sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
             Cell: this.renderFilterableCell('start', true),
@@ -641,7 +592,8 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: visibleColumns.shown('End'),
             accessor: 'end',
             headerClassName: 'enable-comparisons',
-            width: 180,
+            width: 160,
+            sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
             Cell: this.renderFilterableCell('end', true),
@@ -650,20 +602,20 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             Header: 'Version',
             show: visibleColumns.shown('Version'),
             accessor: 'version',
-            width: 180,
+            width: 160,
+            sortable: hasSql,
             defaultSortDesc: true,
             filterable: allowGeneralFilter,
-            Cell: this.renderFilterableCell('version', true),
+            Cell: this.renderFilterableCell('version'),
           },
           {
             Header: 'Time span',
             show: visibleColumns.shown('Time span'),
-            id: 'time_span',
-            className: 'padded',
-            accessor: ({ start, end }) => computeSegmentTimeSpan(start, end),
+            accessor: 'time_span',
             width: 100,
-            sortable: false,
-            filterable: false,
+            sortable: hasSql,
+            filterable: allowGeneralFilter,
+            Cell: this.renderFilterableCell('time_span'),
           },
           {
             Header: 'Shard type',
@@ -671,9 +623,14 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             id: 'shard_type',
             width: 100,
             sortable: false,
-            accessor: ({ shard_spec }) => {
-              if (typeof shard_spec?.type !== 'string') return '-';
-              return shard_spec?.type;
+            accessor: d => {
+              let v: any;
+              try {
+                v = JSONBig.parse(d.shard_spec);
+              } catch {}
+
+              if (typeof v?.type !== 'string') return '-';
+              return v?.type;
             },
             Cell: this.renderFilterableCell('shard_type', true),
           },
@@ -686,33 +643,35 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             sortable: false,
             filterable: false,
             Cell: ({ value }) => {
+              let v: any;
+              try {
+                v = JSONBig.parse(value);
+              } catch {}
+
               const onShowFullShardSpec = () => {
                 this.setState({
                   showFullShardSpec:
-                    value && typeof value === 'object'
-                      ? JSONBig.stringify(value, undefined, 2)
-                      : String(value),
+                    v && typeof v === 'object' ? JSONBig.stringify(v, undefined, 2) : String(value),
                 });
               };
 
-              switch (value?.type) {
+              switch (v?.type) {
                 case 'range': {
-                  const dimensions: string[] = value.dimensions || [];
+                  const dimensions: string[] = v.dimensions || [];
                   const formatEdge = (values: string[]) =>
                     dimensions.map((d, i) => formatRangeDimensionValue(d, values[i])).join('; ');
 
                   return (
                     <TableClickableCell
                       className="range-detail"
-                      tooltip="Show full shardSpec"
                       onClick={onShowFullShardSpec}
                       hoverIcon={IconNames.EYE_OPEN}
                     >
                       <span className="range-label">Start:</span>
-                      {Array.isArray(value.start) ? formatEdge(value.start) : '-∞'}
+                      {Array.isArray(v.start) ? formatEdge(v.start) : '-∞'}
                       <br />
                       <span className="range-label">End:</span>
-                      {Array.isArray(value.end) ? formatEdge(value.end) : '∞'}
+                      {Array.isArray(v.end) ? formatEdge(v.end) : '∞'}
                     </TableClickableCell>
                   );
                 }
@@ -721,29 +680,23 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                   return (
                     <TableClickableCell
                       className="range-detail"
-                      tooltip="Show full shardSpec"
                       onClick={onShowFullShardSpec}
                       hoverIcon={IconNames.EYE_OPEN}
                     >
                       <span className="range-label">Start:</span>
-                      {value.start != null
-                        ? formatRangeDimensionValue(value.dimension, value.start)
-                        : '-∞'}
+                      {v.start != null ? formatRangeDimensionValue(v.dimension, v.start) : '-∞'}
                       <br />
                       <span className="range-label">End:</span>
-                      {value.end != null
-                        ? formatRangeDimensionValue(value.dimension, value.end)
-                        : '∞'}
+                      {v.end != null ? formatRangeDimensionValue(v.dimension, v.end) : '∞'}
                     </TableClickableCell>
                   );
                 }
 
                 case 'hashed': {
-                  const { partitionDimensions } = value;
-                  if (!Array.isArray(partitionDimensions)) return JSONBig.stringify(value);
+                  const { partitionDimensions } = v;
+                  if (!Array.isArray(partitionDimensions)) return value;
                   return (
                     <TableClickableCell
-                      tooltip="Show full shardSpec"
                       onClick={onShowFullShardSpec}
                       hoverIcon={IconNames.EYE_OPEN}
                     >
@@ -761,7 +714,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 case 'tombstone':
                   return (
                     <TableClickableCell
-                      tooltip="Show full shardSpec"
                       onClick={onShowFullShardSpec}
                       hoverIcon={IconNames.EYE_OPEN}
                     >
@@ -772,11 +724,10 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
                 default:
                   return (
                     <TableClickableCell
-                      tooltip="Show full shardSpec"
                       onClick={onShowFullShardSpec}
                       hoverIcon={IconNames.EYE_OPEN}
                     >
-                      {JSONBig.stringify(value)}
+                      {String(value)}
                     </TableClickableCell>
                   );
               }
@@ -801,6 +752,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             accessor: 'partition_num',
             width: 60,
             filterable: false,
+            sortable: hasSql,
             className: 'padded',
           },
           {
@@ -808,6 +760,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             show: visibleColumns.shown('Size'),
             accessor: 'size',
             filterable: false,
+            sortable: hasSql,
             defaultSortDesc: true,
             width: 120,
             className: 'padded',
@@ -867,7 +820,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           },
           {
             Header: twoLines('Replication factor', <i>(desired)</i>),
-            show: visibleColumns.shown('Replication factor'),
+            show: hasSql && visibleColumns.shown('Replication factor'),
             accessor: 'replication_factor',
             width: 80,
             filterable: false,
@@ -894,7 +847,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           },
           {
             Header: 'Is realtime',
-            show: visibleColumns.shown('Is realtime'),
+            show: hasSql && visibleColumns.shown('Is realtime'),
             id: 'is_realtime',
             accessor: row => String(Boolean(row.is_realtime)),
             Filter: BooleanFilterInput,
@@ -912,7 +865,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           },
           {
             Header: 'Is overshadowed',
-            show: visibleColumns.shown('Is overshadowed'),
+            show: hasSql && visibleColumns.shown('Is overshadowed'),
             id: 'is_overshadowed',
             accessor: row => String(Boolean(row.is_overshadowed)),
             Filter: BooleanFilterInput,
@@ -992,9 +945,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           <MenuItem
             icon={IconNames.APPLICATION}
             text="View SQL query for table"
-            disabled={typeof lastSegmentsQuery !== 'string'}
+            disabled={!lastSegmentsQuery}
             onClick={() => {
-              if (typeof lastSegmentsQuery !== 'string') return;
+              if (!lastSegmentsQuery) return;
               goToQuery({ queryString: lastSegmentsQuery });
             }}
           />
@@ -1004,7 +957,6 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
   }
 
   render() {
-    const { capabilities, onFiltersChange } = this.props;
     const {
       segmentTableActionDialogId,
       datasourceTableActionDialogId,
@@ -1012,14 +964,18 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
       visibleColumns,
       showSegmentTimeline,
       showFullShardSpec,
-      groupByInterval,
     } = this.state;
+    const { capabilities } = this.props;
+    const { groupByInterval } = this.state;
 
     return (
       <div className="segments-view app-view">
         <ViewControlBar label="Segments">
           <RefreshButton
-            onRefresh={this.refresh}
+            onRefresh={auto => {
+              if (auto && hasPopoverOpen()) return;
+              this.segmentsQueryManager.rerunLastQuery(auto);
+            }}
             localStorageKey={LocalStorageKeys.SEGMENTS_REFRESH_RATE}
           />
           <Label>Group by</Label>
@@ -1028,6 +984,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               active={!groupByInterval}
               onClick={() => {
                 this.setState({ groupByInterval: false });
+                this.fetchData(false);
               }}
             >
               None
@@ -1036,6 +993,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
               active={groupByInterval}
               onClick={() => {
                 this.setState({ groupByInterval: true });
+                this.fetchData(true);
               }}
             >
               Interval
@@ -1043,13 +1001,9 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           </ButtonGroup>
           {this.renderBulkSegmentsActions()}
           <Switch
-            checked={Boolean(showSegmentTimeline)}
+            checked={showSegmentTimeline}
             label="Show segment timeline"
-            onChange={() =>
-              this.setState({
-                showSegmentTimeline: showSegmentTimeline ? undefined : { capabilities },
-              })
-            }
+            onChange={() => this.setState({ showSegmentTimeline: !showSegmentTimeline })}
             disabled={!capabilities.hasSqlOrCoordinatorAccess()}
           />
           <TableColumnSelector
@@ -1061,13 +1015,12 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
             }
             onClose={added => {
               if (!added) return;
-              this.fetchData();
+              this.fetchData(groupByInterval);
             }}
             tableColumnsHidden={visibleColumns.getHiddenColumns()}
           />
         </ViewControlBar>
         <SplitterLayout
-          className="timeline-segments-splitter"
           vertical
           percentage
           secondaryInitialSize={35}
@@ -1075,33 +1028,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
           primaryMinSize={20}
           secondaryMinSize={10}
         >
-          {showSegmentTimeline && (
-            <SegmentTimeline
-              capabilities={showSegmentTimeline.capabilities}
-              datasource={showSegmentTimeline.datasource}
-              getIntervalActionButton={(start, end, datasource, realtime) => {
-                return (
-                  <Button
-                    text="Apply fitler to table"
-                    small
-                    rightIcon={IconNames.ARROW_DOWN}
-                    onClick={() =>
-                      onFiltersChange(
-                        compact([
-                          start && { id: 'start', value: `>=${start.toISOString()}` },
-                          end && { id: 'end', value: `<${end.toISOString()}` },
-                          datasource && { id: 'datasource', value: `=${datasource}` },
-                          typeof realtime === 'boolean'
-                            ? { id: 'is_realtime', value: `=${realtime}` }
-                            : undefined,
-                        ]),
-                      )
-                    }
-                  />
-                );
-              }}
-            />
-          )}
+          {showSegmentTimeline && <SegmentTimeline capabilities={capabilities} />}
           {this.renderSegmentsTable()}
         </SplitterLayout>
         {this.renderTerminateSegmentAction()}

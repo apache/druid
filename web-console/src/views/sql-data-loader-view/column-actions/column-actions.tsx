@@ -18,8 +18,8 @@
 
 import { Button, FormGroup, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult, SqlExpression } from 'druid-query-toolkit';
-import { F } from 'druid-query-toolkit';
+import type { QueryResult, SqlExpression } from '@druid-toolkit/query';
+import { F } from '@druid-toolkit/query';
 import type { JSX } from 'react';
 import React from 'react';
 

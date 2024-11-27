@@ -182,24 +182,12 @@ export class ConsoleApplication extends React.PureComponent<
     changeTabWithFilter('datasources', [{ id: 'datasource', value: `=${datasource}` }]);
   };
 
-  private readonly goToSegments = ({
-    start,
-    end,
-    datasource,
-    realtime,
-  }: {
-    start?: Date;
-    end?: Date;
-    datasource?: string;
-    realtime?: boolean;
-  }) => {
+  private readonly goToSegments = (datasource: string, onlyUnavailable = false) => {
     changeTabWithFilter(
       'segments',
       compact([
-        start && { id: 'start', value: `>=${start.toISOString()}` },
-        end && { id: 'end', value: `<${end.toISOString()}` },
-        datasource && { id: 'datasource', value: `=${datasource}` },
-        typeof realtime === 'boolean' ? { id: 'is_realtime', value: `=${realtime}` } : undefined,
+        { id: 'datasource', value: `=${datasource}` },
+        onlyUnavailable ? { id: 'is_available', value: '=false' } : undefined,
       ]),
     );
   };

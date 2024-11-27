@@ -23,7 +23,7 @@
   width: 100%;
   overflow: auto;
 
-  .splitter-layout.timeline-datasources-splitter {
+  .splitter-layout {
     position: absolute;
     top: $view-control-bar-height + $standard-padding;
     bottom: 0;
@@ -44,13 +44,6 @@
 
   .ReactTable {
     @include pin-full;
-
-    .datasource-color-tab {
-      display: inline-block;
-      width: 10px;
-      height: 20px;
-      border-radius: 3px;
-    }
 
     .clickable-cell {
       cursor: pointer;

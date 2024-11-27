@@ -18,7 +18,7 @@
 
 import { sum } from 'd3-array';
 
-import { deepMove, deepSet } from '../../utils';
+import { deepMove, deepSet } from './object-change';
 
 export type RuleType =
   | 'loadForever'
@@ -41,7 +41,6 @@ export interface Rule {
 }
 
 export class RuleUtil {
-  static DEFAULT_RULES_KEY = '_default';
   static TYPES: RuleType[] = [
     'loadForever',
     'loadByInterval',

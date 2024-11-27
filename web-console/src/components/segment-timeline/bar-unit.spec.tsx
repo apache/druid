@@ -16,30 +16,18 @@
  * limitations under the License.
  */
 
-export interface Margin {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
+import { render } from '@testing-library/react';
 
-export class Stage {
-  public readonly width: number;
-  public readonly height: number;
+import { BarUnit } from './bar-unit';
 
-  constructor(width: number, height: number) {
-    this.width = width;
-    this.height = height;
-  }
-
-  public equals(other: Stage | undefined): boolean {
-    return Boolean(other && this.width === other.width && this.height === other.height);
-  }
-
-  public applyMargin(margin: Margin): Stage {
-    return new Stage(
-      this.width - margin.left - margin.right,
-      this.height - margin.top - margin.bottom,
+describe('BarUnit', () => {
+  it('matches snapshot', () => {
+    const barGroup = (
+      <svg>
+        <BarUnit x={10} y={10} width={10} height={10} />
+      </svg>
     );
-  }
-}
+    const { container } = render(barGroup);
+    expect(container.firstChild).toMatchSnapshot();
+  });
+});

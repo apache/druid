@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { SqlExpression } from 'druid-query-toolkit';
+import { SqlExpression } from '@druid-toolkit/query';
 
 import { decomposeTimeInInterval, shiftBackAndExpandTimeInExpression } from './time-manipulation';
 

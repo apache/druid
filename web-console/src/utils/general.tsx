@@ -59,10 +59,6 @@ export function isSimpleArray(a: any): a is (string | number | boolean)[] {
   );
 }
 
-export function arraysEqualByElement<T>(xs: T[], ys: T[]): boolean {
-  return xs.length === ys.length && xs.every((x, i) => x === ys[i]);
-}
-
 export function wait(ms: number): Promise<void> {
   return new Promise(resolve => {
     setTimeout(resolve, ms);
@@ -255,14 +251,6 @@ export function uniq(array: readonly string[]): string[] {
   });
 }
 
-export function allSameValue<T>(xs: readonly T[]): T | undefined {
-  const sameValue: T | undefined = xs[0];
-  for (let i = 1; i < xs.length; i++) {
-    if (sameValue !== xs[i]) return;
-  }
-  return sameValue;
-}
-
 // ----------------------------
 
 export function formatEmpty(str: string): string {
@@ -383,14 +371,6 @@ export function formatDurationHybrid(ms: NumberLike): string {
   } else {
     return formatDuration(ms);
   }
-}
-
-export function timezoneOffsetInMinutesToString(offsetInMinutes: number, padHour: boolean): string {
-  const sign = offsetInMinutes < 0 ? '-' : '+';
-  const absOffset = Math.abs(offsetInMinutes);
-  const h = Math.floor(absOffset / 60);
-  const m = absOffset % 60;
-  return `${sign}${padHour ? pad2(h) : h}:${pad2(m)}`;
 }
 
 function pluralize(word: string): string {
@@ -632,10 +612,12 @@ export function hashJoaat(str: string): number {
   return (hash & 4294967295) >>> 0;
 }
 
-export const OVERLAY_OPEN_SELECTOR = `.${Classes.PORTAL} .${Classes.OVERLAY_OPEN}`;
+export function objectHash(obj: any): string {
+  return hashJoaat(JSONBig.stringify(obj)).toString(16).padStart(8);
+}
 
-export function hasOverlayOpen(): boolean {
-  return Boolean(document.querySelector(OVERLAY_OPEN_SELECTOR));
+export function hasPopoverOpen(): boolean {
+  return Boolean(document.querySelector(`${Classes.PORTAL} ${Classes.OVERLAY} ${Classes.POPOVER}`));
 }
 
 export function checkedCircleIcon(checked: boolean): IconName {

@@ -54,7 +54,10 @@ exports[`SegmentsView matches snapshot 1`] = `
           "Start",
           "End",
           "Version",
-          "Time span",
+          {
+            "label": "𝑓(sys.segments)",
+            "text": "Time span",
+          },
           "Shard type",
           "Shard spec",
           "Partition",
@@ -74,6 +77,7 @@ exports[`SegmentsView matches snapshot 1`] = `
       onClose={[Function]}
       tableColumnsHidden={
         [
+          "Time span",
           "Is published",
           "Is overshadowed",
         ]
@@ -81,7 +85,6 @@ exports[`SegmentsView matches snapshot 1`] = `
     />
   </Memo(ViewControlBar)>
   <SplitterLayout
-    className="timeline-segments-splitter"
     percentage={true}
     primaryIndex={1}
     primaryMinSize={20}
@@ -152,6 +155,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "accessor": "segment_id",
             "filterable": true,
             "show": true,
+            "sortable": true,
             "width": 280,
           },
           {
@@ -168,6 +172,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "defaultSortDesc": true,
             "filterable": true,
             "show": false,
+            "sortable": true,
             "width": 120,
           },
           {
@@ -178,7 +183,8 @@ exports[`SegmentsView matches snapshot 1`] = `
             "filterable": true,
             "headerClassName": "enable-comparisons",
             "show": true,
-            "width": 180,
+            "sortable": true,
+            "width": 160,
           },
           {
             "Cell": [Function],
@@ -188,7 +194,8 @@ exports[`SegmentsView matches snapshot 1`] = `
             "filterable": true,
             "headerClassName": "enable-comparisons",
             "show": true,
-            "width": 180,
+            "sortable": true,
+            "width": 160,
           },
           {
             "Cell": [Function],
@@ -197,16 +204,16 @@ exports[`SegmentsView matches snapshot 1`] = `
             "defaultSortDesc": true,
             "filterable": true,
             "show": true,
-            "width": 180,
+            "sortable": true,
+            "width": 160,
           },
           {
+            "Cell": [Function],
             "Header": "Time span",
-            "accessor": [Function],
-            "className": "padded",
-            "filterable": false,
-            "id": "time_span",
-            "show": true,
-            "sortable": false,
+            "accessor": "time_span",
+            "filterable": true,
+            "show": false,
+            "sortable": true,
             "width": 100,
           },
           {
@@ -235,6 +242,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "className": "padded",
             "filterable": false,
             "show": true,
+            "sortable": true,
             "width": 60,
           },
           {
@@ -245,6 +253,7 @@ exports[`SegmentsView matches snapshot 1`] = `
             "defaultSortDesc": true,
             "filterable": false,
             "show": true,
+            "sortable": true,
             "width": 120,
           },
           {
@@ -365,11 +374,18 @@ exports[`SegmentsView matches snapshot 1`] = `
       defaultFilterMethod={[Function]}
       defaultFiltered={[]}
       defaultPage={0}
-      defaultPageSize={20}
+      defaultPageSize={50}
       defaultResized={[]}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
-      defaultSorted={[]}
+      defaultSorted={
+        [
+          {
+            "desc": true,
+            "id": "start",
+          },
+        ]
+      }
       expanderDefaults={
         {
           "filterable": false,
@@ -405,7 +421,7 @@ exports[`SegmentsView matches snapshot 1`] = `
       getTrProps={[Function]}
       groupedByPivotKey="_groupedByPivot"
       indexKey="_index"
-      loading={true}
+      loading={false}
       loadingText="Loading..."
       manual={true}
       multiSort={true}
@@ -415,13 +431,8 @@ exports[`SegmentsView matches snapshot 1`] = `
       ofText=""
       onFetchData={[Function]}
       onFilteredChange={[Function]}
-      onPageChange={[Function]}
-      onPageSizeChange={[Function]}
-      onSortedChange={[Function]}
       originalKey="_original"
-      page={0}
       pageJumpText="jump to page"
-      pageSize={50}
       pageSizeOptions={
         [
           50,
@@ -446,14 +457,6 @@ exports[`SegmentsView matches snapshot 1`] = `
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
-      sorted={
-        [
-          {
-            "desc": true,
-            "id": "start",
-          },
-        ]
-      }
       style={{}}
       subRowsKey="_subRows"
     />

@@ -20,7 +20,7 @@ import 'regenerator-runtime/runtime';
 import './bootstrap/ace';
 
 import { OverlaysProvider } from '@blueprintjs/core';
-import { QueryRunner } from 'druid-query-toolkit';
+import { QueryRunner } from '@druid-toolkit/query';
 import { createRoot } from 'react-dom/client';
 
 import { bootstrapJsonParse } from './bootstrap/json-parser';

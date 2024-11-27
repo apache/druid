@@ -18,8 +18,8 @@
 
 import { FormGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult, SqlQuery, ValuesFilterPattern } from 'druid-query-toolkit';
-import { C, F, SqlExpression } from 'druid-query-toolkit';
+import type { QueryResult, SqlQuery, ValuesFilterPattern } from '@druid-toolkit/query';
+import { C, F, SqlExpression } from '@druid-toolkit/query';
 import React, { useMemo, useState } from 'react';
 
 import { ClearableInput } from '../../../../../../components';

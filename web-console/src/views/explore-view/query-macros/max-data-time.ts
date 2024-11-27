@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import type { SqlQuery } from 'druid-query-toolkit';
-import { L, SqlFunction } from 'druid-query-toolkit';
+import type { SqlQuery } from '@druid-toolkit/query';
+import { L, SqlFunction } from '@druid-toolkit/query';
 
 import { getMaxTimeForTable } from '../utils';
 

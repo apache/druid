@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
+import type { QueryResult } from '@druid-toolkit/query';
 import type { CancelToken } from 'axios';
-import type { QueryResult } from 'druid-query-toolkit';
 
 import type { Execution } from '../../druid-models';
 import { IntermediateQueryState } from '../../utils';

@@ -19,23 +19,11 @@
 import { createStore } from 'zustand';
 
 interface WorkState {
-  msqTaskVersion: number;
-  msqDartVersion: number;
-  incrementMsqTask(): void;
-  incrementMsqDart(): void;
+  version: number;
+  increment(): void;
 }
 
-export const WORK_STATE_STORE = createStore<WorkState>(set => ({
-  msqTaskVersion: 0,
-  msqDartVersion: 0,
-  incrementMsqTask: () => set(state => ({ msqTaskVersion: state.msqTaskVersion + 1 })),
-  incrementMsqDart: () => set(state => ({ msqDartVersion: state.msqDartVersion + 1 })),
+export const workStateStore = createStore<WorkState>(set => ({
+  version: 0,
+  increment: () => set(state => ({ version: state.version + 1 })),
 }));
-
-export function getMsqTaskVersion(store: WorkState): number {
-  return store.msqTaskVersion;
-}
-
-export function getMsqDartVersion(store: WorkState): number {
-  return store.msqDartVersion;
-}

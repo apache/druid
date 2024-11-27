@@ -27,7 +27,7 @@ import { Deferred } from '../deferred/deferred';
 
 import './table-filterable-cell.scss';
 
-const FILTER_MODES: FilterMode[] = ['=', '!=', '<', '>='];
+const FILTER_MODES: FilterMode[] = ['=', '!=', '<=', '>='];
 const FILTER_MODES_NO_COMPARISONS: FilterMode[] = ['=', '!='];
 
 export interface TableFilterableCellProps {

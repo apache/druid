@@ -42,9 +42,8 @@ import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../reac
 import { Api, AppToaster } from '../../singletons';
 import {
   formatDuration,
-  getApiArray,
   getDruidErrorMessage,
-  hasOverlayOpen,
+  hasPopoverOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   oneOf,
@@ -175,19 +174,8 @@ ORDER BY
             cancelToken,
           );
         } else if (capabilities.hasOverlordAccess()) {
-          return (await getApiArray(`/druid/indexer/v1/tasks`, cancelToken)).map(d => {
-            return {
-              task_id: d.id,
-              group_id: d.groupId,
-              type: d.type,
-              created_time: d.createdTime,
-              datasource: d.dataSource,
-              duration: d.duration ? d.duration : 0,
-              error_msg: d.errorMsg,
-              location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
-              status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
-            };
-          });
+          const resp = await Api.instance.get(`/druid/indexer/v1/tasks`, { cancelToken });
+          return TasksView.parseTasks(resp.data);
         } else {
           throw new Error(`must have SQL or overlord access`);
         }
@@ -199,6 +187,22 @@ ORDER BY
       },
     });
   }
+
+  static parseTasks = (data: any[]): TaskQueryResultRow[] => {
+    return data.map(d => {
+      return {
+        task_id: d.id,
+        group_id: d.groupId,
+        type: d.type,
+        created_time: d.createdTime,
+        datasource: d.dataSource,
+        duration: d.duration ? d.duration : 0,
+        error_msg: d.errorMsg,
+        location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
+        status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
+      };
+    });
+  };
 
   componentDidMount(): void {
     const { capabilities } = this.props;
@@ -372,7 +376,6 @@ ORDER BY
             width: 440,
             Cell: ({ value, original }) => (
               <TableClickableCell
-                tooltip="Show detail"
                 onClick={() => this.onTaskDetail(original)}
                 hoverIcon={IconNames.SEARCH_TEMPLATE}
               >
@@ -591,7 +594,7 @@ ORDER BY
           <RefreshButton
             localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
             onRefresh={auto => {
-              if (auto && hasOverlayOpen()) return;
+              if (auto && hasPopoverOpen()) return;
               this.taskQueryManager.rerunLastQuery(auto);
             }}
           />

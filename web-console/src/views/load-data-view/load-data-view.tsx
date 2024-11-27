@@ -157,7 +157,6 @@ import {
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
-  getApiArray,
   getDruidErrorMessage,
   localStorageGetJson,
   LocalStorageKeys,
@@ -3560,7 +3559,8 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let existingDatasources: string[];
     try {
-      existingDatasources = await getApiArray<string>('/druid/coordinator/v1/datasources');
+      existingDatasources = (await Api.instance.get<string[]>('/druid/coordinator/v1/datasources'))
+        .data;
     } catch {
       return;
     }

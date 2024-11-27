@@ -106,12 +106,11 @@ export const SupervisorResetOffsetsDialog = React.memo(function SupervisorResetO
   const [statusResp] = useQueryManager<string, SupervisorStatus>({
     initQuery: supervisorId,
     processQuery: async (supervisorId, cancelToken) => {
-      return (
-        await Api.instance.get(
-          `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/status`,
-          { cancelToken },
-        )
-      ).data;
+      const statusResp = await Api.instance.get(
+        `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/status`,
+        { cancelToken },
+      );
+      return statusResp.data;
     },
   });
 

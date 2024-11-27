@@ -17,7 +17,7 @@
  */
 
 // micro-cache
-import { sql, T } from 'druid-query-toolkit';
+import { sql, T } from '@druid-toolkit/query';
 
 import { deepGet, queryDruidSql } from '../../../utils';
 

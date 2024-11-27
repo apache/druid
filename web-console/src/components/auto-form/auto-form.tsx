@@ -539,6 +539,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           text={showMore ? 'Show less' : 'Show more'}
           rightIcon={showMore ? IconNames.CHEVRON_UP : IconNames.CHEVRON_DOWN}
           minimal
+          fill
           onClick={() => {
             this.setState(({ showMore }) => ({ showMore: !showMore }));
           }}

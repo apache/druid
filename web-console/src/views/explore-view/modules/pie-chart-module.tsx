@@ -17,7 +17,7 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import { C, L } from 'druid-query-toolkit';
+import { C, L } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import { useEffect, useMemo, useRef } from 'react';

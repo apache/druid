@@ -31,8 +31,8 @@ import {
   Position,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryParameter } from 'druid-query-toolkit';
-import { isEmptyArray } from 'druid-query-toolkit';
+import type { QueryParameter } from '@druid-toolkit/query';
+import { isEmptyArray } from '@druid-toolkit/query';
 import React, { useState } from 'react';
 
 import { FancyNumericInput } from '../../../components/fancy-numeric-input/fancy-numeric-input';

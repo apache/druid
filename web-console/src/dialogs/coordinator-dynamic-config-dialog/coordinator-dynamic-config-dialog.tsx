@@ -27,7 +27,7 @@ import { COORDINATOR_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
-import { getApiArray, getDruidErrorMessage } from '../../utils';
+import { getDruidErrorMessage } from '../../utils';
 import { SnitchDialog } from '..';
 
 import './coordinator-dynamic-config-dialog.scss';
@@ -47,7 +47,10 @@ export const CoordinatorDynamicConfigDialog = React.memo(function CoordinatorDyn
   const [historyRecordsState] = useQueryManager<null, any[]>({
     initQuery: null,
     processQuery: async (_, cancelToken) => {
-      return await getApiArray(`/druid/coordinator/v1/config/history?count=100`, cancelToken);
+      const historyResp = await Api.instance.get(`/druid/coordinator/v1/config/history?count=100`, {
+        cancelToken,
+      });
+      return historyResp.data;
     },
   });
 

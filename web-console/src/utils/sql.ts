@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { SqlBase } from 'druid-query-toolkit';
+import type { SqlBase } from '@druid-toolkit/query';
 import {
   SqlColumn,
   SqlExpression,
@@ -24,7 +24,7 @@ import {
   SqlLiteral,
   SqlQuery,
   SqlStar,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 
 import type { RowColumn } from './general';
 import { offsetToRowColumn } from './general';
