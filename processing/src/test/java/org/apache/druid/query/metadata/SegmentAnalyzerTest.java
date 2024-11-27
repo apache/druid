@@ -305,7 +305,7 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     };
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
-        .withTimestampSpec(new TimestampSpec("ds", "auto", null))
+        .withTimestampSpec(new TimestampSpec("ts", "auto", null))
         .withDimensionsSpec(TestIndex.DIMENSIONS_SPEC)
         .withMetrics(metrics)
         .withRollup(true)
