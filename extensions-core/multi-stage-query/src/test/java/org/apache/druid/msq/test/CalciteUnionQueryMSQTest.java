@@ -62,7 +62,7 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
    */
   @Test
   @Override
-  public void testUnionIsUnplannableInNative()
+  public void testUnionColumnOrderChange()
   {
     assertQueryIsUnplannable(
         "SELECT dim2, dim1, m1 FROM foo2 UNION SELECT dim1, dim2, m1 FROM foo",
