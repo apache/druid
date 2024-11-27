@@ -18,8 +18,8 @@
 
 import { FormGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult, RegexpFilterPattern, SqlQuery } from '@druid-toolkit/query';
-import { C, F, filterPatternToExpression, SqlExpression } from '@druid-toolkit/query';
+import type { QueryResult, RegexpFilterPattern, SqlQuery } from 'druid-query-toolkit';
+import { C, F, filterPatternToExpression, SqlExpression } from 'druid-query-toolkit';
 import React, { useMemo } from 'react';
 
 import { useQueryManager } from '../../../../../../hooks';

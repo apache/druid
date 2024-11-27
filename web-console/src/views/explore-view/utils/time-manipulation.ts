@@ -24,7 +24,7 @@ import {
   SqlExpression,
   SqlFunction,
   SqlLiteral,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 
 import { partition } from '../../../utils';
 
