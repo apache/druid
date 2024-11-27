@@ -106,7 +106,7 @@ public class DruidOverlord
         giant.lock();
 
         // I AM THE MASTER OF THE UNIVERSE.
-        log.info("By the power of Grayskull, I have the power!");
+        log.info("By the power of Grayskull, I have the power. I am the leader");
 
         try {
           final TaskRunner taskRunner = runnerFactory.build();
@@ -193,6 +193,7 @@ public class DruidOverlord
         giant.lock();
         try {
           initialized = false;
+          log.info("I am no longer the leader...");
           final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
 
           if (leaderLifecycle != null) {
