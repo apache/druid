@@ -18,8 +18,7 @@
 
 import type { IconName } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression } from '@druid-toolkit/query';
-import { C, F } from '@druid-toolkit/query';
+import { C, F, SqlExpression } from 'druid-query-toolkit';
 import type { Filter } from 'react-table';
 
 import { addOrUpdate, caseInsensitiveContains, filterMap } from '../utils';
@@ -32,9 +31,9 @@ export const STANDARD_TABLE_PAGE_SIZE_OPTIONS = [50, 100, 200];
 export const SMALL_TABLE_PAGE_SIZE = 25;
 export const SMALL_TABLE_PAGE_SIZE_OPTIONS = [25, 50, 100];
 
-export type FilterMode = '~' | '=' | '!=' | '<=' | '>=';
+export type FilterMode = '~' | '=' | '!=' | '<' | '<=' | '>' | '>=';
 
-export const FILTER_MODES: FilterMode[] = ['~', '=', '!=', '<=', '>='];
+export const FILTER_MODES: FilterMode[] = ['~', '=', '!=', '<', '<=', '>', '>='];
 export const FILTER_MODES_NO_COMPARISON: FilterMode[] = ['~', '=', '!='];
 
 export function filterModeToIcon(mode: FilterMode): IconName {
@@ -45,8 +44,12 @@ export function filterModeToIcon(mode: FilterMode): IconName {
       return IconNames.EQUALS;
     case '!=':
       return IconNames.NOT_EQUAL_TO;
+    case '<':
+      return IconNames.LESS_THAN;
     case '<=':
       return IconNames.LESS_THAN_OR_EQUAL_TO;
+    case '>':
+      return IconNames.GREATER_THAN;
     case '>=':
       return IconNames.GREATER_THAN_OR_EQUAL_TO;
     default:
@@ -62,8 +65,12 @@ export function filterModeToTitle(mode: FilterMode): string {
       return 'Equals';
     case '!=':
       return 'Not equals';
+    case '<':
+      return 'Less than';
     case '<=':
       return 'Less than or equal';
+    case '>':
+      return 'Greater than';
     case '>=':
       return 'Greater than or equal';
     default:
@@ -89,7 +96,7 @@ export function parseFilterModeAndNeedle(
   filter: Filter,
   loose = false,
 ): FilterModeAndNeedle | undefined {
-  const m = /^(~|=|!=|<=|>=)?(.*)$/.exec(String(filter.value));
+  const m = /^(~|=|!=|<(?!=)|<=|>(?!=)|>=)?(.*)$/.exec(String(filter.value));
   if (!m) return;
   if (!loose && !m[2]) return;
   const mode = (m[1] as FilterMode) || '~';
@@ -112,21 +119,28 @@ export function booleanCustomTableFilter(filter: Filter, value: unknown): boolea
   const modeAndNeedle = parseFilterModeAndNeedle(filter);
   if (!modeAndNeedle) return true;
   const { mode, needle } = modeAndNeedle;
+  const strValue = String(value);
   switch (mode) {
     case '=':
-      return String(value) === needle;
+      return strValue === needle;
 
     case '!=':
-      return String(value) !== needle;
+      return strValue !== needle;
+
+    case '<':
+      return strValue < needle;
 
     case '<=':
-      return String(value) <= needle;
+      return strValue <= needle;
+
+    case '>':
+      return strValue > needle;
 
     case '>=':
-      return String(value) >= needle;
+      return strValue >= needle;
 
     default:
-      return caseInsensitiveContains(String(value), needle);
+      return caseInsensitiveContains(strValue, needle);
   }
 }
 
@@ -142,8 +156,14 @@ export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression | undef
     case '!=':
       return column.unequal(needle);
 
+    case '<':
+      return column.lessThan(needle);
+
     case '<=':
       return column.lessThanOrEqual(needle);
+
+    case '>':
+      return column.greaterThan(needle);
 
     case '>=':
       return column.greaterThanOrEqual(needle);
@@ -151,6 +171,10 @@ export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression | undef
     default:
       return F('LOWER', column).like(`%${needle.toLowerCase()}%`);
   }
+}
+
+export function sqlQueryCustomTableFilters(filters: Filter[]): SqlExpression {
+  return SqlExpression.and(...filterMap(filters, sqlQueryCustomTableFilter));
 }
 
 export function tableFiltersToString(tableFilters: Filter[]): string {
@@ -161,9 +185,11 @@ export function tableFiltersToString(tableFilters: Filter[]): string {
 
 export function stringToTableFilters(str: string | undefined): Filter[] {
   if (!str) return [];
-  // '~' | '=' | '!=' | '<=' | '>=';
+  // '~' | '=' | '!=' | '<' | '<=' | '>' | '>=';
   return filterMap(str.split('&'), clause => {
-    const m = /^(\w+)((?:~|=|!=|<=|>=).*)$/.exec(clause.replace(/%2[56]/g, decodeURIComponent));
+    const m = /^(\w+)((?:~|=|!=|<(?!=)|<=|>(?!=)|>=).*)$/.exec(
+      clause.replace(/%2[56]/g, decodeURIComponent),
+    );
     if (!m) return;
     return { id: m[1], value: m[2] };
   });

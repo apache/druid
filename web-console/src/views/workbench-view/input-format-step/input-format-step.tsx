@@ -18,8 +18,8 @@
 
 import { Button, Callout, FormGroup, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression } from '@druid-toolkit/query';
-import { C, SqlColumnDeclaration, SqlType } from '@druid-toolkit/query';
+import type { SqlExpression } from 'druid-query-toolkit';
+import { C, SqlColumnDeclaration, SqlType } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { ArrayModeSwitch, AutoForm, CenterMessage, LearnMore, Loader } from '../../../components';
