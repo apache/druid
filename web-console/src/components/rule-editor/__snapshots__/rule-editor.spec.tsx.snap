@@ -70,7 +70,7 @@ exports[`RuleEditor matches snapshot no tier in rule 1`] = `
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="rule-detail bp5-card bp5-elevation-2"
+        class="bp5-card bp5-elevation-2"
       >
         <div
           class="bp5-form-group"
@@ -451,7 +451,7 @@ exports[`RuleEditor matches snapshot with broadcast rule 1`] = `
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="rule-detail bp5-card bp5-elevation-2"
+        class="bp5-card bp5-elevation-2"
       >
         <div
           class="bp5-form-group"
@@ -629,7 +629,7 @@ exports[`RuleEditor matches snapshot with existing tier and non existing tier in
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="rule-detail bp5-card bp5-elevation-2"
+        class="bp5-card bp5-elevation-2"
       >
         <div
           class="bp5-form-group"
@@ -1190,7 +1190,7 @@ exports[`RuleEditor matches snapshot with existing tier in rule 1`] = `
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="rule-detail bp5-card bp5-elevation-2"
+        class="bp5-card bp5-elevation-2"
       >
         <div
           class="bp5-form-group"
@@ -1581,7 +1581,7 @@ exports[`RuleEditor matches snapshot with non existing tier in rule 1`] = `
       style="transform: translateY(0); transition: none;"
     >
       <div
-        class="rule-detail bp5-card bp5-elevation-2"
+        class="bp5-card bp5-elevation-2"
       >
         <div
           class="bp5-form-group"

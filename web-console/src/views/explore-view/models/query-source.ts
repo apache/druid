@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import type { Column } from 'druid-query-toolkit';
-import { C, F, SqlColumn, SqlExpression, SqlQuery, SqlStar } from 'druid-query-toolkit';
+import type { Column } from '@druid-toolkit/query';
+import { C, F, SqlColumn, SqlExpression, SqlQuery, SqlStar } from '@druid-toolkit/query';
 
 import { filterMap, mapRecordIfChanged } from '../../../utils';
 

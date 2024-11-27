@@ -18,7 +18,7 @@
 
 import { Button, ControlGroup, FormGroup, NumericInput } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { NumberRangeFilterPattern } from 'druid-query-toolkit';
+import type { NumberRangeFilterPattern } from '@druid-toolkit/query';
 import React from 'react';
 
 import type { QuerySource } from '../../../../models';

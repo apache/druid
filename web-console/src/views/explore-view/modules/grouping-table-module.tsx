@@ -18,8 +18,8 @@
 
 import { Button } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression, SqlOrderByDirection, SqlQuery } from 'druid-query-toolkit';
-import { C, F } from 'druid-query-toolkit';
+import type { SqlExpression, SqlOrderByDirection, SqlQuery } from '@druid-toolkit/query';
+import { C, F } from '@druid-toolkit/query';
 import { useMemo } from 'react';
 
 import { Loader } from '../../../components';

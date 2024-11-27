@@ -19,10 +19,10 @@
 import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
+import { T } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import { T } from 'druid-query-toolkit';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
@@ -38,7 +38,7 @@ import {
   queryDruidSql,
 } from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
-import { getMsqTaskVersion, WORK_STATE_STORE } from '../work-state-store';
+import { workStateStore } from '../work-state-store';
 
 import './recent-query-task-panel.scss';
 
@@ -83,8 +83,13 @@ export const RecentQueryTaskPanel = React.memo(function RecentQueryTaskPanel(
 
   const [confirmCancelId, setConfirmCancelId] = useState<string | undefined>();
 
+  const workStateVersion = useStore(
+    workStateStore,
+    useCallback(state => state.version, []),
+  );
+
   const [queryTaskHistoryState, queryManager] = useQueryManager<number, RecentQueryEntry[]>({
-    query: useStore(WORK_STATE_STORE, getMsqTaskVersion),
+    query: workStateVersion,
     processQuery: async (_, cancelToken) => {
       return await queryDruidSql<RecentQueryEntry>(
         {
@@ -110,6 +115,11 @@ LIMIT 100`,
   }, 30000);
 
   const now = useClock();
+
+  const incrementWorkVersion = useStore(
+    workStateStore,
+    useCallback(state => state.increment, []),
+  );
 
   const queryTaskHistory = queryTaskHistoryState.getSomeData();
   return (
@@ -265,7 +275,7 @@ LIMIT 100`,
                 message: 'Query canceled',
                 intent: Intent.SUCCESS,
               });
-              queryManager.rerunLastQuery();
+              incrementWorkVersion();
             } catch {
               AppToaster.show({
                 message: 'Could not cancel query',

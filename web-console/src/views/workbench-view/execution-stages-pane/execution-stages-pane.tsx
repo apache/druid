@@ -251,7 +251,7 @@ export const ExecutionStagesPane = React.memo(function ExecutionStagesPane(
               return (
                 <TableClickableCell
                   hoverIcon={IconNames.SHARE}
-                  tooltip={`Go to task: ${taskId}`}
+                  data-tooltip={`Go to task: ${taskId}`}
                   onClick={() => {
                     goToTask(taskId);
                   }}

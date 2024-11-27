@@ -288,7 +288,7 @@ export class QueryManager<Q, R, I = never, E extends Error = Error> {
     return this.lastQuery;
   }
 
-  public getLastIntermediateQuery(): unknown {
+  public getLastIntermediateQuery(): any {
     return this.lastIntermediateQuery;
   }
 

@@ -30,9 +30,9 @@ import {
 import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
-import type { Rule } from '../../druid-models';
-import { RuleUtil } from '../../druid-models';
 import { durationSanitizer } from '../../utils';
+import type { Rule } from '../../utils/load-rule';
+import { RuleUtil } from '../../utils/load-rule';
 import { SuggestibleInput } from '../suggestible-input/suggestible-input';
 
 import './rule-editor.scss';
@@ -170,7 +170,7 @@ export const RuleEditor = React.memo(function RuleEditor(props: RuleEditorProps)
       </div>
 
       <Collapse isOpen={isOpen}>
-        <Card className="rule-detail" elevation={2}>
+        <Card elevation={2}>
           <FormGroup>
             <ControlGroup>
               <HTMLSelect

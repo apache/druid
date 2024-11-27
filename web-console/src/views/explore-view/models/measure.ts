@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import type { Column, SqlBase, SqlQuery } from 'druid-query-toolkit';
-import { C, F, filterMap, L, SqlAlias, SqlExpression, SqlFunction } from 'druid-query-toolkit';
+import type { Column, SqlBase, SqlQuery } from '@druid-toolkit/query';
+import { C, F, filterMap, L, SqlAlias, SqlExpression, SqlFunction } from '@druid-toolkit/query';
 
 import { uniq } from '../../../utils';
 

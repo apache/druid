@@ -18,9 +18,9 @@
 
 import { Button, Callout, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { QueryResult, SqlQuery } from '@druid-toolkit/query';
+import { F, SqlExpression, SqlFunction } from '@druid-toolkit/query';
 import type { CancelToken } from 'axios';
-import type { QueryResult, SqlQuery } from 'druid-query-toolkit';
-import { F, SqlExpression, SqlFunction } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useEffect } from 'react';
 

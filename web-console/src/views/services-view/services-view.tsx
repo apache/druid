@@ -48,8 +48,7 @@ import {
   formatBytes,
   formatBytesCompact,
   formatDurationWithMsIfNeeded,
-  getApiArray,
-  hasOverlayOpen,
+  hasPopoverOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   lookupBy,
@@ -258,24 +257,24 @@ ORDER BY
         if (capabilities.hasSql()) {
           services = await queryDruidSql({ query: ServicesView.SERVICE_SQL }, cancelToken);
         } else if (capabilities.hasCoordinatorAccess()) {
-          services = (await getApiArray('/druid/coordinator/v1/servers?simple', cancelToken)).map(
-            (s: any): ServiceResultRow => {
-              const hostParts = s.host.split(':');
-              const port = parseInt(hostParts[1], 10);
-              return {
-                service: s.host,
-                service_type: s.type === 'indexer-executor' ? 'peon' : s.type,
-                tier: s.tier,
-                host: hostParts[0],
-                plaintext_port: port < 9000 ? port : -1,
-                tls_port: port < 9000 ? -1 : port,
-                curr_size: s.currSize,
-                max_size: s.maxSize,
-                start_time: '1970:01:01T00:00:00Z',
-                is_leader: 0,
-              };
-            },
-          );
+          services = (
+            await Api.instance.get('/druid/coordinator/v1/servers?simple', { cancelToken })
+          ).data.map((s: any): ServiceResultRow => {
+            const hostParts = s.host.split(':');
+            const port = parseInt(hostParts[1], 10);
+            return {
+              service: s.host,
+              service_type: s.type === 'indexer-executor' ? 'peon' : s.type,
+              tier: s.tier,
+              host: hostParts[0],
+              plaintext_port: port < 9000 ? port : -1,
+              tls_port: port < 9000 ? -1 : port,
+              curr_size: s.currSize,
+              max_size: s.maxSize,
+              start_time: '1970:01:01T00:00:00Z',
+              is_leader: 0,
+            };
+          });
         } else {
           throw new Error(`must have SQL or coordinator access`);
         }
@@ -309,10 +308,9 @@ ORDER BY
         if (capabilities.hasOverlordAccess()) {
           auxiliaryQueries.push(async (services, cancelToken) => {
             try {
-              const workerInfos = await getApiArray<WorkerInfo>(
-                '/druid/indexer/v1/workers',
-                cancelToken,
-              );
+              const workerInfos = (
+                await Api.instance.get<WorkerInfo[]>('/druid/indexer/v1/workers', { cancelToken })
+              ).data;
 
               const workerInfoLookup: Record<string, WorkerInfo> = lookupBy(
                 workerInfos,
@@ -810,7 +808,7 @@ ORDER BY
           </ButtonGroup>
           <RefreshButton
             onRefresh={auto => {
-              if (auto && hasOverlayOpen()) return;
+              if (auto && hasPopoverOpen()) return;
               this.serviceQueryManager.rerunLastQuery(auto);
             }}
             localStorageKey={LocalStorageKeys.SERVICES_REFRESH_RATE}

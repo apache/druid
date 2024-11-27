@@ -19,9 +19,9 @@
 import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
+import type { Column, QueryResult } from '@druid-toolkit/query';
+import { SqlColumn, SqlExpression, SqlLiteral, trimString } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import type { Column, QueryResult } from 'druid-query-toolkit';
-import { SqlColumn, SqlExpression, SqlLiteral, trimString } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
 import type { Column as TableColumn } from 'react-table';

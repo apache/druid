@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { T } from 'druid-query-toolkit';
+import { T } from '@druid-toolkit/query';
 import type * as playwright from 'playwright-chromium';
 
 import { DatasourcesOverview } from './component/datasources/overview';

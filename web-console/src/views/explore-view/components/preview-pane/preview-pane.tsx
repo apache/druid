@@ -17,8 +17,8 @@
  */
 
 import { Callout } from '@blueprintjs/core';
+import type { QueryResult, SqlQuery } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import type { QueryResult, SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { useQueryManager } from '../../../../hooks';

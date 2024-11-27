@@ -16,35 +16,35 @@
  * limitations under the License.
  */
 
-import { Duration } from '../../utils';
+.stacked-bar-chart {
+  position: relative;
+  overflow: hidden;
 
-export const START_OF_TIME_DATE = '-146136543-09-08T08:23:32.096Z';
-export const END_OF_TIME_DATE = '146140482-04-24T15:36:27.903Z';
+  .bar-chart-tooltip {
+    position: absolute;
+    left: 100px;
+    right: 0;
 
-export function computeSegmentTimeSpan(start: string, end: string): string {
-  if (start === START_OF_TIME_DATE && end === END_OF_TIME_DATE) {
-    return 'All';
+    div {
+      display: inline-block;
+      width: 230px;
+    }
   }
 
-  const startDate = new Date(start);
-  if (isNaN(startDate.valueOf())) {
-    return 'Invalid start';
+  svg {
+    position: absolute;
+
+    .hovered-bar {
+      fill: transparent;
+      stroke: #ffffff;
+      stroke-width: 1.5px;
+    }
+
+    .gridline-x {
+      line {
+        stroke-dasharray: 5, 5;
+        opacity: 0.5;
+      }
+    }
   }
-
-  const endDate = new Date(end);
-  if (isNaN(endDate.valueOf())) {
-    return 'Invalid end';
-  }
-
-  return Duration.fromRange(startDate, endDate, 'Etc/UTC').getDescription(true);
-}
-
-export interface ShardSpec {
-  type: string;
-  partitionNum?: number;
-  partitions?: number;
-  dimensions?: string[];
-  partitionDimensions?: string[];
-  start?: string[];
-  end?: string[];
 }

@@ -17,7 +17,7 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import { C, F, L, SqlCase } from 'druid-query-toolkit';
+import { C, F, L, SqlCase } from '@druid-toolkit/query';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import { useEffect, useMemo, useRef } from 'react';
@@ -25,7 +25,6 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
 import {
-  Duration,
   formatInteger,
   formatNumber,
   prettyFormatIsoDateTick,
@@ -35,7 +34,7 @@ import { Issue } from '../components';
 import { highlightStore } from '../highlight-store/highlight-store';
 import type { ExpressionMeta } from '../models';
 import { ModuleRepository } from '../module-repository/module-repository';
-import { DATE_FORMAT, getAutoGranularity } from '../utils';
+import { DATE_FORMAT, getAutoGranularity, snapToGranularity } from '../utils';
 
 import './record-table-module.scss';
 
@@ -296,13 +295,13 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
         // this is only used for the label and the data saved in the highlight
         // the positioning is done with the true coordinates until the user
         // releases the mouse button (in the `brushend` event)
-        let start = params.areas[0].coordRange[0];
-        let end = params.areas[0].coordRange[1];
-        if (snappyHighlight) {
-          const duration = new Duration(timeGranularity);
-          start = duration.round(start, 'Etc/UTC');
-          end = duration.round(end, 'Etc/UTC');
-        }
+        const { start, end } = snappyHighlight
+          ? snapToGranularity(
+              params.areas[0].coordRange[0],
+              params.areas[0].coordRange[1],
+              timeGranularity,
+            )
+          : { start: params.areas[0].coordRange[0], end: params.areas[0].coordRange[1] };
 
         const x0 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[0]);
         const x1 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[1]);

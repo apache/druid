@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import type { Column, SqlExpression } from 'druid-query-toolkit';
-import { C, F, SqlColumn, SqlFunction, SqlStar } from 'druid-query-toolkit';
+import type { Column, SqlExpression } from '@druid-toolkit/query';
+import { C, F, SqlColumn, SqlFunction, SqlStar } from '@druid-toolkit/query';
 
 import { capitalizeFirst } from '../../../utils';
 

@@ -24,7 +24,7 @@ import {
   SqlExpression,
   SqlQuery,
   SqlWithPart,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 import React, { useMemo, useState } from 'react';
 
 import { AppToaster } from '../../../../../singletons';

@@ -188,7 +188,7 @@ exports[`RetentionDialog matches snapshot 1`] = `
                         style="transform: translateY(0); transition: none;"
                       >
                         <div
-                          class="rule-detail bp5-card bp5-elevation-2"
+                          class="bp5-card bp5-elevation-2"
                         >
                           <div
                             class="bp5-form-group"
@@ -653,7 +653,7 @@ exports[`RetentionDialog matches snapshot 1`] = `
                         style="transform: translateY(0); transition: none;"
                       >
                         <div
-                          class="rule-detail bp5-card bp5-elevation-2"
+                          class="bp5-card bp5-elevation-2"
                         >
                           <div
                             class="bp5-form-group"

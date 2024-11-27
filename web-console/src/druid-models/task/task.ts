@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { C } from 'druid-query-toolkit';
+import { C } from '@druid-toolkit/query';
 
 import type { Counters, StageDefinition } from '../stages/stages';
 

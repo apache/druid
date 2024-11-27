@@ -43,7 +43,6 @@ export * from './menu-checkbox/menu-checkbox';
 export * from './more-button/more-button';
 export * from './plural-pair-if-needed/plural-pair-if-needed';
 export * from './popover-text/popover-text';
-export * from './portal-bubble/portal-bubble';
 export * from './query-error-pane/query-error-pane';
 export * from './record-table-pane/record-table-pane';
 export * from './refresh-button/refresh-button';

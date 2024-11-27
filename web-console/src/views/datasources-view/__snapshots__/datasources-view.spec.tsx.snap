@@ -109,7 +109,6 @@ exports[`DatasourcesView matches snapshot 1`] = `
     />
   </Memo(ViewControlBar)>
   <SplitterLayout
-    className="timeline-datasources-splitter"
     percentage={true}
     primaryIndex={1}
     primaryMinSize={20}

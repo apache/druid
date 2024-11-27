@@ -19,8 +19,8 @@
 import type { IconName } from '@blueprintjs/core';
 import { Icon, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { Column } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import type { Column } from 'druid-query-toolkit';
 import { useState } from 'react';
 
 import { caseInsensitiveContains, columnToIcon, filterMap } from '../../../../utils';

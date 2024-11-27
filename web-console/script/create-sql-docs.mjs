@@ -39,12 +39,6 @@ const initialFunctionDocs = {
       ),
     ],
   ],
-  UNNEST: [
-    [
-      'arrayExpression',
-      convertMarkdownToHtml("Unnests ARRAY typed values. The source for UNNEST can be an array type column, or an input that's been transformed into an array, such as with helper functions like `MV_TO_ARRAY` or `ARRAY`.")
-    ]
-  ]
 };
 
 function hasHtmlTags(str) {

@@ -19,10 +19,10 @@
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 
-import type { IngestionSpec } from '../../../druid-models';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
-import { getApiArray, partition, pluralIfNeeded, queryDruidSql } from '../../../utils';
+import { Api } from '../../../singletons';
+import { pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface SupervisorCounts {
@@ -50,14 +50,11 @@ FROM sys.supervisors`,
           )
         )[0];
       } else if (capabilities.hasOverlordAccess()) {
-        const supervisors = await getApiArray<{ spec: IngestionSpec }>(
-          '/druid/indexer/v1/supervisor?full',
-          cancelToken,
-        );
-        const [running, suspended] = partition(supervisors, d => !d.spec.suspended);
+        const resp = await Api.instance.get('/druid/indexer/v1/supervisor?full', { cancelToken });
+        const data = resp.data;
         return {
-          running: running.length,
-          suspended: suspended.length,
+          running: data.filter((d: any) => d.spec.suspended === false).length,
+          suspended: data.filter((d: any) => d.spec.suspended === true).length,
         };
       } else {
         throw new Error(`must have SQL or overlord access`);

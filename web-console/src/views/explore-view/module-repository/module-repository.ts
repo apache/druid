@@ -17,11 +17,10 @@
  */
 
 import type { IconName } from '@blueprintjs/icons';
+import type { QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
 import type { CancelToken } from 'axios';
-import type { QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 
-import type { Stage } from '../../../utils/stage';
-import type { ParameterDefinition, QuerySource } from '../models';
+import type { ParameterDefinition, QuerySource, Stage } from '../models';
 
 interface ModuleDefinition<P> {
   id: string;

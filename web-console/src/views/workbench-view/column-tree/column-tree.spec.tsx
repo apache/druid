@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { SqlQuery } from 'druid-query-toolkit';
+import { SqlQuery } from '@druid-toolkit/query';
 
 import type { ColumnMetadata } from '../../../utils';
 import { shallow } from '../../../utils/shallow-renderer';

@@ -211,10 +211,6 @@ export class Capabilities {
     };
   }
 
-  public clone(): Capabilities {
-    return new Capabilities(this.valueOf());
-  }
-
   public getMode(): CapabilitiesMode {
     if (!this.hasSql()) return 'no-sql';
     if (!this.hasCoordinatorAccess()) return 'no-proxy';

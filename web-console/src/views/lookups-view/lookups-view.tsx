@@ -41,9 +41,8 @@ import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../.
 import { Api, AppToaster } from '../../singletons';
 import {
   deepGet,
-  getApiArray,
   getDruidErrorMessage,
-  hasOverlayOpen,
+  hasPopoverOpen,
   isLookupsUninitialized,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -125,12 +124,14 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
     this.lookupsQueryManager = new QueryManager({
       processQuery: async (_, cancelToken) => {
-        const tiersResp = await getApiArray(
+        const tiersResp = await Api.instance.get(
           '/druid/coordinator/v1/lookups/config?discover=true',
-          cancelToken,
+          { cancelToken },
         );
         const tiers =
-          tiersResp.length > 0 ? tiersResp.sort(tierNameCompare) : [DEFAULT_LOOKUP_TIER];
+          tiersResp.data && tiersResp.data.length > 0
+            ? tiersResp.data.sort(tierNameCompare)
+            : [DEFAULT_LOOKUP_TIER];
 
         const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all', {
           cancelToken,
@@ -387,7 +388,6 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             width: 200,
             Cell: ({ value, original }) => (
               <TableClickableCell
-                tooltip="Show detail"
                 onClick={() => this.onDetail(original)}
                 hoverIcon={IconNames.SEARCH_TEMPLATE}
               >
@@ -511,7 +511,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         <ViewControlBar label="Lookups">
           <RefreshButton
             onRefresh={auto => {
-              if (auto && hasOverlayOpen()) return;
+              if (auto && hasPopoverOpen()) return;
               this.lookupsQueryManager.rerunLastQuery(auto);
             }}
             localStorageKey={LocalStorageKeys.LOOKUPS_REFRESH_RATE}

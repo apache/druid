@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { sane } from 'druid-query-toolkit';
+import { sane } from '@druid-toolkit/query';
 
 import { findAllSqlQueriesInText, findSqlQueryPrefix } from './sql';
 

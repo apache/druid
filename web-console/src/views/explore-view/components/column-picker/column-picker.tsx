@@ -18,7 +18,7 @@
 
 import { Button, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Column } from 'druid-query-toolkit';
+import type { Column } from '@druid-toolkit/query';
 import React, { useState } from 'react';
 
 import { columnToIcon } from '../../../../utils';

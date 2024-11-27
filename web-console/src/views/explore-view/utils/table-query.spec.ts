@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import type { SqlOrderByExpression } from 'druid-query-toolkit';
-import { C, sql, SqlExpression, SqlQuery, T } from 'druid-query-toolkit';
+import type { SqlOrderByExpression } from '@druid-toolkit/query';
+import { C, sql, SqlExpression, SqlQuery, T } from '@druid-toolkit/query';
 
 import { nodePostJson } from '../../../test-utils';
 import { ExpressionMeta, Measure } from '../models';

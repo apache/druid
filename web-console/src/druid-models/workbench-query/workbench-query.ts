@@ -22,7 +22,7 @@ import type {
   SqlClusteredByClause,
   SqlExpression,
   SqlPartitionedByClause,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 import {
   C,
   F,
@@ -30,7 +30,7 @@ import {
   SqlOrderByClause,
   SqlOrderByExpression,
   SqlQuery,
-} from 'druid-query-toolkit';
+} from '@druid-toolkit/query';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
