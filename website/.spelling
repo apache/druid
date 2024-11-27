@@ -2417,6 +2417,7 @@ ddSketch
 DDSketch
 druid-ddsketch
 numBins
+9.4.56.v20240826
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
