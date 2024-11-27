@@ -34,3 +34,8 @@ For information about new features in Druid 31, see the [Druid 31 release notes]
 * Fixes an issue with projection segment merging [#17460](https://github.com/apache/druid/pull/17460)
 * Fixes web console progress indicator [#17334](https://github.com/apache/druid/pull/17334)
 * Fixes a minor performance regression with query processing [#17397](https://github.com/apache/druid/pull/17397)
+
+## Dependency updates
+Bumped the versions of the following dependencies:
+* Jetty to 9.4.56.v20240826 [#17385](https://github.com/apache/druid/pull/17385)
+* Apache Kafka to 3.9.0 [#17513](https://github.com/apache/druid/pull/17513)
