@@ -154,7 +154,7 @@ Supported arguments for the function:
 | `bucket` | Yes  | S3 bucket destination for exported files. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths` allow list. | n/a |
 | `prefix` | Yes  | Destination path in the bucket to create exported files. The export query expects the destination path to be empty. If the location includes other files, the query will fail. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths` allow list. | n/a |
 
-Configure following runtime parameters to export to an S3 destination:
+Configure the following runtime parameters to export to an S3 destination:
 
 | Runtime parameter | Required | Description | Default |
 |---|---|---|---|
@@ -168,7 +168,7 @@ Configure following runtime parameters to export to an S3 destination:
 To export query results to Google Cloud Storage (GCS), pass the `google()` function as an argument to the `EXTERN` function.
 Export to GCS requires the `druid-google-extensions` extension.
 
-The `google()` function configures the connection to Google Cloud Storage. Pass the arguments for `google()` as named parameters with the value in single quotes. For example:
+The `google()` function configures the connection to GCS. Pass the arguments for `google()` as named parameters with their values enclosed in single quotes. For example:
 
 ```sql
 INSERT INTO
