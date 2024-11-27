@@ -466,6 +466,8 @@ public class TaskLockbox
    * @param skipSegmentLineageCheck Whether lineage check is to be skipped
    *                                (this is true for streaming ingestion)
    * @param lockGranularity         Granularity of task lock
+   * @param reduceMetadataIO        Whether to skip fetching payloads for all used
+   *                                segments and rely on their IDs instead.
    * @return List of allocation results in the same order as the requests.
    */
   public List<SegmentAllocateResult> allocateSegments(
@@ -473,7 +475,8 @@ public class TaskLockbox
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
-      LockGranularity lockGranularity
+      LockGranularity lockGranularity,
+      boolean reduceMetadataIO
   )
   {
     log.info("Allocating [%d] segments for datasource [%s], interval [%s]", requests.size(), dataSource, interval);
@@ -487,9 +490,15 @@ public class TaskLockbox
       if (isTimeChunkLock) {
         // For time-chunk locking, segment must be allocated only after acquiring the lock
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, true));
-        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
+        allocateSegmentIds(
+            dataSource,
+            interval,
+            skipSegmentLineageCheck,
+            holderList.getPending(),
+            reduceMetadataIO
+        );
       } else {
-        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending());
+        allocateSegmentIds(dataSource, interval, skipSegmentLineageCheck, holderList.getPending(), false);
         holderList.getPending().forEach(holder -> acquireTaskLock(holder, false));
       }
       holderList.getPending().forEach(SegmentAllocationHolder::markSucceeded);
@@ -702,12 +711,12 @@ public class TaskLockbox
    * for the given requests. Updates the holder with the allocated segment if
    * the allocation succeeds, otherwise marks it as failed.
    */
-  @VisibleForTesting
-  void allocateSegmentIds(
+  private void allocateSegmentIds(
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
-      Collection<SegmentAllocationHolder> holders
+      Collection<SegmentAllocationHolder> holders,
+      boolean reduceMetadataIO
   )
   {
     if (holders.isEmpty()) {
@@ -724,7 +733,8 @@ public class TaskLockbox
             dataSource,
             interval,
             skipSegmentLineageCheck,
-            createRequests
+            createRequests,
+            reduceMetadataIO
         );
 
     for (SegmentAllocationHolder holder : holders) {

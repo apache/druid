@@ -64,6 +64,7 @@
     <dependency>
       <groupId>com.google.inject.extensions</groupId>
       <artifactId>guice-multibindings</artifactId>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.druid</groupId>
@@ -239,7 +240,6 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jmh.version>1.21</jmh.version>
-    <javac.target>1.8</javac.target>
     <uberjar.name>benchmarks</uberjar.name>
   </properties>
 
