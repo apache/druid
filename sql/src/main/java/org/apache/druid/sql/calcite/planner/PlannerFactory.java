@@ -39,6 +39,7 @@ import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
@@ -196,7 +197,7 @@ public class PlannerFactory extends PlannerToolbox
           }
         });
 
-    if (PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+    if (QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
         .equals(plannerConfig().getNativeQuerySqlPlanningMode())
     ) {
       frameworkConfigBuilder.costFactory(new DruidVolcanoCost.Factory());
