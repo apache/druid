@@ -27,7 +27,7 @@ import { OVERLORD_DYNAMIC_CONFIG_FIELDS } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api, AppToaster } from '../../singletons';
-import { getDruidErrorMessage } from '../../utils';
+import { getApiArray, getDruidErrorMessage } from '../../utils';
 import { SnitchDialog } from '..';
 
 import './overlord-dynamic-config-dialog.scss';
@@ -47,10 +47,7 @@ export const OverlordDynamicConfigDialog = React.memo(function OverlordDynamicCo
   const [historyRecordsState] = useQueryManager<null, any[]>({
     initQuery: null,
     processQuery: async (_, cancelToken) => {
-      const historyResp = await Api.instance.get(`/druid/indexer/v1/worker/history?count=100`, {
-        cancelToken,
-      });
-      return historyResp.data;
+      return await getApiArray(`/druid/indexer/v1/worker/history?count=100`, cancelToken);
     },
   });
 

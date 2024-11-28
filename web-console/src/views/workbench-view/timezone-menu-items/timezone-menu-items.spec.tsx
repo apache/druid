@@ -16,16 +16,26 @@
  * limitations under the License.
  */
 
-export class Stage {
-  public readonly width: number;
-  public readonly height: number;
+import { shallow } from '../../../utils/shallow-renderer';
 
-  constructor(width: number, height: number) {
-    this.width = width;
-    this.height = height;
-  }
+import { TimezoneMenuItems } from './timezone-menu-items';
 
-  public equals(other: Stage | undefined): boolean {
-    return Boolean(other && this.width === other.width && this.height === other.height);
-  }
-}
+jest.useFakeTimers('modern').setSystemTime(Date.parse('2024-06-08T12:34:56Z'));
+
+describe('TimezoneMenuItems', () => {
+  it('ensure UTC', () => {
+    expect(new Date().getTimezoneOffset()).toBe(0);
+  });
+
+  it('matches snapshot', () => {
+    const comp = shallow(
+      <TimezoneMenuItems
+        sqlTimeZone="Blah"
+        setSqlTimeZone={() => {}}
+        defaultSqlTimeZone="Etc/UTC"
+      />,
+    );
+
+    expect(comp).toMatchSnapshot();
+  });
+});

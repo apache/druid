@@ -22,4 +22,3 @@ export * from './measure';
 export * from './measure-pattern';
 export * from './parameter';
 export * from './query-source';
-export * from './stage';
