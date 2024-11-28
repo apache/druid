@@ -753,7 +753,6 @@ public class TaskLockbox
             request.getPreviousSegmentId(),
             version,
             request.getPartialShardSpec(),
-            null,
             allocatorId
         )
     );
@@ -1816,7 +1815,6 @@ public class TaskLockbox
             action.getPreviousSegmentId(),
             acquiredLock == null ? lockRequest.getVersion() : acquiredLock.getVersion(),
             action.getPartialShardSpec(),
-            null,
             ((PendingSegmentAllocatingTask) task).getTaskAllocatorId()
         );
       }

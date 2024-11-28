@@ -1736,17 +1736,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           pendingSegmentId,
           request.getSequenceName(),
           request.getPreviousSegmentId(),
-          request.getUpgradedFromSegmentId(),
+          null,
           request.getTaskAllocatorId()
       );
 
     } else if (!overallMaxId.getInterval().equals(interval)) {
       log.warn(
           "Cannot allocate new segment for dataSource[%s], interval[%s], existingVersion[%s]: conflicting segment[%s].",
-          dataSource,
-          interval,
-          existingVersion,
-          overallMaxId
+          dataSource, interval, existingVersion, overallMaxId
       );
       return null;
     } else if (committedMaxId != null
@@ -1754,8 +1751,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                   == SingleDimensionShardSpec.UNKNOWN_NUM_CORE_PARTITIONS) {
       log.warn(
           "Cannot allocate new segment because of unknown core partition size of segment[%s], shardSpec[%s]",
-          committedMaxId,
-          committedMaxId.getShardSpec()
+          committedMaxId, committedMaxId.getShardSpec()
       );
       return null;
     } else {
@@ -1776,7 +1772,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           getTrueAllocatedId(pendingSegmentId),
           request.getSequenceName(),
           request.getPreviousSegmentId(),
-          request.getUpgradedFromSegmentId(),
+          null,
           request.getTaskAllocatorId()
       );
     }
