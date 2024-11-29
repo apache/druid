@@ -118,13 +118,10 @@ public class BatchServerInventoryViewTest
 
     jsonMapper = TestHelper.makeJsonMapper();
 
-    announcer = new Announcer(
-        cf,
-        Execs.directExecutor()
-    );
+    announcer = new Announcer(cf, Execs.directExecutor());
     announcer.start();
 
-    nodeAnnouncer = new NodeAnnouncer(cf);
+    nodeAnnouncer = new NodeAnnouncer(cf, Execs.directExecutor());
     nodeAnnouncer.start();
 
     DruidServerMetadata serverMetadata = new DruidServerMetadata(

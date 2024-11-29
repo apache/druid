@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
 
 /**
  * The {@link NodeAnnouncer} class is responsible for announcing a single node
@@ -58,6 +59,8 @@ public class NodeAnnouncer
   private static final Logger log = new Logger(NodeAnnouncer.class);
 
   private final CuratorFramework curator;
+  private final ExecutorService nodeCacheExecutor;
+
   private final ConcurrentMap<String, NodeCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, byte[]> announcedPaths = new ConcurrentHashMap<>();
 
@@ -88,9 +91,10 @@ public class NodeAnnouncer
   @GuardedBy("toAnnounce")
   private final List<String> pathsCreatedInThisAnnouncer = new ArrayList<>();
 
-  public NodeAnnouncer(CuratorFramework curator)
+  public NodeAnnouncer(CuratorFramework curator, ExecutorService exec)
   {
     this.curator = curator;
+    this.nodeCacheExecutor = exec;
   }
 
   @VisibleForTesting
@@ -249,7 +253,7 @@ public class NodeAnnouncer
   {
     final NodeCache cache = new NodeCache(curator, path, true);
     cache.getListenable().addListener(
-        () -> {
+        () -> nodeCacheExecutor.submit(() -> {
           ChildData currentData = cache.getCurrentData();
 
           if (currentData == null) {
@@ -262,10 +266,15 @@ public class NodeAnnouncer
                   "Ephemeral node at path [%s] was unexpectedly removed. Recreating node with previous data.",
                   path
               );
-              createAnnouncement(path, previouslyAnnouncedData);
+              try {
+                createAnnouncement(path, previouslyAnnouncedData);
+              }
+              catch (Exception e) {
+                throw new RuntimeException(e);
+              }
             }
           }
-        }
+        })
     );
     return cache;
   }

@@ -28,6 +28,8 @@ import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.ZKPathsUtils;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.data.Stat;
@@ -39,17 +41,21 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
 
 /**
  *
  */
 public class NodeAnnouncerTest extends CuratorTestBase
 {
+  private static final Logger log = new Logger(NodeAnnouncerTest.class);
+  private ExecutorService exec;
 
   @Before
   public void setUp() throws Exception
   {
     setupServerAndCurator();
+    exec = Execs.singleThreaded("test-node-announcer-sanity-%s");
   }
 
   @After
@@ -63,7 +69,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/testAnnounce";
 
@@ -80,7 +86,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/newParent/testPath";
     final String parentPath = ZKPathsUtils.getParentPath(testPath);
@@ -104,7 +110,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
     final byte[] billy = StringUtils.toUtf8("billy");
     final byte[] tilly = StringUtils.toUtf8("tilly");
     final String testPath = "/testPath";
@@ -133,7 +139,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
     final byte[] billy = StringUtils.toUtf8("billy");
     final byte[] tilly = StringUtils.toUtf8("tilly");
     final String testPath = "/testAnnounce";
@@ -152,7 +158,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
     final byte[] billy = StringUtils.toUtf8("billy");
     final byte[] tilly = StringUtils.toUtf8("tilly");
     final String testPath = "/testUpdate";
@@ -174,7 +180,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/testUpdate";
 
@@ -190,7 +196,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath1 = "/test1";
@@ -266,7 +272,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
     try {
       curator.inTransaction().create().forPath("/somewhere").and().commit();
       announcer.start();
@@ -318,7 +324,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
@@ -344,7 +350,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
@@ -373,7 +379,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
   {
     curator.start();
     curator.blockUntilConnected();
-    NodeAnnouncer announcer = new NodeAnnouncer(curator);
+    NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
