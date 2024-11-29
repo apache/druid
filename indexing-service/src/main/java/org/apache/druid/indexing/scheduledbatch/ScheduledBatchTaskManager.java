@@ -46,9 +46,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class ScheduledBatchScheduler
+/**
+ * Responsible for task management for the scheduled batch supervisor.
+ */
+public class ScheduledBatchTaskManager
 {
-  private static final Logger log = new EmittingLogger(ScheduledBatchScheduler.class);
+  private static final Logger log = new EmittingLogger(ScheduledBatchTaskManager.class);
 
   private final TaskRunnerListener taskRunnerListener;
   private final TaskMaster taskMaster;
@@ -66,7 +69,7 @@ public class ScheduledBatchScheduler
   private final ScheduledExecutorFactory executorFactory;
 
   @Inject
-  public ScheduledBatchScheduler(
+  public ScheduledBatchTaskManager(
       final TaskMaster taskMaster,
       final ScheduledExecutorFactory executorFactory,
       final BrokerClient brokerClient,
@@ -105,21 +108,29 @@ public class ScheduledBatchScheduler
     };
   }
 
+  /**
+   * Starts scheduled ingestion for the specified {@code supervisorId}
+   */
   public void startScheduledIngestion(
       final String supervisorId,
+      final String dataSource,
       final CronSchedulerConfig cronSchedulerConfig,
       final SqlQuery spec
   )
   {
     log.info(
-        "Starting scheduled batch ingestion for supervisorId[%s] with cronSchedule[%s] and spec[%s].",
-        supervisorId, cronSchedulerConfig, spec
+        "Starting scheduled batch ingestion for supervisorId[%s] with datasource[%s], cronSchedule[%s] and spec[%s].",
+        supervisorId, dataSource, cronSchedulerConfig, spec
     );
-    final SchedulerManager manager = new SchedulerManager(supervisorId, cronSchedulerConfig, spec, executorFactory);
+    final SchedulerManager manager = new SchedulerManager(supervisorId, dataSource, cronSchedulerConfig, spec, executorFactory);
     manager.startScheduling();
     supervisorToManager.put(supervisorId, manager);
   }
 
+  /**
+   *
+   * @param supervisorId
+   */
   public void stopScheduledIngestion(final String supervisorId)
   {
     log.info("Stopping scheduled batch ingestion for supervisorId[%s].", supervisorId);
@@ -181,7 +192,7 @@ public class ScheduledBatchScheduler
   private void submitSqlTask(final String supervisorId, final SqlQuery spec)
       throws ExecutionException, InterruptedException
   {
-    log.info("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
+    log.debug("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
     final SqlTaskStatus taskStatus = FutureUtils.get(brokerClient.submitSqlTask(spec), true);
     statusTracker.onTaskSubmitted(supervisorId, taskStatus);
   }
@@ -189,6 +200,7 @@ public class ScheduledBatchScheduler
   private class SchedulerManager
   {
     private final String supervisorId;
+    private final String dataSource;
     private final SqlQuery spec;
     private final ScheduledExecutorService managerExecutor;
     private final CronSchedulerConfig cronSchedulerConfig;
@@ -196,20 +208,22 @@ public class ScheduledBatchScheduler
     private ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus status;
 
     /**
-     * Note that the last task submitted per supervisor should eventually be persisted in the metadata store,
+     * TODO: Note that the last task submitted per supervisor should eventually be persisted in the metadata store,
      * along with any other scheduler state, so that the batch supervisor can recover gracefully and
      * avoid missing task submissions during rolling restarts, etc.
      */
-    private DateTime lastTaskSubmittedTime;
+    private volatile DateTime lastTaskSubmittedTime;
 
     private SchedulerManager(
         final String supervisorId,
+        final String dataSource,
         final CronSchedulerConfig cronSchedulerConfig,
         final SqlQuery spec,
         final ScheduledExecutorFactory executorFactory
     )
     {
       this.supervisorId = supervisorId;
+      this.dataSource = dataSource;
       this.cronSchedulerConfig = cronSchedulerConfig;
       this.spec = spec;
       this.managerExecutor = executorFactory.create(1, "scheduler-" + supervisorId + "-%d");
@@ -269,6 +283,7 @@ public class ScheduledBatchScheduler
       emitter.emit(
           ServiceMetricEvent.builder()
                             .setDimension("supervisorId", supervisorId)
+                            .setDimension("dataSource", dataSource)
                             .setMetric(metricName, 1)
       );
     }
@@ -282,13 +297,13 @@ public class ScheduledBatchScheduler
     @Nullable
     private DateTime getNextTaskSubmissionTime()
     {
-      return cronSchedulerConfig.getNextTaskSubmissionTime(DateTimes.nowUtc());
+      return cronSchedulerConfig.getNextTaskStartTimeAfter(DateTimes.nowUtc());
     }
 
     @Nullable
     private Duration getTimeUntilNextTaskSubmission()
     {
-      return cronSchedulerConfig.getTimeUntilNextTaskSubmission(DateTimes.nowUtc());
+      return cronSchedulerConfig.getDurationUntilNextTaskStartTimeAfter(DateTimes.nowUtc());
     }
 
     private ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus getSchedulerStatus()

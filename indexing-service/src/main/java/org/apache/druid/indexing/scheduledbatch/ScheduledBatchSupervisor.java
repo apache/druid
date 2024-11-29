@@ -32,38 +32,36 @@ public class ScheduledBatchSupervisor implements Supervisor
 {
   private static final Logger log = new Logger(ScheduledBatchSupervisor.class);
   private final ScheduledBatchSupervisorSpec supervisorSpec;
-  private final ScheduledBatchScheduler scheduler;
+  private final ScheduledBatchTaskManager batchTaskManager;
 
   public ScheduledBatchSupervisor(
       final ScheduledBatchSupervisorSpec supervisorSpec,
-      final ScheduledBatchScheduler scheduler
+      final ScheduledBatchTaskManager batchTaskManager
   )
   {
     this.supervisorSpec = supervisorSpec;
-    this.scheduler = scheduler;
+    this.batchTaskManager = batchTaskManager;
   }
 
   @Override
   public void start()
   {
     if (supervisorSpec.isSuspended()) {
-      log.info("Suspending the scheduled batch supervisor[%s].", supervisorSpec.getId());
-      scheduler.stopScheduledIngestion(supervisorSpec.getId());
+      batchTaskManager.stopScheduledIngestion(supervisorSpec.getId());
     } else {
-      scheduler.startScheduledIngestion(
+      batchTaskManager.startScheduledIngestion(
           supervisorSpec.getId(),
+          supervisorSpec.getDataSources().get(0),
           supervisorSpec.getSchedulerConfig(),
           supervisorSpec.getSpec()
       );
-      log.info("Starting the scheduled batch supervisor[%s].", supervisorSpec.getId());
     }
   }
 
   @Override
   public void stop(boolean stopGracefully)
   {
-    log.info("Stopping the scheduled batch supervisor[%s]", supervisorSpec.getId());
-    scheduler.stopScheduledIngestion(supervisorSpec.getId());
+    batchTaskManager.stopScheduledIngestion(supervisorSpec.getId());
   }
 
   @Override
@@ -72,7 +70,7 @@ public class ScheduledBatchSupervisor implements Supervisor
     return new SupervisorReport<>(
         supervisorSpec.getId(),
         DateTimes.nowUtc(),
-        scheduler.getSchedulerSnapshot(supervisorSpec.getId())
+        batchTaskManager.getSchedulerSnapshot(supervisorSpec.getId())
     );
   }
 

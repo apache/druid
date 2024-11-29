@@ -37,16 +37,16 @@ import javax.annotation.Nullable;
 public interface CronSchedulerConfig
 {
   /**
-   * Gets the next task submission time after the specified reference time {@code dateTime}, or {@code null}
-   * if no future submission time can be determined (e.g., if the schedule is in the past).
+   * Gets the next task submission time after the specified {@code referenceTime}, or {@code null}
+   * if no future submission time can be determined (e.g., if the {@code referenceTime} is in the past).
    */
   @Nullable
-  DateTime getNextTaskSubmissionTime(DateTime dateTime);
+  DateTime getNextTaskStartTimeAfter(DateTime referenceTime);
 
   /**
-   * Gets the duration until the next task submission after the specified reference time {@code dateTime}, or
-   * {@code null} if no future submission time can be determined (e.g., if the schedule is in the past).
+   * Gets the duration until the next task submission after the specified {@code referenceTime}, or
+   * {@code null} if no future submission time can be determined (e.g., if the {@code referenceTime} is in the past).
    */
   @Nullable
-  Duration getTimeUntilNextTaskSubmission(DateTime dateTime);
+  Duration getDurationUntilNextTaskStartTimeAfter(DateTime referenceTime);
 }

@@ -35,7 +35,7 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
-import org.apache.druid.indexing.scheduledbatch.ScheduledBatchScheduler;
+import org.apache.druid.indexing.scheduledbatch.ScheduledBatchTaskManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -90,7 +90,7 @@ public class DruidOverlord
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue,
       final CompactionScheduler compactionScheduler,
-      final ScheduledBatchScheduler scheduledBatchScheduler,
+      final ScheduledBatchTaskManager scheduledBatchScheduler,
       final ObjectMapper mapper,
       final TaskContextEnricher taskContextEnricher
   )

@@ -41,20 +41,20 @@ public class ScheduledBatchSupervisorTest
 {
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private BrokerClient brokerClient;
-  private ScheduledBatchScheduler scheduler;
+  private ScheduledBatchTaskManager scheduler;
   private SqlQuery query;
 
   @Before
   public void setUp()
   {
     brokerClient = Mockito.mock(BrokerClient.class);
-    scheduler = Mockito.mock(ScheduledBatchScheduler.class);
+    scheduler = Mockito.mock(ScheduledBatchTaskManager.class);
 
     OBJECT_MAPPER.setInjectableValues(
         new InjectableValues.Std()
             .addValue(BrokerClient.class, brokerClient)
             .addValue(ObjectMapper.class, OBJECT_MAPPER)
-            .addValue(ScheduledBatchScheduler.class, scheduler)
+            .addValue(ScheduledBatchTaskManager.class, scheduler)
     );
     OBJECT_MAPPER.registerModules(
         new SupervisorModule().getJacksonModules()
@@ -98,7 +98,8 @@ public class ScheduledBatchSupervisorTest
     supervisor.start();
     supervisor.stop(false);
 
-    Mockito.verify(scheduler, Mockito.times(1)).startScheduledIngestion(activeSpec.getId(), activeSpec.getSchedulerConfig(), activeSpec.getSpec());
+    Mockito.verify(scheduler, Mockito.times(1))
+           .startScheduledIngestion(activeSpec.getId(), "foo", activeSpec.getSchedulerConfig(), activeSpec.getSpec());
     Mockito.verify(scheduler, Mockito.times(1)).stopScheduledIngestion(activeSpec.getId());
   }
 

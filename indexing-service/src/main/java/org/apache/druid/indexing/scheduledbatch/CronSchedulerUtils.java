@@ -33,9 +33,9 @@ import java.util.Optional;
 public class CronSchedulerUtils
 {
   @Nullable
-  static DateTime getNextTaskSubmissionTime(final ExecutionTime executionTime, final DateTime dateTime)
+  static DateTime getNextTaskStartTimeAfter(final ExecutionTime executionTime, final DateTime referenceTime)
   {
-    final Optional<ZonedDateTime> zonedDateTime = executionTime.nextExecution(convertToZonedDateTime(dateTime));
+    final Optional<ZonedDateTime> zonedDateTime = executionTime.nextExecution(convertToZonedDateTime(referenceTime));
     if (zonedDateTime.isPresent()) {
       final ZonedDateTime zdt = zonedDateTime.get();
       final Instant instant = zdt.toInstant();
@@ -46,9 +46,9 @@ public class CronSchedulerUtils
   }
 
   @Nullable
-  static Duration getTimeUntilNextTaskSubmission(final ExecutionTime executionTime, final DateTime dateTime)
+  static Duration getDurationUntilNextTaskStartTimeAfter(final ExecutionTime executionTime, final DateTime referenceTime)
   {
-    final Optional<java.time.Duration> duration = executionTime.timeToNextExecution(convertToZonedDateTime(dateTime));
+    final Optional<java.time.Duration> duration = executionTime.timeToNextExecution(convertToZonedDateTime(referenceTime));
     return duration.map(value -> Duration.millis(value.toMillis())).orElse(null);
   }
 

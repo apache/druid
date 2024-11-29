@@ -21,10 +21,14 @@ package org.apache.druid.indexing.scheduledbatch;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -40,8 +44,8 @@ public class UnixCronSchedulerConfigTest
   {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@hourly");
 
-    assertEquals(DATE_2024_01_01.plusHours(1), config.getNextTaskSubmissionTime(DATE_2024_01_01));
-    assertEquals(Duration.standardHours(1), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+    assertEquals(DATE_2024_01_01.plusHours(1), config.getNextTaskStartTimeAfter(DATE_2024_01_01));
+    assertEquals(Duration.standardHours(1), config.getDurationUntilNextTaskStartTimeAfter(DATE_2024_01_01));
   }
 
   @Test
@@ -49,8 +53,8 @@ public class UnixCronSchedulerConfigTest
   {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@daily");
 
-    assertEquals(DATE_2024_01_01.plusDays(1), config.getNextTaskSubmissionTime(DATE_2024_01_01));
-    assertEquals(Duration.standardDays(1), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+    assertEquals(DATE_2024_01_01.plusDays(1), config.getNextTaskStartTimeAfter(DATE_2024_01_01));
+    assertEquals(Duration.standardDays(1), config.getDurationUntilNextTaskStartTimeAfter(DATE_2024_01_01));
   }
 
   @Test
@@ -58,8 +62,8 @@ public class UnixCronSchedulerConfigTest
   {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@weekly");
 
-    assertEquals(DATE_2024_01_01.withDayOfWeek(7), config.getNextTaskSubmissionTime(DATE_2024_01_01));
-    assertEquals(Duration.standardDays(6), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+    assertEquals(DATE_2024_01_01.withDayOfWeek(7), config.getNextTaskStartTimeAfter(DATE_2024_01_01));
+    assertEquals(Duration.standardDays(6), config.getDurationUntilNextTaskStartTimeAfter(DATE_2024_01_01));
   }
 
   @Test
@@ -67,8 +71,8 @@ public class UnixCronSchedulerConfigTest
   {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@monthly");
 
-    assertEquals(DATE_2024_01_01.plusMonths(1).withDayOfMonth(1), config.getNextTaskSubmissionTime(DATE_2024_01_01));
-    assertEquals(Duration.standardDays(31), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+    assertEquals(DATE_2024_01_01.plusMonths(1).withDayOfMonth(1), config.getNextTaskStartTimeAfter(DATE_2024_01_01));
+    assertEquals(Duration.standardDays(31), config.getDurationUntilNextTaskStartTimeAfter(DATE_2024_01_01));
   }
 
   @Test
@@ -76,8 +80,8 @@ public class UnixCronSchedulerConfigTest
   {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("@yearly");
 
-    assertEquals(DATE_2024_01_01.plusYears(1).withDayOfYear(1), config.getNextTaskSubmissionTime(DATE_2024_01_01));
-    assertEquals(Duration.standardDays(366), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+    assertEquals(DATE_2024_01_01.plusYears(1).withDayOfYear(1), config.getNextTaskStartTimeAfter(DATE_2024_01_01));
+    assertEquals(Duration.standardDays(366), config.getDurationUntilNextTaskStartTimeAfter(DATE_2024_01_01));
   }
 
   @Test
@@ -85,8 +89,8 @@ public class UnixCronSchedulerConfigTest
   {
     final UnixCronSchedulerConfig config = new UnixCronSchedulerConfig("*/30 * * * *");
 
-    assertEquals(DATE_2024_01_01.plusMinutes(30), config.getNextTaskSubmissionTime(DATE_2024_01_01));
-    assertEquals(Duration.standardMinutes(30), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+    assertEquals(DATE_2024_01_01.plusMinutes(30), config.getNextTaskStartTimeAfter(DATE_2024_01_01));
+    assertEquals(Duration.standardMinutes(30), config.getDurationUntilNextTaskStartTimeAfter(DATE_2024_01_01));
   }
 
 
@@ -106,6 +110,14 @@ public class UnixCronSchedulerConfigTest
   @Test
   public void testInvalidUnixCronExpression()
   {
-    assertThrows(IllegalArgumentException.class, () -> new UnixCronSchedulerConfig("0 15 10 * * ? *"));
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new UnixCronSchedulerConfig("0 15 10 * * ? *")
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Unix schedule[0 15 10 * * ? *] is invalid: [Cron expression contains 7 parts but we expect one of [5]]"
+        )
+    );
   }
 }
