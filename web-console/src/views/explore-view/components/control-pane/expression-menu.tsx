@@ -29,8 +29,8 @@ import {
   Position,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Column } from '@druid-toolkit/query';
-import { SqlColumn, SqlExpression } from '@druid-toolkit/query';
+import type { Column } from 'druid-query-toolkit';
+import { SqlColumn, SqlExpression } from 'druid-query-toolkit';
 import { useState } from 'react';
 
 import { AppToaster } from '../../../../singletons';

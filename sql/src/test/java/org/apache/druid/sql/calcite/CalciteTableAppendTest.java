@@ -84,14 +84,14 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   public void testAppend2()
   {
     testBuilder()
-        .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo')) u")
+        .sql("select dim1,dim4,dbl1,f1 from TABLE(APPEND('foo','numfoo')) u")
         .expectedQuery(
             Druids.newScanQueryBuilder()
                 .dataSource(
                     unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE3)
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("dim1", "dim4", "d1", "f1")
+                .columns("dim1", "dim4", "dbl1", "f1")
                 .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.DOUBLE, ColumnType.FLOAT)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -126,14 +126,14 @@ public class CalciteTableAppendTest extends BaseCalciteQueryTest
   public void testAppendSameTableMultipleTimes()
   {
     testBuilder()
-        .sql("select dim1,dim4,d1,f1 from TABLE(APPEND('foo','numfoo','foo')) u where dim1='2'")
+        .sql("select dim1,dim4,dbl1,f1 from TABLE(APPEND('foo','numfoo','foo')) u where dim1='2'")
         .expectedQuery(
             Druids.newScanQueryBuilder()
                 .dataSource(
                     unionDataSource(CalciteTests.DATASOURCE1, CalciteTests.DATASOURCE3, CalciteTests.DATASOURCE1)
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("dim1", "dim4", "d1", "f1")
+                .columns("dim1", "dim4", "dbl1", "f1")
                 .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.DOUBLE, ColumnType.FLOAT)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)

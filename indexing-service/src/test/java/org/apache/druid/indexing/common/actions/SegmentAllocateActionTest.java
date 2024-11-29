@@ -93,21 +93,28 @@ public class SegmentAllocateActionTest
 
   private SegmentAllocationQueue allocationQueue;
 
-  @Parameterized.Parameters(name = "granularity = {0}, useBatch = {1}")
+  @Parameterized.Parameters(name = "granularity = {0}, useBatch = {1}, skipSegmentPayloadFetchForAllocation = {2}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.SEGMENT, true},
-        new Object[]{LockGranularity.SEGMENT, false},
-        new Object[]{LockGranularity.TIME_CHUNK, true},
-        new Object[]{LockGranularity.TIME_CHUNK, false}
+        new Object[]{LockGranularity.SEGMENT, true, true},
+        new Object[]{LockGranularity.SEGMENT, true, false},
+        new Object[]{LockGranularity.SEGMENT, false, false},
+        new Object[]{LockGranularity.TIME_CHUNK, true, true},
+        new Object[]{LockGranularity.TIME_CHUNK, true, false},
+        new Object[]{LockGranularity.TIME_CHUNK, false, false}
     );
   }
 
-  public SegmentAllocateActionTest(LockGranularity lockGranularity, boolean useBatch)
+  public SegmentAllocateActionTest(
+      LockGranularity lockGranularity,
+      boolean useBatch,
+      boolean skipSegmentPayloadFetchForAllocation
+  )
   {
     this.lockGranularity = lockGranularity;
     this.useBatch = useBatch;
+    this.taskActionTestKit.setSkipSegmentPayloadFetchForAllocation(skipSegmentPayloadFetchForAllocation);
   }
 
   @Before

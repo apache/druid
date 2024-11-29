@@ -111,7 +111,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                                   new DimensionsSpec(
                                       ImmutableList.<DimensionSchema>builder()
                                                    .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim2", "dim3")))
-                                                   .add(new DoubleDimensionSchema("d1"))
+                                                   .add(new DoubleDimensionSchema("dbl1"))
                                                    .add(new FloatDimensionSchema("f1"))
                                                    .add(new LongDimensionSchema("l1"))
                                                    .build()
@@ -176,7 +176,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder3 = new VarianceAggregatorCollector();
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
-      Object raw1 = row.getRaw("d1");
+      Object raw1 = row.getRaw("dbl1");
       Object raw2 = row.getRaw("f1");
       Object raw3 = row.getRaw("l1");
       addToHolder(holder1, raw1);
@@ -193,7 +193,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
     );
     testQuery(
         "SELECT\n"
-        + "VAR_POP(d1),\n"
+        + "VAR_POP(dbl1),\n"
         + "VAR_POP(f1),\n"
         + "VAR_POP(l1)\n"
         + "FROM numfoo",
@@ -204,7 +204,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       ImmutableList.of(
-                          new VarianceAggregatorFactory("a0", "d1", "population", "double"),
+                          new VarianceAggregatorFactory("a0", "dbl1", "population", "double"),
                           new VarianceAggregatorFactory("a1", "f1", "population", "float"),
                           new VarianceAggregatorFactory("a2", "l1", "population", "long")
                       )
@@ -224,7 +224,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder3 = new VarianceAggregatorCollector();
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
-      Object raw1 = row.getRaw("d1");
+      Object raw1 = row.getRaw("dbl1");
       Object raw2 = row.getRaw("f1");
       Object raw3 = row.getRaw("l1");
       addToHolder(holder1, raw1);
@@ -241,7 +241,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
     );
     testQuery(
         "SELECT\n"
-        + "VAR_SAMP(d1),\n"
+        + "VAR_SAMP(dbl1),\n"
         + "VAR_SAMP(f1),\n"
         + "VAR_SAMP(l1)\n"
         + "FROM numfoo",
@@ -252,7 +252,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       ImmutableList.of(
-                          new VarianceAggregatorFactory("a0", "d1", "sample", "double"),
+                          new VarianceAggregatorFactory("a0", "dbl1", "sample", "double"),
                           new VarianceAggregatorFactory("a1", "f1", "sample", "float"),
                           new VarianceAggregatorFactory("a2", "l1", "sample", "long")
                       )
@@ -272,7 +272,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder3 = new VarianceAggregatorCollector();
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
-      Object raw1 = row.getRaw("d1");
+      Object raw1 = row.getRaw("dbl1");
       Object raw2 = row.getRaw("f1");
       Object raw3 = row.getRaw("l1");
       addToHolder(holder1, raw1);
@@ -290,7 +290,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT\n"
-        + "STDDEV_POP(d1),\n"
+        + "STDDEV_POP(dbl1),\n"
         + "STDDEV_POP(f1),\n"
         + "STDDEV_POP(l1)\n"
         + "FROM numfoo",
@@ -301,7 +301,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       ImmutableList.of(
-                          new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
+                          new VarianceAggregatorFactory("a0:agg", "dbl1", "population", "double"),
                           new VarianceAggregatorFactory("a1:agg", "f1", "population", "float"),
                           new VarianceAggregatorFactory("a2:agg", "l1", "population", "long")
                       )
@@ -328,7 +328,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder3 = new VarianceAggregatorCollector();
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
-      Object raw1 = row.getRaw("d1");
+      Object raw1 = row.getRaw("dbl1");
       Object raw2 = row.getRaw("f1");
       Object raw3 = row.getRaw("l1");
       addToHolder(holder1, raw1);
@@ -346,7 +346,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT\n"
-        + "STDDEV_SAMP(d1),\n"
+        + "STDDEV_SAMP(dbl1),\n"
         + "STDDEV_SAMP(f1),\n"
         + "STDDEV_SAMP(l1)\n"
         + "FROM numfoo",
@@ -357,7 +357,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .aggregators(
                       ImmutableList.of(
-                          new VarianceAggregatorFactory("a0:agg", "d1", "sample", "double"),
+                          new VarianceAggregatorFactory("a0:agg", "dbl1", "sample", "double"),
                           new VarianceAggregatorFactory("a1:agg", "f1", "sample", "float"),
                           new VarianceAggregatorFactory("a2:agg", "l1", "sample", "long")
                       )
@@ -382,7 +382,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
     VarianceAggregatorCollector holder2 = new VarianceAggregatorCollector();
     VarianceAggregatorCollector holder3 = new VarianceAggregatorCollector();
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
-      Object raw1 = row.getRaw("d1");
+      Object raw1 = row.getRaw("dbl1");
       Object raw2 = row.getRaw("f1");
       Object raw3 = row.getRaw("l1");
       addToHolder(holder1, raw1, 7);
@@ -400,7 +400,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
 
     testQuery(
         "SELECT\n"
-        + "STDDEV(d1*7),\n"
+        + "STDDEV(dbl1*7),\n"
         + "STDDEV(f1*7),\n"
         + "STDDEV(l1*7)\n"
         + "FROM numfoo",
@@ -410,7 +410,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
                   .virtualColumns(
-                      BaseCalciteQueryTest.expressionVirtualColumn("v0", "(\"d1\" * 7)", ColumnType.DOUBLE),
+                      BaseCalciteQueryTest.expressionVirtualColumn("v0", "(\"dbl1\" * 7)", ColumnType.DOUBLE),
                       BaseCalciteQueryTest.expressionVirtualColumn("v1", "(\"f1\" * 7)", ColumnType.FLOAT),
                       BaseCalciteQueryTest.expressionVirtualColumn("v2", "(\"l1\" * 7)", ColumnType.LONG)
                   )
@@ -457,7 +457,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                         .setDataSource(CalciteTests.DATASOURCE3)
                         .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                         .setGranularity(Granularities.ALL)
-                        .setDimensions(new DefaultDimensionSpec("dim2", "_d0"))
+                        .setDimensions(new DefaultDimensionSpec("dim2", "d0"))
                         .setAggregatorSpecs(
                             new VarianceAggregatorFactory("a0", "f1", "sample", "float")
                         )
@@ -527,10 +527,10 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT\n"
-        + "STDDEV_POP(d1),\n"
-        + "STDDEV_SAMP(d1),\n"
-        + "STDDEV(d1),\n"
-        + "VARIANCE(d1),\n"
+        + "STDDEV_POP(dbl1),\n"
+        + "STDDEV_SAMP(dbl1),\n"
+        + "STDDEV(dbl1),\n"
+        + "VARIANCE(dbl1),\n"
         + "STDDEV_POP(l1),\n"
         + "STDDEV_SAMP(l1),\n"
         + "STDDEV(l1),\n"
@@ -543,10 +543,10 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                   .granularity(Granularities.ALL)
                   .filters(numericEquality("dim2", 0L, ColumnType.LONG))
                   .aggregators(
-                      new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
-                      new VarianceAggregatorFactory("a1:agg", "d1", "sample", "double"),
-                      new VarianceAggregatorFactory("a2:agg", "d1", "sample", "double"),
-                      new VarianceAggregatorFactory("a3", "d1", "sample", "double"),
+                      new VarianceAggregatorFactory("a0:agg", "dbl1", "population", "double"),
+                      new VarianceAggregatorFactory("a1:agg", "dbl1", "sample", "double"),
+                      new VarianceAggregatorFactory("a2:agg", "dbl1", "sample", "double"),
+                      new VarianceAggregatorFactory("a3", "dbl1", "sample", "double"),
                       new VarianceAggregatorFactory("a4:agg", "l1", "population", "long"),
                       new VarianceAggregatorFactory("a5:agg", "l1", "sample", "long"),
                       new VarianceAggregatorFactory("a6:agg", "l1", "sample", "long"),
@@ -579,10 +579,10 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT\n"
         + "dim2,\n"
-        + "STDDEV_POP(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
-        + "STDDEV_SAMP(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
-        + "STDDEV(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
-        + "VARIANCE(d1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "STDDEV_POP(dbl1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "STDDEV_SAMP(dbl1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "STDDEV(dbl1) FILTER(WHERE dim1 = 'nonexistent'),\n"
+        + "VARIANCE(dbl1) FILTER(WHERE dim1 = 'nonexistent'),\n"
         + "STDDEV_POP(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
         + "STDDEV_SAMP(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
         + "STDDEV(l1) FILTER(WHERE dim1 = 'nonexistent'),\n"
@@ -595,23 +595,23 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
                         .setDimFilter(equality("dim2", "a", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
-                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
-                                    new VarianceAggregatorFactory("a0:agg", "d1", "population", "double"),
+                                    new VarianceAggregatorFactory("a0:agg", "dbl1", "population", "double"),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new VarianceAggregatorFactory("a1:agg", "d1", "sample", "double"),
+                                    new VarianceAggregatorFactory("a1:agg", "dbl1", "sample", "double"),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new VarianceAggregatorFactory("a2:agg", "d1", "sample", "double"),
+                                    new VarianceAggregatorFactory("a2:agg", "dbl1", "sample", "double"),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(
-                                    new VarianceAggregatorFactory("a3", "d1", "sample", "double"),
+                                    new VarianceAggregatorFactory("a3", "dbl1", "sample", "double"),
                                     equality("dim1", "nonexistent", ColumnType.STRING)
                                 ),
                                 new FilteredAggregatorFactory(

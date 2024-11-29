@@ -59,6 +59,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryResources;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper.RowBasedKey;
 
@@ -103,6 +104,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
   private final ObjectMapper spillMapper;
   private final String processingTmpDir;
   private final int mergeBufferSize;
+  private final GroupByStatsProvider groupByStatsProvider;
 
   public GroupByMergingQueryRunner(
       GroupByQueryConfig config,
@@ -114,7 +116,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
       int concurrencyHint,
       int mergeBufferSize,
       ObjectMapper spillMapper,
-      String processingTmpDir
+      String processingTmpDir,
+      GroupByStatsProvider groupByStatsProvider
   )
   {
     this.config = config;
@@ -127,6 +130,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     this.spillMapper = spillMapper;
     this.processingTmpDir = processingTmpDir;
     this.mergeBufferSize = mergeBufferSize;
+    this.groupByStatsProvider = groupByStatsProvider;
   }
 
   @Override
@@ -163,6 +167,9 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
         StringUtils.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
+    GroupByStatsProvider.PerQueryStats perQueryStats =
+        groupByStatsProvider.getPerQueryStatsContainer(query.context().getQueryResourceId());
+
     final int priority = queryContext.getPriority();
 
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
@@ -182,8 +189,10 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
             try {
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
                   temporaryStorageDirectory,
-                  querySpecificConfig.getMaxOnDiskStorage().getBytes()
+                  querySpecificConfig.getMaxOnDiskStorage().getBytes(),
+                  perQueryStats
               );
+
               final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
                   ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);
               resources.register(temporaryStorageHolder);
@@ -215,7 +224,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                       priority,
                       hasTimeout,
                       timeoutAt,
-                      mergeBufferSize
+                      mergeBufferSize,
+                      perQueryStats
                   );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<AggregateResult, ResultRow> accumulator = pair.rhs;
@@ -318,8 +328,8 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
     GroupByQueryResources resource = groupByResourcesReservationPool.fetch(queryResourceId);
     if (resource == null) {
       throw DruidException.defensive(
-          "Expected merge buffers to be reserved in the reservation pool for the query id [%s] however while executing "
-          + "the GroupByMergingQueryRunner, however none were provided.",
+          "Expected merge buffers to be reserved in the reservation pool for the query resource id [%s] however while executing "
+          + "the GroupByMergingQueryRunner none were provided.",
           queryResourceId
       );
     }
