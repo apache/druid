@@ -45,6 +45,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 
 /**
+ *
  */
 public class AnnouncerTest extends CuratorTestBase
 {

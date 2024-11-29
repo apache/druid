@@ -32,7 +32,7 @@ import com.google.inject.Provider;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.common.utils.UUIDUtils;
 import org.apache.druid.curator.ZkEnablementConfig;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -64,7 +64,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
   private final BatchDataSegmentAnnouncerConfig config;
 
   @Nullable //Null if zk is disabled or isSkipSegmentAnnouncementOnZk = true
-  private final Announcer announcer;
+  private final NodeAnnouncer announcer;
 
   private final ObjectMapper jsonMapper;
   private final String liveSegmentLocation;
@@ -91,7 +91,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       DruidServerMetadata server,
       final BatchDataSegmentAnnouncerConfig config,
       ZkPathsConfig zkPaths,
-      Provider<Announcer> announcerProvider,
+      Provider<NodeAnnouncer> announcerProvider,
       ObjectMapper jsonMapper,
       ZkEnablementConfig zkEnablementConfig
   )
@@ -127,7 +127,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       DruidServerMetadata server,
       final BatchDataSegmentAnnouncerConfig config,
       ZkPathsConfig zkPaths,
-      Announcer announcer,
+      NodeAnnouncer announcer,
       ObjectMapper jsonMapper
   )
   {
