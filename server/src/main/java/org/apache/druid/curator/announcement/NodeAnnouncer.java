@@ -268,7 +268,7 @@ public class NodeAnnouncer
           ChildData currentData = cache.getCurrentData();
 
           if (currentData == null) {
-            // If currentData is null, and we record having announced the data,
+            // If currentData is null, and we know we have already announced the data,
             // this means that the ephemeral node was unexpectedly removed.
             // We will recreate the node again using the previous data.
             final byte[] previouslyAnnouncedData = announcedPaths.get(path);
@@ -312,6 +312,7 @@ public class NodeAnnouncer
   {
     synchronized (toAnnounce) {
       if (!started) {
+        log.debug("NodeAnnouncer has not started yet, queuing updates for later processing...");
         // removeParentsIfCreated is not relevant for updates; use dummy value "false".
         toUpdate.add(new Announceable(path, bytes, false));
         return;
