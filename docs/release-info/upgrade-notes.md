@@ -193,6 +193,34 @@ Removed the `auto` search strategy from the native search query. Setting `search
 
 [#15550](https://github.com/apache/druid/pull/15550)
 
+### Incompatible changes
+
+#### Changes to date format in kubernetes service discovery
+
+Druid 29.0.0 includes a breaking change for those using kubernetes service discovery. The date format used in the config maps used for leader election of coordinators and overlords has changed. 
+
+If you're upgrading from any version prior to 29.0.0 manual intervention is required. The steps to fix are as follows:
+
+kubectl get cm -n <druid namespace>
+
+you should see 2 config maps of the form:
+
+<cluster-identifier>-leaderelection-coordinator
+<cluster-identifier>-leaderelection-overlord
+
+verify the date from your error message appears in the annotations:
+
+kubectl describe cm <cluster-identifier>-leaderelection-coordinator -n <druid namespace>
+kubectl describe cm <cluster-identifier>-leaderelection-overlord -n <druid namespace>
+
+remove these by:
+
+kubectl delete cm <cluster-identifier>-leaderelection-coordinator -n <druid namespace>
+kubectl delete cm <cluster-identifier>-leaderelection-overlord -n <druid namespace>
+
+These will be recreated by the services which will then successfully start.
+
+
 ## 28.0.0
 
 ### Upgrade notes
