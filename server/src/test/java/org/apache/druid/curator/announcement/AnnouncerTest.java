@@ -264,7 +264,8 @@ public class AnnouncerTest extends CuratorTestBase
     latch.await();
   }
 
-  private CountDownLatch createCountdownLatchForPaths(String ...path) {
+  private CountDownLatch createCountdownLatchForPaths(String... path)
+  {
     final CountDownLatch latch = new CountDownLatch(path.length);
     curator.getCuratorListenable().addListener(
         new CuratorListener()
