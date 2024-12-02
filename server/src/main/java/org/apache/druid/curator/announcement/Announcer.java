@@ -55,10 +55,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * The {@link Announcer} class manages the announcement of a node, and watches all child
- * nodes under the specified path in a ZooKeeper ensemble. It monitors these nodes
+ * and sibling nodes under the specified path in a ZooKeeper ensemble. It monitors these nodes
  * to ensure their existence and manage their lifecycle collectively.
  *
- * <p>Use this class when you need to manage the lifecycle of all child nodes under the
+ * <p>
+ * Use this class when you need to manage the lifecycle of all child nodes under the parent of your
  * specified path. Should your use case involve the management of a standalone node
  * instead, see {@link NodeAnnouncer}.</p>
  */
@@ -186,7 +187,7 @@ public class Announcer
   }
 
   /**
-   * Like announce(path, bytes, true).
+   * Overload of {@link #announce(String, byte[], boolean)}, but removes parent node of path after announcement.
    */
   public void announce(String path, byte[] bytes)
   {
@@ -194,12 +195,17 @@ public class Announcer
   }
 
   /**
-   * Announces the provided bytes at the given path.  Announcement means that it will create an ephemeral node
-   * and monitor it to make sure that it always exists until it is unannounced or this object is closed.
+   * Announces the provided bytes at the given path.
+   *
+   * <p>
+   * Announcement using {@link Announcer} will create an ephemeral znode at the specified path, and uses its parent
+   * path to watch all the siblings and children znodes of your specified path. The watched nodes will always exist
+   * until it is unannounced, or until {@link #stop()} is called.
+   * </p>
    *
    * @param path                  The path to announce at
    * @param bytes                 The payload to announce
-   * @param removeParentIfCreated remove parent of "path" if we had created that parent
+   * @param removeParentIfCreated remove parent of "path" if we had created that parent during announcement
    */
   public void announce(String path, byte[] bytes, boolean removeParentIfCreated)
   {

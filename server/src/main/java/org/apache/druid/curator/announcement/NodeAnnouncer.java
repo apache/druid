@@ -25,6 +25,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.NodeCache;
+import org.apache.curator.utils.CloseableExecutorService;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
@@ -51,15 +52,15 @@ import java.util.concurrent.ExecutorService;
  * explicitly unannounced or the object is closed.
  *
  * <p>Use this class when you need to manage the lifecycle of a standalone
- * node. Should your use case involve watching all child nodes of your specified
- * path in a ZooKeeper ensemble, see {@link Announcer}.</p>
+ * node. Should your use case involve watching all child and sibling nodes of your
+ * specified path in a ZooKeeper ensemble, see {@link Announcer}.</p>
  */
 public class NodeAnnouncer
 {
   private static final Logger log = new Logger(NodeAnnouncer.class);
 
   private final CuratorFramework curator;
-  private final ExecutorService nodeCacheExecutor;
+  private final CloseableExecutorService nodeCacheExecutor;
 
   private final ConcurrentMap<String, NodeCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, byte[]> announcedPaths = new ConcurrentHashMap<>();
@@ -94,7 +95,7 @@ public class NodeAnnouncer
   public NodeAnnouncer(CuratorFramework curator, ExecutorService exec)
   {
     this.curator = curator;
-    this.nodeCacheExecutor = exec;
+    this.nodeCacheExecutor = new CloseableExecutorService(exec);
   }
 
   @VisibleForTesting
@@ -153,6 +154,8 @@ public class NodeAnnouncer
     for (String announcementPath : announcedPaths.keySet()) {
       closer.register(() -> unannounce(announcementPath));
     }
+    closer.register(nodeCacheExecutor);
+
     CloseableUtils.closeAndWrapExceptions(closer);
   }
 
@@ -188,18 +191,20 @@ public class NodeAnnouncer
   }
 
   /**
-   * Announces the provided bytes at the given path.  Announcement means that it will create an ephemeral node
-   * and monitor it to make sure that it always exists until it is unannounced or this object is closed.
+   * Announces the provided bytes at the given path.
+   *
+   * <p>
+   * Announcement using {@link NodeAnnouncer} will create an ephemeral znode at the specified path, and listens for
+   * changes on your znode. Your znode will exist until it is unannounced, or until {@link #stop()} is called.
+   * </p>
    *
    * @param path                  The path to announce at
    * @param bytes                 The payload to announce
-   * @param removeParentIfCreated remove parent of "path" if we had created that parent
+   * @param removeParentIfCreated remove parent of "path" if we had created that parent during announcement
    */
   public void announce(String path, byte[] bytes, boolean removeParentIfCreated)
   {
     synchronized (toAnnounce) {
-      // In the case that this method is called by other components or thread that assumes the NodeAnnouncer
-      // is ready when NodeAnnouncer has not started, we will queue the announcement request.
       if (!started) {
         log.debug("NodeAnnouncer has not started yet, queuing announcement for later processing...");
         toAnnounce.add(new Announceable(path, bytes, removeParentIfCreated));
@@ -210,9 +215,10 @@ public class NodeAnnouncer
     final String parentPath = ZKPathsUtils.getParentPath(path);
     byte[] announcedPayload = announcedPaths.get(path);
 
+    // If announcedPayload is null, this means that we have yet to announce this path.
+    // There is a possibility that the parent paths do not exist, so we check if we need to create the parent path first.
     if (announcedPayload == null) {
       boolean buildParentPath = false;
-      // Payload does not exist. We have yet to announce this path. Check if we need to build a parent path.
       try {
         buildParentPath = curator.checkExists().forPath(parentPath) == null;
       }
@@ -327,8 +333,8 @@ public class NodeAnnouncer
     try {
       cache.start();
     }
-    catch (Exception e) {
-      throw CloseableUtils.closeInCatch(new RuntimeException(e), cache);
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, cache);
     }
   }
 
