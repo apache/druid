@@ -150,7 +150,7 @@ function stackIntervalRows(trimmedIntervalRows: TrimmedIntervalRow[]): {
   intervalBars: IntervalBar[];
   intervalTree: IntervalTree;
 } {
-  // Total size of the datasource will be user as an ordering tiebreaker
+  // Total size of the datasource will be used as an ordering tiebreaker
   const datasourceToTotalSize = groupByAsMap(
     trimmedIntervalRows,
     intervalRow => intervalRow.datasource,
