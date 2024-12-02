@@ -59,9 +59,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * to ensure their existence and manage their lifecycle collectively.
  *
  * <p>
- * Use this class when you need to manage the lifecycle of all child nodes under the parent of your
- * specified path. Should your use case involve the management of a standalone node
- * instead, see {@link NodeAnnouncer}.</p>
+ * This class uses Apache Curator's PathChildrenCache recipe under the hood to track all znodes
+ * under the specified node's parent. See {@link NodeAnnouncer} for an announcer that
+ * uses the NodeCache recipe instead.
+ * </p>
  */
 public class Announcer
 {
@@ -172,7 +173,7 @@ public class Announcer
             operations.add(curator.transactionOp().delete().forPath(parent));
           }
           catch (Exception e) {
-            log.info(e, "Unable to delete parent[%s].", parent);
+            log.info(e, "Unable to delete parent[%s] when closing Announcer.", parent);
           }
         }
 
@@ -180,7 +181,7 @@ public class Announcer
           transaction.forOperations(operations);
         }
         catch (Exception e) {
-          log.info(e, "Unable to commit transaction.");
+          log.info(e, "Unable to commit transaction when closing Announcer.");
         }
       }
     }
@@ -211,6 +212,7 @@ public class Announcer
   {
     synchronized (toAnnounce) {
       if (!started) {
+        log.debug("Announcer has not started yet, queuing announcement for later processing...");
         toAnnounce.add(new Announceable(path, bytes, removeParentIfCreated));
         return;
       }
@@ -230,7 +232,7 @@ public class Announcer
         }
       }
       catch (Exception e) {
-        log.debug(e, "Problem checking if the parent existed, ignoring.");
+        log.warn(e, "Failed to check existence of parent path. Proceeding without creating parent path.");
       }
 
       // I don't have a watcher on this path yet, create a Map and start watching.
@@ -421,6 +423,9 @@ public class Announcer
     catch (KeeperException.NoNodeException e) {
       log.info("Unannounced node[%s] that does not exist.", path);
     }
+    catch (KeeperException.NotEmptyException e) {
+      log.warn("Unannouncing non-empty path[%s]", path);
+    }
     catch (Exception e) {
       throw new RuntimeException(e);
     }
@@ -445,8 +450,11 @@ public class Announcer
       }
       log.debug("Created parentPath[%s], %s remove on stop.", parentPath, removeParentsIfCreated ? "will" : "will not");
     }
-    catch (Exception e) {
+    catch (KeeperException.NodeExistsException e) {
       log.info(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
+    }
+    catch (Exception e) {
+      log.error(e, "Unhandled exception when creating parentPath[%s].", parentPath);
     }
   }
 }

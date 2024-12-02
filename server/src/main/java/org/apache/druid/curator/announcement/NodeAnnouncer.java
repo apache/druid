@@ -22,13 +22,13 @@ package org.apache.druid.curator.announcement;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.api.transaction.CuratorMultiTransaction;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.NodeCache;
 import org.apache.curator.utils.CloseableExecutorService;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -37,12 +37,14 @@ import org.apache.druid.utils.CloseableUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -51,9 +53,11 @@ import java.util.concurrent.ExecutorService;
  * and monitors its existence to ensure that it remains active until it is
  * explicitly unannounced or the object is closed.
  *
- * <p>Use this class when you need to manage the lifecycle of a standalone
- * node. Should your use case involve watching all child and sibling nodes of your
- * specified path in a ZooKeeper ensemble, see {@link Announcer}.</p>
+ * <p>
+ * This class uses Apache Curator's NodeCache recipe under the hood to track a single
+ * node, along with all of its parent's status. See {@link Announcer} for an announcer that
+ * uses the PathChildrenCache recipe instead.
+ * </p>
  */
 public class NodeAnnouncer
 {
@@ -90,7 +94,7 @@ public class NodeAnnouncer
    * the node announcer is responsible for deleting all paths stored in this list.
    */
   @GuardedBy("toAnnounce")
-  private final List<String> pathsCreatedInThisAnnouncer = new ArrayList<>();
+  private final List<String> parentsIBuilt = new CopyOnWriteArrayList<>();
 
   public NodeAnnouncer(CuratorFramework curator, ExecutorService exec)
   {
@@ -107,7 +111,7 @@ public class NodeAnnouncer
   @LifecycleStart
   public void start()
   {
-    log.info("Starting NodeAnnouncer");
+    log.debug("Starting NodeAnnouncer");
     synchronized (toAnnounce) {
       if (started) {
         log.debug("Called start() but NodeAnnouncer have already started.");
@@ -131,7 +135,7 @@ public class NodeAnnouncer
   @LifecycleStop
   public void stop()
   {
-    log.info("Stopping NodeAnnouncer");
+    log.debug("Stopping NodeAnnouncer");
     synchronized (toAnnounce) {
       if (!started) {
         log.debug("Called stop() but NodeAnnouncer have not started.");
@@ -140,44 +144,45 @@ public class NodeAnnouncer
 
       started = false;
       closeResources();
-      dropPathsCreatedInThisAnnouncer();
     }
   }
 
   @GuardedBy("toAnnounce")
   private void closeResources()
   {
-    Closer closer = Closer.create();
-    for (NodeCache cache : listeners.values()) {
-      closer.register(cache);
+    try {
+      CloseableUtils.closeAll(listeners.values());
+
     }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      nodeCacheExecutor.close();
+    }
+
     for (String announcementPath : announcedPaths.keySet()) {
-      closer.register(() -> unannounce(announcementPath));
+      unannounce(announcementPath);
     }
-    closer.register(nodeCacheExecutor);
 
-    CloseableUtils.closeAndWrapExceptions(closer);
-  }
+    if (!parentsIBuilt.isEmpty()) {
+      CuratorMultiTransaction transaction = curator.transaction();
 
-  @GuardedBy("toAnnounce")
-  private void dropPathsCreatedInThisAnnouncer()
-  {
-    if (!pathsCreatedInThisAnnouncer.isEmpty()) {
-      final List<CuratorOp> deleteOps = new ArrayList<>(pathsCreatedInThisAnnouncer.size());
-      for (String parent : pathsCreatedInThisAnnouncer) {
+      ArrayList<CuratorOp> operations = new ArrayList<>();
+      for (String parent : parentsIBuilt) {
         try {
-          deleteOps.add(curator.transactionOp().delete().forPath(parent));
+          operations.add(curator.transactionOp().delete().forPath(parent));
         }
         catch (Exception e) {
-          log.error(e, "Unable to delete parent[%s].", parent);
+          log.info(e, "Unable to delete parent[%s] when closing NodeAnnouncer.", parent);
         }
       }
 
       try {
-        curator.transaction().forOperations(deleteOps);
+        transaction.forOperations(operations);
       }
       catch (Exception e) {
-        log.error(e, "Unable to commit transaction.");
+        log.info(e, "Unable to commit transaction when closing NodeAnnouncer.");
       }
     }
   }
@@ -223,7 +228,7 @@ public class NodeAnnouncer
         buildParentPath = curator.checkExists().forPath(parentPath) == null;
       }
       catch (Exception e) {
-        log.debug(e, "Failed to check existence of parent path. Proceeding without creating parent path.");
+        log.warn(e, "Failed to check existence of parent path. Proceeding without creating parent path.");
       }
 
       // Synchronize to make sure that I only create a listener once.
@@ -268,10 +273,7 @@ public class NodeAnnouncer
             // We will recreate the node again using the previous data.
             final byte[] previouslyAnnouncedData = announcedPaths.get(path);
             if (previouslyAnnouncedData != null) {
-              log.info(
-                  "Ephemeral node at path [%s] was unexpectedly removed. Recreating node with previous data.",
-                  path
-              );
+              log.info("Node[%s] dropped, reinstating.", path);
               try {
                 createAnnouncement(path, previouslyAnnouncedData);
               }
@@ -306,38 +308,6 @@ public class NodeAnnouncer
     return Arrays.equals(updatedAnnouncementData, bytes);
   }
 
-  @GuardedBy("toAnnounce")
-  private void createPath(String parentPath, boolean removeParentsIfCreated)
-  {
-    try {
-      curator.create().creatingParentsIfNeeded().forPath(parentPath);
-      if (removeParentsIfCreated) {
-        pathsCreatedInThisAnnouncer.add(parentPath);
-      }
-      log.debug(
-          "Created parentPath[%s], %s remove when stop() is called.",
-          parentPath,
-          removeParentsIfCreated ? "will" : "will not"
-      );
-    }
-    catch (KeeperException.NodeExistsException e) {
-      log.error(e, "The parentPath[%s] already exists.", parentPath);
-    }
-    catch (Exception e) {
-      log.error(e, "Failed to create parentPath[%s].", parentPath);
-    }
-  }
-
-  private void startCache(NodeCache cache)
-  {
-    try {
-      cache.start();
-    }
-    catch (Throwable e) {
-      throw CloseableUtils.closeAndWrapInCatch(e, cache);
-    }
-  }
-
   public void update(final String path, final byte[] bytes)
   {
     synchronized (toAnnounce) {
@@ -346,29 +316,22 @@ public class NodeAnnouncer
         toUpdate.add(new Announceable(path, bytes, false));
         return;
       }
-    }
 
-    byte[] oldBytes = announcedPaths.get(path);
+      byte[] oldBytes = announcedPaths.get(path);
 
-    if (oldBytes == null) {
-      throw new ISE("Cannot update path[%s] that hasn't been announced!", path);
-    }
-
-    boolean canUpdate = false;
-    synchronized (toAnnounce) {
-      if (!Arrays.equals(oldBytes, bytes)) {
-        announcedPaths.put(path, bytes);
-        canUpdate = true;
+      if (oldBytes == null) {
+        throw new ISE("Cannot update path[%s] that hasn't been announced!", path);
       }
-    }
 
-    try {
-      if (canUpdate) {
-        updateAnnouncement(path, bytes);
+      try {
+        if (!Arrays.equals(oldBytes, bytes)) {
+          announcedPaths.put(path, bytes);
+          updateAnnouncement(path, bytes);
+        }
       }
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
+      catch (Exception e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
@@ -393,23 +356,58 @@ public class NodeAnnouncer
   public void unannounce(String path)
   {
     synchronized (toAnnounce) {
-      log.info("unannouncing [%s]", path);
       final byte[] value = announcedPaths.remove(path);
 
       if (value == null) {
-        log.error("Path[%s] not announced, cannot unannounce.", path);
+        log.debug("Path[%s] not announced, cannot unannounce.", path);
         return;
       }
     }
 
+    log.info("unannouncing [%s]", path);
+
     try {
-      curator.transaction().forOperations(curator.transactionOp().delete().forPath(path));
+      CuratorOp deleteOp = curator.transactionOp().delete().forPath(path);
+      curator.transaction().forOperations(deleteOp);
     }
     catch (KeeperException.NoNodeException e) {
       log.info("Unannounced node[%s] that does not exist.", path);
     }
+    catch (KeeperException.NotEmptyException e) {
+      log.warn("Unannouncing non-empty path[%s]", path);
+    }
     catch (Exception e) {
       throw new RuntimeException(e);
+    }
+  }
+
+  private void startCache(NodeCache cache)
+  {
+    try {
+      cache.start();
+    }
+    catch (Throwable e) {
+      throw CloseableUtils.closeAndWrapInCatch(e, cache);
+    }
+  }
+
+  @GuardedBy("toAnnounce")
+  private void createPath(String parentPath, boolean removeParentsIfCreated)
+  {
+    try {
+      curator.create().creatingParentsIfNeeded().forPath(parentPath);
+      if (removeParentsIfCreated) {
+        // We keep track of all parents we have built, so we can delete them later on when needed.
+        parentsIBuilt.add(parentPath);
+      }
+
+      log.debug("Created parentPath[%s], %s remove on stop.", parentPath, removeParentsIfCreated ? "will" : "will not");
+    }
+    catch (KeeperException.NodeExistsException e) {
+      log.info(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
+    }
+    catch (Exception e) {
+      log.error(e, "Unhandled exception when creating parentPath[%s].", parentPath);
     }
   }
 }
