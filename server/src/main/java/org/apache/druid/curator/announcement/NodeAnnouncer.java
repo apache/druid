@@ -113,7 +113,7 @@ public class NodeAnnouncer
     log.debug("Starting NodeAnnouncer");
     synchronized (toAnnounce) {
       if (started) {
-        log.debug("Called start() but NodeAnnouncer have already started.");
+        log.debug("Cannot start NodeAnnouncer that has already started.");
         return;
       }
 
@@ -137,7 +137,7 @@ public class NodeAnnouncer
     log.debug("Stopping NodeAnnouncer");
     synchronized (toAnnounce) {
       if (!started) {
-        log.debug("Called stop() but NodeAnnouncer have not started.");
+        log.debug("Cannot stop NodeAnnouncer has not started.");
         return;
       }
 
