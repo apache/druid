@@ -511,7 +511,7 @@ public class MSQFaultsTest extends MSQTestBase
             + "PARTITIONED BY ALL TIME")
         .setExpectedValidationErrorMatcher(
             new DruidExceptionMatcher(
-                DruidException.Persona.ADMIN,
+                DruidException.Persona.USER,
                 DruidException.Category.INVALID_INPUT,
                 "general"
             ).expectMessageContains(
@@ -533,7 +533,7 @@ public class MSQFaultsTest extends MSQTestBase
         )
         .setExpectedValidationErrorMatcher(
             new DruidExceptionMatcher(
-                DruidException.Persona.ADMIN,
+                DruidException.Persona.USER,
                 DruidException.Category.INVALID_INPUT,
                 "general"
             ).expectMessageContains(

@@ -164,6 +164,7 @@ public class MSQSelectTest extends MSQTestBase
                            )
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("EXPR$0")
+                           .columnTypes(ColumnType.LONG)
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
@@ -197,6 +198,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
@@ -254,12 +256,13 @@ public class MSQSelectTest extends MSQTestBase
                    .query(newScanQueryBuilder()
                               .dataSource(CalciteTests.DATASOURCE2)
                               .intervals(querySegmentSpec(Filtration.eternity()))
-                              .columns("dim2", "m1")
+                              .columns("m1", "dim2")
+                              .columnTypes(ColumnType.LONG, ColumnType.STRING)
                               .context(defaultScanQueryContext(
                                   context,
                                   RowSignature.builder()
-                                              .add("dim2", ColumnType.STRING)
                                               .add("m1", ColumnType.LONG)
+                                              .add("dim2", ColumnType.STRING)
                                               .build()
                               ))
                               .build())
@@ -331,6 +334,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .context(defaultScanQueryContext(context, expectedScanSignature))
                            .build()
                    )
@@ -395,6 +399,7 @@ public class MSQSelectTest extends MSQTestBase
                                )
                            )
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
@@ -437,6 +442,7 @@ public class MSQSelectTest extends MSQTestBase
                                )
                            )
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
@@ -476,6 +482,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Intervals.ETERNITY))
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
@@ -511,6 +518,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Intervals.ETERNITY))
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
                            .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
@@ -693,6 +701,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .context(defaultScanQueryContext(context, resultSignature))
                            .limit(10)
                            .build()
@@ -998,6 +1007,7 @@ public class MSQSelectTest extends MSQTestBase
                                     .dataSource(CalciteTests.DATASOURCE1)
                                     .intervals(querySegmentSpec(Filtration.eternity()))
                                     .columns("dim2", "m1", "m2")
+                                    .columnTypes(ColumnType.STRING, ColumnType.FLOAT, ColumnType.DOUBLE)
                                     .context(
                                         defaultScanQueryContext(
                                             queryContext,
@@ -1016,7 +1026,8 @@ public class MSQSelectTest extends MSQTestBase
                                 newScanQueryBuilder()
                                     .dataSource(CalciteTests.DATASOURCE1)
                                     .intervals(querySegmentSpec(Filtration.eternity()))
-                                    .columns(ImmutableList.of("m1"))
+                                    .columns("m1")
+                                    .columnTypes(ColumnType.FLOAT)
                                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                     .context(
                                         defaultScanQueryContext(
@@ -1475,17 +1486,17 @@ public class MSQSelectTest extends MSQTestBase
                                      ColumnType.LONG,
                                      CalciteTests.createExprMacroTable()
                                  )
-                             ).columns("user", "v0").filters(new LikeDimFilter("user", "%ot%", null, null))
-                             .context(defaultScanQueryContext(multipleWorkerContext, RowSignature.builder()
-                                                                                                 .add(
-                                                                                                     "user",
-                                                                                                     ColumnType.STRING
-                                                                                                 )
-                                                                                                 .add(
-                                                                                                     "v0",
-                                                                                                     ColumnType.LONG
-                                                                                                 )
-                                                                                                 .build()))
+                             )
+                             .columns("v0", "user")
+                             .columnTypes(ColumnType.LONG, ColumnType.STRING)
+                             .filters(new LikeDimFilter("user", "%ot%", null, null))
+                             .context(defaultScanQueryContext(
+                                 multipleWorkerContext,
+                                 RowSignature.builder()
+                                     .add("v0", ColumnType.LONG)
+                                     .add("user", ColumnType.STRING)
+                                     .build()
+                             ))
                              .build();
 
     SelectTester selectTester = testSelectQuery()
@@ -1670,12 +1681,13 @@ public class MSQSelectTest extends MSQTestBase
                        newScanQueryBuilder()
                            .dataSource(CalciteTests.DATASOURCE2)
                            .intervals(querySegmentSpec(Filtration.eternity()))
-                           .columns("dim2", "m1")
+                           .columns("m1", "dim2")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .context(defaultScanQueryContext(
                                context,
                                RowSignature.builder()
-                                           .add("dim2", ColumnType.STRING)
                                            .add("m1", ColumnType.LONG)
+                                           .add("dim2", ColumnType.STRING)
                                            .build()
                            ))
                            .build()
@@ -1742,6 +1754,7 @@ public class MSQSelectTest extends MSQTestBase
                                                   )
                                               )
                                               .columns("dim3", "v0")
+                                              .columnTypes(ColumnType.STRING, ColumnType.STRING_ARRAY)
                                               .context(defaultScanQueryContext(context, expectedScanSignature))
                                               .build())
                                    .columnMappings(
@@ -2430,6 +2443,7 @@ public class MSQSelectTest extends MSQTestBase
                            ))
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("v0")
+                           .columnTypes(ColumnType.LONG)
                            .virtualColumns(new ExpressionVirtualColumn("v0", ExprEval.of(1L).toExpr(), ColumnType.LONG))
                            .context(defaultScanQueryContext(
                                context,
@@ -2480,6 +2494,7 @@ public class MSQSelectTest extends MSQTestBase
                         .dataSource("foo")
                         .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
                         .columns("v0")
+                        .columnTypes(ColumnType.LONG)
                         .context(defaultScanQueryContext(
                             queryContext,
                             RowSignature.builder().add("v0", ColumnType.LONG).build()
@@ -2591,6 +2606,7 @@ public class MSQSelectTest extends MSQTestBase
                               )
                               .intervals(querySegmentSpec(Filtration.eternity()))
                               .columns("EXPR$0")
+                              .columnTypes(ColumnType.LONG)
                               .context(defaultScanQueryContext(
                                   context,
                                   resultSignature
@@ -2648,7 +2664,8 @@ public class MSQSelectTest extends MSQTestBase
                                   context,
                                   resultSignature
                               ))
-                              .columns(ImmutableList.of("j0.unnest"))
+                              .columns("j0.unnest")
+                              .columnTypes(ColumnType.STRING)
                               .build())
                    .columnMappings(expectedColumnMappings)
                    .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -2719,6 +2736,7 @@ public class MSQSelectTest extends MSQTestBase
                                           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                           .filters(equality("dim2", "a", ColumnType.STRING))
                                           .columns("dim3")
+                                          .columnTypes(ColumnType.STRING)
                                           .context(defaultScanQueryContext(
                                               context,
                                               resultSignature1
@@ -2735,7 +2753,8 @@ public class MSQSelectTest extends MSQTestBase
                                   context,
                                   resultSignature
                               ))
-                              .columns(ImmutableList.of("j0.unnest"))
+                              .columns("j0.unnest")
+                              .columnTypes(ColumnType.STRING)
                               .build())
                    .columnMappings(expectedColumnMappings)
                    .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -2802,7 +2821,8 @@ public class MSQSelectTest extends MSQTestBase
                                   context,
                                   rowSignature
                               ))
-                              .columns(ImmutableList.of("__time", "dim1"))
+                              .columns("__time", "dim1")
+                              .columnTypes(ColumnType.LONG, ColumnType.STRING)
                               .build())
                    .columnMappings(ColumnMappings.identity(rowSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())

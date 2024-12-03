@@ -32,7 +32,7 @@ describe('aggregateSortProgressCounters', () => {
         },
         {
           type: 'sortProgress',
-          totalMergingLevels: 4,
+          totalMergingLevels: -1,
           levelToTotalBatches: { 0: 2, 1: 4, 2: 6, 3: 5 },
           levelToMergedBatches: { 0: 2, 1: 4, 2: 6, 3: 5 },
           totalMergersForUltimateLevel: 1,
@@ -41,7 +41,6 @@ describe('aggregateSortProgressCounters', () => {
     ).toEqual({
       totalMergingLevels: {
         '2': 1,
-        '4': 1,
       },
       levelToBatches: {
         '0': {

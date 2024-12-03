@@ -27,8 +27,8 @@ import {
   Menu,
   Tag,
 } from '@blueprintjs/core';
-import type { SqlExpression, SqlQuery } from '@druid-toolkit/query';
-import { type QueryResult, F, sql, SqlFunction } from '@druid-toolkit/query';
+import type { QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { F, sql, SqlFunction } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { ClearableInput, Loader, MenuCheckbox } from '../../../../../components';

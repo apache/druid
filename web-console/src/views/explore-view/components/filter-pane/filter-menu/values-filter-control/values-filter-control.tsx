@@ -18,8 +18,8 @@
 
 import { FormGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult, SqlQuery, ValuesFilterPattern } from '@druid-toolkit/query';
-import { C, F, SqlExpression } from '@druid-toolkit/query';
+import type { QueryResult, SqlQuery, ValuesFilterPattern } from 'druid-query-toolkit';
+import { C, F, SqlExpression } from 'druid-query-toolkit';
 import React, { useMemo, useState } from 'react';
 
 import { ClearableInput } from '../../../../../../components';
@@ -60,6 +60,7 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
         .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
         .changeLimitValue(101)
         .toString(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [querySource.query, filter, column, searchString],
   );
 

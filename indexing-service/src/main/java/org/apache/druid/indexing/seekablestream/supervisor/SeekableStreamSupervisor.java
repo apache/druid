@@ -31,9 +31,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
+import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
@@ -65,7 +66,6 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientAsyncImpl;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskRunner;
@@ -86,6 +86,7 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -422,13 +423,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   // change taskCount without resubmitting.
   private class DynamicAllocationTasksNotice implements Notice
   {
-    Callable<Integer> scaleAction;
+    Callable<Integer> computeDesiredTaskCount;
     ServiceEmitter emitter;
+    Runnable onSuccessfulScale;
     private static final String TYPE = "dynamic_allocation_tasks_notice";
 
-    DynamicAllocationTasksNotice(Callable<Integer> scaleAction, ServiceEmitter emitter)
+    DynamicAllocationTasksNotice(
+        Callable<Integer> computeDesiredTaskCount,
+        Runnable onSuccessfulScale,
+        ServiceEmitter emitter
+    )
     {
-      this.scaleAction = scaleAction;
+      this.computeDesiredTaskCount = computeDesiredTaskCount;
+      this.onSuccessfulScale = onSuccessfulScale;
       this.emitter = emitter;
     }
 
@@ -470,7 +477,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               return;
             }
           }
-          final Integer desiredTaskCount = scaleAction.call();
+          final Integer desiredTaskCount = computeDesiredTaskCount.call();
           ServiceMetricEvent.Builder event = ServiceMetricEvent.builder()
               .setDimension(DruidMetrics.DATASOURCE, dataSource)
               .setDimension(DruidMetrics.STREAM, getIoConfig().getStream());
@@ -500,6 +507,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
           boolean allocationSuccess = changeTaskCount(desiredTaskCount);
           if (allocationSuccess) {
+            onSuccessfulScale.run();
             dynamicTriggerLastRunTime = nowTime;
           }
         }
@@ -830,12 +838,25 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private final SeekableStreamIndexTaskTuningConfig taskTuningConfig;
   private final String supervisorId;
   private final TaskInfoProvider taskInfoProvider;
-  private final long futureTimeoutInSeconds; // how long to wait for async operations to complete
   private final RowIngestionMetersFactory rowIngestionMetersFactory;
+  /**
+   * Single-threaded executor for running {@link Notice#handle()} from {@link #notices}.
+   */
   private final ExecutorService exec;
+  /**
+   * Single-threaded scheduled executor for adding periodic {@link RunNotice} to {@link #notices}.
+   */
   private final ScheduledExecutorService scheduledExec;
+  /**
+   * Single-threaded scheduled executor for reporting metircs on notice queue size, lag, etc.
+   * See {@link #scheduleReporting}.
+   */
   private final ScheduledExecutorService reportingExec;
-  private final ListeningExecutorService workerExec;
+  /**
+   * Multi-threaded executor for callbacks from worker RPCs.
+   * Also serves as the connectExec for {@link #taskClient}.
+   */
+  private final ListeningScheduledExecutorService workerExec;
   private final NoticesQueue<Notice> notices = new NoticesQueue<>();
   private final Object stopLock = new Object();
   private final Object stateChangeLock = new Object();
@@ -896,21 +917,16 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     );
 
     int workerThreads;
-    int maxNumTasks;
     if (autoScalerConfig != null && autoScalerConfig.getEnableTaskAutoScaler()) {
       log.info("Running Task autoscaler for datasource [%s]", dataSource);
 
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
                        ? this.tuningConfig.getWorkerThreads()
                        : Math.min(10, autoScalerConfig.getTaskCountMax()));
-
-      maxNumTasks = autoScalerConfig.getTaskCountMax() * this.ioConfig.getReplicas();
     } else {
       workerThreads = (this.tuningConfig.getWorkerThreads() != null
                        ? this.tuningConfig.getWorkerThreads()
                        : Math.min(10, this.ioConfig.getTaskCount()));
-
-      maxNumTasks = this.ioConfig.getTaskCount() * this.ioConfig.getReplicas();
     }
 
     IdleConfig specIdleConfig = spec.getIoConfig().getIdleConfig();
@@ -931,7 +947,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
 
     this.workerExec = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(
+        ScheduledExecutors.fixed(
             workerThreads,
             StringUtils.encodeForFormat(supervisorId) + "-Worker-%d"
         )
@@ -966,13 +982,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
     };
 
-    this.futureTimeoutInSeconds = Math.max(
-        MINIMUM_FUTURE_TIMEOUT_IN_SECONDS,
-        tuningConfig.getChatRetries() * (tuningConfig.getHttpTimeout().getStandardSeconds()
-                                         + SeekableStreamIndexTaskClientAsyncImpl.MAX_RETRY_WAIT_SECONDS)
-    );
-
-    this.taskClient = taskClientFactory.build(dataSource, taskInfoProvider, maxNumTasks, this.tuningConfig);
+    this.taskClient = taskClientFactory.build(dataSource, taskInfoProvider, this.tuningConfig, workerExec);
   }
 
   @Override
@@ -1260,9 +1270,13 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  public Runnable buildDynamicAllocationTask(Callable<Integer> scaleAction, ServiceEmitter emitter)
+  public Runnable buildDynamicAllocationTask(
+      Callable<Integer> scaleAction,
+      Runnable onSuccessfulScale,
+      ServiceEmitter emitter
+  )
   {
-    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, emitter));
+    return () -> addNotice(new DynamicAllocationTasksNotice(scaleAction, onSuccessfulScale, emitter));
   }
 
   private Runnable buildRunTask()
@@ -2301,7 +2315,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     final List<ListenableFuture<Object>> futures = new ArrayList<>();
     for (TaskGroup taskGroup : taskGroupsToVerify) {
       //noinspection unchecked
-      futures.add((ListenableFuture<Object>) workerExec.submit(() -> verifyAndMergeCheckpoints(taskGroup)));
+      futures.add((ListenableFuture<Object>) verifyAndMergeCheckpoints(taskGroup));
     }
 
     try {
@@ -2314,16 +2328,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   /**
-   * This method does two things -
-   * 1. Makes sure the checkpoints information in the taskGroup is consistent with that of the tasks, if not kill
-   * inconsistent tasks.
-   * 2. truncates the checkpoints in the taskGroup corresponding to which segments have been published, so that any newly
-   * created tasks for the taskGroup start indexing from after the latest published sequences.
+   * Calls {@link SeekableStreamIndexTaskClient#getCheckpointsAsync(String, boolean)} on each task in the group,
+   * then calls {@link #verifyAndMergeCheckpoints(TaskGroup, List, List)} as a callback in {@link #workerExec}.
    */
-  private void verifyAndMergeCheckpoints(final TaskGroup taskGroup)
+  private ListenableFuture<?> verifyAndMergeCheckpoints(final TaskGroup taskGroup)
   {
-    final int groupId = taskGroup.groupId;
-    final List<Pair<String, TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>>> taskSequences = new ArrayList<>();
     final List<ListenableFuture<TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>>> futures = new ArrayList<>();
     final List<String> taskIds = new ArrayList<>();
 
@@ -2337,29 +2346,47 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       taskIds.add(taskId);
     }
 
-    try {
-      List<Either<Throwable, TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>>> futuresResult =
-          coalesceAndAwait(futures);
+    return Futures.transform(
+        FutureUtils.coalesce(futures),
+        futuresResult -> {
+          verifyAndMergeCheckpoints(taskGroup, taskIds, futuresResult);
+          return null;
+        },
+        workerExec
+    );
+  }
 
-      for (int i = 0; i < futuresResult.size(); i++) {
-        final Either<Throwable, TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>> futureResult =
-            futuresResult.get(i);
-        final String taskId = taskIds.get(i);
-        if (futureResult.isError()) {
-          final Throwable e = new RuntimeException(futureResult.error());
-          stateManager.recordThrowableEvent(e);
-          log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
-          killTask(taskId, "Exception[%s] while getting checkpoints", e.getClass());
-          taskGroup.tasks.remove(taskId);
-        } else if (futureResult.valueOrThrow().isEmpty()) {
-          log.warn("Ignoring task [%s], as probably it is not started running yet", taskId);
-        } else {
-          taskSequences.add(new Pair<>(taskId, futureResult.valueOrThrow()));
-        }
+  /**
+   * This method does two things in {@link #workerExec} -
+   * 1. Makes sure the checkpoints information in the taskGroup is consistent with that of the tasks, if not kill
+   * inconsistent tasks.
+   * 2. truncates the checkpoints in the taskGroup corresponding to which segments have been published, so that any newly
+   * created tasks for the taskGroup start indexing from after the latest published sequences.
+   */
+  private void verifyAndMergeCheckpoints(
+      final TaskGroup taskGroup,
+      final List<String> taskIds,
+      final List<Either<Throwable, TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>>> checkpointResults
+  )
+  {
+    final int groupId = taskGroup.groupId;
+    final List<Pair<String, TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>>> taskSequences = new ArrayList<>();
+
+    for (int i = 0; i < checkpointResults.size(); i++) {
+      final Either<Throwable, TreeMap<Integer, Map<PartitionIdType, SequenceOffsetType>>> checkpointResult =
+          checkpointResults.get(i);
+      final String taskId = taskIds.get(i);
+      if (checkpointResult.isError()) {
+        final Throwable e = new RuntimeException(checkpointResult.error());
+        stateManager.recordThrowableEvent(e);
+        log.error(e, "Problem while getting checkpoints for task [%s], killing the task", taskId);
+        killTask(taskId, "Exception[%s] while getting checkpoints", e.getClass());
+        taskGroup.tasks.remove(taskId);
+      } else if (checkpointResult.valueOrThrow().isEmpty()) {
+        log.warn("Ignoring task [%s], as probably it is not started running yet", taskId);
+      } else {
+        taskSequences.add(new Pair<>(taskId, checkpointResult.valueOrThrow()));
       }
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
     }
 
     final DataSourceMetadata rawDataSourceMetadata = indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(
@@ -3348,13 +3375,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       pauseFutures.add(taskClient.pauseAsync(taskId));
     }
 
-    return Futures.transform(
+    return Futures.transformAsync(
         FutureUtils.coalesce(pauseFutures),
-        new Function<List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>>, Map<PartitionIdType, SequenceOffsetType>>()
+        new AsyncFunction<List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>>, Map<PartitionIdType, SequenceOffsetType>>()
         {
-          @Nullable
           @Override
-          public Map<PartitionIdType, SequenceOffsetType> apply(List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> input)
+          public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> apply(List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> input)
           {
             // 3) Build a map of the highest sequence read by any task in the group for each partition
             final Map<PartitionIdType, SequenceOffsetType> endOffsets = new HashMap<>();
@@ -3395,50 +3421,54 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
             if (setEndOffsetTaskIds.isEmpty()) {
               log.info("All tasks in taskGroup [%d] have failed, tasks will be re-created", taskGroup.groupId);
-              return null;
+              return Futures.immediateFuture(null);
             }
 
-            try {
-
-              if (endOffsets.equals(taskGroup.checkpointSequences.lastEntry().getValue())) {
-                log.warn(
-                    "Checkpoint[%s] is same as the start sequences[%s] of latest sequence for the taskGroup[%d].",
-                    endOffsets,
-                    taskGroup.checkpointSequences.lastEntry().getValue(),
-                    taskGroup.groupId
-                );
-              }
-
-              log.info(
-                  "Setting endOffsets for tasks in taskGroup[%d] to [%s]",
-                  taskGroup.groupId, endOffsets
+            if (endOffsets.equals(taskGroup.checkpointSequences.lastEntry().getValue())) {
+              log.warn(
+                  "Checkpoint[%s] is same as the start sequences[%s] of latest sequence for the taskGroup[%d].",
+                  endOffsets,
+                  taskGroup.checkpointSequences.lastEntry().getValue(),
+                  taskGroup.groupId
               );
-              for (final String taskId : setEndOffsetTaskIds) {
-                setEndOffsetFutures.add(taskClient.setEndOffsetsAsync(taskId, endOffsets, finalize));
-              }
-
-              List<Either<Throwable, Boolean>> results = coalesceAndAwait(setEndOffsetFutures);
-              for (int i = 0; i < results.size(); i++) {
-                if (results.get(i).isValue() && Boolean.valueOf(true).equals(results.get(i).valueOrThrow())) {
-                  log.info("Successfully set endOffsets for task[%s] and resumed it", setEndOffsetTaskIds.get(i));
-                } else {
-                  String taskId = setEndOffsetTaskIds.get(i);
-                  killTask(taskId, "Failed to set end offsets, killing task");
-                  taskGroup.tasks.remove(taskId);
-                }
-              }
-            }
-            catch (Exception e) {
-              log.error("An exception occurred while setting end offsets: [%s]", e.getMessage());
-              throw new RuntimeException(e);
             }
 
-            if (taskGroup.tasks.isEmpty()) {
-              log.info("All tasks in taskGroup[%d] have failed, tasks will be re-created", taskGroup.groupId);
-              return null;
+            log.info(
+                "Setting endOffsets for tasks in taskGroup[%d] to [%s]",
+                taskGroup.groupId, endOffsets
+            );
+            for (final String taskId : setEndOffsetTaskIds) {
+              setEndOffsetFutures.add(taskClient.setEndOffsetsAsync(taskId, endOffsets, finalize));
             }
 
-            return endOffsets;
+            return Futures.transform(
+                FutureUtils.coalesce(setEndOffsetFutures),
+                results -> {
+                  try {
+                    for (int i = 0; i < results.size(); i++) {
+                      if (results.get(i).isValue() && Boolean.valueOf(true).equals(results.get(i).valueOrThrow())) {
+                        log.info("Successfully set endOffsets for task[%s] and resumed it", setEndOffsetTaskIds.get(i));
+                      } else {
+                        String taskId = setEndOffsetTaskIds.get(i);
+                        killTask(taskId, "Failed to set end offsets, killing task");
+                        taskGroup.tasks.remove(taskId);
+                      }
+                    }
+                  }
+                  catch (Exception e) {
+                    log.error("An exception occurred while setting end offsets: [%s]", e.getMessage());
+                    throw new RuntimeException(e);
+                  }
+
+                  if (taskGroup.tasks.isEmpty()) {
+                    log.info("All tasks in taskGroup[%d] have failed, tasks will be re-created", taskGroup.groupId);
+                    return null;
+                  }
+
+                  return endOffsets;
+                },
+                workerExec
+            );
           }
         },
         workerExec

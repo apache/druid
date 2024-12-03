@@ -18,10 +18,10 @@
 
 import { Intent, ResizeSensor } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { C, dedupe, T } from '@druid-toolkit/query';
 import type { Ace } from 'ace-builds';
 import ace from 'ace-builds';
 import classNames from 'classnames';
+import { C, dedupe, T } from 'druid-query-toolkit';
 import debounce from 'lodash.debounce';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -355,6 +355,7 @@ export class FlexibleQueryInput extends React.PureComponent<
                   ),
                   'sub-query-highlight',
                   'text',
+                  false,
                 );
               this.highlightFoundQuery = { row, marker };
             }}

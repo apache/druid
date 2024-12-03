@@ -20,11 +20,11 @@ import './modules';
 
 import { Button, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Column, QueryResult, SqlExpression } from '@druid-toolkit/query';
-import { QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import type { CancelToken } from 'axios';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
+import type { Column, QueryResult, SqlExpression } from 'druid-query-toolkit';
+import { QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 
@@ -173,6 +173,7 @@ export const ExploreView = React.memo(function ExploreView() {
     if (exploreState !== newExploreState) {
       setExploreState(newExploreState);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [querySourceState.data]);
 
   // -------------------------------------------------------
@@ -184,6 +185,7 @@ export const ExploreView = React.memo(function ExploreView() {
     if (exploreState !== newExploreState) {
       setExploreState(newExploreState);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [module, parameterValues, querySourceState.data]);
 
   function setModuleId(moduleId: string, parameterValues: ParameterValues) {

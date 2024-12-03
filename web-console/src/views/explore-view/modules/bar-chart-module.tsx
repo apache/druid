@@ -17,10 +17,10 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import { L } from '@druid-toolkit/query';
+import { L } from 'druid-query-toolkit';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
@@ -174,6 +174,7 @@ ModuleRepository.registerModule<BarChartParameterValues>({
               : undefined,
         });
       });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sourceDataState.data]);
 
     useEffect(() => {

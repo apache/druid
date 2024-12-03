@@ -44,6 +44,8 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
@@ -64,6 +66,7 @@ import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFac
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
@@ -71,6 +74,10 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -79,6 +86,7 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
@@ -111,6 +119,8 @@ public class TestDataBuilder
 
   public static final String TIMESTAMP_COLUMN = "t";
   public static final GlobalTableDataSource CUSTOM_TABLE = new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE);
+
+  public static QueryableIndex QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE = null;
 
   public static final JoinableFactory CUSTOM_ROW_TABLE_JOINABLE = new JoinableFactory()
   {
@@ -161,8 +171,8 @@ public class TestDataBuilder
                            "dim5",
                            "dim6"
                        )))
-                       .add(new DoubleDimensionSchema("d1"))
-                       .add(new DoubleDimensionSchema("d2"))
+                       .add(new DoubleDimensionSchema("dbl1"))
+                       .add(new DoubleDimensionSchema("dbl2"))
                        .add(new FloatDimensionSchema("f1"))
                        .add(new FloatDimensionSchema("f2"))
                        .add(new LongDimensionSchema("l1"))
@@ -380,7 +390,7 @@ public class TestDataBuilder
                   .put("t", "2000-01-01")
                   .put("m1", "1.0")
                   .put("m2", "1.0")
-                  .put("d1", 1.0)
+                  .put("dbl1", 1.0)
                   .put("f1", 1.0f)
                   .put("l1", 7L)
                   .put("dim1", "")
@@ -394,8 +404,8 @@ public class TestDataBuilder
                   .put("t", "2000-01-02")
                   .put("m1", "2.0")
                   .put("m2", "2.0")
-                  .put("d1", 1.7)
-                  .put("d2", 1.7)
+                  .put("dbl1", 1.7)
+                  .put("dbl2", 1.7)
                   .put("f1", 0.1f)
                   .put("f2", 0.1f)
                   .put("l1", 325323L)
@@ -411,8 +421,8 @@ public class TestDataBuilder
                   .put("t", "2000-01-03")
                   .put("m1", "3.0")
                   .put("m2", "3.0")
-                  .put("d1", 0.0)
-                  .put("d2", 0.0)
+                  .put("dbl1", 0.0)
+                  .put("dbl2", 0.0)
                   .put("f1", 0.0)
                   .put("f2", 0.0)
                   .put("l1", 0)
@@ -584,8 +594,8 @@ public class TestDataBuilder
           x.get("dim3"),
           x.get("dim4"),
           x.get("dim5"),
-          x.get("d1"),
-          x.get("d2"),
+          x.get("dbl1"),
+          x.get("dbl2"),
           x.get("f1"),
           x.get("f2"),
           x.get("l1"),
@@ -597,8 +607,8 @@ public class TestDataBuilder
                   .add("dim3", ColumnType.STRING)
                   .add("dim4", ColumnType.STRING)
                   .add("dim5", ColumnType.STRING)
-                  .add("d1", ColumnType.DOUBLE)
-                  .add("d2", ColumnType.DOUBLE)
+                  .add("dbl1", ColumnType.DOUBLE)
+                  .add("dbl2", ColumnType.DOUBLE)
                   .add("f1", ColumnType.FLOAT)
                   .add("f2", ColumnType.FLOAT)
                   .add("l1", ColumnType.LONG)
@@ -978,6 +988,21 @@ public class TestDataBuilder
     attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.T_ALL_TYPE_PARQUET, tmpDir);
   }
 
+  public static void attachIndexesForBenchmarkDatasource(SpecificSegmentsQuerySegmentWalker segmentWalker)
+  {
+    final QueryableIndex queryableIndex = getQueryableIndexForBenchmarkDatasource();
+
+    segmentWalker.add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.BENCHMARK_DATASOURCE)
+                   .interval(Intervals.ETERNITY)
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 0))
+                   .size(0)
+                   .build(),
+        queryableIndex);
+  }
+
   @SuppressWarnings({"rawtypes", "unchecked"})
   private static void attachIndexForDrillTestDatasource(
       SpecificSegmentsQuerySegmentWalker segmentWalker,
@@ -1012,6 +1037,40 @@ public class TestDataBuilder
         .schema(indexSchema)
         .rows(inputRowsForDrillDatasource)
         .buildMMappedIndex();
+  }
+
+  public static QueryableIndex getQueryableIndexForBenchmarkDatasource()
+  {
+    if (QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE == null) {
+      throw new RuntimeException("Queryable index was not populated for benchmark datasource.");
+    }
+    return QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE;
+  }
+
+  public static void makeQueryableIndexForBenchmarkDatasource(Closer closer, int rowsPerSegment)
+  {
+    if (closer == null) {
+      throw new RuntimeException("Closer not supplied for generating segments, exiting.");
+    }
+
+    final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
+    final DataSegment dataSegment = schemaInfo.makeSegmentDescriptor(CalciteTests.BENCHMARK_DATASOURCE);
+    final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
+
+    List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
+                                                    .getDimensions()
+                                                    .stream()
+                                                    .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                    .collect(Collectors.toList());
+    QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE = segmentGenerator.generate(
+        dataSegment,
+        schemaInfo,
+        DimensionsSpec.builder().setDimensions(columnSchemas).build(),
+        TransformSpec.NONE,
+        IndexSpec.builder().withStringDictionaryEncoding(new StringEncodingStrategy.Utf8()).build(),
+        Granularities.NONE,
+        rowsPerSegment
+    );
   }
 
   private static DimensionsSpec getDimensionSpecForDrillDatasource(String datasource)

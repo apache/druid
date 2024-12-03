@@ -591,6 +591,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1")
+                .columnTypes(ColumnType.FLOAT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -658,6 +659,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1", "m2")
+                .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -728,6 +730,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1", "m2")
+                .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -870,6 +873,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1", "v0")
+                .columnTypes(ColumnType.FLOAT, ColumnType.LONG)
                 .virtualColumns(expressionVirtualColumn("v0", "strlen(\"dim1\")", ColumnType.LONG))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
@@ -942,6 +946,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("m1")
+                .columnTypes(ColumnType.FLOAT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -987,7 +992,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"j0.m2\",\"type\":\"DOUBLE\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
+                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.m2\",\"type\":\"DOUBLE\"}]"
                     )
                     .build();
 
@@ -1024,6 +1029,7 @@ public class MSQWindowTest extends MSQTestBase
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .virtualColumns(expressionVirtualColumn("v0", "\"m2\"", ColumnType.FLOAT))
                                 .columns("m2", "v0")
+                                .columnTypes(ColumnType.DOUBLE, ColumnType.FLOAT)
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(contextWithRowSignature1)
                                 .build()
@@ -1037,7 +1043,8 @@ public class MSQWindowTest extends MSQTestBase
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("j0.m2", "m1")
+                .columns("m1", "j0.m2")
+                .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1090,7 +1097,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"j0.m2\",\"type\":\"DOUBLE\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
+                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.m2\",\"type\":\"DOUBLE\"}]"
                     )
                     .build();
 
@@ -1127,6 +1134,7 @@ public class MSQWindowTest extends MSQTestBase
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .virtualColumns(expressionVirtualColumn("v0", "\"m2\"", ColumnType.FLOAT))
                                 .columns("m2", "v0")
+                                .columnTypes(ColumnType.DOUBLE, ColumnType.FLOAT)
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .context(contextWithRowSignature1)
                                 .build()
@@ -1140,7 +1148,8 @@ public class MSQWindowTest extends MSQTestBase
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("j0.m2", "m1")
+                .columns("m1", "j0.m2")
+                .columnTypes(ColumnType.FLOAT, ColumnType.DOUBLE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1213,6 +1222,7 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim2", "m1")
+                .columnTypes(ColumnType.STRING, ColumnType.FLOAT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1269,7 +1279,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"j0.unnest\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
+                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.unnest\",\"type\":\"STRING\"}]"
                     )
                     .build();
 
@@ -1297,7 +1307,8 @@ public class MSQWindowTest extends MSQTestBase
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("j0.unnest", "m1")
+                .columns("m1", "j0.unnest")
+                .columnTypes(ColumnType.FLOAT, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1351,7 +1362,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"j0.unnest\",\"type\":\"STRING\"},{\"name\":\"m1\",\"type\":\"FLOAT\"}]"
+                        "[{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"j0.unnest\",\"type\":\"STRING\"}]"
                     )
                     .build();
 
@@ -1379,7 +1390,8 @@ public class MSQWindowTest extends MSQTestBase
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("j0.unnest", "m1")
+                .columns("m1", "j0.unnest")
+                .columnTypes(ColumnType.FLOAT, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1740,7 +1752,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"cityName\",\"type\":\"STRING\"}]"
+                        "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"added\",\"type\":\"LONG\"}]"
                     )
                     .build();
 
@@ -1750,7 +1762,8 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.WIKIPEDIA)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(in("cityName", ImmutableList.of("Ahmedabad", "Albuquerque")))
-                .columns("added", "cityName")
+                .columns("cityName", "added")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(contextWithRowSignature)
                 .build()),
@@ -1805,7 +1818,7 @@ public class MSQWindowTest extends MSQTestBase
         .setSql(
             "select cityName, added, SUM(added) OVER () cc from wikipedia")
         .setQueryContext(customContext)
-        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15922, 200))
+        .setExpectedMSQFault(new TooManyRowsInAWindowFault(15930, 200))
         .verifyResults();
   }
 
@@ -1829,7 +1842,7 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"}]"
+                        "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"added\",\"type\":\"LONG\"}]"
                     )
                     .build();
 
@@ -1839,7 +1852,8 @@ public class MSQWindowTest extends MSQTestBase
                 .dataSource(CalciteTests.WIKIPEDIA)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(notNull("cityName"))
-                .columns("added", "cityName", "countryIsoCode")
+                .columns("cityName", "countryIsoCode", "added")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(innerContextWithRowSignature)
                 .build()),
@@ -1861,13 +1875,14 @@ public class MSQWindowTest extends MSQTestBase
                     .putAll(DEFAULT_MSQ_CONTEXT)
                     .put(
                         DruidQuery.CTX_SCAN_SIGNATURE,
-                        "[{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"w0\",\"type\":\"LONG\"}]"
+                        "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"w0\",\"type\":\"LONG\"}]"
                     )
                     .build();
     final Query scanQuery = Druids.newScanQueryBuilder()
                                   .dataSource(new QueryDataSource(query))
                                   .intervals(querySegmentSpec(Filtration.eternity()))
-                                  .columns("added", "cityName", "w0")
+                                  .columns("cityName", "added", "w0")
+                                  .columnTypes(ColumnType.STRING, ColumnType.LONG, ColumnType.LONG)
                                   .limit(5)
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                   .context(outerContextWithRowSignature)
@@ -2087,6 +2102,7 @@ public class MSQWindowTest extends MSQTestBase
                                   .dataSource(new QueryDataSource(windowQuery))
                                   .intervals(querySegmentSpec(Filtration.eternity()))
                                   .columns("d0", "d1", "d2", "w0", "w1")
+                                  .columnTypes(ColumnType.STRING, ColumnType.DOUBLE, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
                                   .orderBy(
                                       ImmutableList.of(
                                           OrderBy.ascending("d0"),
@@ -2219,64 +2235,106 @@ public class MSQWindowTest extends MSQTestBase
             2, 0, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(13).bytes(1379).frames(1),
+            CounterSnapshotMatcher.with().rows(13).bytes(989).frames(1),
             2, 0, "output"
         )
 
-        // Stage 3, Worker 0
+        // Stage 3, Worker 1 (window stage)
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(3).bytes(318).frames(1),
-            3, 0, "input0"
-        )
-        .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(3).bytes(330).frames(1),
-            3, 0, "output"
-        )
-        .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(3).bytes(318).frames(1),
-            3, 0, "shuffle"
-        )
-
-        // Stage 3, Worker 1
-        .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(0, 3).bytes(0, 333).frames(0, 1),
+            CounterSnapshotMatcher.with().rows(0, 6).bytes(0, 461).frames(0, 1),
             3, 1, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(3).bytes(345).frames(1),
+            CounterSnapshotMatcher.with().rows(0, 6).bytes(0, 641).frames(0, 1),
             3, 1, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(3).bytes(333).frames(1),
+            CounterSnapshotMatcher.with().rows(1, 1, 2, 2).bytes(122, 132, 230, 235).frames(1, 1, 1, 1),
             3, 1, "shuffle"
         )
 
-        // Stage 3, Worker 2
+        // Stage 3, Worker 2 (window stage)
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(0, 0, 3).bytes(0, 0, 352).frames(0, 0, 1),
+            CounterSnapshotMatcher.with().rows(0, 0, 1).bytes(0, 0, 114).frames(0, 0, 1),
             3, 2, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(3).bytes(364).frames(1),
+            CounterSnapshotMatcher.with().rows(0, 0, 1).bytes(0, 0, 144).frames(0, 0, 1),
             3, 2, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(3).bytes(352).frames(1),
+            CounterSnapshotMatcher.with().rows(1).bytes(140).frames(1),
             3, 2, "shuffle"
         )
 
-        // Stage 3, Worker 3
+        // Stage 3, Worker 3 (window stage)
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(0, 0, 0, 4).bytes(0, 0, 0, 426).frames(0, 0, 0, 1),
+            CounterSnapshotMatcher.with().rows(0, 0, 0, 6).bytes(0, 0, 0, 482).frames(0, 0, 0, 1),
             3, 3, "input0"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(4).bytes(442).frames(1),
+            CounterSnapshotMatcher.with().rows(0, 0, 0, 6).bytes(0, 0, 0, 662).frames(0, 0, 0, 1),
             3, 3, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
-            CounterSnapshotMatcher.with().rows(4).bytes(426).frames(1),
+            CounterSnapshotMatcher.with().rows(1, 1, 2, 2).bytes(143, 137, 222, 238).frames(1, 1, 1, 1),
             3, 3, "shuffle"
+        )
+
+        // Stage 4, Worker 0
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(3).bytes(337).frames(1),
+            4, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(3).bytes(349).frames(1),
+            4, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(3).bytes(337).frames(1),
+            4, 0, "shuffle"
+        )
+
+        // Stage 4, Worker 1
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(0, 2).bytes(0, 235).frames(0, 1),
+            4, 1, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(2).bytes(243).frames(1),
+            4, 1, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(2).bytes(235).frames(1),
+            4, 1, "shuffle"
+        )
+
+        // Stage 4, Worker 2
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(0, 0, 4).bytes(0, 0, 418).frames(0, 0, 1),
+            4, 2, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(4).bytes(434).frames(1),
+            4, 2, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(4).bytes(418).frames(1),
+            4, 2, "shuffle"
+        )
+
+        // Stage 4, Worker 3
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(0, 0, 0, 4).bytes(0, 0, 0, 439).frames(0, 0, 0, 1),
+            4, 3, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(4).bytes(455).frames(1),
+            4, 3, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher.with().rows(4).bytes(439).frames(1),
+            4, 3, "shuffle"
         )
         .verifyResults();
   }
@@ -2331,7 +2389,7 @@ public class MSQWindowTest extends MSQTestBase
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Encountered a multi value column [v0]. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
+                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
         ))
         .verifyExecutionError();
   }
@@ -2350,7 +2408,7 @@ public class MSQWindowTest extends MSQTestBase
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(ISE.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "Encountered a multi value column [v0]. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
+                "Encountered a multi value column. Window processing does not support MVDs. Consider using UNNEST or MV_TO_ARRAY."))
         ))
         .verifyExecutionError();
   }

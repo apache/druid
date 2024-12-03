@@ -392,9 +392,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
             newScanQueryBuilder()
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
-                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(queryContextWithGranularity(Granularities.HOUR))
                 .build()
         )
@@ -419,9 +418,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
             newScanQueryBuilder()
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
-                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(queryContextWithGranularity(Granularities.DAY))
                 .build()
         )
@@ -465,9 +463,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
             newScanQueryBuilder()
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
-                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(queryContextWithGranularity(Granularities.DAY))
                 .build()
         )
@@ -526,9 +523,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     expressionVirtualColumn("v2", "CAST(\"c\", 'DOUBLE')", ColumnType.DOUBLE),
                     expressionVirtualColumn("v3", "CAST(\"d\", 'LONG')", ColumnType.LONG)
                 )
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
-                .columns("b", "e", "v0", "v1", "v2", "v3")
+                .columns("v0", "b", "v1", "v2", "v3", "e")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.LONG, ColumnType.STRING)
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
@@ -588,9 +584,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                         OrderBy.ascending("d")
                     )
                 )
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
-                .columns("b", "d", "v0", "v1")
+                .columns("v0", "b", "d", "v1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
@@ -649,9 +644,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                         OrderBy.ascending("b")
                     )
                 )
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
-                .columns("b", "d", "v0", "v1")
+                .columns("v0", "b", "d", "v1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
@@ -714,9 +708,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                         OrderBy.ascending("e")
                     )
                 )
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
-                .columns("b", "d", "e", "v0", "v1")
+                .columns("v0", "b", "d", "e", "v1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG)
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
@@ -911,8 +904,6 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     expressionPostAgg("p0", "1", ColumnType.LONG),
                     expressionPostAgg("p1", "CAST(\"d3\", 'DOUBLE')", ColumnType.DOUBLE)
                 )
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
                 .setContext(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
@@ -997,9 +988,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     expressionVirtualColumn("v0", "timestamp_parse(\"a\",null,'UTC')", ColumnType.LONG),
                     expressionVirtualColumn("v1", "1", ColumnType.LONG)
                 )
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
-                .columns("b", "c", "d", "v0", "v1")
+                .columns("v0", "b", "v1", "c", "d")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.LONG, ColumnType.STRING)
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
@@ -1063,9 +1053,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     expressionVirtualColumn("v2", "CAST(\"c\", 'DOUBLE')", ColumnType.DOUBLE),
                     expressionVirtualColumn("v3", "CAST(\"d\", 'LONG')", ColumnType.LONG)
                 )
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
-                .columns("b", "e", "v0", "v1", "v2", "v3")
+                .columns("v0", "b", "v1", "v2", "v3", "e")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.LONG, ColumnType.STRING)
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
@@ -1158,8 +1147,6 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                     expressionPostAgg("p0", "1", ColumnType.LONG),
                     expressionPostAgg("p1", "CAST(\"d3\", 'DOUBLE')", ColumnType.DOUBLE)
                 )
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
                 .setContext(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
@@ -1226,9 +1213,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .virtualColumns(
                     expressionVirtualColumn("v0", "array(\"dim1\")", ColumnType.STRING_ARRAY)
                 )
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
                 .columns("__time", "v0")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING_ARRAY)
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )
@@ -1284,9 +1270,8 @@ public abstract class CalciteCatalogIngestionDmlTest extends CalciteIngestionDml
                 .virtualColumns(
                     expressionVirtualColumn("v0", "array(\"dim1\")", ColumnType.STRING_ARRAY)
                 )
-                // Scan query lists columns in alphabetical order independent of the
-                // SQL project list or the defined schema.
                 .columns("__time", "v0")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING_ARRAY)
                 .context(CalciteIngestionDmlTest.PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )

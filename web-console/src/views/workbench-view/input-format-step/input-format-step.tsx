@@ -18,8 +18,8 @@
 
 import { Button, Callout, FormGroup, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression } from '@druid-toolkit/query';
-import { C, SqlColumnDeclaration, SqlType } from '@druid-toolkit/query';
+import type { SqlExpression } from 'druid-query-toolkit';
+import { C, SqlColumnDeclaration, SqlType } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { ArrayModeSwitch, AutoForm, CenterMessage, LearnMore, Loader } from '../../../components';
@@ -98,7 +98,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
 
   const [previewState] = useQueryManager<InputSourceAndFormat, SampleResponse>({
     query: inputSourceAndFormatToSample,
-    processQuery: async ({ inputSource, inputFormat }) => {
+    processQuery: async ({ inputSource, inputFormat }, cancelToken) => {
       const fixedFormatSource = inputSource.type === 'delta';
       if (!fixedFormatSource && !isValidInputFormat(inputFormat))
         throw new Error('invalid input format');
@@ -131,7 +131,7 @@ export const InputFormatStep = React.memo(function InputFormatStep(props: InputF
         },
       };
 
-      return await postToSampler(sampleSpec, 'input-format-step');
+      return await postToSampler(sampleSpec, 'input-format-step', cancelToken);
     },
   });
 

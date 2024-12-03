@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { SqlAlias, SqlExpression, SqlOrderByExpression, SqlTable } from '@druid-toolkit/query';
+import type { SqlAlias, SqlExpression, SqlOrderByExpression, SqlTable } from 'druid-query-toolkit';
 import {
   C,
   F,
@@ -28,14 +28,13 @@ import {
   SqlType,
   SqlWithPart,
   T,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 
 import type { ColumnHint } from '../../../utils';
-import { forceSignInNumberFormatter, formatNumber, formatPercent } from '../../../utils';
+import { Duration, forceSignInNumberFormatter, formatNumber, formatPercent } from '../../../utils';
 import type { ExpressionMeta } from '../models';
 import { Measure } from '../models';
 
-import { formatDuration } from './duration';
 import { addTableScope } from './general';
 import { KNOWN_AGGREGATIONS } from './known-aggregations';
 import type { Compare } from './time-manipulation';
@@ -103,7 +102,7 @@ function makeBaseColumnHints(
       ).getUnderlyingExpression(),
     };
     if (isTimestamp(splitColumn)) {
-      hint.displayName = `${splitColumn.name} (by ${formatDuration(timeBucket, true)})`;
+      hint.displayName = `${splitColumn.name} (by ${new Duration(timeBucket).getDescription()})`;
     }
     columnHints.set(splitColumn.name, hint);
   }
@@ -199,6 +198,7 @@ interface DecodedOrderBy {
   orderedCompareDuration?: string;
   orderedCompareType?: CompareType;
 }
+
 function decodeTableOrderBy(
   orderBy: SqlOrderByExpression | undefined,
   hasCompare: boolean,
@@ -216,8 +216,8 @@ function decodeTableOrderBy(
   let orderedCompareDuration: Compare | undefined;
   let orderedCompareType: CompareType | undefined;
 
-  const m = orderByColumnName.match(
-    /^(.+):compare:(P[^:]+):(value|delta|absDelta|percent|absPercent)$/,
+  const m = /^(.+):compare:(P[^:]+):(value|delta|absDelta|percent|absPercent)$/.exec(
+    orderByColumnName,
   );
   if (m) {
     if (!hasCompare) return;
@@ -290,7 +290,7 @@ function makeCompareAggregatorsAndAddHints(
   prevMeasure: SqlExpression,
   columnHints: Map<string, ColumnHint>,
 ): SqlExpression[] {
-  const group = `Previous ${formatDuration(compare, true)}`;
+  const group = `Previous ${new Duration(compare).getDescription()}`;
   const diff = mainMeasure.subtract(prevMeasure);
 
   const ret: SqlExpression[] = [];
@@ -471,6 +471,7 @@ interface MakeNonCompareTableQueryAndHintsOptions {
 
   orderBy: SqlOrderByExpression | undefined;
 }
+
 function makeNonCompareTableQueryAndHints(
   options: MakeNonCompareTableQueryAndHintsOptions,
 ): QueryAndHints {
@@ -666,7 +667,7 @@ function makeJoinCompareTableQueryAndHints(
           : q
               .applyIf(orderByCompareDuration, q =>
                 q.changeOrderByExpression(
-                  decodedOrderBy!.orderedMeasure!.expression.toOrderByExpression('DESC'),
+                  decodedOrderBy.orderedMeasure!.expression.toOrderByExpression('DESC'),
                 ),
               )
               .changeLimitValue(safeSubQueryLimit),
@@ -699,7 +700,7 @@ function makeJoinCompareTableQueryAndHints(
               q =>
                 q
                   .changeOrderByExpression(
-                    effectiveOrderBy.changeExpression(C(decodedOrderBy!.orderedMeasure!.name)),
+                    effectiveOrderBy.changeExpression(C(decodedOrderBy.orderedMeasure!.name)),
                   )
                   .changeLimitValue(maxRows),
               q =>
@@ -714,7 +715,7 @@ function makeJoinCompareTableQueryAndHints(
                     )
                   : q
                       .changeOrderByExpression(
-                        C(decodedOrderBy!.orderedThing.name).toOrderByExpression('DESC'),
+                        C(decodedOrderBy.orderedThing.name).toOrderByExpression('DESC'),
                       )
                       .changeLimitValue(safeSubQueryLimit),
             ),

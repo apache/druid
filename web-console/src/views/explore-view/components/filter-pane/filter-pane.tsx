@@ -18,16 +18,16 @@
 
 import { Button, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import classNames from 'classnames';
 import type {
   Column,
   FilterPattern,
   QueryResult,
   SqlExpression,
   SqlQuery,
-} from '@druid-toolkit/query';
-import { filterPatternsToExpression, fitFilterPatterns } from '@druid-toolkit/query';
-import classNames from 'classnames';
-import React, { forwardRef, useImperativeHandle, useState } from 'react';
+} from 'druid-query-toolkit';
+import { filterPatternsToExpression, fitFilterPatterns } from 'druid-query-toolkit';
+import { forwardRef, useImperativeHandle, useState } from 'react';
 
 import type { QuerySource } from '../../models';
 import { formatPatternWithoutNegation, initPatternForColumn } from '../../utils';
@@ -76,6 +76,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
     () => ({
       filterOn,
     }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [patterns],
   );
 

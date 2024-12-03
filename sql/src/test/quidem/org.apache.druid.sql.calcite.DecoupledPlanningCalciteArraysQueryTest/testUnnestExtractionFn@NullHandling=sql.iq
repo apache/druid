@@ -1,5 +1,5 @@
-# testUnnestExtractionFn@NullHandling=sql case-crc:404dc668
-# quidem testcase reason: UNNEST_DIFFERENT_RESULTSET
+# testUnnestExtractionFn@NullHandling=sql case-crc:33ee4d88
+# quidem testcase reason: UNNEST_SUBSTRING_EMPTY
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
@@ -22,13 +22,13 @@ SELECT substring(d3,1) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested 
 !ok
 LogicalProject(EXPR$0=[SUBSTRING($18, 1)])
   LogicalUnnest(unnestExpr=[MV_TO_ARRAY($3)], filter=[<>(SUBSTRING($0, 1), 'b')])
-    LogicalProject(__time=[$0], dim1=[$1], dim2=[$2], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], d1=[$7], d2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0])
+    LogicalProject(__time=[$0], dim1=[$1], dim2=[$2], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0])
       LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
 DruidProject(EXPR$0=[SUBSTRING($18, 1)], druid=[logical])
   DruidUnnest(unnestExpr=[MV_TO_ARRAY($3)], filter=[<>(SUBSTRING($0, 1), 'b')])
-    DruidProject(__time=[$0], dim1=[$1], dim2=[$2], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], d1=[$7], d2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0], druid=[logical])
+    DruidProject(__time=[$0], dim1=[$1], dim2=[$2], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0], druid=[logical])
       DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan

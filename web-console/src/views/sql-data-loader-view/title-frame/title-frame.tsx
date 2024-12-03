@@ -38,7 +38,7 @@ export const TitleFrame = React.memo(function TitleFrame(props: TitleFrameProps)
       <h1 className="titles">
         {title} <span className="slash">/</span> {subtitle}
       </h1>
-      {toolbar && <div className="toolbar">{toolbar}</div>}
+      {!!toolbar && <div className="toolbar">{toolbar}</div>}
       {children}
     </div>
   );

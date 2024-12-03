@@ -62,10 +62,11 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     };
 
     this.showLogQueryManager = new QueryManager({
-      processQuery: async () => {
+      processQuery: async (_, cancelToken) => {
         const { endpoint, tailOffset } = this.props;
         const resp = await Api.instance.get(
           endpoint + (tailOffset ? `?offset=-${tailOffset}` : ''),
+          { cancelToken },
         );
         const data = resp.data;
 

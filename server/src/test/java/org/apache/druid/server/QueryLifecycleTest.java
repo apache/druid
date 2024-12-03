@@ -32,9 +32,9 @@ import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.QueryContextTest;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.log.RequestLogger;
@@ -70,7 +70,7 @@ public class QueryLifecycleTest
                                               .intervals(ImmutableList.of(Intervals.ETERNITY))
                                               .aggregators(new CountAggregatorFactory("chocula"))
                                               .build();
-  QueryToolChestWarehouse toolChestWarehouse;
+  QueryRunnerFactoryConglomerate conglomerate;
   QuerySegmentWalker texasRanger;
   GenericQueryMetricsFactory metricsFactory;
   ServiceEmitter emitter;
@@ -90,7 +90,7 @@ public class QueryLifecycleTest
   @Before
   public void setup()
   {
-    toolChestWarehouse = EasyMock.createMock(QueryToolChestWarehouse.class);
+    conglomerate = EasyMock.createMock(QueryRunnerFactoryConglomerate.class);
     texasRanger = EasyMock.createMock(QuerySegmentWalker.class);
     metricsFactory = EasyMock.createMock(GenericQueryMetricsFactory.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);
@@ -110,7 +110,7 @@ public class QueryLifecycleTest
     long nanos = System.nanoTime();
     long millis = System.currentTimeMillis();
     return new QueryLifecycle(
-        toolChestWarehouse,
+        conglomerate,
         texasRanger,
         metricsFactory,
         emitter,
@@ -127,7 +127,7 @@ public class QueryLifecycleTest
   public void teardown()
   {
     EasyMock.verify(
-        toolChestWarehouse,
+        conglomerate,
         texasRanger,
         metricsFactory,
         emitter,
@@ -146,7 +146,7 @@ public class QueryLifecycleTest
   {
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
-    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
             .once();
     EasyMock.expect(texasRanger.getQueryRunnerForIntervals(EasyMock.anyObject(), EasyMock.anyObject()))
@@ -168,7 +168,7 @@ public class QueryLifecycleTest
 
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
-    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
             .once();
 
@@ -194,7 +194,7 @@ public class QueryLifecycleTest
     EasyMock.expect(authorizer.authorize(authenticationResult, new Resource("baz", ResourceType.QUERY_CONTEXT), Action.WRITE))
             .andReturn(Access.OK).times(2);
 
-    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
             .times(2);
 
@@ -242,7 +242,7 @@ public class QueryLifecycleTest
             .andReturn(Access.DENIED)
             .times(2);
 
-    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
             .times(2);
 
@@ -277,7 +277,7 @@ public class QueryLifecycleTest
             .andReturn(Access.OK)
             .times(2);
 
-    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
             .times(2);
 
@@ -323,7 +323,7 @@ public class QueryLifecycleTest
             .andReturn(Access.OK)
             .times(2);
 
-    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
             .times(2);
 
@@ -373,7 +373,7 @@ public class QueryLifecycleTest
             .andReturn(Access.DENIED)
             .times(2);
 
-    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
             .times(2);
 
@@ -417,7 +417,7 @@ public class QueryLifecycleTest
             .andReturn(Access.OK)
             .times(2);
 
-    EasyMock.expect(toolChestWarehouse.getToolChest(EasyMock.anyObject()))
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest)
             .times(2);
 
@@ -460,7 +460,7 @@ public class QueryLifecycleTest
   private void replayAll()
   {
     EasyMock.replay(
-        toolChestWarehouse,
+        conglomerate,
         texasRanger,
         metricsFactory,
         emitter,

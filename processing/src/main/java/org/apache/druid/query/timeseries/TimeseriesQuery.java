@@ -43,6 +43,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Finalization;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -181,7 +182,8 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return context().getBoolean(SKIP_EMPTY_BUCKETS, false);
   }
 
-  public RowSignature getResultSignature(final RowSignature.Finalization finalization)
+  @Override
+  public RowSignature getResultRowSignature(Finalization finalization)
   {
     final RowSignature.Builder builder = RowSignature.builder();
     builder.addTimeColumn();

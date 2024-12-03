@@ -20,7 +20,6 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
@@ -171,7 +170,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments()
   {
     if (snapshot == null) {
-      snapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments.values(), ImmutableMap.of());
+      snapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments.values());
     }
     return snapshot;
   }

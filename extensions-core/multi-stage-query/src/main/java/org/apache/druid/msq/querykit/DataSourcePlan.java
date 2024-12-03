@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
 import org.apache.druid.msq.input.lookup.LookupInputSpec;
@@ -123,7 +124,7 @@ public class DataSourcePlan
   /**
    * Build a plan.
    *
-   * @param queryKitSpec reference for recursive planning
+   * @param queryKitSpec     reference for recursive planning
    * @param queryContext     query context
    * @param dataSource       datasource to plan
    * @param querySegmentSpec intervals for mandatory pruning. Must be {@link MultipleIntervalSegmentSpec}. The returned
@@ -134,7 +135,6 @@ public class DataSourcePlan
    * @param minStageNumber   starting stage number for subqueries
    * @param broadcast        whether the plan should broadcast data for this datasource
    */
-  @SuppressWarnings("rawtypes")
   public static DataSourcePlan forDataSource(
       final QueryKitSpec queryKitSpec,
       final QueryContext queryContext,
@@ -275,6 +275,20 @@ public class DataSourcePlan
   public IntSet getBroadcastInputs()
   {
     return broadcastInputs;
+  }
+
+  /**
+   * Figure for {@link StageDefinition#getMaxWorkerCount()} that should be used when processing.
+   */
+  public int getMaxWorkerCount(final QueryKitSpec queryKitSpec)
+  {
+    if (isSingleWorker()) {
+      return 1;
+    } else if (InputSpecs.hasLeafInputs(inputSpecs, broadcastInputs)) {
+      return queryKitSpec.getMaxLeafWorkerCount();
+    } else {
+      return queryKitSpec.getMaxNonLeafWorkerCount();
+    }
   }
 
   /**

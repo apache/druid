@@ -145,7 +145,7 @@ public class MapLookupExtractorFactory implements LookupExtractorFactory
     @Produces(MediaType.APPLICATION_JSON)
     public Response getKeys()
     {
-      return Response.ok(map.keySet().toString()).build();
+      return Response.ok(map.keySet()).build();
     }
 
     @GET
@@ -153,7 +153,7 @@ public class MapLookupExtractorFactory implements LookupExtractorFactory
     @Produces(MediaType.APPLICATION_JSON)
     public Response getValues()
     {
-      return Response.ok(map.values().toString()).build();
+      return Response.ok(map.values()).build();
     }
 
     @GET

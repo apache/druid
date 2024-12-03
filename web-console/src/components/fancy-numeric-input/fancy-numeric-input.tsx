@@ -19,8 +19,8 @@
 import type { InputGroupProps2, Intent } from '@blueprintjs/core';
 import { Button, ButtonGroup, Classes, ControlGroup, InputGroup, Keys } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlExpression, SqlFunction, SqlLiteral, SqlMulti } from '@druid-toolkit/query';
 import classNames from 'classnames';
+import { SqlExpression, SqlFunction, SqlLiteral, SqlMulti } from 'druid-query-toolkit';
 import React, { useEffect, useState } from 'react';
 
 import { clamp } from '../../utils';
@@ -128,6 +128,7 @@ export const FancyNumericInput = React.memo(function FancyNumericInput(
     if (effectiveValue !== shownNumberClamped) {
       setShownValue(numberToShown(effectiveValue));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveValue]);
 
   const containerClasses = classNames(

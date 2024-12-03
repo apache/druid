@@ -20,6 +20,7 @@
 package org.apache.druid.segment.column;
 
 import com.google.common.collect.Lists;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -73,16 +74,19 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
   @Nullable
   private final ColumnarMultiInts multiValueColumn;
   private final Indexed<ByteBuffer> utf8Dictionary;
+  private final BitmapFactory bitmapFactory;
 
   public StringUtf8DictionaryEncodedColumn(
       @Nullable ColumnarInts singleValueColumn,
       @Nullable ColumnarMultiInts multiValueColumn,
-      Indexed<ByteBuffer> utf8Dictionary
+      Indexed<ByteBuffer> utf8Dictionary,
+      BitmapFactory bitmapFactory
   )
   {
     this.column = singleValueColumn;
     this.multiValueColumn = multiValueColumn;
     this.utf8Dictionary = utf8Dictionary;
+    this.bitmapFactory = bitmapFactory;
   }
 
   @Override
@@ -133,6 +137,11 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
   public int getCardinality()
   {
     return utf8Dictionary.size();
+  }
+
+  public BitmapFactory getBitmapFactory()
+  {
+    return bitmapFactory;
   }
 
   @Override

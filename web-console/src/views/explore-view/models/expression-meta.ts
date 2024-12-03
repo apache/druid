@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import type { Column } from '@druid-toolkit/query';
-import { C, filterMap, SqlColumn, SqlExpression } from '@druid-toolkit/query';
+import type { Column } from 'druid-query-toolkit';
+import { C, filterMap, SqlColumn, SqlExpression } from 'druid-query-toolkit';
 
 import { renameColumnsInExpression } from '../utils';
 
