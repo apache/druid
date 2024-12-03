@@ -26,7 +26,6 @@ import org.apache.curator.framework.api.transaction.CuratorMultiTransaction;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.NodeCache;
-import org.apache.curator.utils.CloseableExecutorService;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -64,7 +63,7 @@ public class NodeAnnouncer
   private static final Logger log = new Logger(NodeAnnouncer.class);
 
   private final CuratorFramework curator;
-  private final CloseableExecutorService nodeCacheExecutor;
+  private final ExecutorService nodeCacheExecutor;
 
   private final ConcurrentMap<String, NodeCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, byte[]> announcedPaths = new ConcurrentHashMap<>();
@@ -99,7 +98,7 @@ public class NodeAnnouncer
   public NodeAnnouncer(CuratorFramework curator, ExecutorService exec)
   {
     this.curator = curator;
-    this.nodeCacheExecutor = new CloseableExecutorService(exec);
+    this.nodeCacheExecutor = exec;
   }
 
   @VisibleForTesting
@@ -151,14 +150,14 @@ public class NodeAnnouncer
   private void closeResources()
   {
     try {
+      // Close all caches...
       CloseableUtils.closeAll(listeners.values());
-
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
     finally {
-      nodeCacheExecutor.close();
+      nodeCacheExecutor.shutdown();
     }
 
     for (String announcementPath : announcedPaths.keySet()) {
