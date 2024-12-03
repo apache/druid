@@ -6995,13 +6995,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
                           expressionVirtualColumn(ds("j0.unnest"), "array(\"dim1\",\"dim2\")", ColumnType.STRING_ARRAY),
                           null
                       ),
-                      nestedExpressionVirtualColumn(ds2("j0.unnest"), "\"dim3\"", ColumnType.STRING),
+                      nestedExpressionVirtualColumn(ds(ds("j0.unnest")), "\"dim3\"", ColumnType.STRING),
                       null
                   ))
                   .intervals(querySegmentSpec(Intervals.of("2000-01-02T00:00:00.000Z/2000-01-03T00:10:00.001Z")))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_UNNEST)
-                  .columns(ds2("j0.unnest"))
+                  .columns(ds(ds("j0.unnest")))
                   .columnTypes(ColumnType.STRING)
                   .build()
         ),

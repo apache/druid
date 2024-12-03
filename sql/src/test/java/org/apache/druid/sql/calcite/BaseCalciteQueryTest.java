@@ -1674,9 +1674,4 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       return "_" + colName;
     }
   }
-
-  public String ds2(String colName)
-  {
-    return ds(ds(colName));
-  }
 }
