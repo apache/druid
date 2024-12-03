@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { Column, QueryResult, SqlExpression } from '@druid-toolkit/query';
+import type { Column, QueryResult, SqlExpression } from 'druid-query-toolkit';
 import {
   C,
   F,
@@ -28,7 +28,7 @@ import {
   SqlRecord,
   SqlType,
   SqlValues,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 import { oneOf } from './general';

@@ -51,30 +51,9 @@ import { deepGet, pluralIfNeeded, removeUndefinedValues, tickIcon } from '../../
 import type { MaxTasksButtonProps } from '../max-tasks-button/max-tasks-button';
 import { MaxTasksButton } from '../max-tasks-button/max-tasks-button';
 import { QueryParametersDialog } from '../query-parameters-dialog/query-parameters-dialog';
+import { TimezoneMenuItems } from '../timezone-menu-items/timezone-menu-items';
 
 import './run-panel.scss';
-
-const NAMED_TIMEZONES: string[] = [
-  'America/Juneau', // -9.0
-  'America/Los_Angeles', // -8.0
-  'America/Yellowknife', // -7.0
-  'America/Phoenix', // -7.0
-  'America/Denver', // -7.0
-  'America/Mexico_City', // -6.0
-  'America/Chicago', // -6.0
-  'America/New_York', // -5.0
-  'America/Argentina/Buenos_Aires', // -4.0
-  'Etc/UTC', // +0.0
-  'Europe/London', // +0.0
-  'Europe/Paris', // +1.0
-  'Asia/Jerusalem', // +2.0
-  'Asia/Shanghai', // +8.0
-  'Asia/Hong_Kong', // +8.0
-  'Asia/Seoul', // +9.0
-  'Asia/Tokyo', // +9.0
-  'Pacific/Guam', // +10.0
-  'Australia/Sydney', // +11.0
-];
 
 const ARRAY_INGEST_MODE_LABEL: Record<ArrayIngestMode, string> = {
   array: 'Array',
@@ -314,25 +293,6 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     onQueryChange(query.changeQueryContext(removeUndefinedValues(queryContext)));
   }
 
-  function offsetOptions(): JSX.Element[] {
-    const items: JSX.Element[] = [];
-
-    for (let i = -12; i <= 14; i++) {
-      const offset = `${i < 0 ? '-' : '+'}${String(Math.abs(i)).padStart(2, '0')}:00`;
-      items.push(
-        <MenuItem
-          key={offset}
-          icon={tickIcon(offset === sqlTimeZone)}
-          text={offset}
-          shouldDismissPopover={false}
-          onClick={() => changeQueryContext({ ...queryContext, sqlTimeZone: offset })}
-        />,
-      );
-    }
-
-    return items;
-  }
-
   const overloadWarning =
     query.unlimited &&
     (queryEngine === 'sql-native' ||
@@ -424,32 +384,13 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     text="Timezone"
                     label={sqlTimeZone ?? defaultQueryContext.sqlTimeZone}
                   >
-                    <MenuDivider title="Timezone type" />
-                    <MenuItem
-                      icon={tickIcon(!sqlTimeZone)}
-                      text="Default"
-                      label={defaultQueryContext.sqlTimeZone}
-                      shouldDismissPopover={false}
-                      onClick={() =>
-                        changeQueryContext({ ...queryContext, sqlTimeZone: undefined })
+                    <TimezoneMenuItems
+                      sqlTimeZone={sqlTimeZone}
+                      setSqlTimeZone={sqlTimeZone =>
+                        changeQueryContext({ ...queryContext, sqlTimeZone })
                       }
+                      defaultSqlTimeZone={defaultQueryContext.sqlTimeZone}
                     />
-                    <MenuItem icon={tickIcon(String(sqlTimeZone).includes('/'))} text="Named">
-                      {NAMED_TIMEZONES.map(namedTimezone => (
-                        <MenuItem
-                          key={namedTimezone}
-                          icon={tickIcon(namedTimezone === sqlTimeZone)}
-                          text={namedTimezone}
-                          shouldDismissPopover={false}
-                          onClick={() =>
-                            changeQueryContext({ ...queryContext, sqlTimeZone: namedTimezone })
-                          }
-                        />
-                      ))}
-                    </MenuItem>
-                    <MenuItem icon={tickIcon(String(sqlTimeZone).includes(':'))} text="Offset">
-                      {offsetOptions()}
-                    </MenuItem>
                     <MenuItem
                       icon={IconNames.BLANK}
                       text="Custom"

@@ -79,6 +79,7 @@ import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -343,6 +344,7 @@ public class CachingClusteredClientBenchmark
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
     );
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergeBufferPool, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
@@ -351,7 +353,8 @@ public class CachingClusteredClientBenchmark
         groupByResourcesReservationPool,
         mapper,
         mapper,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPool);

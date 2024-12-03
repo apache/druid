@@ -79,7 +79,7 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
     ColumnSerializerUtils.writeInternal(smoosher, serializer, getColumnName(), fileName);
   }
 
-  protected void copyFromTempSmoosh(FileSmoosher smoosher, SmooshedFileMapper fileMapper) throws IOException
+  protected static void copyFromTempSmoosh(FileSmoosher smoosher, SmooshedFileMapper fileMapper) throws IOException
   {
     for (String internalName : fileMapper.getInternalFilenames()) {
       smoosher.add(internalName, fileMapper.mapFile(internalName));

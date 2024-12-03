@@ -17,7 +17,6 @@
  */
 
 import {
-  ceilToUtcDay,
   dateToIsoDateString,
   intervalToLocalDateRange,
   localDateRangeToInterval,
@@ -58,14 +57,6 @@ describe('date', () => {
       const interval = '/2021-02-03T12:00:00';
 
       expect(localDateRangeToInterval(intervalToLocalDateRange(interval))).toEqual(interval);
-    });
-  });
-
-  describe('ceilToUtcDay', () => {
-    it('works', () => {
-      expect(ceilToUtcDay(new Date('2021-02-03T12:03:02.001Z'))).toEqual(
-        new Date('2021-02-04T00:00:00Z'),
-      );
     });
   });
 });

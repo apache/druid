@@ -511,7 +511,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
         binder -> binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class)),
         new JoinableFactoryModule(),
         new IndexingServiceTuningConfigModule(),
-        new MSQIndexingModule(),
         Modules.override(new MSQSqlModule()).with(
             binder -> {
               // Our Guice configuration currently requires bindings to exist even if they aren't ever used, the
@@ -540,6 +539,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
+    objectMapper.registerModules(new MSQIndexingModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
     objectMapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
 
@@ -697,7 +697,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
           break;
         default:
           throw new ISE("Cannot query segment %s in test runner", segmentId);
-
       }
       Segment segment = new Segment()
       {
