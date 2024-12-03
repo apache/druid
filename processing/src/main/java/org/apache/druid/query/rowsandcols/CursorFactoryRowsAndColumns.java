@@ -112,12 +112,8 @@ public class CursorFactoryRowsAndColumns implements CloseableShapeshifter, RowsA
           cursor.advance();
         }
 
-        if (writer == null) {
-          return new EmptyRowsAndColumns();
-        } else {
-          final byte[] bytes = writer.toByteArray();
-          return new ColumnBasedFrameRowsAndColumns(Frame.wrap(bytes), rowSignature);
-        }
+        final byte[] bytes = writer.toByteArray();
+        return new ColumnBasedFrameRowsAndColumns(Frame.wrap(bytes), rowSignature);
       }
     }
   }

@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -104,6 +105,10 @@ public class QueryContexts
 
   // SQL statement resource specific keys
   public static final String CTX_EXECUTION_MODE = "executionMode";
+
+  public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
 
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;

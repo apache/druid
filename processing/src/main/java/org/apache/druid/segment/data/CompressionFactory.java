@@ -303,7 +303,6 @@ public class CompressionFactory
      */
     LongEncodingReader duplicate();
 
-    @SuppressWarnings("unused")
     LongEncodingStrategy getStrategy();
   }
 

@@ -22,7 +22,7 @@
   height: 100%;
   width: 100%;
 
-  .splitter-layout {
+  .splitter-layout.timeline-segments-splitter {
     position: absolute;
     top: $view-control-bar-height + $standard-padding;
     bottom: 0;

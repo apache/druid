@@ -49,8 +49,10 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarLongs;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
+import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
@@ -103,6 +105,11 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
 
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
 
+        final ByteBuffer encodedValuesBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+            mapper,
+            columnName,
+            ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME
+        );
         final ByteBuffer longsValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
@@ -137,12 +144,19 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
           );
         }
 
+        final CompressedVSizeColumnarIntsSupplier encodedCol = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
+            encodedValuesBuffer,
+            byteOrder,
+            columnBuilder.getFileMapper()
+        );
+
         final Supplier<ColumnarLongs> longs = CompressedColumnarLongsSupplier.fromByteBuffer(
             longsValueColumn,
             byteOrder
         );
         return new ScalarLongColumnAndIndexSupplier(
             longDictionarySupplier,
+            encodedCol,
             longs,
             rBitmaps,
             bitmapSerdeFactory.getBitmapFactory(),
@@ -159,6 +173,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
 
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
 
+  private final Supplier<ColumnarInts> encodedValuesSupplier;
   private final Supplier<ColumnarLongs> valueColumnSupplier;
 
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
@@ -170,6 +185,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
 
   private ScalarLongColumnAndIndexSupplier(
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
+      Supplier<ColumnarInts> encodedValuesSupplier,
       Supplier<ColumnarLongs> valueColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
       BitmapFactory bitmapFactory,
@@ -177,6 +193,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
   )
   {
     this.longDictionarySupplier = longDictionarySupplier;
+    this.encodedValuesSupplier = encodedValuesSupplier;
     this.valueColumnSupplier = valueColumnSupplier;
     this.valueIndexes = valueIndexes;
     this.bitmapFactory = bitmapFactory;
@@ -189,8 +206,10 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
   {
     return new ScalarLongColumn(
         longDictionarySupplier.get(),
+        encodedValuesSupplier,
         valueColumnSupplier.get(),
-        nullValueBitmap
+        nullValueBitmap,
+        bitmapFactory
     );
   }
 

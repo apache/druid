@@ -49,4 +49,9 @@ public interface BlockingPool<T>
    * @return count of pending requests
    */
   long getPendingRequests();
+
+  /**
+   * @return number of used buffers from the pool
+   */
+  long getUsedResourcesCount();
 }
