@@ -49,9 +49,11 @@ import java.util.List;
 /**
  * Druid extension of {@link AggregateCaseToFilterRule}.
  *
- * after enhancing the upstream one to support cases like
+ * Optionally enables rewrites of:
  *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
- * without introducing an inner case this should be removed.
+ * to
+ *    SUM(COL1) FILTER (COND)
+ *
  */
 public class DruidAggregateCaseToFilterRule extends RelOptRule implements SubstitutionRule
 {
@@ -156,6 +158,50 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
     final SqlKind kind = call.getAggregation().getKind();
     if (call.isDistinct()) {
       return null;
+    }
+
+
+    // Four styles supported:
+    //
+    // A1: AGG(CASE WHEN x = 'foo' THEN expr END)
+    //   => AGG(expr) FILTER (x = 'foo')
+    // A2: SUM0(CASE WHEN x = 'foo' THEN cnt ELSE 0 END)
+    //   => SUM0(cnt) FILTER (x = 'foo')
+    // B: SUM0(CASE WHEN x = 'foo' THEN 1 ELSE 0 END)
+    //   => COUNT() FILTER (x = 'foo')
+    // C: COUNT(CASE WHEN x = 'foo' THEN 'dummy' END)
+    //   => COUNT() FILTER (x = 'foo')
+
+    if (kind == SqlKind.COUNT // Case C
+        && arg1.isA(SqlKind.LITERAL)
+        && !RexLiteral.isNullLiteral(arg1)
+        && RexLiteral.isNullLiteral(arg2)) {
+      newProjects.add(filter);
+      return AggregateCall.create(SqlStdOperatorTable.COUNT, false, false,
+          false, call.rexList, ImmutableList.of(), newProjects.size() - 1, null,
+          RelCollations.EMPTY, call.getType(),
+          call.getName());
+    } else if (kind == SqlKind.SUM0 // Case B
+        && isIntLiteral(arg1, BigDecimal.ONE)
+        && isIntLiteral(arg2, BigDecimal.ZERO)) {
+
+      newProjects.add(filter);
+      final RelDataType dataType =
+          typeFactory.createTypeWithNullability(
+              typeFactory.createSqlType(SqlTypeName.BIGINT), false);
+      return AggregateCall.create( SqlStdOperatorTable.COUNT, false, false,
+          false, call.rexList, ImmutableList.of(), newProjects.size() - 1, null,
+          RelCollations.EMPTY, dataType, call.getName());
+    } else if ((RexLiteral.isNullLiteral(arg2) // Case A1
+            && call.getAggregation().allowsFilter())
+        || (kind == SqlKind.SUM0 // Case A2
+            && isIntLiteral(arg2, BigDecimal.ZERO))) {
+      newProjects.add(arg1);
+      newProjects.add(filter);
+      return AggregateCall.create( call.getAggregation(), false,
+          false, false, call.rexList, ImmutableList.of(newProjects.size() - 2),
+          newProjects.size() - 1, null, RelCollations.EMPTY,
+          call.getType(), call.getName());
     }
 
     // Rewrites

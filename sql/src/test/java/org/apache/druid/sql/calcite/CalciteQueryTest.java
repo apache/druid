@@ -5349,7 +5349,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCaseFilteredAggregationWithGroupBy()
   {
-    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT\n"
         + "  cnt,\n"
@@ -9493,7 +9492,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testQueryWithSelectProjectAndIdentityProjectDoesNotRename()
   {
-    cannotVectorizeUnlessFallback();
     msqIncompatible();
     testQuery(
         PLANNER_CONFIG_NO_HLL.withOverrides(
@@ -9543,7 +9541,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                                                     ),
                                                     new GroupingAggregatorFactory(
                                                         "a1",
-                                                        ImmutableList.of("dim1", "v0")
+                                                        ImmutableList.of("v0", "dim1")
                                                     )
                                                 )
                                             )
