@@ -137,7 +137,7 @@ public class NodeAnnouncer
     log.debug("Stopping NodeAnnouncer");
     synchronized (toAnnounce) {
       if (!started) {
-        log.debug("Cannot stop NodeAnnouncer has not started.");
+        log.debug("Cannot stop NodeAnnouncer that has not started.");
         return;
       }
 

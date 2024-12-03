@@ -118,6 +118,7 @@ public class Announcer
     log.debug("Starting Announcer.");
     synchronized (toAnnounce) {
       if (started) {
+        log.debug("Cannot start Announcer that has already started.");
         return;
       }
 
@@ -141,6 +142,7 @@ public class Announcer
     log.debug("Stopping Announcer.");
     synchronized (toAnnounce) {
       if (!started) {
+        log.debug("Cannot stop Announcer that has not started.");
         return;
       }
 
