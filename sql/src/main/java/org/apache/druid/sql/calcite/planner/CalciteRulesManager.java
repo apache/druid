@@ -283,13 +283,17 @@ public class CalciteRulesManager
     builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
+    builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
+    builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
+
+
     builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
     builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
-    builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
-    builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
+
+
     final HepProgramBuilder builder2 = HepProgram.builder();
     builder2.addRuleInstance(new LogicalUnnestRule());
     builder2.addRuleInstance(new UnnestInputCleanupRule());
