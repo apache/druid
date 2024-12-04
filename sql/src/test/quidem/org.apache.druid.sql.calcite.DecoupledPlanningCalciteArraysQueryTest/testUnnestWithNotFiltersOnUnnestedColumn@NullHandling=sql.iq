@@ -22,15 +22,15 @@ SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where d3
 (5 rows)
 
 !ok
-LogicalProject(d3=[$2])
-  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($1)], filter=[<>($0, 'd')])
-    LogicalProject(__time=[$0], dim3=[$3])
+LogicalProject(d3=[$1])
+  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[<>($0, 'd')])
+    LogicalProject(dim3=[$3])
       LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
-DruidProject(d3=[$2], druid=[logical])
-  DruidUnnest(unnestExpr=[MV_TO_ARRAY($1)], filter=[<>($0, 'd')])
-    DruidProject(__time=[$0], dim3=[$3], druid=[logical])
+DruidProject(d3=[$1], druid=[logical])
+  DruidUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[<>($0, 'd')])
+    DruidProject(dim3=[$3], druid=[logical])
       DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan

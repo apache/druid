@@ -20,15 +20,15 @@ SELECT substring(d3,1) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested 
 (3 rows)
 
 !ok
-LogicalProject(EXPR$0=[SUBSTRING($2, 1)])
-  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($1)], filter=[<>(SUBSTRING($0, 1), 'b')])
-    LogicalProject(__time=[$0], dim3=[$3])
+LogicalProject(EXPR$0=[SUBSTRING($1, 1)])
+  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[<>(SUBSTRING($0, 1), 'b')])
+    LogicalProject(dim3=[$3])
       LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
-DruidProject(EXPR$0=[SUBSTRING($2, 1)], druid=[logical])
-  DruidUnnest(unnestExpr=[MV_TO_ARRAY($1)], filter=[<>(SUBSTRING($0, 1), 'b')])
-    DruidProject(__time=[$0], dim3=[$3], druid=[logical])
+DruidProject(EXPR$0=[SUBSTRING($1, 1)], druid=[logical])
+  DruidUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[<>(SUBSTRING($0, 1), 'b')])
+    DruidProject(dim3=[$3], druid=[logical])
       DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan

@@ -122,7 +122,6 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
 
     List<RelNode> newInputs = new ArrayList<>();
     List<Mapping> inputMappings = new ArrayList<>();
-    @Deprecated
     int changeCount = 0;
     int offset = 0;
     for (RelNode input : correlate.getInputs()) {
@@ -198,7 +197,6 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
 
     // Create input with trimmed columns.
     TrimResult trimResult = trimChild(correlate, input, inputFieldsUsed, extraFields);
-
 
     RelNode newInput = trimResult.left;
     final Mapping inputMapping = trimResult.right;
