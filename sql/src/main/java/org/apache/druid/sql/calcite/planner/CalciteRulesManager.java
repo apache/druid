@@ -281,17 +281,22 @@ public class CalciteRulesManager
   {
     final HepProgramBuilder builder = HepProgram.builder();
     builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+    builder.addGroupBegin();
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
+    builder.addGroupEnd();
+
     builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
 
 
+    builder.addGroupBegin();
     builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
     builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
+    builder.addGroupEnd();
 
 
     final HepProgramBuilder builder2 = HepProgram.builder();
@@ -304,8 +309,7 @@ public class CalciteRulesManager
         Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
         new DruidTrimFieldsProgram(true),
         Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE),
-        new DruidTrimFieldsProgram(false),
-        Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE)
+        new DruidTrimFieldsProgram(false)
     );
   }
 
