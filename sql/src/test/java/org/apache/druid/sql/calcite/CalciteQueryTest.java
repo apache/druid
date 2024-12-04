@@ -5425,6 +5425,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
         .run();
   }
 
+
   @Test
   public void testFilteredAggregationWithNotIn()
   {

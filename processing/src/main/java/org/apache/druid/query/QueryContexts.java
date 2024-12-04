@@ -88,6 +88,8 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
+  public static final String EXTENDED_FILTERED_SUM_REWRITE_ENABLED = "extendedFilteredSumRewrite";
+
 
   // projection context keys
   public static final String NO_PROJECTIONS = "noProjections";
@@ -133,6 +135,7 @@ public class QueryContexts
   public static final int DEFAULT_IN_FUNCTION_EXPR_THRESHOLD = 2;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
+  public static final boolean DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED = true;
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize

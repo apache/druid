@@ -494,7 +494,7 @@ public class CalciteRulesManager
 
     // Calcite rules.
     rules.addAll(BASE_RULES);
-    rules.add(new DruidAggregateCaseToFilterRule(true));
+    rules.add(new DruidAggregateCaseToFilterRule(plannerContext.queryContext().isExtendedFilteredSumRewrite()));
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
     rules.addAll(configurableRuleSet(plannerContext));

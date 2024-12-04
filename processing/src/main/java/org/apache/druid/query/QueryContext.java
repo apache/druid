@@ -620,6 +620,15 @@ public class QueryContext
     );
   }
 
+  public boolean isExtendedFilteredSumRewrite()
+  {
+    return getBoolean(
+        QueryContexts.EXTENDED_FILTERED_SUM_REWRITE_ENABLED,
+        QueryContexts.DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED
+    );
+  }
+
+
   public QueryResourceId getQueryResourceId()
   {
     return new QueryResourceId(getString(QueryContexts.QUERY_RESOURCE_ID));

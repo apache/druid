@@ -14,7 +14,7 @@ UNION ALL
 +--------+---------+
 | EXPR$0 | channel |
 +--------+---------+
-|        |         |
+|      1 |         |
 +--------+---------+
 (1 row)
 
@@ -28,7 +28,7 @@ LogicalUnion(all=[true])
   LogicalValues(tuples=[[{ null, null }]])
 
 !convertedPlan
-DruidProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR], druid=[logical])
+DruidProject(EXPR$0=[CAST(1:BIGINT):BIGINT], channel=[CAST($1):VARCHAR], druid=[logical])
   DruidValues(tuples=[[{ null, null }]])
 
 !druidPlan
@@ -46,7 +46,7 @@ DruidProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR], druid=[logica
   "virtualColumns" : [ {
     "type" : "expression",
     "name" : "v0",
-    "expression" : "null",
+    "expression" : "1",
     "outputType" : "LONG"
   }, {
     "type" : "expression",

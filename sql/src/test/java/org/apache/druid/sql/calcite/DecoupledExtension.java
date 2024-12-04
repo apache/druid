@@ -55,16 +55,10 @@ public class DecoupledExtension implements BeforeEachCallback
   }
 
   private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.<String, Object>builder()
-                                                                                    .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
-                                                                                    .put(
-                                                                                        PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
-                                                                                        PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
-                                                                                    )
-                                                                                    .put(
-                                                                                        QueryContexts.ENABLE_DEBUG,
-                                                                                        true
-                                                                                    )
-                                                                                    .build();
+      .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+      .put(PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
+      .put(QueryContexts.ENABLE_DEBUG, true)
+      .build();
 
   public QueryTestBuilder testBuilder()
   {
@@ -124,10 +118,10 @@ public class DecoupledExtension implements BeforeEachCallback
       }
     };
 
-    return builder.cannotVectorize(
-                      baseTest.cannotVectorize ||
-                      (!ExpressionProcessing.allowVectorizeFallback() && baseTest.cannotVectorizeUnlessFallback)
-                  )
-                  .skipVectorize(baseTest.skipVectorize);
+    boolean cannotVectorize = baseTest.cannotVectorize
+        || (!ExpressionProcessing.allowVectorizeFallback() && baseTest.cannotVectorizeUnlessFallback);
+    return builder
+        .cannotVectorize(cannotVectorize)
+        .skipVectorize(baseTest.skipVectorize);
   }
 }
