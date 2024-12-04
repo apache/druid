@@ -3,7 +3,6 @@
 !use druidtest://?numMergeBuffers=3
 !set outputformat mysql
 
-
 (SELECT COUNT(*), "channel" FROM "wikipedia" WHERE
  added = '31'
 AND __time >= '2024-08-17T00:00:00+00:00' AND 'timestamp' > 1723856628000
@@ -15,7 +14,7 @@ UNION ALL
 +--------+---------+
 | EXPR$0 | channel |
 +--------+---------+
-|      1 |         |
+|        |         |
 +--------+---------+
 (1 row)
 
@@ -29,7 +28,7 @@ LogicalUnion(all=[true])
   LogicalValues(tuples=[[{ null, null }]])
 
 !convertedPlan
-DruidProject(EXPR$0=[CAST(1:BIGINT):BIGINT], channel=[CAST($1):VARCHAR], druid=[logical])
+DruidProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR], druid=[logical])
   DruidValues(tuples=[[{ null, null }]])
 
 !druidPlan
@@ -47,7 +46,7 @@ DruidProject(EXPR$0=[CAST(1:BIGINT):BIGINT], channel=[CAST($1):VARCHAR], druid=[
   "virtualColumns" : [ {
     "type" : "expression",
     "name" : "v0",
-    "expression" : "1",
+    "expression" : "null",
     "outputType" : "LONG"
   }, {
     "type" : "expression",
