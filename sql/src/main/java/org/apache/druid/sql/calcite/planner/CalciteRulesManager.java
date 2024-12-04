@@ -291,8 +291,8 @@ public class CalciteRulesManager
     builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
     final HepProgramBuilder builder2 = HepProgram.builder();
-    builder2.addRuleInstance(new LogicalUnnestRule());
-    builder2.addRuleInstance(new UnnestInputCleanupRule());
+    builder.addRuleInstance(new LogicalUnnestRule());
+    builder.addRuleInstance(new UnnestInputCleanupRule());
     builder2.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     builder2.addRuleInstance(CoreRules.PROJECT_MERGE);
     builder2.addRuleInstance(AggregateProjectMergeRule.Config.DEFAULT.toRule());
