@@ -181,7 +181,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   }
 
   @Nullable
-  @Override
   public String getStatus()
   {
     return (getRunner() != null && getRunner().getStatus() != null) ? getRunner().getStatus().toString() : null;

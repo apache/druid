@@ -48,8 +48,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -313,15 +311,6 @@ public interface Task
   default TaskIdentifier getMetadata()
   {
     return new TaskIdentifier(this.getId(), this.getGroupId(), this.getType());
-  }
-
-  /**
-   * @return The status of the task. Note: this interface method is unstable at this time.
-   */
-  @Nullable
-  default String getStatus()
-  {
-    return null;
   }
 
   static TaskInfo<TaskIdentifier, TaskStatus> toTaskIdentifierInfo(TaskInfo<Task, TaskStatus> taskInfo)

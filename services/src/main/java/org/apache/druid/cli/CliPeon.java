@@ -91,6 +91,7 @@ import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.SingleTaskBackgroundRunner;
 import org.apache.druid.indexing.overlord.TaskRunner;
 import org.apache.druid.indexing.overlord.TaskStorage;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycle;
 import org.apache.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
@@ -303,22 +304,7 @@ public class CliPeon extends GuiceRunnable
           @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
           public Supplier<Map<String, Object>> heartbeatDimensions(Task task)
           {
-            ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
-            builder.put(DruidMetrics.TASK_ID, task.getId());
-            builder.put(DruidMetrics.DATASOURCE, task.getDataSource());
-            builder.put(DruidMetrics.TASK_TYPE, task.getType());
-            builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
-            if (task.getStatus() != null) {
-              builder.put(DruidMetrics.TASK_STATUS, task.getStatus());
-            }
-            Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
-            if (tags != null && !tags.isEmpty()) {
-              builder.put(DruidMetrics.TAGS, tags);
-            }
-
-            return Suppliers.ofInstance(
-                builder.build()
-            );
+            return Suppliers.ofInstance(CliPeon.heartbeatDimensions(task));
           }
 
           @Provides
@@ -566,6 +552,28 @@ public class CliPeon extends GuiceRunnable
     );
     shuffleClientBiddy.addBinding("local").to(HttpShuffleClient.class).in(LazySingleton.class);
     shuffleClientBiddy.addBinding("deepstore").to(DeepStorageShuffleClient.class).in(LazySingleton.class);
+  }
+
+  static Map<String, Object> heartbeatDimensions(Task task)
+  {
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    builder.put(DruidMetrics.TASK_ID, task.getId());
+    builder.put(DruidMetrics.DATASOURCE, task.getDataSource());
+    builder.put(DruidMetrics.TASK_TYPE, task.getType());
+    builder.put(DruidMetrics.GROUP_ID, task.getGroupId());
+    Map<String, Object> tags = task.getContextValue(DruidMetrics.TAGS);
+    if (tags != null && !tags.isEmpty()) {
+      builder.put(DruidMetrics.TAGS, tags);
+    }
+
+    if (task instanceof SeekableStreamIndexTask) {
+      SeekableStreamIndexTask streamingTask = (SeekableStreamIndexTask) task;
+      if (streamingTask.getStatus() != null) {
+        builder.put(DruidMetrics.STATUS, streamingTask.getStatus());
+      }
+    }
+
+    return builder.build();
   }
 
   public class BroadcastSegmentLoadingModule implements Module
