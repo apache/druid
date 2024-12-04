@@ -281,23 +281,15 @@ public class CalciteRulesManager
   {
     final HepProgramBuilder builder = HepProgram.builder();
     builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
-//    builder.addGroupBegin();
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
-//    builder.addGroupEnd();
-
-    builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
-    builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
-
-//    builder.addGroupBegin();
     builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
     builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
-//    builder.addGroupEnd();
-
-
+    builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
+    builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
     final HepProgramBuilder builder2 = HepProgram.builder();
     builder2.addRuleInstance(new LogicalUnnestRule());
     builder2.addRuleInstance(new UnnestInputCleanupRule());
@@ -305,15 +297,11 @@ public class CalciteRulesManager
     builder2.addRuleInstance(CoreRules.PROJECT_MERGE);
     builder2.addRuleInstance(AggregateProjectMergeRule.Config.DEFAULT.toRule());
     return Programs.sequence(
-        new LoggingProgram("__decStart", true),
         Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
-        new LoggingProgram("__decAfterBuild1", true),
-        new DruidTrimFieldsProgram(false),
-        new LoggingProgram("__decAfterTrim1", true),
+        new DruidTrimFieldsProgram(true),
         Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE),
-        new LoggingProgram("__decAfterBuild2", true),
         new DruidTrimFieldsProgram(false),
-        new LoggingProgram("__decAfterTrim2", true)
+        Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE)
     );
   }
 
@@ -569,7 +557,7 @@ public class CalciteRulesManager
     {
       final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
       final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel, relBuilder);
-      return runFieldTrimmer(relBuilder, decorrelatedRel);
+      return runFieldTrimmer2(relBuilder, decorrelatedRel);
     }
 
   }
