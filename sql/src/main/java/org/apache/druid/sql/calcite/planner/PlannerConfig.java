@@ -38,9 +38,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
-  public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
   public static final int NUM_FILTER_NOT_USED = -1;
-
   @JsonProperty
   private int maxTopNLimit = 100_000;
 
@@ -75,9 +73,7 @@ public class PlannerConfig
   private int maxNumericInFilters = NUM_FILTER_NOT_USED;
 
   @JsonProperty
-  private String nativeQuerySqlPlanningMode = NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED; // can be COUPLED or DECOUPLED
-  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
-  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
+  private String nativeQuerySqlPlanningMode = QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED; // can be COUPLED or DECOUPLED
 
   private boolean serializeComplexValues = true;
 
@@ -383,7 +379,7 @@ public class PlannerConfig
           maxNumericInFilters);
       nativeQuerySqlPlanningMode = QueryContexts.parseString(
           queryContext,
-          CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+          QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
           nativeQuerySqlPlanningMode
       );
       return this;

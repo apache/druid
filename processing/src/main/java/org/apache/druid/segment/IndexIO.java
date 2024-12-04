@@ -456,7 +456,8 @@ public class IndexIO
                 new StringUtf8DictionaryEncodedColumnSupplier<>(
                     index.getDimValueUtf8Lookup(dimension)::singleThreaded,
                     null,
-                    Suppliers.ofInstance(index.getDimColumn(dimension))
+                    Suppliers.ofInstance(index.getDimColumn(dimension)),
+                    LEGACY_FACTORY.getBitmapFactory()
                 )
             );
         GenericIndexed<ImmutableBitmap> bitmaps = index.getBitmapIndexes().get(dimension);

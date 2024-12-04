@@ -138,6 +138,12 @@ public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool
     return 0;
   }
 
+  @Override
+  public long getUsedResourcesCount()
+  {
+    return takenFromMap.size();
+  }
+
   public long getOutstandingObjectCount()
   {
     return takenFromMap.size();

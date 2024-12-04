@@ -17,11 +17,12 @@
  */
 
 import { ResizeSensor } from '@blueprintjs/core';
-import type { QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import type { QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import React, { useMemo, useState } from 'react';
 
+import { Stage } from '../../../../utils/stage';
 import type { ParameterDefinition, ParameterValues, QuerySource } from '../../models';
-import { effectiveParameterDefault, Stage } from '../../models';
+import { effectiveParameterDefault } from '../../models';
 import { ModuleRepository } from '../../module-repository/module-repository';
 import { Issue } from '../issue/issue';
 

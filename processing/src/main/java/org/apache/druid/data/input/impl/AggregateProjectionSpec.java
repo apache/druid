@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.AggregateProjectionMetadata;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -39,6 +40,7 @@ import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -72,10 +74,10 @@ public class AggregateProjectionSpec
   )
   {
     this.name = name;
-    if (CollectionUtils.isNullOrEmpty(groupingColumns)) {
-      throw InvalidInput.exception("groupingColumns must not be null or empty");
+    if (CollectionUtils.isNullOrEmpty(groupingColumns) && (aggregators == null || aggregators.length == 0)) {
+      throw InvalidInput.exception("groupingColumns and aggregators must not both be null or empty");
     }
-    this.groupingColumns = groupingColumns;
+    this.groupingColumns = groupingColumns == null ? Collections.emptyList() : groupingColumns;
     this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
     // in the future this should be expanded to support user specified ordering, but for now we compute it based on
     // the grouping columns, which is consistent with how rollup ordering works for incremental index base table
@@ -169,6 +171,10 @@ public class AggregateProjectionSpec
 
   private static ProjectionOrdering computeOrdering(VirtualColumns virtualColumns, List<DimensionSchema> groupingColumns)
   {
+    if (groupingColumns.isEmpty()) {
+      // call it time ordered, there is no grouping columns so there is only 1 row for this projection
+      return new ProjectionOrdering(Cursors.ascendingTimeOrder(), null);
+    }
     final List<OrderBy> ordering = Lists.newArrayListWithCapacity(groupingColumns.size());
 
     String timeColumnName = null;

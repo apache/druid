@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { Column } from '@druid-toolkit/query';
+import type { Column } from 'druid-query-toolkit';
 
 import type { Measure } from './models';
 

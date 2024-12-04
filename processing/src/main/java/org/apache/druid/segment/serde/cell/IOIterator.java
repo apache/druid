@@ -30,10 +30,10 @@ import java.io.IOException;
  */
 public interface IOIterator<T> extends Closeable
 {
-  boolean hasNext() throws IOException;
+  boolean hasNext();
 
   T next() throws IOException;
 
   @Override
-  void close() throws IOException;
+  void close();
 }

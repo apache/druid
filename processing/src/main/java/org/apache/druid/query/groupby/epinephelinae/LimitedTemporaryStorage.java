@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 
 import java.io.Closeable;
 import java.io.File;
@@ -47,6 +48,8 @@ public class LimitedTemporaryStorage implements Closeable
 {
   private static final Logger log = new Logger(LimitedTemporaryStorage.class);
 
+  private final GroupByStatsProvider.PerQueryStats perQueryStatsContainer;
+
   private final File storageDirectory;
   private final long maxBytesUsed;
 
@@ -57,10 +60,15 @@ public class LimitedTemporaryStorage implements Closeable
 
   private boolean createdStorageDirectory = false;
 
-  public LimitedTemporaryStorage(File storageDirectory, long maxBytesUsed)
+  public LimitedTemporaryStorage(
+      File storageDirectory,
+      long maxBytesUsed,
+      GroupByStatsProvider.PerQueryStats perQueryStatsContainer
+  )
   {
     this.storageDirectory = storageDirectory;
     this.maxBytesUsed = maxBytesUsed;
+    this.perQueryStatsContainer = perQueryStatsContainer;
   }
 
   /**
@@ -121,7 +129,7 @@ public class LimitedTemporaryStorage implements Closeable
   }
 
   @VisibleForTesting
-  long currentSize()
+  public long currentSize()
   {
     return bytesUsed.get();
   }
@@ -134,6 +142,11 @@ public class LimitedTemporaryStorage implements Closeable
         return;
       }
       closed = true;
+
+      perQueryStatsContainer.spilledBytes(bytesUsed.get());
+
+      bytesUsed.set(0);
+
       for (File file : ImmutableSet.copyOf(files)) {
         delete(file);
       }
@@ -199,6 +212,5 @@ public class LimitedTemporaryStorage implements Closeable
         throw new TemporaryStorageFullException(maxBytesUsed);
       }
     }
-
   }
 }

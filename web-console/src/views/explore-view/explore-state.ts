@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import type { Column } from '@druid-toolkit/query';
+import type { Column } from 'druid-query-toolkit';
 import {
   filterPatternToExpression,
   SqlExpression,
   SqlLiteral,
   SqlQuery,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 
 import { isEmpty } from '../../utils';
 
