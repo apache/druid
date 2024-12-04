@@ -1582,6 +1582,8 @@ string_to_array
 stringAny
 stringFirst
 stringLast
+stringMin
+stringMax
 Strlen
 strlen
 strpos
