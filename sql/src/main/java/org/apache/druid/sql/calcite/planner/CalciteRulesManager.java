@@ -120,7 +120,6 @@ public class CalciteRulesManager
           CoreRules.FILTER_PROJECT_TRANSPOSE,
           CoreRules.JOIN_PUSH_EXPRESSIONS,
           CoreRules.AGGREGATE_EXPAND_WITHIN_DISTINCT,
-          CoreRules.AGGREGATE_CASE_TO_FILTER,
           CoreRules.FILTER_AGGREGATE_TRANSPOSE,
           CoreRules.PROJECT_WINDOW_TRANSPOSE,
           CoreRules.MATCH,
@@ -360,7 +359,6 @@ public class CalciteRulesManager
       builder.addRuleInstance(new CoalesceLookupRule());
       builder.addRuleInstance(new RewriteFirstValueLastValueRule());
       builder.addRuleInstance(CoreRules.AGGREGATE_REMOVE);
-      builder.addRuleInstance(new DruidAggregateCaseToFilterRule(true));
     }
 
     // Remaining rules run as a single group until fixpoint.
@@ -496,6 +494,7 @@ public class CalciteRulesManager
 
     // Calcite rules.
     rules.addAll(BASE_RULES);
+    rules.add(new DruidAggregateCaseToFilterRule(true));
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
     rules.addAll(configurableRuleSet(plannerContext));

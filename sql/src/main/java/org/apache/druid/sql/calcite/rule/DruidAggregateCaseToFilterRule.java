@@ -171,9 +171,23 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
     RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
     final SqlKind kind = call.getAggregation().getKind();
     if (call.isDistinct()) {
+      // Just one style supported:
+      //   COUNT(DISTINCT CASE WHEN x = 'foo' THEN y END)
+      // =>
+      //   COUNT(DISTINCT y) FILTER(WHERE x = 'foo')
+
+      if (kind == SqlKind.COUNT
+          && RexLiteral.isNullLiteral(arg2)) {
+        newProjects.add(arg1);
+        newProjects.add(filter);
+        return AggregateCall.create(
+            SqlStdOperatorTable.COUNT, true, false,
+            false, call.rexList, ImmutableList.of(newProjects.size() - 2),
+            newProjects.size() - 1, null, RelCollations.EMPTY,
+            call.getType(), call.getName());
+      }
       return null;
     }
-
 
     // Four styles supported:
     //
