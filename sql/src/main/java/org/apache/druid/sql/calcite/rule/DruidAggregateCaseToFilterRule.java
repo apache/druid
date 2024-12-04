@@ -49,17 +49,31 @@ import java.util.List;
 /**
  * Druid extension of {@link AggregateCaseToFilterRule}.
  *
- * Optionally enables rewrites of:
+ * Turning on extendedFilteredSumRewrite enables rewrites of:
  *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
  * to
  *    SUM(COL1) FILTER (COND)
  *
+ * +-----------------+--------------+----------+------+--------------+
+ * | input row count | cond matches | valueCol | orig | filtered-SUM |
+ * +-----------------+--------------+----------+------+--------------+
+ * | 0               | *            | *        | null | null         |
+ * | >0              | none         | *        | 0    | null         |
+ * | >0              | all          | null     | null | null         |
+ * | >0              | N>0          | 1        | N    | N            |
+ * +-----------------+--------------+----------+------+--------------+
+ *
+ * The only inconsistency this causes is when then condition matches all rows; and for all o
+ *
  */
 public class DruidAggregateCaseToFilterRule extends RelOptRule implements SubstitutionRule
 {
-  public DruidAggregateCaseToFilterRule()
+  private boolean extendedFilteredSumRewrite;
+
+  public DruidAggregateCaseToFilterRule(boolean extendedFilteredSumRewrite)
   {
     super(operand(Aggregate.class, operand(Project.class, any())));
+    this.extendedFilteredSumRewrite = extendedFilteredSumRewrite;
   }
 
   @Override
@@ -113,7 +127,7 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
     call.getPlanner().prune(aggregate);
   }
 
-  private static @Nullable AggregateCall transform(AggregateCall call,
+  private @Nullable AggregateCall transform(AggregateCall call,
       Project project, List<RexNode> newProjects)
   {
     final int singleArg = soleArgument(call);
@@ -213,7 +227,8 @@ public class DruidAggregateCaseToFilterRule extends RelOptRule implements Substi
     // https://issues.apache.org/jira/browse/CALCITE-5953
     // have restricted this rewrite as in case there are no rows it may not be equvivalent;
     // however it may have some performance impact in Druid
-    if (kind == SqlKind.SUM && isIntLiteral(arg2, BigDecimal.ZERO)) {
+    if (extendedFilteredSumRewrite &&
+        kind == SqlKind.SUM && isIntLiteral(arg2, BigDecimal.ZERO)) {
       if (isIntLiteral(arg1, BigDecimal.ONE)) { // D2
         newProjects.add(filter);
         final RelDataType dataType = typeFactory.createTypeWithNullability(
