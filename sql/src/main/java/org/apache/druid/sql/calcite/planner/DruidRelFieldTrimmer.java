@@ -163,8 +163,8 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
         correlate.getTraitSet(),
         newInputs.get(0),
         newInputs.get(1).accept(
-            new RelVistatorRelShuttle(
-                new CorrelateExprMapping(correlate.getCorrelationId(), newInputs.get(0).getRowType(), mapping, rexBuilder)
+            new RexRewritingRelShuttle(
+                new RexCorrelVariableMapShuttle(correlate.getCorrelationId(), newInputs.get(0).getRowType(), mapping, rexBuilder)
             )
         ),
         correlate.getCorrelationId(),
@@ -267,14 +267,14 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
     return mapping;
   }
 
-  class CorrelateExprMapping extends RexShuttle
+  static class RexCorrelVariableMapShuttle extends RexShuttle
   {
     private final CorrelationId correlationId;
     private final Mapping mapping;
     private final RelDataType newCorrelRowType;
     private final RexBuilder rexBuilder;
 
-    public CorrelateExprMapping(final CorrelationId correlationId, RelDataType newCorrelRowType, Mapping mapping, RexBuilder rexBuilder)
+    public RexCorrelVariableMapShuttle(final CorrelationId correlationId, RelDataType newCorrelRowType, Mapping mapping, RexBuilder rexBuilder)
     {
       this.correlationId = correlationId;
       this.newCorrelRowType = newCorrelRowType;
@@ -302,11 +302,11 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
     }
   }
 
-  public class RelVistatorRelShuttle extends RelHomogeneousShuttle
+  static class RexRewritingRelShuttle extends RelHomogeneousShuttle
   {
     private final RexShuttle rexVisitor;
 
-    RelVistatorRelShuttle(RexShuttle rexVisitor)
+    RexRewritingRelShuttle(RexShuttle rexVisitor)
     {
       this.rexVisitor = rexVisitor;
     }
