@@ -290,6 +290,7 @@ public class CalciteRulesManager
     builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
+    builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     final HepProgramBuilder builder2 = HepProgram.builder();
     builder.addRuleInstance(new LogicalUnnestRule());
     builder.addRuleInstance(new UnnestInputCleanupRule());
@@ -298,8 +299,6 @@ public class CalciteRulesManager
     builder2.addRuleInstance(AggregateProjectMergeRule.Config.DEFAULT.toRule());
     return Programs.sequence(
         Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
-        new DruidTrimFieldsProgram(true),
-        Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE),
         new DruidTrimFieldsProgram(false),
         Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE)
     );
