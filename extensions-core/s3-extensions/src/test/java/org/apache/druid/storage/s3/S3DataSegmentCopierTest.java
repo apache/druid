@@ -35,7 +35,7 @@ import org.junit.Test;
 
 import java.util.Map;
 
-public class S3DataSegmentMoverTest
+public class S3DataSegmentCopierTest
 {
   private static final DataSegment SOURCE_SEGMENT = new DataSegment(
       "test",
@@ -55,10 +55,10 @@ public class S3DataSegmentMoverTest
   );
 
   @Test
-  public void testMove() throws Exception
+  public void testCopy() throws Exception
   {
     S3TestUtils.MockAmazonS3Client mockS3Client = new S3TestUtils.MockAmazonS3Client();
-    S3DataSegmentMover mover = new S3DataSegmentMover(
+    S3DataSegmentCopier copier = new S3DataSegmentCopier(
         Suppliers.ofInstance(mockS3Client),
         new S3DataSegmentPusherConfig()
     );
@@ -68,25 +68,25 @@ public class S3DataSegmentMoverTest
         "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip"
     );
 
-    DataSegment movedSegment = mover.move(
+    DataSegment copiedSegment = copier.copy(
         SOURCE_SEGMENT,
         ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
 
-    Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
+    Map<String, Object> targetLoadSpec = copiedSegment.getLoadSpec();
     Assert.assertEquals(
         "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
         MapUtils.getString(targetLoadSpec, "key")
     );
     Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
-    Assert.assertTrue(mockS3Client.didMove());
+    Assert.assertTrue(mockS3Client.didCopy());
   }
 
   @Test
-  public void testMoveNoop() throws Exception
+  public void testCopyNoop() throws Exception
   {
     S3TestUtils.MockAmazonS3Client mockS3Client = new S3TestUtils.MockAmazonS3Client();
-    S3DataSegmentMover mover = new S3DataSegmentMover(
+    S3DataSegmentCopier copier = new S3DataSegmentCopier(
         Suppliers.ofInstance(mockS3Client),
         new S3DataSegmentPusherConfig()
     );
@@ -96,45 +96,45 @@ public class S3DataSegmentMoverTest
         "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip"
     );
 
-    DataSegment movedSegment = mover.move(
+    DataSegment copiedSegment = copier.copy(
         SOURCE_SEGMENT,
         ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
 
-    Map<String, Object> targetLoadSpec = movedSegment.getLoadSpec();
+    Map<String, Object> targetLoadSpec = copiedSegment.getLoadSpec();
 
     Assert.assertEquals(
         "targetBaseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
         MapUtils.getString(targetLoadSpec, "key")
     );
     Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
-    Assert.assertFalse(mockS3Client.didMove());
+    Assert.assertFalse(mockS3Client.didCopy());
   }
 
   @Test(expected = SegmentLoadingException.class)
-  public void testMoveException() throws Exception
+  public void testCopyException() throws Exception
   {
     S3TestUtils.MockAmazonS3Client mockS3Client = new S3TestUtils.MockAmazonS3Client();
-    S3DataSegmentMover mover = new S3DataSegmentMover(
+    S3DataSegmentCopier copier = new S3DataSegmentCopier(
         Suppliers.ofInstance(mockS3Client),
         new S3DataSegmentPusherConfig()
     );
 
-    mover.move(
+    copier.copy(
         SOURCE_SEGMENT,
         ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
   }
 
   @Test
-  public void testIgnoresGoneButAlreadyMoved() throws Exception
+  public void testIgnoresGoneButAlreadyCopied() throws Exception
   {
     S3TestUtils.MockAmazonS3Client mockS3Client = new S3TestUtils.MockAmazonS3Client();
-    S3DataSegmentMover mover = new S3DataSegmentMover(
+    S3DataSegmentCopier copier = new S3DataSegmentCopier(
         Suppliers.ofInstance(mockS3Client),
         new S3DataSegmentPusherConfig()
     );
-    mover.move(new DataSegment(
+    copier.copy(new DataSegment(
         "test",
         Intervals.of("2013-01-01/2013-01-02"),
         "1",
@@ -153,14 +153,14 @@ public class S3DataSegmentMoverTest
   }
 
   @Test(expected = SegmentLoadingException.class)
-  public void testFailsToMoveMissing() throws Exception
+  public void testFailsToCopyMissing() throws Exception
   {
     S3TestUtils.MockAmazonS3Client mockS3Client = new S3TestUtils.MockAmazonS3Client();
-    S3DataSegmentMover mover = new S3DataSegmentMover(
+    S3DataSegmentCopier copier = new S3DataSegmentCopier(
         Suppliers.ofInstance(mockS3Client),
         new S3DataSegmentPusherConfig()
     );
-    mover.move(new DataSegment(
+    copier.copy(new DataSegment(
         "test",
         Intervals.of("2013-01-01/2013-01-02"),
         "1",
@@ -179,7 +179,7 @@ public class S3DataSegmentMoverTest
   }
 
   @Test
-  public void testMoveWithTransferManagerForLargeSegments() throws Exception
+  public void testCopyWithTransferManagerForLargeSegments() throws Exception
   {
     final long bigSegmentSize = 10 * (2L << 30); // 10GB
     S3TestUtils.MockAmazonS3Client mockS3Client = new S3TestUtils.MockAmazonS3Client()
@@ -195,7 +195,7 @@ public class S3DataSegmentMoverTest
       }
     };
 
-    S3DataSegmentMover mover = new S3DataSegmentMover(
+    S3DataSegmentCopier copier = new S3DataSegmentCopier(
         Suppliers.ofInstance(mockS3Client),
         new S3DataSegmentPusherConfig()
     );
@@ -205,7 +205,7 @@ public class S3DataSegmentMoverTest
         "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip"
     );
 
-    DataSegment copiedSegment = mover.move(
+    DataSegment copiedSegment = copier.copy(
         SOURCE_SEGMENT.withSize(bigSegmentSize),
         ImmutableMap.of("baseKey", "targetBaseKey", "bucket", "archive")
     );
@@ -216,7 +216,7 @@ public class S3DataSegmentMoverTest
         MapUtils.getString(targetLoadSpec, "key")
     );
     Assert.assertEquals("archive", MapUtils.getString(targetLoadSpec, "bucket"));
-    Assert.assertTrue(mockS3Client.didMove());
+    Assert.assertTrue(mockS3Client.didCopy());
     Assert.assertTrue(mockS3Client.didUseTransferManager());
   }
 }

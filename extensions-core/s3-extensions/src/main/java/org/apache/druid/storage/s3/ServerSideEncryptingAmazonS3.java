@@ -43,6 +43,10 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
+import com.amazonaws.services.s3.transfer.Copy;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
+import com.amazonaws.services.s3.transfer.model.CopyResult;
 import org.apache.druid.java.util.common.ISE;
 
 import java.io.File;
@@ -131,6 +135,22 @@ public class ServerSideEncryptingAmazonS3
   public CopyObjectResult copyObject(CopyObjectRequest request)
   {
     return amazonS3.copyObject(serverSideEncryption.decorate(request));
+  }
+
+  public CopyResult copyObjectWithTransferManager(CopyObjectRequest request)
+  {
+    TransferManager manager = TransferManagerBuilder.standard().withS3Client(amazonS3).build();
+    try {
+      Copy copy = manager.copy(serverSideEncryption.decorate(request));
+      copy.waitForCompletion();
+      return copy.waitForCopyResult();
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      manager.shutdownNow(false);
+    }
   }
 
   public void deleteObject(String bucket, String key)
