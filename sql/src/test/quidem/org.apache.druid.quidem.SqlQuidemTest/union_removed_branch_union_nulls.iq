@@ -3,6 +3,7 @@
 !use druidtest://?numMergeBuffers=3
 !set outputformat mysql
 
+
 (SELECT COUNT(*), "channel" FROM "wikipedia" WHERE
  added = '31'
 AND __time >= '2024-08-17T00:00:00+00:00' AND 'timestamp' > 1723856628000
