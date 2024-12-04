@@ -186,9 +186,6 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
     RelOptUtil.InputFinder inputFinder = new RelOptUtil.InputFinder(extraFields);
 
     correlate.getUnnestExpr().accept(inputFinder);
-    if (correlate.getFilter() != null) {
-      correlate.getFilter().accept(inputFinder);
-    }
 
     ImmutableBitSet finderFields = inputFinder.build();
 
@@ -216,9 +213,6 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
 
     RexNode newUnnestExpr = correlate.getUnnestExpr().accept(shuttle);
     RexNode newFilterExpr = correlate.getFilter();
-    if (correlate.getFilter() != null) {
-      newFilterExpr = correlate.getFilter().accept(shuttle);
-    }
 
     final LogicalUnnest newCorrelate = correlate.copy(
         correlate.getTraitSet(),
