@@ -26,6 +26,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.DurationGranularity;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -41,9 +42,130 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class UniformGranularityTest
+public class UniformGranularitySpecTest
 {
   private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+
+  @Test
+  public void testBooleanTrigger()
+  {
+    final List<Interval> inputIntervals = Lists.newArrayList(
+        Intervals.of("2023-01-08T00Z/2023-01-11T00Z"),
+        Intervals.of("2024-01-01T00Z/20240-01-03T00Z")
+    );
+
+    final GranularitySpec safeIntervals = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.NONE,
+        true,
+        true,
+        null,
+        DateTimes.of("2025-01-01"),
+        null
+    );
+
+    Assert.assertThrows(IAE.class, () -> safeIntervals.withIntervals(inputIntervals));
+
+    final GranularitySpec unsafeIntervals = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.NONE,
+        true,
+        false,
+        null,
+        DateTimes.of("2025-01-01"),
+        null
+    );
+
+    Assert.assertEquals(inputIntervals, unsafeIntervals.withIntervals(inputIntervals).inputIntervals());
+  }
+
+  @Test
+  public void testNullInterval()
+  {
+    final List<Interval> invalidLowerLimitIntervals = Collections.singletonList(
+        Intervals.of("999-01-08T00Z/2012-01-11T00Z")
+    );
+
+    final GranularitySpec nullSpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.NONE,
+        true,
+        true,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertThrows(IAE.class, () -> nullSpec.withIntervals(invalidLowerLimitIntervals));
+
+    final List<Interval> invalidUpperLimitIntervals = Collections.singletonList(
+        new Interval(DateTimes.nowUtc(), DateTimes.nowUtc().plusYears(2))
+    );
+
+    Assert.assertThrows(IAE.class, () -> nullSpec.withIntervals(invalidUpperLimitIntervals));
+
+    final List<Interval> inputIntervals = Lists.newArrayList(
+        Intervals.of("2024-01-01T00Z/2024-01-11T00Z"),
+        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
+    );
+
+    final GranularitySpec spec = nullSpec.withIntervals(inputIntervals);
+
+    Assert.assertEquals(inputIntervals, Lists.newArrayList(spec.inputIntervals()));
+  }
+
+  @Test
+  public void testIntervalRestrictions()
+  {
+    final List<Interval> inputIntervals = Collections.singletonList(
+        Intervals.of("2024-01-01T00Z/20240-02-01T00Z")
+    );
+
+    final GranularitySpec withinRangeSpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.NONE,
+        true,
+        true,
+        null,
+        DateTimes.of("20250-01-01"),
+        null
+    );
+    Assert.assertEquals(inputIntervals, withinRangeSpec.withIntervals(inputIntervals).inputIntervals());
+
+    final GranularitySpec upperLimitReachedSpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.NONE,
+        true,
+        true,
+        null,
+        DateTimes.of("2025-01-01"),
+        null
+    );
+    Assert.assertThrows(IAE.class, () -> upperLimitReachedSpec.withIntervals(inputIntervals));
+
+    final GranularitySpec lowerLimitReachedSpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.NONE,
+        true,
+        true,
+        DateTimes.of("2025-01-01"),
+        DateTimes.of("20250-01-01"),
+        null
+    );
+    Assert.assertThrows(IAE.class, () -> lowerLimitReachedSpec.withIntervals(inputIntervals));
+
+    final GranularitySpec bothLimitsReachedSpec = new UniformGranularitySpec(
+        Granularities.DAY,
+        Granularities.NONE,
+        true,
+        true,
+        DateTimes.of("2025-01-01"),
+        DateTimes.of("2026-01-01"),
+        null
+    );
+
+    Assert.assertThrows(IAE.class, () -> bothLimitsReachedSpec.withIntervals(inputIntervals));
+  }
 
   @Test
   public void testSimple()
@@ -351,7 +473,7 @@ public class UniformGranularityTest
         )
     );
 
-    Assert.assertTrue(spec != null);
+    Assert.assertNotNull(spec);
 
     int count = Iterators.size(spec.sortedBucketIntervals().iterator());
     // account for three leap years...

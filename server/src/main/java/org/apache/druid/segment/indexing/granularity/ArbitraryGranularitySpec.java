@@ -26,10 +26,12 @@ import com.google.common.collect.PeekingIterator;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Objects;
 
 public class ArbitraryGranularitySpec extends BaseGranularitySpec
 {
@@ -40,13 +42,21 @@ public class ArbitraryGranularitySpec extends BaseGranularitySpec
   public ArbitraryGranularitySpec(
       @JsonProperty("queryGranularity") Granularity queryGranularity,
       @JsonProperty("rollup") Boolean rollup,
+      @JsonProperty("safeInput") Boolean safeInput,
+      @JsonProperty("safeStart") @Nullable DateTime safeStartTime,
+      @JsonProperty("safeEnd") @Nullable DateTime safeEndTime,
       @JsonProperty("intervals") @Nullable List<Interval> inputIntervals
   )
   {
-    super(inputIntervals, rollup);
+    super(inputIntervals, rollup, safeInput, safeStartTime, safeEndTime);
     this.queryGranularity = queryGranularity == null ? Granularities.NONE : queryGranularity;
 
-    lookupTableBucketByDateTime = new LookupIntervalBuckets(inputIntervals);
+    lookupTableBucketByDateTime = new LookupIntervalBuckets(
+        inputIntervals,
+        this.safeInput,
+        this.safeStartTime,
+        this.safeEndTime
+    );
 
     // Ensure intervals are non-overlapping (but they may abut each other)
     final PeekingIterator<Interval> intervalIterator = Iterators.peekingIterator(sortedBucketIntervals().iterator());
@@ -59,6 +69,15 @@ public class ArbitraryGranularitySpec extends BaseGranularitySpec
         }
       }
     }
+  }
+
+  public ArbitraryGranularitySpec(
+      Granularity queryGranularity,
+      Boolean rollup,
+      List<Interval> inputIntervals
+  )
+  {
+    this(queryGranularity, rollup, false, null, null, inputIntervals);
   }
 
   public ArbitraryGranularitySpec(
@@ -106,11 +125,17 @@ public class ArbitraryGranularitySpec extends BaseGranularitySpec
     if (!rollup.equals(that.rollup)) {
       return false;
     }
+    if (isSafeInput() != that.isSafeInput()) {
+      return false;
+    }
+    if (!getSafeStart().equals(that.getSafeStart())) {
+      return false;
+    }
+    if (!getSafeEnd().equals(that.getSafeEnd())) {
+      return false;
+    }
 
-    return !(queryGranularity != null
-             ? !queryGranularity.equals(that.queryGranularity)
-             : that.queryGranularity != null);
-
+    return Objects.equals(queryGranularity, that.queryGranularity);
   }
 
   @Override
@@ -119,6 +144,9 @@ public class ArbitraryGranularitySpec extends BaseGranularitySpec
     int result = inputIntervals().hashCode();
     result = 31 * result + rollup.hashCode();
     result = 31 * result + (queryGranularity != null ? queryGranularity.hashCode() : 0);
+    result = 31 * result + safeInput.hashCode();
+    result = 31 * result + safeStartTime.hashCode();
+    result = 31 * result + safeEndTime.hashCode();
     return result;
   }
 
@@ -129,13 +157,23 @@ public class ArbitraryGranularitySpec extends BaseGranularitySpec
            "intervals=" + inputIntervals() +
            ", queryGranularity=" + queryGranularity +
            ", rollup=" + rollup +
+           ", safeInput=" + safeInput +
+           ", safeStart=" + safeStartTime +
+           ", safeEnd=" + safeEndTime +
            '}';
   }
 
   @Override
   public GranularitySpec withIntervals(List<Interval> inputIntervals)
   {
-    return new ArbitraryGranularitySpec(queryGranularity, rollup, inputIntervals);
+    return new ArbitraryGranularitySpec(
+        queryGranularity,
+        rollup,
+        safeInput,
+        safeStartTime,
+        safeEndTime,
+        inputIntervals
+    );
   }
 
   @Override

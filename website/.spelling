@@ -218,6 +218,9 @@ ROUTINE_TYPE
 Rackspace
 Redis
 S3
+safeEnd
+safeInput
+safeStart
 SAS
 SDK
 SIGAR
