@@ -181,28 +181,6 @@ public class JoinDataSource implements DataSource
       final JoinConditionAnalysis conditionAnalysis,
       final JoinType joinType,
       final DimFilter leftFilter,
-      @Nullable final JoinableFactoryWrapper joinableFactoryWrapper
-  )
-  {
-    return new JoinDataSource(
-        left,
-        right,
-        rightPrefix,
-        conditionAnalysis,
-        joinType,
-        leftFilter,
-        joinableFactoryWrapper,
-        null
-    );
-  }
-
-  public static JoinDataSource create(
-      final DataSource left,
-      final DataSource right,
-      final String rightPrefix,
-      final JoinConditionAnalysis conditionAnalysis,
-      final JoinType joinType,
-      final DimFilter leftFilter,
       @Nullable final JoinableFactoryWrapper joinableFactoryWrapper,
       @Nullable final JoinAlgorithm preferredJoinAlgorithm
   )
@@ -365,7 +343,8 @@ public class JoinDataSource implements DataSource
           clause.getCondition(),
           clause.getJoinType(),
           joinBaseFilter,
-          this.joinableFactoryWrapper
+          this.joinableFactoryWrapper,
+          clause.getPreferredJoinAlgorithm()
       );
       joinBaseFilter = null;
     }
@@ -592,7 +571,8 @@ public class JoinDataSource implements DataSource
                 joinDataSource.getRightPrefix(),
                 joinDataSource.getRight(),
                 joinDataSource.getJoinType(),
-                joinDataSource.getConditionAnalysis()
+                joinDataSource.getConditionAnalysis(),
+                joinDataSource.getPreferredJoinAlgorithm()
             )
         );
       } else if (current instanceof UnnestDataSource) {

@@ -618,7 +618,8 @@ public class DataSourcePlan
           clause.getJoinType(),
           // First JoinDataSource (i == 0) involves the base table, so we need to propagate the base table filter.
           i == 0 ? analysis.getJoinBaseTableFilter().orElse(null) : null,
-          dataSource.getJoinableFactoryWrapper()
+          dataSource.getJoinableFactoryWrapper(),
+          clause.getPreferredJoinAlgorithm()
       );
       inputSpecs.addAll(clausePlan.getInputSpecs());
       clausePlan.getBroadcastInputs().intStream().forEach(n -> broadcastInputs.add(n + shift));

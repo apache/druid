@@ -21,10 +21,12 @@ package org.apache.druid.query.planning;
 
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.JoinType;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -38,6 +40,7 @@ public class PreJoinableClause
   private final DataSource dataSource;
   private final JoinType joinType;
   private final JoinConditionAnalysis condition;
+  private final JoinAlgorithm preferredJoinAlgorithm;
 
   public PreJoinableClause(
       final String prefix,
@@ -46,10 +49,22 @@ public class PreJoinableClause
       final JoinConditionAnalysis condition
   )
   {
+    this(prefix, dataSource, joinType, condition, null);
+  }
+
+  public PreJoinableClause(
+      final String prefix,
+      final DataSource dataSource,
+      final JoinType joinType,
+      final JoinConditionAnalysis condition,
+      @Nullable final JoinAlgorithm preferredJoinAlgorithm
+  )
+  {
     this.prefix = JoinPrefixUtils.validatePrefix(prefix);
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
     this.condition = Preconditions.checkNotNull(condition, "condition");
+    this.preferredJoinAlgorithm = preferredJoinAlgorithm;
   }
 
   public String getPrefix()
@@ -70,6 +85,12 @@ public class PreJoinableClause
   public JoinConditionAnalysis getCondition()
   {
     return condition;
+  }
+
+  @Nullable
+  public JoinAlgorithm getPreferredJoinAlgorithm()
+  {
+    return preferredJoinAlgorithm;
   }
 
   @Override

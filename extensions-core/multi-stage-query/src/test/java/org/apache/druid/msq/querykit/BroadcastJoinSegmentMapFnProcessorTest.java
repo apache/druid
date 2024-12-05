@@ -190,6 +190,7 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
             JoinConditionAnalysis.forExpression("x == \"j.x\"", "j.", ExprMacroTable.nil()),
             JoinType.INNER,
             null,
+            null,
             null
         )
     );
