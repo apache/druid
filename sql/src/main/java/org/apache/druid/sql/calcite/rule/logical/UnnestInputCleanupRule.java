@@ -126,7 +126,7 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
         inputIndex,
         newUnnestExpr
     );
-    builder.project(projectFields, ImmutableSet.of() , true);
+    builder.project(projectFields, ImmutableSet.of(), true);
 
     RelNode build = builder.build();
     call.transformTo(build);
@@ -152,8 +152,8 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
     {
       int newIndex = projects.indexOf(inputRef);
       if (newIndex < 0) {
-          newIndex = projects.size();
-          projects.add(inputRef);
+        newIndex = projects.size();
+        projects.add(inputRef);
       }
       if (newIndex == inputRef.getIndex()) {
         return inputRef;
