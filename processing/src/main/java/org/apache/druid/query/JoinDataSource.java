@@ -364,6 +364,12 @@ public class JoinDataSource implements DataSource
   }
 
   @Override
+  public boolean hasTimeFilter()
+  {
+    return left.hasTimeFilter() && right.hasTimeFilter();
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
