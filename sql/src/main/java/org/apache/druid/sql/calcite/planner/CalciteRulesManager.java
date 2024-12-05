@@ -48,7 +48,6 @@ import org.apache.calcite.rel.rules.PruneEmptyRules;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql2rel.RelDecorrelator;
-import org.apache.calcite.sql2rel.RelFieldTrimmer;
 import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
@@ -290,14 +289,15 @@ public class CalciteRulesManager
     builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(new LogicalUnnestRule());
     builder.addRuleInstance(new UnnestInputCleanupRule());
-    final HepProgramBuilder builder2 = HepProgram.builder();
-    builder2.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
-    builder2.addRuleInstance(CoreRules.PROJECT_MERGE);
-    builder2.addRuleInstance(AggregateProjectMergeRule.Config.DEFAULT.toRule());
+
+    final HepProgramBuilder cleanupRules = HepProgram.builder();
+    cleanupRules.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
+    cleanupRules.addRuleInstance(CoreRules.PROJECT_MERGE);
+    cleanupRules.addRuleInstance(AggregateProjectMergeRule.Config.DEFAULT.toRule());
     return Programs.sequence(
         Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
         new DruidTrimFieldsProgram(true),
-        Programs.of(builder2.build(), true, DefaultRelMetadataProvider.INSTANCE)
+        Programs.of(cleanupRules.build(), true, DefaultRelMetadataProvider.INSTANCE)
     );
   }
 
@@ -553,13 +553,15 @@ public class CalciteRulesManager
     {
       final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
       final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel, relBuilder);
-      return runFieldTrimmer2(relBuilder, decorrelatedRel);
+      RelNode ret = new DruidRelFieldTrimmer(null, relBuilder, true).trim(decorrelatedRel);
+      return ret;
     }
 
   }
 
   /** Program that trims fields. */
-  private static class DruidTrimFieldsProgram implements Program {
+  private static class DruidTrimFieldsProgram implements Program
+  {
     private boolean trim;
 
     public DruidTrimFieldsProgram(boolean trim)
@@ -567,32 +569,15 @@ public class CalciteRulesManager
       this.trim = trim;
     }
 
-    @Override public RelNode run(RelOptPlanner planner, RelNode rel,
+    @Override
+    public RelNode run(RelOptPlanner planner, RelNode rel,
         RelTraitSet requiredOutputTraits,
         List<RelOptMaterialization> materializations,
-        List<RelOptLattice> lattices) {
-      final RelBuilder relBuilder =
-          RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
+        List<RelOptLattice> lattices)
+    {
+      final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
       RelNode ret = new DruidRelFieldTrimmer(null, relBuilder, trim).trim(rel);
       return ret;
     }
   }
-
-  private static RelNode runFieldTrimmer2(RelBuilder relBuilder, RelNode decorrelatedRel)
-  {
-    RelNode a = new RelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
-    a=decorrelatedRel;
-    return runFieldTrimmer(relBuilder, a);
-  }
-
-
-  private static RelNode runFieldTrimmer(final RelBuilder relBuilder, final RelNode decorrelatedRel)
-  {
-    if(true) {
-      return new DruidRelFieldTrimmer(null, relBuilder,true).trim(decorrelatedRel);
-    } else {
-      return new RelFieldTrimmer(null, relBuilder).trim(decorrelatedRel);
-    }
-  }
-
 }
