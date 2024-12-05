@@ -182,7 +182,8 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
   @Nullable
   public String getStatus()
   {
-    return (getRunner() != null && getRunner().getStatus() != null) ? getRunner().getStatus().toString() : null;
+    SeekableStreamIndexTaskRunner.Status status = (getRunner() != null) ? getRunner().getStatus() : null;
+    return (status != null) ? status.toString() : null;
   }
 
   public Appenderator newAppenderator(
