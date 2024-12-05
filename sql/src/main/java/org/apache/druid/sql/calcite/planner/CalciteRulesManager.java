@@ -284,16 +284,13 @@ public class CalciteRulesManager
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
     builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
-    builder.addRuleCollection(baseRuleSet(plannerContext));
-    builder.addRuleInstance(CoreRules.UNION_MERGE);
-    builder.addRuleInstance(FilterCorrelateRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
     builder.addRuleInstance(FilterIntoJoinRuleConfig.DEFAULT.withPredicate(DruidJoinRule::isSupportedPredicate).toRule());
     builder.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
-    final HepProgramBuilder builder2 = HepProgram.builder();
     builder.addRuleInstance(new LogicalUnnestRule());
     builder.addRuleInstance(new UnnestInputCleanupRule());
+    final HepProgramBuilder builder2 = HepProgram.builder();
     builder2.addRuleInstance(FilterProjectTransposeRule.Config.DEFAULT.toRule());
     builder2.addRuleInstance(CoreRules.PROJECT_MERGE);
     builder2.addRuleInstance(AggregateProjectMergeRule.Config.DEFAULT.toRule());
