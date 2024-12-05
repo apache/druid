@@ -50,10 +50,19 @@ import java.util.List;
  * Druid extension of {@link AggregateCaseToFilterRule}.
  *
  * Turning on extendedFilteredSumRewrite enables rewrites of:
+ * <pre>
  *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
- * to
- *    SUM(COL1) FILTER (COND)
- *
+ * </pre>
+ * to:
+ * <pre>
+ *    SUM(COL1) FILTER (WHERE COND)
+ * </pre>
+ * <p>
+ * This rewrite improves performance but introduces a known inconsistency when
+ * the condition never matches, as the expected result (0) is replaced with `null`.
+ * <p>
+ * Example behavior:
+ * <pre>
  * +-----------------+--------------+----------+------+--------------+
  * | input row count | cond matches | valueCol | orig | filtered-SUM |
  * +-----------------+--------------+----------+------+--------------+
@@ -62,8 +71,7 @@ import java.util.List;
  * | >0              | all          | null     | null | null         |
  * | >0              | N>0          | 1        | N    | N            |
  * +-----------------+--------------+----------+------+--------------+
- *
- * The only inconsistency this causes is when the condition never matches and the result supposed to be 0.
+ * </pre>
  */
 public class DruidAggregateCaseToFilterRule extends RelOptRule implements SubstitutionRule
 {
