@@ -85,12 +85,12 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
 
     RexNode newUnnestExpr = unnestInput.accept(new ExpressionPullerRexShuttle(newProjects, inputIndex));
 
-    if(newUnnestExpr instanceof RexInputRef) {
+    if (newUnnestExpr instanceof RexInputRef) {
       // this won't make it simpler
       return;
     }
 
-    if(newProjects.get(inputIndex) == null ) {
+    if (newProjects.get(inputIndex) == null) {
       newProjects.set(
           inputIndex,
           rexBuilder.makeInputRef(oldProject.getInput(), 0)
@@ -118,9 +118,6 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
     // not-anymore referenced input columns beneath oldProject
     List<RexNode> projectFields = new ArrayList<>(builder.fields());
     int hideCount = newProjects.size() - oldProject.getProjects().size();
-    if(hideCount>0) {
-//      return;
-    }
     for (int i = 0; i < hideCount; i++) {
       projectFields.remove(unnest.getRowType().getFieldCount() - 2);
     }

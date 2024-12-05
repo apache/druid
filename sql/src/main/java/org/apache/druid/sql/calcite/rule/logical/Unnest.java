@@ -50,7 +50,7 @@ public abstract class Unnest extends SingleRel
   @Override
   protected RelDataType deriveRowType()
   {
-    List<RelDataTypeField> fields =new ArrayList<>();
+    List<RelDataTypeField> fields = new ArrayList<>();
     fields.addAll(input.getRowType().getFieldList());
     fields.add(unnestFieldType);
     return new RelRecordType(fields);
