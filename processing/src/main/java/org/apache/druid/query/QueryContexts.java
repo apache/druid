@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
+
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -121,6 +122,10 @@ public class QueryContexts
   // SQL statement resource specific keys
   public static final String CTX_EXECUTION_MODE = "executionMode";
 
+  public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
+
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;
   public static final boolean DEFAULT_POPULATE_CACHE = true;
@@ -149,7 +154,9 @@ public class QueryContexts
   public static final int DEFAULT_IN_FUNCTION_EXPR_THRESHOLD = 2;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
   public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
+  public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
   public static final boolean DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED = true;
+
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize

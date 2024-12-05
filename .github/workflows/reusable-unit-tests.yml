@@ -117,27 +117,30 @@ jobs:
           MAVEN_PROJECTS: ${{ inputs.maven_projects }}
         run: ./.github/scripts/unit_tests_script.sh
 
-      - name: Check for .hprof files on failure
+      - name: Check for dumps on failure
         if: ${{ failure() }}
-        id: check_for_heap_dump
+        id: check_for_dumps
         run: |
-          if ls ${GITHUB_WORKSPACE}/target/*.hprof 1> /dev/null 2>&1; then
-            echo "found_hprof=true" >> "$GITHUB_ENV"
+          if test -n "$(find "${GITHUB_WORKSPACE}" \( -name '*.hprof' -or -name 'hs_err_pid*' -or -name 'replay_pid*' -or -regex '.*/core\.[0-9]*' \))"
+          then
+            echo "found_dumps=true" >> "$GITHUB_ENV"
           else
-            echo "found_hprof=false" >> "$GITHUB_ENV"
+            echo "found_dumps=false" >> "$GITHUB_ENV"
           fi
 
-      - name: Collect tarball hprof dumps if they exist on failure
-        if: ${{ failure() && env.found_hprof == 'true' }}
+      - name: Collect dumps if they exist on failure
+        if: ${{ failure() && env.found_dumps == 'true' }}
         run: |
-          tar cvzf ${RUNNER_TEMP}/hprof-dumps.tgz ${GITHUB_WORKSPACE}/target/*.hprof
+          find "${GITHUB_WORKSPACE}" \
+            \( -name '*.hprof' -or -name 'hs_err_pid*' -or -name 'replay_pid*' -or -regex '.*/core\.[0-9]*' \) \
+            -exec tar -cvzf ${RUNNER_TEMP}/failure-dumps.tar.gz {} +
 
-      - name: Upload hprof dumps to GitHub if they exist on failure
-        if: ${{ failure() && env.found_hprof == 'true' }}
+      - name: Upload dumps to GitHub if they exist on failure
+        if: ${{ failure() && env.found_dumps == 'true' }}
         uses: actions/upload-artifact@master
         with:
-          name: Hprof-${{ inputs.group }} hprof dumps (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }})
-          path: ${{ runner.temp }}/hprof-dumps.tgz
+          name: Failure-${{ inputs.group }} failure dumps (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }})
+          path: ${{ runner.temp }}/failure-dumps.tar.gz
 
       - name: set outputs on failure
         id: set_outputs

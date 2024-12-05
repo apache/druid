@@ -179,7 +179,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(taskClientFactory.build(
         EasyMock.anyString(),
         EasyMock.anyObject(),
-        EasyMock.anyInt(),
+        EasyMock.anyObject(),
         EasyMock.anyObject()
     )).andReturn(
         indexTaskClient).anyTimes();
@@ -2807,7 +2807,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           true,
           minimumMessageTime,
           maximumMessageTime,
-          ioConfig.getInputFormat()
+          ioConfig.getInputFormat(),
+          ioConfig.getTaskDuration().getStandardMinutes()
       )
       {
       };
@@ -3166,7 +3167,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             true,
             minimumMessageTime,
             maximumMessageTime,
-            ioConfig.getInputFormat()
+            ioConfig.getInputFormat(),
+            ioConfig.getTaskDuration().getStandardMinutes()
     )
     {
     };

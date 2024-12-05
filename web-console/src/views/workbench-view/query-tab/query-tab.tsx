@@ -18,14 +18,13 @@
 
 import { Code, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { QueryResult, QueryRunner, SqlQuery } from '@druid-toolkit/query';
 import axios from 'axios';
+import { QueryResult, QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import SplitterLayout from 'react-splitter-layout';
 import { useStore } from 'zustand';
 
-import { Loader, QueryErrorPane } from '../../../components';
+import { Loader, QueryErrorPane, SplitterLayout } from '../../../components';
 import type { CapacityInfo, DruidEngine, LastExecution, QueryContext } from '../../../druid-models';
 import { DEFAULT_SERVER_QUERY_CONTEXT, Execution, WorkbenchQuery } from '../../../druid-models';
 import {
@@ -44,9 +43,9 @@ import {
   deepGet,
   DruidError,
   findAllSqlQueriesInText,
-  localStorageGet,
+  localStorageGetJson,
   LocalStorageKeys,
-  localStorageSet,
+  localStorageSetJson,
   QueryManager,
 } from '../../../utils';
 import { CapacityAlert } from '../capacity-alert/capacity-alert';
@@ -62,13 +61,17 @@ import { metadataStateStore } from '../metadata-state-store';
 import { ResultTablePane } from '../result-table-pane/result-table-pane';
 import type { RunPanelProps } from '../run-panel/run-panel';
 import { RunPanel } from '../run-panel/run-panel';
-import { workStateStore } from '../work-state-store';
+import { WORK_STATE_STORE } from '../work-state-store';
 
 import './query-tab.scss';
 
 const queryRunner = new QueryRunner({
   inflateDateStrategy: 'none',
 });
+
+function handleSecondaryPaneSizeChange(secondaryPaneSize: number) {
+  localStorageSetJson(LocalStorageKeys.WORKBENCH_PANE_SIZE, secondaryPaneSize);
+}
 
 export interface QueryTabProps
   extends Pick<
@@ -180,14 +183,11 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
   );
 
   function shouldAutoRun(): boolean {
-    if (query.getEffectiveEngine() !== 'sql-native') return false;
+    const effectiveEngine = query.getEffectiveEngine();
+    if (effectiveEngine !== 'sql-native' && effectiveEngine !== 'sql-msq-dart') return false;
     const queryDuration = executionState.data?.result?.queryDuration;
     return Boolean(queryDuration && queryDuration < 10000);
   }
-
-  const handleSecondaryPaneSizeChange = useCallback((secondaryPaneSize: number) => {
-    localStorageSet(LocalStorageKeys.WORKBENCH_PANE_SIZE, String(secondaryPaneSize));
-  }, []);
 
   const queryInputRef = useRef<FlexibleQueryInput | null>(null);
 
@@ -296,9 +296,10 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                   if (deepGet(query, 'context.fullReport') && dartResponse[0][0] === 'fullReport') {
                     const dartReport = dartResponse[dartResponse.length - 1][0];
 
-                    return Execution.fromTaskReport(dartReport)
-                      .changeEngine('sql-msq-dart')
-                      .changeSqlQuery(query.query, query.context);
+                    return Execution.fromDartReport(dartReport).changeSqlQuery(
+                      query.query,
+                      query.context,
+                    );
                   } else {
                     return Execution.fromResult(
                       engine,
@@ -308,7 +309,7 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
                         query.header,
                         query.typesHeader,
                         query.sqlTypesHeader,
-                      ),
+                      ).changeQueryDuration(Date.now() - startTime.valueOf()),
                     ).changeSqlQuery(query.query, query.context);
                   }
                 },
@@ -361,16 +362,27 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.data, executionState.error]);
 
-  const incrementWorkVersion = useStore(
-    workStateStore,
-    useCallback(state => state.increment, []),
-  );
   useEffect(() => {
-    incrementWorkVersion();
+    const effectiveEngine = query.getEffectiveEngine();
+    if (effectiveEngine === 'sql-msq-task') {
+      WORK_STATE_STORE.getState().incrementMsqTask();
+    } else if (effectiveEngine === 'sql-msq-dart') {
+      WORK_STATE_STORE.getState().incrementMsqDart();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [executionState.loading, Boolean(executionState.intermediate)]);
 
   const execution = executionState.data;
+
+  // This is the execution that would be shown in the output pane, it is either the actual execution or a result
+  // execution that will be shown under the loader
+  const executionToShow =
+    execution ||
+    (() => {
+      if (executionState.intermediate) return;
+      const e = executionState.getSomeData();
+      return e?.result ? e : undefined;
+    })();
 
   const incrementMetadataVersion = useStore(
     metadataStateStore,
@@ -456,7 +468,9 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
       <SplitterLayout
         vertical
         percentage
-        secondaryInitialSize={Number(localStorageGet(LocalStorageKeys.WORKBENCH_PANE_SIZE)!) || 40}
+        secondaryInitialSize={
+          Number(localStorageGetJson(LocalStorageKeys.WORKBENCH_PANE_SIZE)) || 40
+        }
         primaryMinSize={20}
         secondaryMinSize={20}
         onSecondaryPaneSizeChange={handleSecondaryPaneSizeChange}
@@ -525,40 +539,40 @@ export const QueryTab = React.memo(function QueryTab(props: QueryTabProps) {
               )}
             </div>
           )}
-          {execution &&
-            (execution.error ? (
+          {executionToShow &&
+            (executionToShow.error ? (
               <div className="error-container">
-                <ExecutionErrorPane execution={execution} />
-                {execution.stages && (
+                <ExecutionErrorPane execution={executionToShow} />
+                {executionToShow.stages && (
                   <ExecutionStagesPane
-                    execution={execution}
-                    onErrorClick={() => onDetails(execution, 'error')}
-                    onWarningClick={() => onDetails(execution, 'warnings')}
+                    execution={executionToShow}
+                    onErrorClick={() => onDetails(executionToShow, 'error')}
+                    onWarningClick={() => onDetails(executionToShow, 'warnings')}
                     goToTask={goToTask}
                   />
                 )}
               </div>
-            ) : execution.result ? (
+            ) : executionToShow.result ? (
               <ResultTablePane
-                runeMode={execution.engine === 'native'}
-                queryResult={execution.result}
+                runeMode={executionToShow.engine === 'native'}
+                queryResult={executionToShow.result}
                 onQueryAction={handleQueryAction}
               />
-            ) : execution.isSuccessfulIngest() ? (
+            ) : executionToShow.isSuccessfulIngest() ? (
               <IngestSuccessPane
-                execution={execution}
+                execution={executionToShow}
                 onDetails={onDetails}
                 onQueryTab={onQueryTab}
               />
             ) : (
               <div className="generic-status-container">
                 <div className="generic-status-container-info">
-                  {`Execution completed with status: ${execution.status}`}
+                  {`Execution completed with status: ${executionToShow.status}`}
                 </div>
                 <ExecutionStagesPane
-                  execution={execution}
-                  onErrorClick={() => onDetails(execution, 'error')}
-                  onWarningClick={() => onDetails(execution, 'warnings')}
+                  execution={executionToShow}
+                  onErrorClick={() => onDetails(executionToShow, 'error')}
+                  onWarningClick={() => onDetails(executionToShow, 'warnings')}
                   goToTask={goToTask}
                 />
               </div>

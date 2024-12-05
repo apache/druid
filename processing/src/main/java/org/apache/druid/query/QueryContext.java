@@ -368,6 +368,11 @@ public class QueryContext
     return getBoolean(QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY, defaultUseNestedForUnkownTypeInSubquery);
   }
 
+  public boolean isUseNestedForUnknownTypeInSubquery()
+  {
+    return isUseNestedForUnknownTypeInSubquery(QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY);
+  }
+
   public int getUncoveredIntervalsLimit()
   {
     return getUncoveredIntervalsLimit(QueryContexts.DEFAULT_UNCOVERED_INTERVALS_LIMIT);
@@ -664,5 +669,14 @@ public class QueryContext
     return "QueryContext{" +
            "context=" + context +
            '}';
+  }
+
+  public boolean isDecoupledMode()
+  {
+    String value = getString(
+        QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+        QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED
+    );
+    return QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equals(value);
   }
 }

@@ -95,7 +95,8 @@ order by 1;
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
           "sqlQueryId" : __SQL_QUERY_ID__
-          "sqlStringifyArrays" : false
+          "sqlStringifyArrays" : false,
+          "windowFunctionOperatorTransformation" : true
         }
       }
     },
@@ -201,7 +202,8 @@ order by 1;
           "maxParseExceptions" : 0,
           "plannerStrategy" : "DECOUPLED",
           "sqlQueryId" : __SQL_QUERY_ID__
-          "sqlStringifyArrays" : false
+          "sqlStringifyArrays" : false,
+          "windowFunctionOperatorTransformation" : true
         }
       }
     },

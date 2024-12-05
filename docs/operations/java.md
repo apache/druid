@@ -27,7 +27,11 @@ a Java runtime for Druid.
 
 ## Selecting a Java runtime
 
-Druid fully supports Java 8u92+, Java 11, and Java 17. The project team recommends Java 17.
+Druid fully supports Java 11 and Java 17. The project team recommends Java 17.
+
+:::info
+Note: Starting with Apache Druid 32.0.0, support for Java 8 has been removed.
+:::
 
 The project team recommends using an OpenJDK-based Java distribution. There are many free and actively-supported
 distributions available, including

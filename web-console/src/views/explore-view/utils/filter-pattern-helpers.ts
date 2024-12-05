@@ -16,10 +16,11 @@
  * limitations under the License.
  */
 
-import type { Column, FilterPattern } from '@druid-toolkit/query';
+import type { Column, FilterPattern } from 'druid-query-toolkit';
+
+import { Duration } from '../../../utils';
 
 import { DATE_FORMAT } from './date-format';
-import { formatDuration } from './duration';
 
 const TIME_RELATIVE_TYPES: Record<string, string> = {
   'maxDataTime/': 'latest',
@@ -82,10 +83,9 @@ export function formatPatternWithoutNegation(pattern: FilterPattern): string {
 
     case 'timeRelative': {
       const type = TIME_RELATIVE_TYPES[`${pattern.anchor}/${pattern.alignType || ''}`];
-      return `${pattern.column} in ${type ? `${type} ` : ''}${formatDuration(
+      return `${pattern.column} in ${type ? `${type} ` : ''}${new Duration(
         pattern.rangeDuration,
-        true,
-      )}`;
+      ).getDescription()}`;
     }
 
     case 'numberRange':

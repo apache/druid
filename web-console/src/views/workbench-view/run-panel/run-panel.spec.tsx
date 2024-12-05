@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { HotkeysProvider } from '@blueprintjs/core';
 import { render } from '@testing-library/react';
 
 import { DEFAULT_SERVER_QUERY_CONTEXT, DRUID_ENGINES, WorkbenchQuery } from '../../../druid-models';
@@ -25,15 +26,17 @@ import { RunPanel } from './run-panel';
 describe('RunPanel', () => {
   it('matches snapshot on native (auto) query', () => {
     const runPanel = (
-      <RunPanel
-        query={WorkbenchQuery.blank().changeQueryString(`SELECT * FROM wikipedia`)}
-        onQueryChange={() => {}}
-        running={false}
-        onRun={() => {}}
-        queryEngines={DRUID_ENGINES}
-        clusterCapacity={9}
-        defaultQueryContext={DEFAULT_SERVER_QUERY_CONTEXT}
-      />
+      <HotkeysProvider>
+        <RunPanel
+          query={WorkbenchQuery.blank().changeQueryString(`SELECT * FROM wikipedia`)}
+          onQueryChange={() => {}}
+          running={false}
+          onRun={() => {}}
+          queryEngines={DRUID_ENGINES}
+          clusterCapacity={9}
+          defaultQueryContext={DEFAULT_SERVER_QUERY_CONTEXT}
+        />
+      </HotkeysProvider>
     );
     const { container } = render(runPanel);
     expect(container.firstChild).toMatchSnapshot();
@@ -41,17 +44,19 @@ describe('RunPanel', () => {
 
   it('matches snapshot on msq (auto) query', () => {
     const runPanel = (
-      <RunPanel
-        query={WorkbenchQuery.blank()
-          .changeQueryString(`SELECT * FROM wikipedia`)
-          .changeEngine('sql-msq-task')}
-        onQueryChange={() => {}}
-        running={false}
-        onRun={() => {}}
-        queryEngines={DRUID_ENGINES}
-        clusterCapacity={9}
-        defaultQueryContext={DEFAULT_SERVER_QUERY_CONTEXT}
-      />
+      <HotkeysProvider>
+        <RunPanel
+          query={WorkbenchQuery.blank()
+            .changeQueryString(`SELECT * FROM wikipedia`)
+            .changeEngine('sql-msq-task')}
+          onQueryChange={() => {}}
+          running={false}
+          onRun={() => {}}
+          queryEngines={DRUID_ENGINES}
+          clusterCapacity={9}
+          defaultQueryContext={DEFAULT_SERVER_QUERY_CONTEXT}
+        />
+      </HotkeysProvider>
     );
     const { container } = render(runPanel);
     expect(container.firstChild).toMatchSnapshot();

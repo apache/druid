@@ -195,9 +195,9 @@ and `druid.tlsPort` properties on each service. Please see `Configuration` secti
 
 Druid uses Jetty as an embedded web server. To learn more about TLS/SSL, certificates, and related concepts in Jetty, including explanations of the configuration settings below, see "Configuring SSL/TLS KeyStores" in the [Jetty Operations Guide](https://www.eclipse.org/jetty/documentation.php).
 
-For information about TLS/SSL support in Java in general, see the [Java Secure Socket Extension (JSSE) Reference Guide](http://docs.oracle.com/javase/8/docs/technotes/guides/security/jsse/JSSERefGuide.html).
+For information about TLS/SSL support in Java in general, see the [Java Secure Socket Extension (JSSE) Reference Guide](https://docs.oracle.com/en/java/javase/11/security/java-secure-socket-extension-jsse-reference-guide.html).
 The [Java Cryptography Architecture
-Standard Algorithm Name Documentation for JDK 8](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all possible
+Standard Algorithm Name Documentation for JDK 11](https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html) lists all possible
 values for the following properties, among others provided by the Java implementation.
 
 |Property|Description|Default|Required|
@@ -230,7 +230,7 @@ These properties apply to the SSLContext that will be provided to the internal H
 |`druid.client.https.trustStoreAlgorithm`|Algorithm to be used by TrustManager to validate certificate chains|`javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm()`|no|
 |`druid.client.https.trustStorePassword`|The [Password Provider](../operations/password-provider.md) or String password for the Trust Store.|none|yes|
 
-This [document](http://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html) lists all the possible
+This [document](https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html) lists all the possible
 values for the above mentioned configs among others provided by Java implementation.
 
 ### Authentication and authorization
@@ -408,6 +408,7 @@ Metric monitoring is an essential part of Druid operations. The following monito
 |`org.apache.druid.server.metrics.TaskSlotCountStatsMonitor`|Reports metrics about task slot usage per emission period.|
 |`org.apache.druid.server.metrics.WorkerTaskCountStatsMonitor`|Reports how many ingestion tasks are currently running/pending/waiting, the number of successful/failed tasks, and metrics about task slot usage for the reporting worker, per emission period. Only supported by Middle Manager node types.|
 |`org.apache.druid.server.metrics.ServiceStatusMonitor`|Reports a heartbeat for the service.|
+|`org.apache.druid.server.metrics.GroupByStatsMonitor`|Report metrics for groupBy queries like disk and merge buffer utilization. |
 
 For example, you might configure monitors on all services for system and JVM information within `common.runtime.properties` as follows:
 
@@ -951,8 +952,6 @@ The following table shows the dynamic configuration properties for the Coordinat
 |Property|Description|Default|
 |--------|-----------|-------|
 |`millisToWaitBeforeDeleting`|How long does the Coordinator need to be a leader before it can start marking overshadowed segments as unused in metadata storage.| 900000 (15 mins)|
-|`mergeBytesLimit`|The maximum total uncompressed size in bytes of segments to merge.|524288000L|
-|`mergeSegmentsLimit`|The maximum number of segments that can be in a single [append task](../ingestion/tasks.md).|100|
 |`smartSegmentLoading`|Enables ["smart" segment loading mode](#smart-segment-loading) which dynamically computes the optimal values of several properties that maximize Coordinator performance.|true|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved in a Historical tier at any given time.|100|
 |`replicantLifetime`|The maximum number of Coordinator runs for which a segment can wait in the load queue of a Historical before Druid raises an alert.|15|

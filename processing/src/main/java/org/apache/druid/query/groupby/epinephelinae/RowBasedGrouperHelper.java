@@ -58,6 +58,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -131,7 +132,8 @@ public class RowBasedGrouperHelper
       final Supplier<ByteBuffer> bufferSupplier,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
     return createGrouperAccumulatorPair(
@@ -148,7 +150,8 @@ public class RowBasedGrouperHelper
         UNKNOWN_THREAD_PRIORITY,
         false,
         UNKNOWN_TIMEOUT,
-        mergeBufferSize
+        mergeBufferSize,
+        perQueryStats
     );
   }
 
@@ -197,7 +200,8 @@ public class RowBasedGrouperHelper
       final int priority,
       final boolean hasQueryTimeout,
       final long queryTimeoutAt,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -276,7 +280,8 @@ public class RowBasedGrouperHelper
           true,
           limitSpec,
           sortHasNonGroupingFields,
-          mergeBufferSize
+          mergeBufferSize,
+          perQueryStats
       );
     } else {
       final Grouper.KeySerdeFactory<RowBasedKey> combineKeySerdeFactory = new RowBasedKeySerdeFactory(
@@ -305,7 +310,8 @@ public class RowBasedGrouperHelper
           grouperSorter,
           priority,
           hasQueryTimeout,
-          queryTimeoutAt
+          queryTimeoutAt,
+          perQueryStats
       );
     }
 
@@ -1280,6 +1286,12 @@ public class RowBasedGrouperHelper
     public List<String> getDictionary()
     {
       return dictionary;
+    }
+
+    @Override
+    public Long getDictionarySize()
+    {
+      return currentEstimatedSize;
     }
 
     @Override

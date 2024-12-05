@@ -268,7 +268,8 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         encodedValueColumnSupplier.get(),
         nullValueBitmap,
         logicalType,
-        variantTypeSetByte
+        variantTypeSetByte,
+        bitmapFactory
     );
   }
 

@@ -445,7 +445,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-    return query.getResultSignature(RowSignature.Finalization.UNKNOWN);
+    return query.getResultRowSignature(RowSignature.Finalization.UNKNOWN);
   }
 
   @Override
@@ -486,9 +486,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     final RowSignature rowSignature =
-        query.getResultSignature(
-            query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
-        );
+        query.getResultRowSignature(query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO);
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature

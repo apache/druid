@@ -719,7 +719,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       String dataSource,
       Interval allocateInterval,
       boolean skipSegmentLineageCheck,
-      List<SegmentCreateRequest> requests
+      List<SegmentCreateRequest> requests,
+      boolean reduceMetadataIO
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
@@ -727,7 +728,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final Interval interval = allocateInterval.withChronology(ISOChronology.getInstanceUTC());
     return connector.retryWithHandle(
-        handle -> allocatePendingSegments(handle, dataSource, interval, skipSegmentLineageCheck, requests)
+        handle -> allocatePendingSegments(
+            handle,
+            dataSource,
+            interval,
+            skipSegmentLineageCheck,
+            requests,
+            reduceMetadataIO
+        )
     );
   }
 
@@ -1003,18 +1011,36 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return newIdentifier;
   }
 
+  @Override
+  public SegmentTimeline getSegmentTimelineForAllocation(
+      String dataSource,
+      Interval interval,
+      boolean reduceMetadataIO
+  )
+  {
+    return connector.retryWithHandle(
+        handle -> {
+          if (reduceMetadataIO) {
+            return SegmentTimeline.forSegments(retrieveUsedSegmentsForAllocation(handle, dataSource, interval));
+          } else {
+            return getTimelineForIntervalsWithHandle(handle, dataSource, Collections.singletonList(interval));
+          }
+        }
+    );
+  }
+
   private Map<SegmentCreateRequest, SegmentIdWithShardSpec> allocatePendingSegments(
       final Handle handle,
       final String dataSource,
       final Interval interval,
       final boolean skipSegmentLineageCheck,
-      final List<SegmentCreateRequest> requests
+      final List<SegmentCreateRequest> requests,
+      final boolean reduceMetadataIO
   ) throws IOException
   {
     // Get the time chunk and associated data segments for the given interval, if any
-    final List<TimelineObjectHolder<String, DataSegment>> existingChunks =
-        getTimelineForIntervalsWithHandle(handle, dataSource, Collections.singletonList(interval))
-            .lookup(interval);
+    final List<TimelineObjectHolder<String, DataSegment>> existingChunks
+        = getSegmentTimelineForAllocation(dataSource, interval, reduceMetadataIO).lookup(interval);
     if (existingChunks.size() > 1) {
       log.warn(
           "Cannot allocate new segments for dataSource[%s], interval[%s] as interval already has [%,d] chunks.",
@@ -2898,6 +2924,67 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           return IntStream.of(result).sum();
         }
     );
+  }
+
+  @VisibleForTesting
+  Set<DataSegment> retrieveUsedSegmentsForAllocation(
+      final Handle handle,
+      final String dataSource,
+      final Interval interval
+  )
+  {
+    final Set<SegmentId> overlappingSegmentIds
+        = SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables, jsonMapper)
+                                  .retrieveUsedSegmentIds(dataSource, interval);
+    // Map from version -> interval -> segmentId with the smallest partitionNum
+    Map<String, Map<Interval, SegmentId>> versionIntervalToSmallestSegmentId = new HashMap<>();
+    for (SegmentId segmentId : overlappingSegmentIds) {
+      final Map<Interval, SegmentId> map
+          = versionIntervalToSmallestSegmentId.computeIfAbsent(segmentId.getVersion(), v -> new HashMap<>());
+      final SegmentId value = map.get(segmentId.getInterval());
+      if (value == null || value.getPartitionNum() > segmentId.getPartitionNum()) {
+        map.put(segmentId.getInterval(), segmentId);
+      }
+    }
+
+    // Retrieve the segments for the ids stored in the map to get the numCorePartitions
+    final Set<String> segmentIdsToRetrieve = new HashSet<>();
+    for (Map<Interval, SegmentId> itvlMap : versionIntervalToSmallestSegmentId.values()) {
+      segmentIdsToRetrieve.addAll(itvlMap.values().stream().map(SegmentId::toString).collect(Collectors.toList()));
+    }
+    final Set<DataSegment> dataSegments = retrieveSegmentsById(dataSource, segmentIdsToRetrieve);
+    final Set<String> retrievedIds = new HashSet<>();
+    final Map<String, Map<Interval, Integer>> versionIntervalToNumCorePartitions = new HashMap<>();
+    for (DataSegment segment : dataSegments) {
+      versionIntervalToNumCorePartitions.computeIfAbsent(segment.getVersion(), v -> new HashMap<>())
+                                        .put(segment.getInterval(), segment.getShardSpec().getNumCorePartitions());
+      retrievedIds.add(segment.getId().toString());
+    }
+    if (!retrievedIds.equals(segmentIdsToRetrieve)) {
+      throw DruidException.defensive(
+          "Used segment IDs for dataSource[%s] and interval[%s] have changed in the metadata store.",
+          dataSource, interval
+      );
+    }
+
+    // Create dummy segments for each segmentId with only the shard spec populated
+    Set<DataSegment> segmentsWithAllocationInfo = new HashSet<>();
+    for (SegmentId id : overlappingSegmentIds) {
+      final int corePartitions = versionIntervalToNumCorePartitions.get(id.getVersion()).get(id.getInterval());
+      segmentsWithAllocationInfo.add(
+          new DataSegment(
+              id,
+              null,
+              null,
+              null,
+              new NumberedShardSpec(id.getPartitionNum(), corePartitions),
+              null,
+              null,
+              1
+          )
+      );
+    }
+    return segmentsWithAllocationInfo;
   }
 
   @Override

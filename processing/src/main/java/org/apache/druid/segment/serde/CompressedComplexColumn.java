@@ -28,18 +28,18 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
-public final class CompressedComplexColumn implements ComplexColumn
+public final class CompressedComplexColumn<T> implements ComplexColumn
 {
   private final String typeName;
   private final CompressedVariableSizedBlobColumn compressedColumn;
   private final ImmutableBitmap nullValues;
-  private final ObjectStrategy<?> objectStrategy;
+  private final ObjectStrategy<T> objectStrategy;
 
   public CompressedComplexColumn(
       String typeName,
       CompressedVariableSizedBlobColumn compressedColumn,
       ImmutableBitmap nullValues,
-      ObjectStrategy<?> objectStrategy
+      ObjectStrategy<T> objectStrategy
   )
   {
     this.typeName = typeName;
@@ -62,7 +62,7 @@ public final class CompressedComplexColumn implements ComplexColumn
 
   @Override
   @Nullable
-  public Object getRowValue(int rowNum)
+  public T getRowValue(int rowNum)
   {
     if (nullValues.get(rowNum)) {
       return null;

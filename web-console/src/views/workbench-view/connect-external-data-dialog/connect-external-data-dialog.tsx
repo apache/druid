@@ -17,7 +17,7 @@
  */
 
 import { Classes, Dialog } from '@blueprintjs/core';
-import type { SqlExpression } from '@druid-toolkit/query';
+import type { SqlExpression } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import type { ArrayMode, ExternalConfig, InputFormat, InputSource } from '../../../druid-models';

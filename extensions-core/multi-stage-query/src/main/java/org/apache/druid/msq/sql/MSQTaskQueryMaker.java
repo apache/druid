@@ -289,6 +289,9 @@ public class MSQTaskQueryMaker implements QueryMaker
     // Add appropriate finalization to native query context.
     nativeQueryContextOverrides.put(QueryContexts.FINALIZE_KEY, finalizeAggregations);
 
+    // This flag is to ensure backward compatibility, as brokers are upgraded after indexers/middlemanagers.
+    nativeQueryContextOverrides.put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true);
+
     final MSQSpec querySpec =
         MSQSpec.builder()
                .query(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides))
