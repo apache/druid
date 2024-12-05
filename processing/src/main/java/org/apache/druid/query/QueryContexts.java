@@ -88,6 +88,20 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
+  /**
+   * Context parameter to enable/disable the extended filtered sum rewrite logic.
+   *
+   * Controls the rewrite of:
+   * <pre>
+   *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
+   * to
+   *    SUM(COL1) FILTER (COND)
+   * </pre>
+   * managed by {@link DruidAggregateCaseToFilterRule}. Defaults to true for performance,
+   * but may produce incorrect results when the condition never matches (expected 0).
+   * This is for testing and can be removed once a correct and high-performance rewrite
+   * is implemented.
+   */
   public static final String EXTENDED_FILTERED_SUM_REWRITE_ENABLED = "extendedFilteredSumRewrite";
 
 

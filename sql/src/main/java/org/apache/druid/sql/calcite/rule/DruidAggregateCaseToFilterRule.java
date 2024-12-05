@@ -63,8 +63,7 @@ import java.util.List;
  * | >0              | N>0          | 1        | N    | N            |
  * +-----------------+--------------+----------+------+--------------+
  *
- * The only inconsistency this causes is when then condition matches all rows; and for all o
- *
+ * The only inconsistency this causes is when the condition never matches and the result supposed to be 0.
  */
 public class DruidAggregateCaseToFilterRule extends RelOptRule implements SubstitutionRule
 {
