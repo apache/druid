@@ -42,6 +42,7 @@ import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -261,7 +262,8 @@ public class CliPeonTest
           false,
           DateTimes.nowUtc().minusDays(2),
           DateTimes.nowUtc(),
-          new CsvInputFormat(null, null, true, null, 0, null)
+          new CsvInputFormat(null, null, true, null, 0, null),
+          Duration.standardHours(2).getStandardMinutes()
       );
     }
   }
