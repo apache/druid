@@ -318,7 +318,7 @@ public class QueryLifecycle
       @Nullable final String remoteAddress,
       final long bytesWritten,
       final long rowsScanned,
-      final long cpuConsumedNanos
+      final long cpuConsumedMillis
   )
   {
     if (baseQuery == null) {
@@ -363,7 +363,7 @@ public class QueryLifecycle
       statsMap.put("query/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs));
       statsMap.put("query/bytes", bytesWritten);
       statsMap.put("query/rowsScanned", rowsScanned);
-      statsMap.put("query/cpu/time", TimeUnit.NANOSECONDS.toMillis(cpuConsumedNanos));
+      statsMap.put("query/cpu/time", cpuConsumedMillis);
       statsMap.put("success", success);
 
       if (authenticationResult != null) {
