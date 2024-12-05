@@ -25,7 +25,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
-
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -34,7 +33,6 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
-import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -50,14 +48,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-
-import static org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorTuningConfig.DEFAULT_SHUTDOWN_TIMEOUT;
 
 /**
  * Manages the creation and lifetime of {@link Supervisor}.
@@ -250,12 +243,9 @@ public class SupervisorManager
       }
       log.info("Waiting for [%d] supervisors to shutdown", stopFutures.size());
       try {
-        long waitMillis = SeekableStreamSupervisorTuningConfig.defaultDuration(
-            null,
-            DEFAULT_SHUTDOWN_TIMEOUT
-        ).getMillis();
-        FutureUtils.coalesce(stopFutures).get(waitMillis, TimeUnit.MILLISECONDS);
-      } catch (Exception e) {
+        FutureUtils.coalesce(stopFutures).get(80, TimeUnit.SECONDS);
+      }
+      catch (Exception e) {
         log.warn(
             "Stopped [%d] out of [%d] supervisors. Remaining supervisors will be killed.",
             stopFutures.stream().filter(Future::isDone).count(),
