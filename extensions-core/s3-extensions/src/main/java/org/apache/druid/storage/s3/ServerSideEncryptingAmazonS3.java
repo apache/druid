@@ -72,6 +72,11 @@ public class ServerSideEncryptingAmazonS3
     this.serverSideEncryption = serverSideEncryption;
   }
 
+  public AmazonS3 getAmazonS3()
+  {
+    return amazonS3;
+  }
+
   public boolean doesObjectExist(String bucket, String objectName)
   {
     try {
