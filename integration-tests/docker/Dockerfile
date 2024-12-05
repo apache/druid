@@ -28,10 +28,10 @@ ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org
 ARG SETUP_RETRIES=3
 # Retry mechanism for running the setup script up to limit of 3 times.
 RUN set -e; \
-    for i in {1..$SETUP_RETRIES}; do \
+    for i in $(seq 1 $SETUP_RETRIES); do \
         echo "Attempt $i to run the setup script..."; \
         APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh && break || { \
-            echo "Attempt $i failed. Retrying..."; \
+            echo "Set up script attempt $i/$SETUP_RETRIES failed. Retrying..."; \
             sleep 2; \
         }; \
     done; \
