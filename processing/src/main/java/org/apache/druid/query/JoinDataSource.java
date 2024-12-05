@@ -409,7 +409,7 @@ public class JoinDataSource implements DataSource
   }
 
   @Nullable
-  @JsonProperty
+  @JsonProperty("preferredJoinAlgorithm")
   public JoinAlgorithm getPreferredJoinAlgorithm()
   {
     return preferredJoinAlgorithm;
@@ -449,6 +449,7 @@ public class JoinDataSource implements DataSource
            ", condition=" + conditionAnalysis +
            ", joinType=" + joinType +
            ", leftFilter=" + leftFilter +
+           ", preferredJoinAlgorithm=" + preferredJoinAlgorithm +
            '}';
   }
 
