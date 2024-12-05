@@ -238,7 +238,7 @@ public class CliPeonTest
     }
 
     @Override
-    public String getStatus()
+    public String getCurrentRunnerStatus()
     {
       return STATUS;
     }

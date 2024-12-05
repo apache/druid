@@ -2270,7 +2270,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         )
     );
 
-    Assert.assertEquals(Status.NOT_STARTED.toString(), task.getStatus());
+    Assert.assertEquals(Status.NOT_STARTED.toString(), task.getCurrentRunnerStatus());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -2282,7 +2282,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
     Assert.assertEquals(2, countEvents(task));
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
-    Assert.assertEquals(Status.READING.toString(), task.getStatus());
+    Assert.assertEquals(Status.READING.toString(), task.getCurrentRunnerStatus());
 
 
     Map<KafkaTopicPartition, Long> currentOffsets = OBJECT_MAPPER.readValue(
@@ -2292,7 +2292,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         }
     );
     Assert.assertEquals(Status.PAUSED, task.getRunner().getStatus());
-    Assert.assertEquals(Status.PAUSED.toString(), task.getStatus());
+    Assert.assertEquals(Status.PAUSED.toString(), task.getCurrentRunnerStatus());
     // Insert remaining data
     insertData(Iterables.skip(records, 4));
 
@@ -2310,7 +2310,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
     Assert.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
-    Assert.assertEquals(Status.PUBLISHING.toString(), task.getStatus());
+    Assert.assertEquals(Status.PUBLISHING.toString(), task.getCurrentRunnerStatus());
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
 
     // Check published metadata and segments in deep storage

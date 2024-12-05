@@ -1461,7 +1461,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
 
-    Assert.assertNull(id1.getStatus());
+    Assert.assertNull(id1.getCurrentRunnerStatus());
 
     supervisor.checkpoint(
         0,
@@ -1602,8 +1602,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.runInternal();
     supervisor.handoffTaskGroupsEarly(ImmutableList.of(0));
 
-    Assert.assertNull(id1.getStatus());
-    Assert.assertEquals("NOT_STARTED", id1.getStatus());
+    Assert.assertNull(id1.getCurrentRunnerStatus());
+    Assert.assertEquals("NOT_STARTED", id1.getCurrentRunnerStatus());
 
     while (supervisor.getNoticesQueueSize() > 0) {
       Thread.sleep(100);

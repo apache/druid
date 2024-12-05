@@ -304,7 +304,7 @@ public class CliPeon extends GuiceRunnable
           @Named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING)
           public Supplier<Map<String, Object>> heartbeatDimensions(Task task)
           {
-            return Suppliers.ofInstance(CliPeon.heartbeatDimensions(task));
+            return () -> CliPeon.heartbeatDimensions(task);
           }
 
           @Provides
@@ -568,8 +568,8 @@ public class CliPeon extends GuiceRunnable
 
     if (task instanceof SeekableStreamIndexTask) {
       SeekableStreamIndexTask streamingTask = (SeekableStreamIndexTask) task;
-      if (streamingTask.getStatus() != null) {
-        builder.put(DruidMetrics.STATUS, streamingTask.getStatus());
+      if (streamingTask.getCurrentRunnerStatus() != null) {
+        builder.put(DruidMetrics.STATUS, streamingTask.getCurrentRunnerStatus());
       }
     }
 
