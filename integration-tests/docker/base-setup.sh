@@ -31,34 +31,9 @@ apt-get install -y default-mysql-server
 # Supervisor
 apt-get install -y supervisor
 
-# Retry function to make setup process more robust
-retry() {
-  local retries="$1"
-  shift
-  local count=0
-  local success=false
-
-  while [ $count -lt "$retries" ]; do
-    echo "Attempting command... (Attempt $((count + 1)) of $retries)"
-
-    if "$@"; then
-      success=true
-      break
-    else
-      count=$((count + 1))
-      sleep 2  # Optional: wait before retrying
-    fi
-  done
-
-  if [ "$success" = false ]; then
-    echo "Command failed after $retries attempts."
-    exit 1
-  fi
-}
-
 # Zookeeper
 install_zk() {
-  retry 3 wget -q -O /tmp/$ZK_TAR.tar.gz "$APACHE_ARCHIVE_MIRROR_HOST/dist/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
+  wget -q -O /tmp/$ZK_TAR.tar.gz "$APACHE_ARCHIVE_MIRROR_HOST/dist/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
   tar -xzf /tmp/$ZK_TAR.tar.gz -C /usr/local
   cp /usr/local/$ZK_TAR/conf/zoo_sample.cfg /usr/local/$ZK_TAR/conf/zoo.cfg
   rm /tmp/$ZK_TAR.tar.gz
