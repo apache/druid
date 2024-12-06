@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.http.ClientSqlQuery;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -35,6 +36,9 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * @see ClientSqlQuery for the equivalent POJO class for use on the client side.
+ */
 public class SqlQuery
 {
   public static List<TypedValue> getParameterList(List<SqlParameter> parameters)

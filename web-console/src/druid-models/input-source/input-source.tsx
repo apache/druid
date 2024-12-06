@@ -507,7 +507,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
         </p>
         <p>
           For more information, refer to the documentation for{' '}
-          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem#getPathMatcher-java.lang.String-">
+          <ExternalLink href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)">
             FileSystem#getPathMatcher
           </ExternalLink>
           .

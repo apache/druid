@@ -409,6 +409,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                                         .dataSource(dataFileExternalDataSource)
                                                         .intervals(querySegmentSpec(Filtration.eternity()))
                                                         .columns("obj")
+                                                        .columnTypes(ColumnType.NESTED_DATA)
                                                         .context(defaultScanQueryContext(context, rowSignature))
                                                         .orderBy(Collections.singletonList(OrderBy.ascending("obj")))
                                                         .build()

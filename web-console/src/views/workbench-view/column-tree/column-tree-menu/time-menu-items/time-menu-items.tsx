@@ -18,12 +18,12 @@
 
 import { MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlQuery } from '@druid-toolkit/query';
-import { C, F, SqlExpression } from '@druid-toolkit/query';
+import type { SqlQuery } from 'druid-query-toolkit';
+import { C, F, SqlExpression } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React from 'react';
 
-import { prettyPrintSql } from '../../../../../utils';
+import { day, hour, month, prettyPrintSql, TZ_UTC, year } from '../../../../../utils';
 
 const LATEST_HOUR: SqlExpression = SqlExpression.parse(
   `? >= CURRENT_TIMESTAMP - INTERVAL '1' HOUR`,
@@ -52,58 +52,6 @@ function fillWithColumnStartEnd(columnName: string, start: Date, end: Date): Sql
   return BETWEEN.fillPlaceholders([start, column, column, end]);
 }
 
-// ------------------------------------
-
-function floorHour(dt: Date): Date {
-  dt = new Date(dt.valueOf());
-  dt.setUTCMinutes(0, 0, 0);
-  return dt;
-}
-
-function nextHour(dt: Date): Date {
-  dt = new Date(dt.valueOf());
-  dt.setUTCHours(dt.getUTCHours() + 1);
-  return dt;
-}
-
-function floorDay(dt: Date): Date {
-  dt = new Date(dt.valueOf());
-  dt.setUTCHours(0, 0, 0, 0);
-  return dt;
-}
-
-function nextDay(dt: Date): Date {
-  dt = new Date(dt.valueOf());
-  dt.setUTCDate(dt.getUTCDate() + 1);
-  return dt;
-}
-
-function floorMonth(dt: Date): Date {
-  dt = new Date(dt.valueOf());
-  dt.setUTCHours(0, 0, 0, 0);
-  dt.setUTCDate(1);
-  return dt;
-}
-
-function nextMonth(dt: Date): Date {
-  dt = new Date(dt.valueOf());
-  dt.setUTCMonth(dt.getUTCMonth() + 1);
-  return dt;
-}
-
-function floorYear(dt: Date): Date {
-  dt = new Date(dt.valueOf());
-  dt.setUTCHours(0, 0, 0, 0);
-  dt.setUTCMonth(0, 1);
-  return dt;
-}
-
-function nextYear(dt: Date): Date {
-  dt = new Date(dt.valueOf());
-  dt.setUTCFullYear(dt.getUTCFullYear() + 1);
-  return dt;
-}
-
 export interface TimeMenuItemsProps {
   table: string;
   schema: string;
@@ -129,10 +77,10 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     }
 
     const now = new Date();
-    const hourStart = floorHour(now);
-    const dayStart = floorDay(now);
-    const monthStart = floorMonth(now);
-    const yearStart = floorYear(now);
+    const hourStart = hour.floor(now, TZ_UTC);
+    const dayStart = day.floor(now, TZ_UTC);
+    const monthStart = month.floor(now, TZ_UTC);
+    const yearStart = year.floor(now, TZ_UTC);
     return (
       <MenuItem icon={IconNames.FILTER} text="Filter">
         {filterMenuItem(`Latest hour`, fillWithColumn(LATEST_HOUR, columnName))}
@@ -143,19 +91,19 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
         <MenuDivider />
         {filterMenuItem(
           `Current hour`,
-          fillWithColumnStartEnd(columnName, hourStart, nextHour(hourStart)),
+          fillWithColumnStartEnd(columnName, hourStart, hour.shift(hourStart, TZ_UTC, 1)),
         )}
         {filterMenuItem(
           `Current day`,
-          fillWithColumnStartEnd(columnName, dayStart, nextDay(dayStart)),
+          fillWithColumnStartEnd(columnName, dayStart, day.shift(dayStart, TZ_UTC, 1)),
         )}
         {filterMenuItem(
           `Current month`,
-          fillWithColumnStartEnd(columnName, monthStart, nextMonth(monthStart)),
+          fillWithColumnStartEnd(columnName, monthStart, month.shift(monthStart, TZ_UTC, 1)),
         )}
         {filterMenuItem(
           `Current year`,
-          fillWithColumnStartEnd(columnName, yearStart, nextYear(yearStart)),
+          fillWithColumnStartEnd(columnName, yearStart, year.shift(yearStart, TZ_UTC, 1)),
         )}
       </MenuItem>
     );

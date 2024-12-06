@@ -185,14 +185,13 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   @Override
   public RowSignature getResultRowSignature(Finalization finalization)
   {
-    final Finalization finalization1 = finalization;
     final RowSignature.Builder builder = RowSignature.builder();
     builder.addTimeColumn();
     String timestampResultField = getTimestampResultField();
     if (StringUtils.isNotEmpty(timestampResultField)) {
       builder.add(timestampResultField, ColumnType.LONG);
     }
-    builder.addAggregators(aggregatorSpecs, finalization1);
+    builder.addAggregators(aggregatorSpecs, finalization);
     builder.addPostAggregators(postAggregatorSpecs);
     return builder.build();
   }

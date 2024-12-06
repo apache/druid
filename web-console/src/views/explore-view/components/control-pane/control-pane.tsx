@@ -27,8 +27,8 @@ import {
   Tag,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Column, SqlExpression } from '@druid-toolkit/query';
-import { SqlColumn } from '@druid-toolkit/query';
+import type { Column, SqlExpression } from 'druid-query-toolkit';
+import { SqlColumn } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 
 import {

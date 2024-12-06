@@ -27,8 +27,8 @@ import {
   RadioGroup,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult } from '@druid-toolkit/query';
 import classNames from 'classnames';
+import type { QueryResult } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
 

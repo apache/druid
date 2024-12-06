@@ -880,6 +880,12 @@ public class GroupByQueryEngine
     }
 
     @Override
+    public Long getDictionarySize()
+    {
+      return 0L;
+    }
+
+    @Override
     public ByteBuffer createKey()
     {
       return ByteBuffer.allocate(keySize);

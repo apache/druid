@@ -21,8 +21,7 @@ import React from 'react';
 
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
-import { Api } from '../../../singletons';
-import { pluralIfNeeded, queryDruidSql } from '../../../utils';
+import { getApiArray, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface DatasourcesCardProps {
@@ -33,7 +32,7 @@ export const DatasourcesCard = React.memo(function DatasourcesCard(props: Dataso
   const [datasourceCountState] = useQueryManager<Capabilities, number>({
     initQuery: props.capabilities,
     processQuery: async (capabilities, cancelToken) => {
-      let datasources: any[];
+      let datasources: string[];
       if (capabilities.hasSql()) {
         datasources = await queryDruidSql(
           {
@@ -42,10 +41,7 @@ export const DatasourcesCard = React.memo(function DatasourcesCard(props: Dataso
           cancelToken,
         );
       } else if (capabilities.hasCoordinatorAccess()) {
-        const datasourcesResp = await Api.instance.get('/druid/coordinator/v1/datasources', {
-          cancelToken,
-        });
-        datasources = datasourcesResp.data;
+        datasources = await getApiArray<string>('/druid/coordinator/v1/datasources', cancelToken);
       } else {
         throw new Error(`must have SQL or coordinator access`);
       }
