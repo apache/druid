@@ -26,12 +26,12 @@ import org.apache.druid.indexer.TaskState;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.http.ClientSqlQuery;
-import org.apache.druid.rpc.MockServiceClient;
-import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.query.explain.ExplainPlan;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.apache.druid.rpc.MockServiceClient;
+import org.apache.druid.rpc.RequestBuilder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.After;
@@ -40,7 +40,6 @@ import org.junit.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
-
 import java.util.List;
 import java.util.Map;
 
