@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment.incremental;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -91,7 +92,14 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
       @Override
       public ColumnCapabilities getColumnCapabilities(String column)
       {
-        return capabilitiesMap.get(column);
+        final ColumnCapabilities capabilities = capabilitiesMap.get(column);
+
+        DruidException.conditionalDefensive(
+            cursorBuildSpec.getPhysicalColumns() == null || capabilities != null || capabilitiesMap.containsKey(column),
+            "Asked for physical column capabilities for column[%s] which wasn't specified as required by the query, this is a bug",
+            column
+        );
+        return capabilities;
       }
     };
   }
@@ -162,7 +170,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
     // Use snapshotColumnInspector instead of 'live' rowSelector.getCapabilities because the snapshot is frozen in time
-    // at approximately when this selector factory was created (e.g. tied to
+    // at approximately when this selector factory was created (e.g. taken just after max row id)
     if (isTimeColumn(columnName)) {
       return virtualColumns.getColumnCapabilitiesWithFallback(snapshotColumnInspector, ColumnHolder.TIME_COLUMN_NAME);
     }

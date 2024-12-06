@@ -277,7 +277,7 @@ public class CursorBuildSpec
     /**
      * @see CursorBuildSpec#getPhysicalColumns()
      */
-    public CursorBuildSpecBuilder setPhyiscalColumns(@Nullable Set<String> physicalColumns)
+    public CursorBuildSpecBuilder setPhysicalColumns(@Nullable Set<String> physicalColumns)
     {
       this.physicalColumns = physicalColumns;
       return this;

@@ -97,6 +97,13 @@ public class UnnestCursorFactory implements CursorFactory
           physicalColumns.add(column);
         }
       }
+      if (filter != null) {
+        for (String column : filter.getRequiredColumns()) {
+          if (spec.getVirtualColumns().getVirtualColumn(column) == null) {
+            physicalColumns.add(column);
+          }
+        }
+      }
       for (String column : spec.getPhysicalColumns()) {
         if (!column.equals(unnestColumn.getOutputName())) {
           physicalColumns.add(column);
@@ -106,7 +113,7 @@ public class UnnestCursorFactory implements CursorFactory
     final CursorBuildSpec unnestBuildSpec =
         CursorBuildSpec.builder(spec)
                        .setFilter(filterPair.lhs)
-                       .setPhyiscalColumns(physicalColumns)
+                       .setPhysicalColumns(physicalColumns)
                        .setVirtualColumns(VirtualColumns.create(Collections.singletonList(unnestColumn)))
                        .build();
 

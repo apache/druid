@@ -297,7 +297,7 @@ public class TopNQueryEngine
                        .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
                        .setGroupingColumns(Collections.singletonList(query.getDimensionSpec().getDimension()))
                        .setVirtualColumns(query.getVirtualColumns())
-                       .setPhyiscalColumns(query.getRequiredColumns())
+                       .setPhysicalColumns(query.getRequiredColumns())
                        .setAggregators(query.getAggregatorSpecs())
                        .setQueryContext(query.context())
                        .setQueryMetrics(queryMetrics)

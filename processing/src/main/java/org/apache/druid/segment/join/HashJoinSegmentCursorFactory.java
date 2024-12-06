@@ -80,7 +80,7 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
 
     final Filter combinedFilter = baseFilterAnd(spec.getFilter());
 
-
+    // for physical column tracking, we start by copying base spec physical columns
     final Set<String> physicalColumns = spec.getPhysicalColumns() != null
                                         ? new HashSet<>(spec.getPhysicalColumns())
                                         : null;
@@ -96,7 +96,7 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
     if (clauses.isEmpty()) {
       // if there are no clauses, we can just use the base cursor directly if we apply the combined filter
       final CursorBuildSpec newSpec = cursorBuildSpecBuilder.setFilter(combinedFilter)
-                                                            .setPhyiscalColumns(physicalColumns)
+                                                            .setPhysicalColumns(physicalColumns)
                                                             .build();
       return baseCursorFactory.makeCursorHolder(newSpec);
     }
@@ -166,7 +166,7 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
         );
         cursorBuildSpecBuilder.setVirtualColumns(preJoinVirtualColumns);
 
-        // add all physical columns columns if they were originally set
+        // add all base table physical columns if they were originally set
         if (physicalColumns != null) {
           if (joinFilterSplit.getBaseTableFilter().isPresent()) {
             for (String column : joinFilterSplit.getBaseTableFilter().get().getRequiredColumns()) {
@@ -184,7 +184,15 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
               }
             }
           }
-          cursorBuildSpecBuilder.setPhyiscalColumns(physicalColumns);
+          final Set<String> prefixes = new HashSet<>();
+          for (JoinableClause clause : clauses) {
+            prefixes.add(clause.getPrefix());
+            physicalColumns.addAll(clause.getCondition().getRequiredColumns());
+          }
+          for (String prefix : prefixes) {
+            physicalColumns.removeIf(x -> JoinPrefixUtils.isPrefixedBy(x, prefix));
+          }
+          cursorBuildSpecBuilder.setPhysicalColumns(physicalColumns);
         }
 
         baseCursorHolder = joinablesCloser.register(baseCursorFactory.makeCursorHolder(cursorBuildSpecBuilder.build()));
