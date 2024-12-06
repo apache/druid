@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.client;
+package org.apache.druid.client.broker;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,11 +26,11 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.query.explain.ExplainPlan;
+import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
-import org.apache.druid.sql.http.ExplainPlan;
-import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.sql.http.SqlTaskStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.util.List;
@@ -47,7 +47,7 @@ public class BrokerClientImpl implements BrokerClient
   }
 
   @Override
-  public ListenableFuture<SqlTaskStatus> submitSqlTask(final SqlQuery sqlQuery)
+  public ListenableFuture<SqlTaskStatus> submitSqlTask(final ClientSqlQuery sqlQuery)
   {
     return FutureUtils.transform(
         client.asyncRequest(
@@ -60,9 +60,9 @@ public class BrokerClientImpl implements BrokerClient
   }
 
   @Override
-  public ListenableFuture<List<ExplainPlan>> fetchExplainPlan(final SqlQuery sqlQuery)
+  public ListenableFuture<List<ExplainPlan>> fetchExplainPlan(final ClientSqlQuery sqlQuery)
   {
-    final SqlQuery explainSqlQuery = new SqlQuery(
+    final ClientSqlQuery explainSqlQuery = new ClientSqlQuery(
         StringUtils.format("EXPLAIN PLAN FOR %s", sqlQuery.getQuery()),
         null,
         false,
