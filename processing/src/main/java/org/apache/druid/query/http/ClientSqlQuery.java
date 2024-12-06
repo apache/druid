@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Client representation of {@link org.apache.druid.sql.http.SqlQuery}. This is effectively a thin POJO class for
+ * Client representation of {@link org.apache.druid.sql.http.SqlQuery}. This is effectively a lightweight POJO class for
  * use by clients such as {@link org.apache.druid.client.broker.BrokerClient} that doesn't bring in any of the
  * Calcite dependencies and server-side logic from the Broker.
  */
@@ -52,7 +52,7 @@ public class ClientSqlQuery
   private final Map<String, Object> context;
 
   @JsonProperty
-  private final List<String> parameters;
+  private final List<ClientSqlParameter> parameters;
 
   @JsonCreator
   public ClientSqlQuery(
@@ -62,7 +62,7 @@ public class ClientSqlQuery
       @JsonProperty("typesHeader") final boolean typesHeader,
       @JsonProperty("sqlTypesHeader") final boolean sqlTypesHeader,
       @JsonProperty("context") final Map<String, Object> context,
-      @JsonProperty("parameters") final List<String> parameters
+      @JsonProperty("parameters") final List<ClientSqlParameter> parameters
   )
   {
     this.query = query;
@@ -104,7 +104,7 @@ public class ClientSqlQuery
     return context;
   }
 
-  public List<String> getParameters()
+  public List<ClientSqlParameter> getParameters()
   {
     return parameters;
   }
