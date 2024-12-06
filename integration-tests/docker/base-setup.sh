@@ -32,6 +32,7 @@ apt-get install -y default-mysql-server
 apt-get install -y supervisor
 
 # Zookeeper
+
 install_zk() {
   wget -q -O /tmp/$ZK_TAR.tar.gz "$APACHE_ARCHIVE_MIRROR_HOST/dist/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
   tar -xzf /tmp/$ZK_TAR.tar.gz -C /usr/local
