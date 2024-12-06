@@ -22,7 +22,7 @@ package org.apache.druid.sql.client;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.sql.http.SqlTaskStatus;
+import org.apache.druid.query.http.SqlTaskStatus;
 
 import java.util.List;
 

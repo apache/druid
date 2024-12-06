@@ -30,7 +30,7 @@ import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.sql.http.SqlTaskStatus;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
 import java.util.List;
