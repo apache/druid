@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.calcite.planner;
+package org.apache.druid.query.explain;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.error.DruidException;
@@ -38,7 +38,7 @@ public class ExplainAttributesTest
   public void testGetters()
   {
     final ExplainAttributes selectAttributes = new ExplainAttributes("SELECT", null, null, null, null);
-    Assert.assertEquals("SELECT", selectAttributes.getStatementType());
+    assertEquals("SELECT", selectAttributes.getStatementType());
     Assert.assertNull(selectAttributes.getTargetDataSource());
     Assert.assertNull(selectAttributes.getPartitionedBy());
     Assert.assertNull(selectAttributes.getClusteredBy());

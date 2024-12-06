@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.http;
+package org.apache.druid.query.explain;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.sql.calcite.planner.ExplainAttributes;
 import org.junit.Test;
 
 import java.util.List;
