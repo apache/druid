@@ -402,7 +402,7 @@ These metrics are emitted by the Druid Coordinator in every run of the correspon
 
 |Metric|Description|Dimensions|Normal value|
 |------|-----------|----------|------------|
-| `service/heartbeat` | Metric indicating the service is up. This metric is emitted only when `ServiceStatusMonitor` is enabled. | `leader` on the Overlord and Coordinator.<br />`workerVersion`, `category`, `status` on the Middle Manager.<br />`taskId`, `groupId`, `taskType`, `dataSource`, `tags` on the Peon |1|
+| `service/heartbeat` | Metric indicating the service is up. This metric is emitted only when `ServiceStatusMonitor` is enabled. | `leader` on the Overlord and Coordinator.<br />`workerVersion`, `category`, `status` on the Middle Manager.<br />`taskId`, `groupId`, `taskType`, `status`, `dataSource`, `tags` on the Peon |1|
 
 ### Historical
 
