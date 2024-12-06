@@ -399,6 +399,7 @@ public class QueryRunnerTestHelper
   {
     final String runnerName = runner.toString();
     return !("rtIndex".equals(runnerName)
+             || "rtIndexPartialSchemaStringDiscovery".equals(runnerName)
              || "noRollupRtIndex".equals(runnerName)
              || "nonTimeOrderedRtIndex".equals(runnerName)
              || "nonTimeOrderedNoRollupRtIndex".equals(runnerName));
@@ -424,6 +425,10 @@ public class QueryRunnerTestHelper
         Arrays.asList(
             maker.apply(
                 "rtIndex",
+                new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
+            ),
+            maker.apply(
+                "rtIndexPartialSchemaStringDiscovery",
                 new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), SEGMENT_ID)
             ),
             maker.apply(
@@ -516,20 +521,6 @@ public class QueryRunnerTestHelper
     }
 
     return retVal;
-  }
-
-  public static <T, QueryType extends Query<T>> TestQueryRunner<T> makeQueryRunner(
-      QueryRunnerFactory<T, QueryType> factory,
-      String resourceFileName,
-      final String runnerName
-  )
-  {
-    return makeQueryRunner(
-        factory,
-        SEGMENT_ID,
-        new IncrementalIndexSegment(TestIndex.makeRealtimeIndex(resourceFileName), SEGMENT_ID),
-        runnerName
-    );
   }
 
   public static <T, QueryType extends Query<T>> TestQueryRunner<T> makeQueryRunner(

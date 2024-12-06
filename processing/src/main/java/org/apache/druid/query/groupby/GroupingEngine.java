@@ -869,6 +869,7 @@ public class GroupingEngine
                        .setInterval(query.getSingleInterval())
                        .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
                        .setVirtualColumns(query.getVirtualColumns())
+                       .setPhysicalColumns(query.getRequiredColumns())
                        .setGroupingColumns(query.getGroupingColumns())
                        .setAggregators(query.getAggregatorSpecs())
                        .setQueryContext(query.context())

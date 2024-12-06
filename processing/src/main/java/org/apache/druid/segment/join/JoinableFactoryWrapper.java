@@ -55,6 +55,11 @@ public class JoinableFactoryWrapper
     this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
   }
 
+  public JoinableFactory getJoinableFactory()
+  {
+    return joinableFactory;
+  }
+
   /**
    * Converts any join clauses to filters that can be converted, and returns the rest as-is.
    * <p>
@@ -190,11 +195,6 @@ public class JoinableFactoryWrapper
       return new JoinClauseToFilterConversion(onlyFilter, joinClauseFullyConverted);
     }
     return new JoinClauseToFilterConversion(null, false);
-  }
-
-  public JoinableFactory getJoinableFactory()
-  {
-    return joinableFactory;
   }
 
   /**

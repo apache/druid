@@ -52,6 +52,7 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -86,9 +87,33 @@ public class UnnestCursorFactory implements CursorFactory
         input == null ? null : spec.getVirtualColumns()
                                    .getColumnCapabilitiesWithFallback(baseCursorFactory, input)
     );
+    final Set<String> physicalColumns;
+    if (spec.getPhysicalColumns() == null) {
+      physicalColumns = null;
+    } else {
+      physicalColumns = new HashSet<>();
+      for (String column : unnestColumn.requiredColumns()) {
+        if (!spec.getVirtualColumns().exists(column)) {
+          physicalColumns.add(column);
+        }
+      }
+      if (filter != null) {
+        for (String column : filter.getRequiredColumns()) {
+          if (!spec.getVirtualColumns().exists(column)) {
+            physicalColumns.add(column);
+          }
+        }
+      }
+      for (String column : spec.getPhysicalColumns()) {
+        if (!column.equals(unnestColumn.getOutputName())) {
+          physicalColumns.add(column);
+        }
+      }
+    }
     final CursorBuildSpec unnestBuildSpec =
         CursorBuildSpec.builder(spec)
                        .setFilter(filterPair.lhs)
+                       .setPhysicalColumns(physicalColumns)
                        .setVirtualColumns(VirtualColumns.create(Collections.singletonList(unnestColumn)))
                        .build();
 

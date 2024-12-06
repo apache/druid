@@ -56,6 +56,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -297,7 +298,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         "nested-test-data.json",
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         new TimestampSpec("timestamp", null, null),
         DimensionsSpec.builder().useSchemaDiscovery(true).build(),
         null,

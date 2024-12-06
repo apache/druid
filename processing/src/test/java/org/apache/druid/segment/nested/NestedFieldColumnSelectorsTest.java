@@ -37,6 +37,7 @@ import org.apache.druid.segment.DoubleColumnSelector;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.LongColumnSelector;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.TransformSpec;
@@ -333,7 +334,7 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         NestedDataTestUtils.NUMERIC_DATA_FILE,
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,
@@ -358,7 +359,7 @@ public class NestedFieldColumnSelectorsTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         NestedDataTestUtils.NUMERIC_DATA_FILE,
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,

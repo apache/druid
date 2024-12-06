@@ -20,8 +20,6 @@
 package org.apache.druid.query.metadata;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.io.CharSource;
-import com.google.common.io.Resources;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -62,7 +60,6 @@ import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -77,9 +74,7 @@ import org.junit.rules.TemporaryFolder;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -302,8 +297,6 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
   @Test
   public void testAnalyzingSegmentWithNonExistentAggregator() throws IOException
   {
-    final URL resource = SegmentAnalyzerTest.class.getClassLoader().getResource("druid.sample.numeric.tsv");
-    CharSource source = Resources.asByteSource(resource).asCharSource(StandardCharsets.UTF_8);
     String invalid_aggregator = "invalid_aggregator";
     AggregatorFactory[] metrics = new AggregatorFactory[]{
         new DoubleSumAggregatorFactory(TestIndex.DOUBLE_METRICS[0], "index"),
@@ -312,17 +305,17 @@ public class SegmentAnalyzerTest extends InitializedNullHandlingTest
     };
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(DateTimes.of("2011-01-12T00:00:00.000Z").getMillis())
-        .withTimestampSpec(new TimestampSpec("ds", "auto", null))
+        .withTimestampSpec(new TimestampSpec("ts", "auto", null))
         .withDimensionsSpec(TestIndex.DIMENSIONS_SPEC)
         .withMetrics(metrics)
         .withRollup(true)
         .build();
 
-    final IncrementalIndex retVal = new OnheapIncrementalIndex.Builder()
-        .setIndexSchema(schema)
-        .setMaxRowCount(10000)
-        .build();
-    IncrementalIndex incrementalIndex = TestIndex.loadIncrementalIndex(retVal, source);
+    IncrementalIndex incrementalIndex = TestIndex.makeIncrementalIndexFromResource(
+        TestIndex.SAMPLE_NUMERIC_JSON,
+        schema,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT
+    );
 
     // Analyze the in-memory segment.
     {

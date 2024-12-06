@@ -30,6 +30,7 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -43,9 +44,11 @@ import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class HashJoinSegmentCursorFactory implements CursorFactory
 {
@@ -77,9 +80,23 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
 
     final Filter combinedFilter = baseFilterAnd(spec.getFilter());
 
+    // for physical column tracking, we start by copying base spec physical columns
+    final Set<String> physicalColumns = spec.getPhysicalColumns() != null
+                                        ? new HashSet<>(spec.getPhysicalColumns())
+                                        : null;
+
+    if (physicalColumns != null && combinedFilter != null) {
+      for (String column : combinedFilter.getRequiredColumns()) {
+        if (!spec.getVirtualColumns().exists(column)) {
+          physicalColumns.add(column);
+        }
+      }
+    }
+
     if (clauses.isEmpty()) {
       // if there are no clauses, we can just use the base cursor directly if we apply the combined filter
       final CursorBuildSpec newSpec = cursorBuildSpecBuilder.setFilter(combinedFilter)
+                                                            .setPhysicalColumns(physicalColumns)
                                                             .build();
       return baseCursorFactory.makeCursorHolder(newSpec);
     }
@@ -148,6 +165,33 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
             )
         );
         cursorBuildSpecBuilder.setVirtualColumns(preJoinVirtualColumns);
+
+        // add all base table physical columns if they were originally set
+        if (physicalColumns != null) {
+          if (joinFilterSplit.getBaseTableFilter().isPresent()) {
+            for (String column : joinFilterSplit.getBaseTableFilter().get().getRequiredColumns()) {
+              if (!spec.getVirtualColumns().exists(column) && !preJoinVirtualColumns.exists(column)) {
+                physicalColumns.add(column);
+              }
+            }
+          }
+          for (VirtualColumn virtualColumn : preJoinVirtualColumns.getVirtualColumns()) {
+            for (String column : virtualColumn.requiredColumns()) {
+              if (!spec.getVirtualColumns().exists(column) && !preJoinVirtualColumns.exists(column)) {
+                physicalColumns.add(column);
+              }
+            }
+          }
+          final Set<String> prefixes = new HashSet<>();
+          for (JoinableClause clause : clauses) {
+            prefixes.add(clause.getPrefix());
+            physicalColumns.addAll(clause.getCondition().getRequiredColumns());
+          }
+          for (String prefix : prefixes) {
+            physicalColumns.removeIf(x -> JoinPrefixUtils.isPrefixedBy(x, prefix));
+          }
+          cursorBuildSpecBuilder.setPhysicalColumns(physicalColumns);
+        }
 
         baseCursorHolder = joinablesCloser.register(baseCursorFactory.makeCursorHolder(cursorBuildSpecBuilder.build()));
       }

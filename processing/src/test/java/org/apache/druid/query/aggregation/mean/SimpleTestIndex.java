@@ -59,7 +59,7 @@ public class SimpleTestIndex
   );
 
   private static Supplier<QueryableIndex> mmappedIndex = Suppliers.memoize(
-      () -> TestIndex.persistRealtimeAndLoadMMapped(realtimeIndex.get())
+      () -> TestIndex.persistAndMemoryMap(realtimeIndex.get())
   );
 
 

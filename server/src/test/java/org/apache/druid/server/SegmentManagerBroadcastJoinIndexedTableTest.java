@@ -170,7 +170,7 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     Assert.assertFalse(joinableFactory.isDirectlyJoinable(dataSource));
 
     final String version = DateTimes.nowUtc().toString();
-    IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv");
+    IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
     final String interval = "2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z";
     DataSegment segment = createSegment(data, interval, version);
     segmentManager.loadSegment(segment);
@@ -218,8 +218,8 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     final String version2 = DateTimes.nowUtc().plus(1000L).toString();
     final String interval = "2011-01-12T00:00:00.000Z/2011-03-28T00:00:00.000Z";
     final String interval2 = "2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z";
-    IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.top");
-    IncrementalIndex data2 = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
+    IncrementalIndex data = TestIndex.makeSampleNumericTopIncrementalIndex();
+    IncrementalIndex data2 = TestIndex.makeSampleNumericBottomIncrementalIndex();
     DataSegment segment1 = createSegment(data, interval, version);
     DataSegment segment2 = createSegment(data2, interval2, version2);
     segmentManager.loadSegment(segment1);
@@ -283,8 +283,8 @@ public class SegmentManagerBroadcastJoinIndexedTableTest extends InitializedNull
     final String version2 = DateTimes.nowUtc().plus(1000L).toString();
     final String interval = "2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z";
     final String interval2 = "2011-01-12T00:00:00.000Z/2011-03-28T00:00:00.000Z";
-    IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.bottom");
-    IncrementalIndex data2 = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv.top");
+    IncrementalIndex data = TestIndex.makeSampleNumericBottomIncrementalIndex();
+    IncrementalIndex data2 = TestIndex.makeSampleNumericTopIncrementalIndex();
     segmentManager.loadSegment(createSegment(data, interval, version));
     Assert.assertTrue(joinableFactory.isDirectlyJoinable(dataSource));
 

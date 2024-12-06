@@ -292,12 +292,13 @@ public class AggregateProjectionMetadata
       if (!queryCursorBuildSpec.isCompatibleOrdering(orderingWithTimeSubstitution)) {
         return null;
       }
-      final List<String> queryGrouping = queryCursorBuildSpec.getGroupingColumns();
       Projections.ProjectionMatchBuilder matchBuilder = new Projections.ProjectionMatchBuilder();
 
       if (timeColumnName != null) {
-        matchBuilder.remapColumn(timeColumnName, ColumnHolder.TIME_COLUMN_NAME);
+        matchBuilder.remapColumn(timeColumnName, ColumnHolder.TIME_COLUMN_NAME)
+                    .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
       }
+      final List<String> queryGrouping = queryCursorBuildSpec.getGroupingColumns();
       if (queryGrouping != null) {
         for (String queryColumn : queryGrouping) {
           matchBuilder = matchRequiredColumn(
@@ -331,7 +332,9 @@ public class AggregateProjectionMetadata
           for (AggregatorFactory projectionAgg : aggregators) {
             final AggregatorFactory combining = queryAgg.substituteCombiningFactory(projectionAgg);
             if (combining != null) {
-              matchBuilder.remapColumn(queryAgg.getName(), projectionAgg.getName()).addPreAggregatedAggregator(combining);
+              matchBuilder.remapColumn(queryAgg.getName(), projectionAgg.getName())
+                          .addReferencedPhysicalColumn(projectionAgg.getName())
+                          .addPreAggregatedAggregator(combining);
               foundMatch = true;
               break;
             }
@@ -388,7 +391,7 @@ public class AggregateProjectionMetadata
                 projectionEquivalent.getOutputName()
             );
           }
-          return matchBuilder;
+          return matchBuilder.addReferencedPhysicalColumn(projectionEquivalent.getOutputName());
         }
 
         matchBuilder.addReferenceedVirtualColumn(buildSpecVirtualColumn);
@@ -401,7 +404,8 @@ public class AggregateProjectionMetadata
             if (virtualGranularity.isFinerThan(granularity)) {
               return null;
             }
-            return matchBuilder.remapColumn(column, timeColumnName);
+            return matchBuilder.remapColumn(column, ColumnHolder.TIME_COLUMN_NAME)
+                               .addReferencedPhysicalColumn(ColumnHolder.TIME_COLUMN_NAME);
           } else {
             // anything else with __time requires none granularity
             if (Granularities.NONE.equals(granularity)) {
@@ -425,7 +429,7 @@ public class AggregateProjectionMetadata
         }
       } else {
         if (physicalColumnChecker.check(name, column)) {
-          return matchBuilder;
+          return matchBuilder.addReferencedPhysicalColumn(column);
         }
         return null;
       }

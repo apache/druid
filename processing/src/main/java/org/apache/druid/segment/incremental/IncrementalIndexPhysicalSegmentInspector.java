@@ -31,7 +31,7 @@ import javax.annotation.Nullable;
 
 public class IncrementalIndexPhysicalSegmentInspector implements PhysicalSegmentInspector
 {
-  private static final ColumnCapabilities.CoercionLogic SNAPSHOT_COERCE_LOGIC =
+  static final ColumnCapabilities.CoercionLogic SNAPSHOT_COERCE_LOGIC =
       new ColumnCapabilities.CoercionLogic()
       {
         @Override
