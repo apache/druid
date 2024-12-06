@@ -198,7 +198,6 @@
   },
   "sqlResultsContext": {
     "timeZone": "UTC",
-    "serializeComplexValues": true,
     "stringifyArrays": false
   },
   "sqlTypeNames": [
