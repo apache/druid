@@ -21,10 +21,10 @@ package org.apache.druid.query.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.QueryContext;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Client representation of {@link org.apache.druid.sql.http.SqlQuery}. This is effectively a thin POJO class for
@@ -74,44 +74,29 @@ public class ClientSqlQuery
     this.parameters = parameters;
   }
 
-  public String getQuery()
+  @Override
+  public boolean equals(final Object o)
   {
-    return query;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    final ClientSqlQuery sqlQuery = (ClientSqlQuery) o;
+    return header == sqlQuery.header &&
+           typesHeader == sqlQuery.typesHeader &&
+           sqlTypesHeader == sqlQuery.sqlTypesHeader &&
+           Objects.equals(query, sqlQuery.query) &&
+           Objects.equals(resultFormat, sqlQuery.resultFormat) &&
+           Objects.equals(context, sqlQuery.context) &&
+           Objects.equals(parameters, sqlQuery.parameters);
   }
 
-  public String getResultFormat()
+  @Override
+  public int hashCode()
   {
-    return resultFormat;
-  }
-
-  public boolean includeHeader()
-  {
-    return header;
-  }
-
-  public boolean includeTypesHeader()
-  {
-    return typesHeader;
-  }
-
-  public boolean includeSqlTypesHeader()
-  {
-    return sqlTypesHeader;
-  }
-
-  public Map<String, Object> getContext()
-  {
-    return context;
-  }
-
-  public QueryContext queryContext()
-  {
-    return QueryContext.of(context);
-  }
-
-  public List<String> getParameters()
-  {
-    return parameters;
+    return Objects.hash(query, resultFormat, header, typesHeader, sqlTypesHeader, context, parameters);
   }
 
   @Override
