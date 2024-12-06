@@ -31,7 +31,7 @@ RUN set -e; \
     for i in $(seq 1 $SETUP_RETRIES); do \
         echo "Attempt $i to run the setup script..."; \
         APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh && break || { \
-            echo "Set up script attempt $i/$SETUP_RETRIES failed. Retrying..."; \
+            echo "Set up script attempt $i/$SETUP_RETRIES failed."; \
             sleep 2; \
         }; \
     done; \
