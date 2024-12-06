@@ -1403,6 +1403,18 @@
               <artifactId>joni</artifactId>
               <version>2.1.34</version>
           </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers</artifactId>
+                <version>1.16.3</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>1.16.3</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -2256,6 +2268,9 @@
             <skipTests>true</skipTests> <!-- skips both UTs and ITs -->
             <jacoco.skip>true</jacoco.skip>
           </properties>
+        </profile>
+        <profile>
+            <id>ci</id>
         </profile>
     </profiles>
 </project>
