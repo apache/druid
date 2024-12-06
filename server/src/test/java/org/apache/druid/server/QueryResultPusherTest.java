@@ -22,7 +22,6 @@ package org.apache.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.server.QueryResource.QueryMetricCounter;
 import org.apache.druid.server.QueryResultPusher.ResultsWriter;
 import org.apache.druid.server.QueryResultPusher.Writer;
 import org.apache.druid.server.mocks.MockHttpServletRequest;
@@ -58,7 +57,7 @@ public class QueryResultPusherTest
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     ResponseContextConfig responseContextConfig = ResponseContextConfig.newConfig(true);
     DruidNode selfNode = DRUID_NODE;
-    QueryResource.QueryMetricCounter counter = new NoopQueryMetricCounter();
+    QueryMetricCounter counter = new NoopQueryMetricCounter();
     String queryId = "someQuery";
     MediaType contentType = MediaType.APPLICATION_JSON_TYPE;
     Map<String, String> extraHeaders = new HashMap<String, String>();
