@@ -21,6 +21,7 @@ package org.apache.druid.indexing.scheduledbatch;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -34,9 +35,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.sql.client.BrokerClient;
-import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.sql.http.SqlTaskStatus;
+import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -115,7 +115,7 @@ public class ScheduledBatchTaskManager
       final String supervisorId,
       final String dataSource,
       final CronSchedulerConfig cronSchedulerConfig,
-      final SqlQuery spec
+      final ClientSqlQuery spec
   )
   {
     log.info(
@@ -189,7 +189,7 @@ public class ScheduledBatchTaskManager
     cronExecutor.submit(runnable);
   }
 
-  private void submitSqlTask(final String supervisorId, final SqlQuery spec)
+  private void submitSqlTask(final String supervisorId, final ClientSqlQuery spec)
       throws ExecutionException, InterruptedException
   {
     log.debug("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
@@ -201,7 +201,7 @@ public class ScheduledBatchTaskManager
   {
     private final String supervisorId;
     private final String dataSource;
-    private final SqlQuery spec;
+    private final ClientSqlQuery spec;
     private final ScheduledExecutorService managerExecutor;
     private final CronSchedulerConfig cronSchedulerConfig;
 
@@ -218,7 +218,7 @@ public class ScheduledBatchTaskManager
         final String supervisorId,
         final String dataSource,
         final CronSchedulerConfig cronSchedulerConfig,
-        final SqlQuery spec,
+        final ClientSqlQuery spec,
         final ScheduledExecutorFactory executorFactory
     )
     {

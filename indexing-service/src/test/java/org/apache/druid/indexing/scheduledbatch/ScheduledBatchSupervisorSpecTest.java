@@ -23,16 +23,16 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.SupervisorModule;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.sql.calcite.planner.ExplainAttributes;
-import org.apache.druid.sql.client.BrokerClient;
-import org.apache.druid.sql.http.ExplainPlan;
-import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.query.explain.ExplainAttributes;
+import org.apache.druid.query.explain.ExplainPlan;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.hamcrest.MatcherAssert;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,7 +50,7 @@ public class ScheduledBatchSupervisorSpecTest
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private BrokerClient brokerClient;
   private ScheduledBatchTaskManager scheduler;
-  private SqlQuery query;
+  private ClientSqlQuery query;
 
   @Before
   public void setUp()
@@ -68,7 +68,7 @@ public class ScheduledBatchSupervisorSpecTest
         new SupervisorModule().getJacksonModules()
     );
 
-    query = new SqlQuery(
+    query = new ClientSqlQuery(
         "REPLACE INTO foo OVERWRITE ALL SELECT TIME_PARSE(ts) AS __time, c1 FROM (VALUES('2023-01-01', 'insert_1'), ('2023-01-01', 'insert_2'), ('2023-02-01', 'insert3')) AS t(ts, c1) PARTITIONED BY ALL ",
         null,
         false,
@@ -186,7 +186,7 @@ public class ScheduledBatchSupervisorSpecTest
   @Test
   public void testCreateSupervisorWithSelectQuery()
   {
-    query = new SqlQuery(
+    query = new ClientSqlQuery(
         "SELECT TIME_PARSE(ts) AS __time, c1 FROM (VALUES('2023-01-01', 'insert_1'), ('2023-01-01', 'insert_2'), ('2023-02-01', 'insert3')) AS t(ts, c1) PARTITIONED BY ALL ",
         null,
         false,

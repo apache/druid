@@ -24,15 +24,15 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.sql.calcite.planner.ExplainAttributes;
-import org.apache.druid.sql.client.BrokerClient;
-import org.apache.druid.sql.http.ExplainPlan;
-import org.apache.druid.sql.http.SqlQuery;
+import org.apache.druid.query.explain.ExplainAttributes;
+import org.apache.druid.query.explain.ExplainPlan;
+import org.apache.druid.query.http.ClientSqlQuery;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
@@ -47,7 +47,7 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
   private static final Logger log = new Logger(ScheduledBatchSupervisor.class);
 
   @JsonProperty
-  private final SqlQuery spec;
+  private final ClientSqlQuery spec;
   @JsonProperty
   private final boolean suspended;
   @JsonProperty
@@ -71,7 +71,7 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
 
   @JsonCreator
   public ScheduledBatchSupervisorSpec(
-      @JsonProperty("spec") final SqlQuery spec,
+      @JsonProperty("spec") final ClientSqlQuery spec,
       @JsonProperty("schedulerConfig") final CronSchedulerConfig schedulerConfig,
       @JsonProperty("suspended") @Nullable Boolean suspended,
       @JsonProperty("id") @Nullable final String id,
@@ -194,7 +194,7 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
     return schedulerConfig;
   }
 
-  public SqlQuery getSpec()
+  public ClientSqlQuery getSpec()
   {
     return spec;
   }

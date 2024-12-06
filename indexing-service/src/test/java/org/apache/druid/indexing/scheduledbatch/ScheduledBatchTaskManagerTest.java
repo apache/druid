@@ -21,6 +21,7 @@ package org.apache.druid.indexing.scheduledbatch;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.TaskState;
@@ -28,13 +29,11 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
-import org.apache.druid.sql.client.BrokerClient;
-import org.apache.druid.sql.http.ResultFormat;
-import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.sql.http.SqlTaskStatus;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.jboss.netty.handler.codec.http.HttpVersion;
@@ -80,8 +79,8 @@ public class ScheduledBatchTaskManagerTest
   private BlockingExecutorService executor;
   private BrokerClient brokerClient;
   private StubServiceEmitter serviceEmitter;
-  private SqlQuery query1;
-  private SqlQuery query2;
+  private ClientSqlQuery query1;
+  private ClientSqlQuery query2;
   private ScheduledBatchTaskManager scheduler;
 
   @Before
@@ -101,11 +100,11 @@ public class ScheduledBatchTaskManagerTest
     );
   }
 
-  private static SqlQuery createSqlQuery(final String query)
+  private static ClientSqlQuery createSqlQuery(final String query)
   {
-    return new SqlQuery(
+    return new ClientSqlQuery(
         query,
-        ResultFormat.ARRAY,
+        null,
         true,
         true,
         true,
