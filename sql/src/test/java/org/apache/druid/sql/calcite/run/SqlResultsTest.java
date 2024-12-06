@@ -42,7 +42,7 @@ import java.util.List;
 
 public class SqlResultsTest extends InitializedNullHandlingTest
 {
-  private static final SqlResults.Context DEFAULT_CONTEXT = new SqlResults.Context(DateTimeZone.UTC, true, false);
+  private static final SqlResults.Context DEFAULT_CONTEXT = new SqlResults.Context(DateTimeZone.UTC, false);
 
   private ObjectMapper jsonMapper;
 
