@@ -74,6 +74,42 @@ public class ClientSqlQuery
     this.parameters = parameters;
   }
 
+  public String getQuery()
+  {
+    return query;
+  }
+
+  public String getResultFormat()
+  {
+    return resultFormat;
+  }
+
+  public boolean isHeader()
+  {
+    return header;
+  }
+
+  public boolean isTypesHeader()
+  {
+    return typesHeader;
+  }
+
+  public boolean isSqlTypesHeader()
+  {
+    return sqlTypesHeader;
+  }
+
+  public Map<String, Object> getContext()
+  {
+    return context;
+  }
+
+  public List<String> getParameters()
+  {
+    return parameters;
+  }
+
+
   @Override
   public boolean equals(final Object o)
   {
