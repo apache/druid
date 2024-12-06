@@ -20,7 +20,7 @@
 package org.apache.druid.indexing.scheduledbatch;
 
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.sql.http.SqlTaskStatus;
+import org.apache.druid.query.http.SqlTaskStatus;
 
 import java.util.Collections;
 import java.util.HashMap;

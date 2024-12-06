@@ -22,7 +22,7 @@ package org.apache.druid.indexing.scheduledbatch;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
-import org.apache.druid.sql.http.SqlTaskStatus;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.junit.Before;
 import org.junit.Test;
 
