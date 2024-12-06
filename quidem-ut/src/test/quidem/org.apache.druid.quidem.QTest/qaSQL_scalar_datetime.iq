@@ -1,0 +1,2498 @@
+!set useApproximateCountDistinct false
+!use druidtest:///?componentSupplier=KttmNestedComponentSupplier
+!set outputformat mysql
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00';
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A1: plain_value_datetime
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (__time IS NULL
+       OR (__time = __time
+           AND __time IS NOT DISTINCT
+           FROM __time
+           AND __time <> __time - interval '2' YEAR
+           AND (__time IS DISTINCT
+                FROM __time - interval '2' YEAR)
+           AND __time > __time - interval '2' YEAR
+           AND __time >= __time - interval '2' YEAR
+           AND __time < __time + interval '2' YEAR
+           AND __time <= __time + interval '2' YEAR
+           AND (__time <> __time - interval '2' YEAR) IS TRUE
+           AND (__time = __time - interval '2' YEAR) IS NOT TRUE
+           AND (__time = __time - interval '2' YEAR) IS FALSE
+           AND (__time <> __time - interval '2' YEAR) IS NOT FALSE
+           AND __time BETWEEN __time - interval '2' YEAR AND __time + interval '2' YEAR
+           AND __time NOT BETWEEN __time AND __time - interval '2' YEAR
+           AND __time like '%'
+           AND __time not like '__DOES_NOT_EXIST__%'
+           AND __time IN (__time - interval '2' YEAR,
+                          __time,
+                          __time + interval '2' YEAR)
+           AND __time NOT IN (__time - interval '2' YEAR,
+                              __time + interval '2' YEAR))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (__time IS NULL
+       OR __time IN
+         (SELECT __time
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (__time IS NULL
+                 OR (__time = __time
+                     AND __time IS NOT DISTINCT
+                     FROM __time
+                     AND __time <> __time - interval '2' YEAR
+                     AND (__time IS DISTINCT
+                          FROM __time - interval '2' YEAR)
+                     AND __time > __time - interval '2' YEAR
+                     AND __time >= __time - interval '2' YEAR
+                     AND __time < __time + interval '2' YEAR
+                     AND __time <= __time + interval '2' YEAR
+                     AND (__time <> __time - interval '2' YEAR) IS TRUE
+                     AND (__time = __time - interval '2' YEAR) IS NOT TRUE
+                     AND (__time = __time - interval '2' YEAR) IS FALSE
+                     AND (__time <> __time - interval '2' YEAR) IS NOT FALSE
+                     AND __time BETWEEN __time - interval '2' YEAR AND __time + interval '2' YEAR
+                     AND __time NOT BETWEEN __time AND __time - interval '2' YEAR
+                     AND __time like '%'
+                     AND __time not like '__DOES_NOT_EXIST__%'
+                     AND __time IN (__time - interval '2' YEAR,
+                                    __time,
+                                    __time + interval '2' YEAR)
+                     AND __time NOT IN (__time - interval '2' YEAR,
+                                        __time + interval '2' YEAR)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          __time,
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (__time IS NULL
+          OR (__time = __time
+              AND __time IS NOT DISTINCT
+              FROM __time
+              AND __time <> __time - interval '2' YEAR
+              AND (__time IS DISTINCT
+                   FROM __time - interval '2' YEAR)
+              AND __time > __time - interval '2' YEAR
+              AND __time >= __time - interval '2' YEAR
+              AND __time < __time + interval '2' YEAR
+              AND __time <= __time + interval '2' YEAR
+              AND (__time <> __time - interval '2' YEAR) IS TRUE
+              AND (__time = __time - interval '2' YEAR) IS NOT TRUE
+              AND (__time = __time - interval '2' YEAR) IS FALSE
+              AND (__time <> __time - interval '2' YEAR) IS NOT FALSE
+              AND __time BETWEEN __time - interval '2' YEAR AND __time + interval '2' YEAR
+              AND __time NOT BETWEEN __time AND __time - interval '2' YEAR
+              AND __time like '%'
+              AND __time not like '__DOES_NOT_EXIST__%'
+              AND __time IN (__time - interval '2' YEAR,
+                             __time,
+                             __time + interval '2' YEAR)
+              AND __time NOT IN (__time - interval '2' YEAR,
+                                 __time + interval '2' YEAR)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A2: current_timestamp
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(CURRENT_TIMESTAMP TO YEAR) IS NULL
+       OR (floor(CURRENT_TIMESTAMP TO YEAR) = floor(CURRENT_TIMESTAMP TO YEAR)
+           AND floor(CURRENT_TIMESTAMP TO YEAR) IS NOT DISTINCT
+           FROM floor(CURRENT_TIMESTAMP TO YEAR)
+           AND floor(CURRENT_TIMESTAMP TO YEAR) <> floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+           AND (floor(CURRENT_TIMESTAMP TO YEAR) IS DISTINCT
+                FROM floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR))
+           AND floor(CURRENT_TIMESTAMP TO YEAR) > floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+           AND floor(CURRENT_TIMESTAMP TO YEAR) >= floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+           AND floor(CURRENT_TIMESTAMP TO YEAR) < floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR)
+           AND floor(CURRENT_TIMESTAMP TO YEAR) <= floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR)
+           AND (floor(CURRENT_TIMESTAMP TO YEAR) <> floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS TRUE
+           AND (floor(CURRENT_TIMESTAMP TO YEAR) = floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS NOT TRUE
+           AND (floor(CURRENT_TIMESTAMP TO YEAR) = floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS FALSE
+           AND (floor(CURRENT_TIMESTAMP TO YEAR) <> floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS NOT FALSE
+           AND floor(CURRENT_TIMESTAMP TO YEAR) BETWEEN floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR) AND floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR)
+           AND floor(CURRENT_TIMESTAMP TO YEAR) NOT BETWEEN floor(CURRENT_TIMESTAMP TO YEAR) AND floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+           AND floor(CURRENT_TIMESTAMP TO YEAR) like '%'
+           AND floor(CURRENT_TIMESTAMP TO YEAR) not like '__DOES_NOT_EXIST__%'
+           AND floor(CURRENT_TIMESTAMP TO YEAR) IN (floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR),
+                                                    floor(CURRENT_TIMESTAMP TO YEAR),
+                                                    floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR))
+           AND floor(CURRENT_TIMESTAMP TO YEAR) NOT IN (floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR),
+                                                        floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(CURRENT_TIMESTAMP TO YEAR) IS NULL
+       OR floor(CURRENT_TIMESTAMP TO YEAR) IN
+         (SELECT floor(CURRENT_TIMESTAMP TO YEAR)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(CURRENT_TIMESTAMP TO YEAR) IS NULL
+                 OR (floor(CURRENT_TIMESTAMP TO YEAR) = floor(CURRENT_TIMESTAMP TO YEAR)
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) IS NOT DISTINCT
+                     FROM floor(CURRENT_TIMESTAMP TO YEAR)
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) <> floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+                     AND (floor(CURRENT_TIMESTAMP TO YEAR) IS DISTINCT
+                          FROM floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR))
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) > floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) >= floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) < floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR)
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) <= floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR)
+                     AND (floor(CURRENT_TIMESTAMP TO YEAR) <> floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS TRUE
+                     AND (floor(CURRENT_TIMESTAMP TO YEAR) = floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS NOT TRUE
+                     AND (floor(CURRENT_TIMESTAMP TO YEAR) = floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS FALSE
+                     AND (floor(CURRENT_TIMESTAMP TO YEAR) <> floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS NOT FALSE
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) BETWEEN floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR) AND floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR)
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) NOT BETWEEN floor(CURRENT_TIMESTAMP TO YEAR) AND floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) like '%'
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) not like '__DOES_NOT_EXIST__%'
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) IN (floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR),
+                                                              floor(CURRENT_TIMESTAMP TO YEAR),
+                                                              floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR))
+                     AND floor(CURRENT_TIMESTAMP TO YEAR) NOT IN (floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR),
+                                                                  floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(CURRENT_TIMESTAMP TO YEAR),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(CURRENT_TIMESTAMP TO YEAR) IS NULL
+          OR (floor(CURRENT_TIMESTAMP TO YEAR) = floor(CURRENT_TIMESTAMP TO YEAR)
+              AND floor(CURRENT_TIMESTAMP TO YEAR) IS NOT DISTINCT
+              FROM floor(CURRENT_TIMESTAMP TO YEAR)
+              AND floor(CURRENT_TIMESTAMP TO YEAR) <> floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+              AND (floor(CURRENT_TIMESTAMP TO YEAR) IS DISTINCT
+                   FROM floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR))
+              AND floor(CURRENT_TIMESTAMP TO YEAR) > floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+              AND floor(CURRENT_TIMESTAMP TO YEAR) >= floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+              AND floor(CURRENT_TIMESTAMP TO YEAR) < floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR)
+              AND floor(CURRENT_TIMESTAMP TO YEAR) <= floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR)
+              AND (floor(CURRENT_TIMESTAMP TO YEAR) <> floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS TRUE
+              AND (floor(CURRENT_TIMESTAMP TO YEAR) = floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS NOT TRUE
+              AND (floor(CURRENT_TIMESTAMP TO YEAR) = floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS FALSE
+              AND (floor(CURRENT_TIMESTAMP TO YEAR) <> floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)) IS NOT FALSE
+              AND floor(CURRENT_TIMESTAMP TO YEAR) BETWEEN floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR) AND floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR)
+              AND floor(CURRENT_TIMESTAMP TO YEAR) NOT BETWEEN floor(CURRENT_TIMESTAMP TO YEAR) AND floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR)
+              AND floor(CURRENT_TIMESTAMP TO YEAR) like '%'
+              AND floor(CURRENT_TIMESTAMP TO YEAR) not like '__DOES_NOT_EXIST__%'
+              AND floor(CURRENT_TIMESTAMP TO YEAR) IN (floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR),
+                                                       floor(CURRENT_TIMESTAMP TO YEAR),
+                                                       floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR))
+              AND floor(CURRENT_TIMESTAMP TO YEAR) NOT IN (floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', -2) TO YEAR),
+                                                           floor(time_shift(CURRENT_TIMESTAMP, 'P1Y', 2) TO YEAR))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A3: current_date
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IS NULL
+       OR (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) = floor(cast(CURRENT_DATE AS timestamp) TO YEAR)
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IS NOT DISTINCT
+           FROM floor(cast(CURRENT_DATE AS timestamp) TO YEAR)
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <> floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+           AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IS DISTINCT
+                FROM floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR))
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) > floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) >= floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) < floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR)
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <= floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR)
+           AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <> floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS TRUE
+           AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) = floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS NOT TRUE
+           AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) = floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS FALSE
+           AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <> floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS NOT FALSE
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) BETWEEN floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR) AND floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR)
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) NOT BETWEEN floor(cast(CURRENT_DATE AS timestamp) TO YEAR) AND floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) like '%'
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) not like '__DOES_NOT_EXIST__%'
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IN (floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR),
+                                                                  floor(cast(CURRENT_DATE AS timestamp) TO YEAR),
+                                                                  floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR))
+           AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) NOT IN (floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR),
+                                                                      floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IS NULL
+       OR floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IN
+         (SELECT floor(cast(CURRENT_DATE AS timestamp) TO YEAR)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IS NULL
+                 OR (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) = floor(cast(CURRENT_DATE AS timestamp) TO YEAR)
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IS NOT DISTINCT
+                     FROM floor(cast(CURRENT_DATE AS timestamp) TO YEAR)
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <> floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+                     AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IS DISTINCT
+                          FROM floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR))
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) > floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) >= floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) < floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR)
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <= floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR)
+                     AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <> floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS TRUE
+                     AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) = floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS NOT TRUE
+                     AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) = floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS FALSE
+                     AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <> floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS NOT FALSE
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) BETWEEN floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR) AND floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR)
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) NOT BETWEEN floor(cast(CURRENT_DATE AS timestamp) TO YEAR) AND floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) like '%'
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) not like '__DOES_NOT_EXIST__%'
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IN (floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR),
+                                                                            floor(cast(CURRENT_DATE AS timestamp) TO YEAR),
+                                                                            floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR))
+                     AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) NOT IN (floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR),
+                                                                                floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(cast(CURRENT_DATE AS timestamp) TO YEAR),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IS NULL
+          OR (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) = floor(cast(CURRENT_DATE AS timestamp) TO YEAR)
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IS NOT DISTINCT
+              FROM floor(cast(CURRENT_DATE AS timestamp) TO YEAR)
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <> floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+              AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IS DISTINCT
+                   FROM floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR))
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) > floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) >= floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) < floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR)
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <= floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR)
+              AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <> floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS TRUE
+              AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) = floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS NOT TRUE
+              AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) = floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS FALSE
+              AND (floor(cast(CURRENT_DATE AS timestamp) TO YEAR) <> floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)) IS NOT FALSE
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) BETWEEN floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR) AND floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR)
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) NOT BETWEEN floor(cast(CURRENT_DATE AS timestamp) TO YEAR) AND floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR)
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) like '%'
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) not like '__DOES_NOT_EXIST__%'
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) IN (floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR),
+                                                                     floor(cast(CURRENT_DATE AS timestamp) TO YEAR),
+                                                                     floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR))
+              AND floor(cast(CURRENT_DATE AS timestamp) TO YEAR) NOT IN (floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', -2) TO YEAR),
+                                                                         floor(time_shift(cast(CURRENT_DATE AS timestamp), 'P1Y', 2) TO YEAR))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A4: date_trunc
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (date_trunc('week', __time) IS NULL
+       OR (date_trunc('week', __time) = date_trunc('week', __time)
+           AND date_trunc('week', __time) IS NOT DISTINCT
+           FROM date_trunc('week', __time)
+           AND date_trunc('week', __time) <> time_shift(date_trunc('week', __time), 'P1D', -2)
+           AND (date_trunc('week', __time) IS DISTINCT
+                FROM time_shift(date_trunc('week', __time), 'P1D', -2))
+           AND date_trunc('week', __time) > time_shift(date_trunc('week', __time), 'P1D', -2)
+           AND date_trunc('week', __time) >= time_shift(date_trunc('week', __time), 'P1D', -2)
+           AND date_trunc('week', __time) < time_shift(date_trunc('week', __time), 'P1D', 2)
+           AND date_trunc('week', __time) <= time_shift(date_trunc('week', __time), 'P1D', 2)
+           AND (date_trunc('week', __time) <> time_shift(date_trunc('week', __time), 'P1D', -2)) IS TRUE
+           AND (date_trunc('week', __time) = time_shift(date_trunc('week', __time), 'P1D', -2)) IS NOT TRUE
+           AND (date_trunc('week', __time) = time_shift(date_trunc('week', __time), 'P1D', -2)) IS FALSE
+           AND (date_trunc('week', __time) <> time_shift(date_trunc('week', __time), 'P1D', -2)) IS NOT FALSE
+           AND date_trunc('week', __time) BETWEEN time_shift(date_trunc('week', __time), 'P1D', -2) AND time_shift(date_trunc('week', __time), 'P1D', 2)
+           AND date_trunc('week', __time) NOT BETWEEN date_trunc('week', __time) AND time_shift(date_trunc('week', __time), 'P1D', -2)
+           AND date_trunc('week', __time) like '%'
+           AND date_trunc('week', __time) not like '__DOES_NOT_EXIST__%'
+           AND date_trunc('week', __time) IN (time_shift(date_trunc('week', __time), 'P1D', -2),
+                                              date_trunc('week', __time),
+                                              time_shift(date_trunc('week', __time), 'P1D', 2))
+           AND date_trunc('week', __time) NOT IN (time_shift(date_trunc('week', __time), 'P1D', -2),
+                                                  time_shift(date_trunc('week', __time), 'P1D', 2)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (date_trunc('week', __time) IS NULL
+       OR date_trunc('week', __time) IN
+         (SELECT date_trunc('week', __time)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (date_trunc('week', __time) IS NULL
+                 OR (date_trunc('week', __time) = date_trunc('week', __time)
+                     AND date_trunc('week', __time) IS NOT DISTINCT
+                     FROM date_trunc('week', __time)
+                     AND date_trunc('week', __time) <> time_shift(date_trunc('week', __time), 'P1D', -2)
+                     AND (date_trunc('week', __time) IS DISTINCT
+                          FROM time_shift(date_trunc('week', __time), 'P1D', -2))
+                     AND date_trunc('week', __time) > time_shift(date_trunc('week', __time), 'P1D', -2)
+                     AND date_trunc('week', __time) >= time_shift(date_trunc('week', __time), 'P1D', -2)
+                     AND date_trunc('week', __time) < time_shift(date_trunc('week', __time), 'P1D', 2)
+                     AND date_trunc('week', __time) <= time_shift(date_trunc('week', __time), 'P1D', 2)
+                     AND (date_trunc('week', __time) <> time_shift(date_trunc('week', __time), 'P1D', -2)) IS TRUE
+                     AND (date_trunc('week', __time) = time_shift(date_trunc('week', __time), 'P1D', -2)) IS NOT TRUE
+                     AND (date_trunc('week', __time) = time_shift(date_trunc('week', __time), 'P1D', -2)) IS FALSE
+                     AND (date_trunc('week', __time) <> time_shift(date_trunc('week', __time), 'P1D', -2)) IS NOT FALSE
+                     AND date_trunc('week', __time) BETWEEN time_shift(date_trunc('week', __time), 'P1D', -2) AND time_shift(date_trunc('week', __time), 'P1D', 2)
+                     AND date_trunc('week', __time) NOT BETWEEN date_trunc('week', __time) AND time_shift(date_trunc('week', __time), 'P1D', -2)
+                     AND date_trunc('week', __time) like '%'
+                     AND date_trunc('week', __time) not like '__DOES_NOT_EXIST__%'
+                     AND date_trunc('week', __time) IN (time_shift(date_trunc('week', __time), 'P1D', -2),
+                                                        date_trunc('week', __time),
+                                                        time_shift(date_trunc('week', __time), 'P1D', 2))
+                     AND date_trunc('week', __time) NOT IN (time_shift(date_trunc('week', __time), 'P1D', -2),
+                                                            time_shift(date_trunc('week', __time), 'P1D', 2))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          date_trunc('week', __time),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (date_trunc('week', __time) IS NULL
+          OR (date_trunc('week', __time) = date_trunc('week', __time)
+              AND date_trunc('week', __time) IS NOT DISTINCT
+              FROM date_trunc('week', __time)
+              AND date_trunc('week', __time) <> time_shift(date_trunc('week', __time), 'P1D', -2)
+              AND (date_trunc('week', __time) IS DISTINCT
+                   FROM time_shift(date_trunc('week', __time), 'P1D', -2))
+              AND date_trunc('week', __time) > time_shift(date_trunc('week', __time), 'P1D', -2)
+              AND date_trunc('week', __time) >= time_shift(date_trunc('week', __time), 'P1D', -2)
+              AND date_trunc('week', __time) < time_shift(date_trunc('week', __time), 'P1D', 2)
+              AND date_trunc('week', __time) <= time_shift(date_trunc('week', __time), 'P1D', 2)
+              AND (date_trunc('week', __time) <> time_shift(date_trunc('week', __time), 'P1D', -2)) IS TRUE
+              AND (date_trunc('week', __time) = time_shift(date_trunc('week', __time), 'P1D', -2)) IS NOT TRUE
+              AND (date_trunc('week', __time) = time_shift(date_trunc('week', __time), 'P1D', -2)) IS FALSE
+              AND (date_trunc('week', __time) <> time_shift(date_trunc('week', __time), 'P1D', -2)) IS NOT FALSE
+              AND date_trunc('week', __time) BETWEEN time_shift(date_trunc('week', __time), 'P1D', -2) AND time_shift(date_trunc('week', __time), 'P1D', 2)
+              AND date_trunc('week', __time) NOT BETWEEN date_trunc('week', __time) AND time_shift(date_trunc('week', __time), 'P1D', -2)
+              AND date_trunc('week', __time) like '%'
+              AND date_trunc('week', __time) not like '__DOES_NOT_EXIST__%'
+              AND date_trunc('week', __time) IN (time_shift(date_trunc('week', __time), 'P1D', -2),
+                                                 date_trunc('week', __time),
+                                                 time_shift(date_trunc('week', __time), 'P1D', 2))
+              AND date_trunc('week', __time) NOT IN (time_shift(date_trunc('week', __time), 'P1D', -2),
+                                                     time_shift(date_trunc('week', __time), 'P1D', 2))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A5: time_ceil
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NULL
+       OR (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NOT DISTINCT
+           FROM time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+           AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS DISTINCT
+                FROM time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2))
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') > time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') >= time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') < time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <= time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+           AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS TRUE
+           AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT TRUE
+           AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS FALSE
+           AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT FALSE
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') BETWEEN time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2) AND time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT BETWEEN time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') AND time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') like '%'
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') not like '__DOES_NOT_EXIST__%'
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IN (time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                             time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'),
+                                                                             time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2))
+           AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT IN (time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                                 time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NULL
+       OR time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IN
+         (SELECT time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NULL
+                 OR (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NOT DISTINCT
+                     FROM time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+                     AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS DISTINCT
+                          FROM time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2))
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') > time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') >= time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') < time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <= time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+                     AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS TRUE
+                     AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT TRUE
+                     AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS FALSE
+                     AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT FALSE
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') BETWEEN time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2) AND time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT BETWEEN time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') AND time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') like '%'
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') not like '__DOES_NOT_EXIST__%'
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IN (time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                                       time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'),
+                                                                                       time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2))
+                     AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT IN (time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                                           time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NULL
+          OR (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NOT DISTINCT
+              FROM time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+              AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS DISTINCT
+                   FROM time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2))
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') > time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') >= time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') < time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <= time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+              AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS TRUE
+              AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT TRUE
+              AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS FALSE
+              AND (time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT FALSE
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') BETWEEN time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2) AND time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT BETWEEN time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') AND time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') like '%'
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') not like '__DOES_NOT_EXIST__%'
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') IN (time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                                time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'),
+                                                                                time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2))
+              AND time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT IN (time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                                    time_shift(time_ceil(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A6: time_floor
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NULL
+       OR (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NOT DISTINCT
+           FROM time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+           AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS DISTINCT
+                FROM time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2))
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') > time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') >= time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') < time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <= time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+           AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS TRUE
+           AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT TRUE
+           AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS FALSE
+           AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT FALSE
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') BETWEEN time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2) AND time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT BETWEEN time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') AND time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') like '%'
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') not like '__DOES_NOT_EXIST__%'
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IN (time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                              time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'),
+                                                                              time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2))
+           AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT IN (time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                                  time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NULL
+       OR time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IN
+         (SELECT time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NULL
+                 OR (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NOT DISTINCT
+                     FROM time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+                     AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS DISTINCT
+                          FROM time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2))
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') > time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') >= time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') < time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <= time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+                     AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS TRUE
+                     AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT TRUE
+                     AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS FALSE
+                     AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT FALSE
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') BETWEEN time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2) AND time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT BETWEEN time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') AND time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') like '%'
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') not like '__DOES_NOT_EXIST__%'
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IN (time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                                        time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'),
+                                                                                        time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2))
+                     AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT IN (time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                                            time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NULL
+          OR (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS NOT DISTINCT
+              FROM time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00')
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+              AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IS DISTINCT
+                   FROM time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2))
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') > time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') >= time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') < time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <= time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+              AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS TRUE
+              AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT TRUE
+              AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') = time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS FALSE
+              AND (time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') <> time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)) IS NOT FALSE
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') BETWEEN time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2) AND time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2)
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT BETWEEN time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') AND time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2)
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') like '%'
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') not like '__DOES_NOT_EXIST__%'
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') IN (time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                                 time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'),
+                                                                                 time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2))
+              AND time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00') NOT IN (time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', -2),
+                                                                                     time_shift(time_floor(__time, 'P1D', timestamp '2000-01-01 00:30:00'), 'P1D', 2))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A7: time_shift
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (time_shift(__time, 'P1D', -1) IS NULL
+       OR (time_shift(__time, 'P1D', -1) = time_shift(__time, 'P1D', -1)
+           AND time_shift(__time, 'P1D', -1) IS NOT DISTINCT
+           FROM time_shift(__time, 'P1D', -1)
+           AND time_shift(__time, 'P1D', -1) <> time_shift(__time, 'P1D', -2)
+           AND (time_shift(__time, 'P1D', -1) IS DISTINCT
+                FROM time_shift(__time, 'P1D', -2))
+           AND time_shift(__time, 'P1D', -1) > time_shift(__time, 'P1D', -2)
+           AND time_shift(__time, 'P1D', -1) >= time_shift(__time, 'P1D', -2)
+           AND time_shift(__time, 'P1D', -1) < time_shift(__time, 'P1D', 2)
+           AND time_shift(__time, 'P1D', -1) <= time_shift(__time, 'P1D', 2)
+           AND (time_shift(__time, 'P1D', -1) <> time_shift(__time, 'P1D', -2)) IS TRUE
+           AND (time_shift(__time, 'P1D', -1) = time_shift(__time, 'P1D', -2)) IS NOT TRUE
+           AND (time_shift(__time, 'P1D', -1) = time_shift(__time, 'P1D', -2)) IS FALSE
+           AND (time_shift(__time, 'P1D', -1) <> time_shift(__time, 'P1D', -2)) IS NOT FALSE
+           AND time_shift(__time, 'P1D', -1) BETWEEN time_shift(__time, 'P1D', -2) AND time_shift(__time, 'P1D', 2)
+           AND time_shift(__time, 'P1D', -1) NOT BETWEEN time_shift(__time, 'P1D', -1) AND time_shift(__time, 'P1D', -2)
+           AND time_shift(__time, 'P1D', -1) like '%'
+           AND time_shift(__time, 'P1D', -1) not like '__DOES_NOT_EXIST__%'
+           AND time_shift(__time, 'P1D', -1) IN (time_shift(__time, 'P1D', -2),
+                                                 time_shift(__time, 'P1D', -1),
+                                                 time_shift(__time, 'P1D', 2))
+           AND time_shift(__time, 'P1D', -1) NOT IN (time_shift(__time, 'P1D', -2),
+                                                     time_shift(__time, 'P1D', 2)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (time_shift(__time, 'P1D', -1) IS NULL
+       OR time_shift(__time, 'P1D', -1) IN
+         (SELECT time_shift(__time, 'P1D', -1)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (time_shift(__time, 'P1D', -1) IS NULL
+                 OR (time_shift(__time, 'P1D', -1) = time_shift(__time, 'P1D', -1)
+                     AND time_shift(__time, 'P1D', -1) IS NOT DISTINCT
+                     FROM time_shift(__time, 'P1D', -1)
+                     AND time_shift(__time, 'P1D', -1) <> time_shift(__time, 'P1D', -2)
+                     AND (time_shift(__time, 'P1D', -1) IS DISTINCT
+                          FROM time_shift(__time, 'P1D', -2))
+                     AND time_shift(__time, 'P1D', -1) > time_shift(__time, 'P1D', -2)
+                     AND time_shift(__time, 'P1D', -1) >= time_shift(__time, 'P1D', -2)
+                     AND time_shift(__time, 'P1D', -1) < time_shift(__time, 'P1D', 2)
+                     AND time_shift(__time, 'P1D', -1) <= time_shift(__time, 'P1D', 2)
+                     AND (time_shift(__time, 'P1D', -1) <> time_shift(__time, 'P1D', -2)) IS TRUE
+                     AND (time_shift(__time, 'P1D', -1) = time_shift(__time, 'P1D', -2)) IS NOT TRUE
+                     AND (time_shift(__time, 'P1D', -1) = time_shift(__time, 'P1D', -2)) IS FALSE
+                     AND (time_shift(__time, 'P1D', -1) <> time_shift(__time, 'P1D', -2)) IS NOT FALSE
+                     AND time_shift(__time, 'P1D', -1) BETWEEN time_shift(__time, 'P1D', -2) AND time_shift(__time, 'P1D', 2)
+                     AND time_shift(__time, 'P1D', -1) NOT BETWEEN time_shift(__time, 'P1D', -1) AND time_shift(__time, 'P1D', -2)
+                     AND time_shift(__time, 'P1D', -1) like '%'
+                     AND time_shift(__time, 'P1D', -1) not like '__DOES_NOT_EXIST__%'
+                     AND time_shift(__time, 'P1D', -1) IN (time_shift(__time, 'P1D', -2),
+                                                           time_shift(__time, 'P1D', -1),
+                                                           time_shift(__time, 'P1D', 2))
+                     AND time_shift(__time, 'P1D', -1) NOT IN (time_shift(__time, 'P1D', -2),
+                                                               time_shift(__time, 'P1D', 2))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          time_shift(__time, 'P1D', -1),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (time_shift(__time, 'P1D', -1) IS NULL
+          OR (time_shift(__time, 'P1D', -1) = time_shift(__time, 'P1D', -1)
+              AND time_shift(__time, 'P1D', -1) IS NOT DISTINCT
+              FROM time_shift(__time, 'P1D', -1)
+              AND time_shift(__time, 'P1D', -1) <> time_shift(__time, 'P1D', -2)
+              AND (time_shift(__time, 'P1D', -1) IS DISTINCT
+                   FROM time_shift(__time, 'P1D', -2))
+              AND time_shift(__time, 'P1D', -1) > time_shift(__time, 'P1D', -2)
+              AND time_shift(__time, 'P1D', -1) >= time_shift(__time, 'P1D', -2)
+              AND time_shift(__time, 'P1D', -1) < time_shift(__time, 'P1D', 2)
+              AND time_shift(__time, 'P1D', -1) <= time_shift(__time, 'P1D', 2)
+              AND (time_shift(__time, 'P1D', -1) <> time_shift(__time, 'P1D', -2)) IS TRUE
+              AND (time_shift(__time, 'P1D', -1) = time_shift(__time, 'P1D', -2)) IS NOT TRUE
+              AND (time_shift(__time, 'P1D', -1) = time_shift(__time, 'P1D', -2)) IS FALSE
+              AND (time_shift(__time, 'P1D', -1) <> time_shift(__time, 'P1D', -2)) IS NOT FALSE
+              AND time_shift(__time, 'P1D', -1) BETWEEN time_shift(__time, 'P1D', -2) AND time_shift(__time, 'P1D', 2)
+              AND time_shift(__time, 'P1D', -1) NOT BETWEEN time_shift(__time, 'P1D', -1) AND time_shift(__time, 'P1D', -2)
+              AND time_shift(__time, 'P1D', -1) like '%'
+              AND time_shift(__time, 'P1D', -1) not like '__DOES_NOT_EXIST__%'
+              AND time_shift(__time, 'P1D', -1) IN (time_shift(__time, 'P1D', -2),
+                                                    time_shift(__time, 'P1D', -1),
+                                                    time_shift(__time, 'P1D', 2))
+              AND time_shift(__time, 'P1D', -1) NOT IN (time_shift(__time, 'P1D', -2),
+                                                        time_shift(__time, 'P1D', 2))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A8: time_extract
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (time_extract(__time, 'DOW') IS NULL
+       OR (time_extract(__time, 'DOW') = time_extract(__time, 'DOW')
+           AND time_extract(__time, 'DOW') IS NOT DISTINCT
+           FROM time_extract(__time, 'DOW')
+           AND time_extract(__time, 'DOW') <> time_extract(__time, 'DOW')-1
+           AND (time_extract(__time, 'DOW') IS DISTINCT
+                FROM time_extract(__time, 'DOW')-1)
+           AND time_extract(__time, 'DOW') > time_extract(__time, 'DOW')-1
+           AND time_extract(__time, 'DOW') >= time_extract(__time, 'DOW')-1
+           AND time_extract(__time, 'DOW') < time_extract(__time, 'DOW')+1
+           AND time_extract(__time, 'DOW') <= time_extract(__time, 'DOW')+1
+           AND (time_extract(__time, 'DOW') <> time_extract(__time, 'DOW')-1) IS TRUE
+           AND (time_extract(__time, 'DOW') = time_extract(__time, 'DOW')-1) IS NOT TRUE
+           AND (time_extract(__time, 'DOW') = time_extract(__time, 'DOW')-1) IS FALSE
+           AND (time_extract(__time, 'DOW') <> time_extract(__time, 'DOW')-1) IS NOT FALSE
+           AND time_extract(__time, 'DOW') BETWEEN time_extract(__time, 'DOW')-1 AND time_extract(__time, 'DOW')+1
+           AND time_extract(__time, 'DOW') NOT BETWEEN time_extract(__time, 'DOW') AND time_extract(__time, 'DOW')-1
+           AND time_extract(__time, 'DOW') like '%'
+           AND time_extract(__time, 'DOW') not like '__DOES_NOT_EXIST__%'
+           AND time_extract(__time, 'DOW') IN (time_extract(__time, 'DOW')-1,
+                                                                          time_extract(__time, 'DOW'),
+                                                                          time_extract(__time, 'DOW')+1)
+           AND time_extract(__time, 'DOW') NOT IN (time_extract(__time, 'DOW')-1,
+                                                                              time_extract(__time, 'DOW')+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (time_extract(__time, 'DOW') IS NULL
+       OR time_extract(__time, 'DOW') IN
+         (SELECT time_extract(__time, 'DOW')
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (time_extract(__time, 'DOW') IS NULL
+                 OR (time_extract(__time, 'DOW') = time_extract(__time, 'DOW')
+                     AND time_extract(__time, 'DOW') IS NOT DISTINCT
+                     FROM time_extract(__time, 'DOW')
+                     AND time_extract(__time, 'DOW') <> time_extract(__time, 'DOW')-1
+                     AND (time_extract(__time, 'DOW') IS DISTINCT
+                          FROM time_extract(__time, 'DOW')-1)
+                     AND time_extract(__time, 'DOW') > time_extract(__time, 'DOW')-1
+                     AND time_extract(__time, 'DOW') >= time_extract(__time, 'DOW')-1
+                     AND time_extract(__time, 'DOW') < time_extract(__time, 'DOW')+1
+                     AND time_extract(__time, 'DOW') <= time_extract(__time, 'DOW')+1
+                     AND (time_extract(__time, 'DOW') <> time_extract(__time, 'DOW')-1) IS TRUE
+                     AND (time_extract(__time, 'DOW') = time_extract(__time, 'DOW')-1) IS NOT TRUE
+                     AND (time_extract(__time, 'DOW') = time_extract(__time, 'DOW')-1) IS FALSE
+                     AND (time_extract(__time, 'DOW') <> time_extract(__time, 'DOW')-1) IS NOT FALSE
+                     AND time_extract(__time, 'DOW') BETWEEN time_extract(__time, 'DOW')-1 AND time_extract(__time, 'DOW')+1
+                     AND time_extract(__time, 'DOW') NOT BETWEEN time_extract(__time, 'DOW') AND time_extract(__time, 'DOW')-1
+                     AND time_extract(__time, 'DOW') like '%'
+                     AND time_extract(__time, 'DOW') not like '__DOES_NOT_EXIST__%'
+                     AND time_extract(__time, 'DOW') IN (time_extract(__time, 'DOW')-1,
+                                                                                    time_extract(__time, 'DOW'),
+                                                                                    time_extract(__time, 'DOW')+1)
+                     AND time_extract(__time, 'DOW') NOT IN (time_extract(__time, 'DOW')-1,
+                                                                                        time_extract(__time, 'DOW')+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          time_extract(__time, 'DOW'),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (time_extract(__time, 'DOW') IS NULL
+          OR (time_extract(__time, 'DOW') = time_extract(__time, 'DOW')
+              AND time_extract(__time, 'DOW') IS NOT DISTINCT
+              FROM time_extract(__time, 'DOW')
+              AND time_extract(__time, 'DOW') <> time_extract(__time, 'DOW')-1
+              AND (time_extract(__time, 'DOW') IS DISTINCT
+                   FROM time_extract(__time, 'DOW')-1)
+              AND time_extract(__time, 'DOW') > time_extract(__time, 'DOW')-1
+              AND time_extract(__time, 'DOW') >= time_extract(__time, 'DOW')-1
+              AND time_extract(__time, 'DOW') < time_extract(__time, 'DOW')+1
+              AND time_extract(__time, 'DOW') <= time_extract(__time, 'DOW')+1
+              AND (time_extract(__time, 'DOW') <> time_extract(__time, 'DOW')-1) IS TRUE
+              AND (time_extract(__time, 'DOW') = time_extract(__time, 'DOW')-1) IS NOT TRUE
+              AND (time_extract(__time, 'DOW') = time_extract(__time, 'DOW')-1) IS FALSE
+              AND (time_extract(__time, 'DOW') <> time_extract(__time, 'DOW')-1) IS NOT FALSE
+              AND time_extract(__time, 'DOW') BETWEEN time_extract(__time, 'DOW')-1 AND time_extract(__time, 'DOW')+1
+              AND time_extract(__time, 'DOW') NOT BETWEEN time_extract(__time, 'DOW') AND time_extract(__time, 'DOW')-1
+              AND time_extract(__time, 'DOW') like '%'
+              AND time_extract(__time, 'DOW') not like '__DOES_NOT_EXIST__%'
+              AND time_extract(__time, 'DOW') IN (time_extract(__time, 'DOW')-1,
+                                                                             time_extract(__time, 'DOW'),
+                                                                             time_extract(__time, 'DOW')+1)
+              AND time_extract(__time, 'DOW') NOT IN (time_extract(__time, 'DOW')-1,
+                                                                                 time_extract(__time, 'DOW')+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A9: time_parse
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (time_parse(cast(__time AS char)) IS NULL
+       OR (time_parse(cast(__time AS char)) = time_parse(cast(__time AS char))
+           AND time_parse(cast(__time AS char)) IS NOT DISTINCT
+           FROM time_parse(cast(__time AS char))
+           AND time_parse(cast(__time AS char)) <> time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+           AND (time_parse(cast(__time AS char)) IS DISTINCT
+                FROM time_shift(time_parse(cast(__time AS char)), 'P1D', -2))
+           AND time_parse(cast(__time AS char)) > time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+           AND time_parse(cast(__time AS char)) >= time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+           AND time_parse(cast(__time AS char)) < time_shift(time_parse(cast(__time AS char)), 'P1D', 2)
+           AND time_parse(cast(__time AS char)) <= time_shift(time_parse(cast(__time AS char)), 'P1D', 2)
+           AND (time_parse(cast(__time AS char)) <> time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS TRUE
+           AND (time_parse(cast(__time AS char)) = time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS NOT TRUE
+           AND (time_parse(cast(__time AS char)) = time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS FALSE
+           AND (time_parse(cast(__time AS char)) <> time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS NOT FALSE
+           AND time_parse(cast(__time AS char)) BETWEEN time_shift(time_parse(cast(__time AS char)), 'P1D', -2) AND time_shift(time_parse(cast(__time AS char)), 'P1D', 2)
+           AND time_parse(cast(__time AS char)) NOT BETWEEN time_parse(cast(__time AS char)) AND time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+           AND time_parse(cast(__time AS char)) like '%'
+           AND time_parse(cast(__time AS char)) not like '__DOES_NOT_EXIST__%'
+           AND time_parse(cast(__time AS char)) IN (time_shift(time_parse(cast(__time AS char)), 'P1D', -2),
+                                                    time_parse(cast(__time AS char)),
+                                                    time_shift(time_parse(cast(__time AS char)), 'P1D', 2))
+           AND time_parse(cast(__time AS char)) NOT IN (time_shift(time_parse(cast(__time AS char)), 'P1D', -2),
+                                                        time_shift(time_parse(cast(__time AS char)), 'P1D', 2)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (time_parse(cast(__time AS char)) IS NULL
+       OR time_parse(cast(__time AS char)) IN
+         (SELECT time_parse(cast(__time AS char))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (time_parse(cast(__time AS char)) IS NULL
+                 OR (time_parse(cast(__time AS char)) = time_parse(cast(__time AS char))
+                     AND time_parse(cast(__time AS char)) IS NOT DISTINCT
+                     FROM time_parse(cast(__time AS char))
+                     AND time_parse(cast(__time AS char)) <> time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+                     AND (time_parse(cast(__time AS char)) IS DISTINCT
+                          FROM time_shift(time_parse(cast(__time AS char)), 'P1D', -2))
+                     AND time_parse(cast(__time AS char)) > time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+                     AND time_parse(cast(__time AS char)) >= time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+                     AND time_parse(cast(__time AS char)) < time_shift(time_parse(cast(__time AS char)), 'P1D', 2)
+                     AND time_parse(cast(__time AS char)) <= time_shift(time_parse(cast(__time AS char)), 'P1D', 2)
+                     AND (time_parse(cast(__time AS char)) <> time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS TRUE
+                     AND (time_parse(cast(__time AS char)) = time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS NOT TRUE
+                     AND (time_parse(cast(__time AS char)) = time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS FALSE
+                     AND (time_parse(cast(__time AS char)) <> time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS NOT FALSE
+                     AND time_parse(cast(__time AS char)) BETWEEN time_shift(time_parse(cast(__time AS char)), 'P1D', -2) AND time_shift(time_parse(cast(__time AS char)), 'P1D', 2)
+                     AND time_parse(cast(__time AS char)) NOT BETWEEN time_parse(cast(__time AS char)) AND time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+                     AND time_parse(cast(__time AS char)) like '%'
+                     AND time_parse(cast(__time AS char)) not like '__DOES_NOT_EXIST__%'
+                     AND time_parse(cast(__time AS char)) IN (time_shift(time_parse(cast(__time AS char)), 'P1D', -2),
+                                                              time_parse(cast(__time AS char)),
+                                                              time_shift(time_parse(cast(__time AS char)), 'P1D', 2))
+                     AND time_parse(cast(__time AS char)) NOT IN (time_shift(time_parse(cast(__time AS char)), 'P1D', -2),
+                                                                  time_shift(time_parse(cast(__time AS char)), 'P1D', 2))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          time_parse(cast(__time AS char)),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (time_parse(cast(__time AS char)) IS NULL
+          OR (time_parse(cast(__time AS char)) = time_parse(cast(__time AS char))
+              AND time_parse(cast(__time AS char)) IS NOT DISTINCT
+              FROM time_parse(cast(__time AS char))
+              AND time_parse(cast(__time AS char)) <> time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+              AND (time_parse(cast(__time AS char)) IS DISTINCT
+                   FROM time_shift(time_parse(cast(__time AS char)), 'P1D', -2))
+              AND time_parse(cast(__time AS char)) > time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+              AND time_parse(cast(__time AS char)) >= time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+              AND time_parse(cast(__time AS char)) < time_shift(time_parse(cast(__time AS char)), 'P1D', 2)
+              AND time_parse(cast(__time AS char)) <= time_shift(time_parse(cast(__time AS char)), 'P1D', 2)
+              AND (time_parse(cast(__time AS char)) <> time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS TRUE
+              AND (time_parse(cast(__time AS char)) = time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS NOT TRUE
+              AND (time_parse(cast(__time AS char)) = time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS FALSE
+              AND (time_parse(cast(__time AS char)) <> time_shift(time_parse(cast(__time AS char)), 'P1D', -2)) IS NOT FALSE
+              AND time_parse(cast(__time AS char)) BETWEEN time_shift(time_parse(cast(__time AS char)), 'P1D', -2) AND time_shift(time_parse(cast(__time AS char)), 'P1D', 2)
+              AND time_parse(cast(__time AS char)) NOT BETWEEN time_parse(cast(__time AS char)) AND time_shift(time_parse(cast(__time AS char)), 'P1D', -2)
+              AND time_parse(cast(__time AS char)) like '%'
+              AND time_parse(cast(__time AS char)) not like '__DOES_NOT_EXIST__%'
+              AND time_parse(cast(__time AS char)) IN (time_shift(time_parse(cast(__time AS char)), 'P1D', -2),
+                                                       time_parse(cast(__time AS char)),
+                                                       time_shift(time_parse(cast(__time AS char)), 'P1D', 2))
+              AND time_parse(cast(__time AS char)) NOT IN (time_shift(time_parse(cast(__time AS char)), 'P1D', -2),
+                                                           time_shift(time_parse(cast(__time AS char)), 'P1D', 2))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A10: time_format
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||time_format(__time) IS NULL
+       OR ('1'||time_format(__time) = 1||time_format(__time)
+           AND '1'||time_format(__time) IS NOT DISTINCT
+           FROM 1||time_format(__time)
+           AND '1'||time_format(__time) <> '0'||time_format(__time)
+           AND ('1'||time_format(__time) IS DISTINCT
+                FROM '0'||time_format(__time))
+           AND '1'||time_format(__time) > '0'||time_format(__time)
+           AND '1'||time_format(__time) >= '0'||time_format(__time)
+           AND '1'||time_format(__time) < 2||time_format(__time)
+           AND '1'||time_format(__time) <= 2||time_format(__time)
+           AND ('1'||time_format(__time) <> '0'||time_format(__time)) IS TRUE
+           AND ('1'||time_format(__time) = '0'||time_format(__time)) IS NOT TRUE
+           AND ('1'||time_format(__time) = '0'||time_format(__time)) IS FALSE
+           AND ('1'||time_format(__time) <> '0'||time_format(__time)) IS NOT FALSE
+           AND '1'||time_format(__time) BETWEEN '0'||time_format(__time) AND 2||time_format(__time)
+           AND '1'||time_format(__time) NOT BETWEEN '1'||time_format(__time) AND '0'||time_format(__time)
+           AND '1'||time_format(__time) like '%'
+           AND '1'||time_format(__time) not like '__DOES_NOT_EXIST__%'
+           AND '1'||time_format(__time) IN ('0'||time_format(__time),
+                                            1||time_format(__time),
+                                            2||time_format(__time))
+           AND '1'||time_format(__time) NOT IN ('0'||time_format(__time),
+                                                2||time_format(__time)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||time_format(__time) IS NULL
+       OR '1'||time_format(__time) IN
+         (SELECT '1'||time_format(__time)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||time_format(__time) IS NULL
+                 OR ('1'||time_format(__time) = 1||time_format(__time)
+                     AND '1'||time_format(__time) IS NOT DISTINCT
+                     FROM 1||time_format(__time)
+                     AND '1'||time_format(__time) <> '0'||time_format(__time)
+                     AND ('1'||time_format(__time) IS DISTINCT
+                          FROM '0'||time_format(__time))
+                     AND '1'||time_format(__time) > '0'||time_format(__time)
+                     AND '1'||time_format(__time) >= '0'||time_format(__time)
+                     AND '1'||time_format(__time) < 2||time_format(__time)
+                     AND '1'||time_format(__time) <= 2||time_format(__time)
+                     AND ('1'||time_format(__time) <> '0'||time_format(__time)) IS TRUE
+                     AND ('1'||time_format(__time) = '0'||time_format(__time)) IS NOT TRUE
+                     AND ('1'||time_format(__time) = '0'||time_format(__time)) IS FALSE
+                     AND ('1'||time_format(__time) <> '0'||time_format(__time)) IS NOT FALSE
+                     AND '1'||time_format(__time) BETWEEN '0'||time_format(__time) AND 2||time_format(__time)
+                     AND '1'||time_format(__time) NOT BETWEEN '1'||time_format(__time) AND '0'||time_format(__time)
+                     AND '1'||time_format(__time) like '%'
+                     AND '1'||time_format(__time) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||time_format(__time) IN ('0'||time_format(__time),
+                                                      1||time_format(__time),
+                                                      2||time_format(__time))
+                     AND '1'||time_format(__time) NOT IN ('0'||time_format(__time),
+                                                          2||time_format(__time))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||time_format(__time),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||time_format(__time) IS NULL
+          OR ('1'||time_format(__time) = 1||time_format(__time)
+              AND '1'||time_format(__time) IS NOT DISTINCT
+              FROM 1||time_format(__time)
+              AND '1'||time_format(__time) <> '0'||time_format(__time)
+              AND ('1'||time_format(__time) IS DISTINCT
+                   FROM '0'||time_format(__time))
+              AND '1'||time_format(__time) > '0'||time_format(__time)
+              AND '1'||time_format(__time) >= '0'||time_format(__time)
+              AND '1'||time_format(__time) < 2||time_format(__time)
+              AND '1'||time_format(__time) <= 2||time_format(__time)
+              AND ('1'||time_format(__time) <> '0'||time_format(__time)) IS TRUE
+              AND ('1'||time_format(__time) = '0'||time_format(__time)) IS NOT TRUE
+              AND ('1'||time_format(__time) = '0'||time_format(__time)) IS FALSE
+              AND ('1'||time_format(__time) <> '0'||time_format(__time)) IS NOT FALSE
+              AND '1'||time_format(__time) BETWEEN '0'||time_format(__time) AND 2||time_format(__time)
+              AND '1'||time_format(__time) NOT BETWEEN '1'||time_format(__time) AND '0'||time_format(__time)
+              AND '1'||time_format(__time) like '%'
+              AND '1'||time_format(__time) not like '__DOES_NOT_EXIST__%'
+              AND '1'||time_format(__time) IN ('0'||time_format(__time),
+                                               1||time_format(__time),
+                                               2||time_format(__time))
+              AND '1'||time_format(__time) NOT IN ('0'||time_format(__time),
+                                                   2||time_format(__time))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A11: time_in_interval
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') IS NULL
+       OR ('1'||time_in_interval(__time, '2000-01-01/P20Y') = 1||time_in_interval(__time, '2000-01-01/P20Y')
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') IS NOT DISTINCT
+           FROM 1||time_in_interval(__time, '2000-01-01/P20Y')
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') <> '0'||time_in_interval(__time, '2000-01-01/P20Y')
+           AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') IS DISTINCT
+                FROM '0'||time_in_interval(__time, '2000-01-01/P20Y'))
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') > '0'||time_in_interval(__time, '2000-01-01/P20Y')
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') >= '0'||time_in_interval(__time, '2000-01-01/P20Y')
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') < 2||time_in_interval(__time, '2000-01-01/P20Y')
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') <= 2||time_in_interval(__time, '2000-01-01/P20Y')
+           AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') <> '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS TRUE
+           AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') = '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS NOT TRUE
+           AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') = '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS FALSE
+           AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') <> '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS NOT FALSE
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') BETWEEN '0'||time_in_interval(__time, '2000-01-01/P20Y') AND 2||time_in_interval(__time, '2000-01-01/P20Y')
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') NOT BETWEEN '1'||time_in_interval(__time, '2000-01-01/P20Y') AND '0'||time_in_interval(__time, '2000-01-01/P20Y')
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') like '%'
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') not like '__DOES_NOT_EXIST__%'
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') IN ('0'||time_in_interval(__time, '2000-01-01/P20Y'),
+                                                                    1||time_in_interval(__time, '2000-01-01/P20Y'),
+                                                                    2||time_in_interval(__time, '2000-01-01/P20Y'))
+           AND '1'||time_in_interval(__time, '2000-01-01/P20Y') NOT IN ('0'||time_in_interval(__time, '2000-01-01/P20Y'),
+                                                                        2||time_in_interval(__time, '2000-01-01/P20Y')))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') IS NULL
+       OR '1'||time_in_interval(__time, '2000-01-01/P20Y') IN
+         (SELECT '1'||time_in_interval(__time, '2000-01-01/P20Y')
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') IS NULL
+                 OR ('1'||time_in_interval(__time, '2000-01-01/P20Y') = 1||time_in_interval(__time, '2000-01-01/P20Y')
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') IS NOT DISTINCT
+                     FROM 1||time_in_interval(__time, '2000-01-01/P20Y')
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') <> '0'||time_in_interval(__time, '2000-01-01/P20Y')
+                     AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') IS DISTINCT
+                          FROM '0'||time_in_interval(__time, '2000-01-01/P20Y'))
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') > '0'||time_in_interval(__time, '2000-01-01/P20Y')
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') >= '0'||time_in_interval(__time, '2000-01-01/P20Y')
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') < 2||time_in_interval(__time, '2000-01-01/P20Y')
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') <= 2||time_in_interval(__time, '2000-01-01/P20Y')
+                     AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') <> '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS TRUE
+                     AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') = '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS NOT TRUE
+                     AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') = '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS FALSE
+                     AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') <> '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS NOT FALSE
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') BETWEEN '0'||time_in_interval(__time, '2000-01-01/P20Y') AND 2||time_in_interval(__time, '2000-01-01/P20Y')
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') NOT BETWEEN '1'||time_in_interval(__time, '2000-01-01/P20Y') AND '0'||time_in_interval(__time, '2000-01-01/P20Y')
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') like '%'
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') not like '__DOES_NOT_EXIST__%'
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') IN ('0'||time_in_interval(__time, '2000-01-01/P20Y'),
+                                                                              1||time_in_interval(__time, '2000-01-01/P20Y'),
+                                                                              2||time_in_interval(__time, '2000-01-01/P20Y'))
+                     AND '1'||time_in_interval(__time, '2000-01-01/P20Y') NOT IN ('0'||time_in_interval(__time, '2000-01-01/P20Y'),
+                                                                                  2||time_in_interval(__time, '2000-01-01/P20Y'))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||time_in_interval(__time, '2000-01-01/P20Y'),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') IS NULL
+          OR ('1'||time_in_interval(__time, '2000-01-01/P20Y') = 1||time_in_interval(__time, '2000-01-01/P20Y')
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') IS NOT DISTINCT
+              FROM 1||time_in_interval(__time, '2000-01-01/P20Y')
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') <> '0'||time_in_interval(__time, '2000-01-01/P20Y')
+              AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') IS DISTINCT
+                   FROM '0'||time_in_interval(__time, '2000-01-01/P20Y'))
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') > '0'||time_in_interval(__time, '2000-01-01/P20Y')
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') >= '0'||time_in_interval(__time, '2000-01-01/P20Y')
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') < 2||time_in_interval(__time, '2000-01-01/P20Y')
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') <= 2||time_in_interval(__time, '2000-01-01/P20Y')
+              AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') <> '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS TRUE
+              AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') = '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS NOT TRUE
+              AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') = '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS FALSE
+              AND ('1'||time_in_interval(__time, '2000-01-01/P20Y') <> '0'||time_in_interval(__time, '2000-01-01/P20Y')) IS NOT FALSE
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') BETWEEN '0'||time_in_interval(__time, '2000-01-01/P20Y') AND 2||time_in_interval(__time, '2000-01-01/P20Y')
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') NOT BETWEEN '1'||time_in_interval(__time, '2000-01-01/P20Y') AND '0'||time_in_interval(__time, '2000-01-01/P20Y')
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') like '%'
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') not like '__DOES_NOT_EXIST__%'
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') IN ('0'||time_in_interval(__time, '2000-01-01/P20Y'),
+                                                                       1||time_in_interval(__time, '2000-01-01/P20Y'),
+                                                                       2||time_in_interval(__time, '2000-01-01/P20Y'))
+              AND '1'||time_in_interval(__time, '2000-01-01/P20Y') NOT IN ('0'||time_in_interval(__time, '2000-01-01/P20Y'),
+                                                                           2||time_in_interval(__time, '2000-01-01/P20Y'))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A12: millis_to_timestamp
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (millis_to_timestamp(extract(millisecond
+                                   FROM __time)) IS NULL
+       OR (millis_to_timestamp(extract(millisecond
+                                       FROM __time)) = millis_to_timestamp(extract(millisecond
+                                                                                   FROM __time))
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) IS NOT DISTINCT
+           FROM millis_to_timestamp(extract(millisecond
+                                            FROM __time))
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) <> millis_to_timestamp(extract(millisecond
+                                                                                        FROM __time)-2)
+           AND (millis_to_timestamp(extract(millisecond
+                                            FROM __time)) IS DISTINCT
+                FROM millis_to_timestamp(extract(millisecond
+                                                 FROM __time)-2))
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) > millis_to_timestamp(extract(millisecond
+                                                                                       FROM __time)-2)
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) >= millis_to_timestamp(extract(millisecond
+                                                                                        FROM __time)-2)
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) < millis_to_timestamp(extract(millisecond
+                                                                                       FROM __time)+2)
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) <= millis_to_timestamp(extract(millisecond
+                                                                                        FROM __time)+2)
+           AND (millis_to_timestamp(extract(millisecond
+                                            FROM __time)) <> millis_to_timestamp(extract(millisecond
+                                                                                         FROM __time)-2)) IS TRUE
+           AND (millis_to_timestamp(extract(millisecond
+                                            FROM __time)) = millis_to_timestamp(extract(millisecond
+                                                                                        FROM __time)-2)) IS NOT TRUE
+           AND (millis_to_timestamp(extract(millisecond
+                                            FROM __time)) = millis_to_timestamp(extract(millisecond
+                                                                                        FROM __time)-2)) IS FALSE
+           AND (millis_to_timestamp(extract(millisecond
+                                            FROM __time)) <> millis_to_timestamp(extract(millisecond
+                                                                                         FROM __time)-2)) IS NOT FALSE
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) BETWEEN millis_to_timestamp(extract(millisecond
+                                                                                             FROM __time)-2) AND millis_to_timestamp(extract(millisecond
+                                                                                                                                             FROM __time)+2)
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) NOT BETWEEN millis_to_timestamp(extract(millisecond
+                                                                                                 FROM __time)) AND millis_to_timestamp(extract(millisecond
+                                                                                                                                               FROM __time)-2)
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) like '%'
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) not like '__DOES_NOT_EXIST__%'
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) IN (millis_to_timestamp(extract(millisecond
+                                                                                         FROM __time)-2),
+                                                             millis_to_timestamp(extract(millisecond
+                                                                                         FROM __time)),
+                                                             millis_to_timestamp(extract(millisecond
+                                                                                         FROM __time)+2))
+           AND millis_to_timestamp(extract(millisecond
+                                           FROM __time)) NOT IN (millis_to_timestamp(extract(millisecond
+                                                                                             FROM __time)-2),
+                                                                 millis_to_timestamp(extract(millisecond
+                                                                                             FROM __time)+2)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (millis_to_timestamp(extract(millisecond
+                                   FROM __time)) IS NULL
+       OR millis_to_timestamp(extract(millisecond
+                                      FROM __time)) IN
+         (SELECT millis_to_timestamp(extract(millisecond
+                                             FROM __time))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (millis_to_timestamp(extract(millisecond
+                                             FROM __time)) IS NULL
+                 OR (millis_to_timestamp(extract(millisecond
+                                                 FROM __time)) = millis_to_timestamp(extract(millisecond
+                                                                                             FROM __time))
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) IS NOT DISTINCT
+                     FROM millis_to_timestamp(extract(millisecond
+                                                      FROM __time))
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) <> millis_to_timestamp(extract(millisecond
+                                                                                                  FROM __time)-2)
+                     AND (millis_to_timestamp(extract(millisecond
+                                                      FROM __time)) IS DISTINCT
+                          FROM millis_to_timestamp(extract(millisecond
+                                                           FROM __time)-2))
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) > millis_to_timestamp(extract(millisecond
+                                                                                                 FROM __time)-2)
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) >= millis_to_timestamp(extract(millisecond
+                                                                                                  FROM __time)-2)
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) < millis_to_timestamp(extract(millisecond
+                                                                                                 FROM __time)+2)
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) <= millis_to_timestamp(extract(millisecond
+                                                                                                  FROM __time)+2)
+                     AND (millis_to_timestamp(extract(millisecond
+                                                      FROM __time)) <> millis_to_timestamp(extract(millisecond
+                                                                                                   FROM __time)-2)) IS TRUE
+                     AND (millis_to_timestamp(extract(millisecond
+                                                      FROM __time)) = millis_to_timestamp(extract(millisecond
+                                                                                                  FROM __time)-2)) IS NOT TRUE
+                     AND (millis_to_timestamp(extract(millisecond
+                                                      FROM __time)) = millis_to_timestamp(extract(millisecond
+                                                                                                  FROM __time)-2)) IS FALSE
+                     AND (millis_to_timestamp(extract(millisecond
+                                                      FROM __time)) <> millis_to_timestamp(extract(millisecond
+                                                                                                   FROM __time)-2)) IS NOT FALSE
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) BETWEEN millis_to_timestamp(extract(millisecond
+                                                                                                       FROM __time)-2) AND millis_to_timestamp(extract(millisecond
+                                                                                                                                                       FROM __time)+2)
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) NOT BETWEEN millis_to_timestamp(extract(millisecond
+                                                                                                           FROM __time)) AND millis_to_timestamp(extract(millisecond
+                                                                                                                                                         FROM __time)-2)
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) like '%'
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) not like '__DOES_NOT_EXIST__%'
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) IN (millis_to_timestamp(extract(millisecond
+                                                                                                   FROM __time)-2),
+                                                                       millis_to_timestamp(extract(millisecond
+                                                                                                   FROM __time)),
+                                                                       millis_to_timestamp(extract(millisecond
+                                                                                                   FROM __time)+2))
+                     AND millis_to_timestamp(extract(millisecond
+                                                     FROM __time)) NOT IN (millis_to_timestamp(extract(millisecond
+                                                                                                       FROM __time)-2),
+                                                                           millis_to_timestamp(extract(millisecond
+                                                                                                       FROM __time)+2))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          millis_to_timestamp(extract(millisecond
+                                                      FROM __time)),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (millis_to_timestamp(extract(millisecond
+                                      FROM __time)) IS NULL
+          OR (millis_to_timestamp(extract(millisecond
+                                          FROM __time)) = millis_to_timestamp(extract(millisecond
+                                                                                      FROM __time))
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) IS NOT DISTINCT
+              FROM millis_to_timestamp(extract(millisecond
+                                               FROM __time))
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) <> millis_to_timestamp(extract(millisecond
+                                                                                           FROM __time)-2)
+              AND (millis_to_timestamp(extract(millisecond
+                                               FROM __time)) IS DISTINCT
+                   FROM millis_to_timestamp(extract(millisecond
+                                                    FROM __time)-2))
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) > millis_to_timestamp(extract(millisecond
+                                                                                          FROM __time)-2)
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) >= millis_to_timestamp(extract(millisecond
+                                                                                           FROM __time)-2)
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) < millis_to_timestamp(extract(millisecond
+                                                                                          FROM __time)+2)
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) <= millis_to_timestamp(extract(millisecond
+                                                                                           FROM __time)+2)
+              AND (millis_to_timestamp(extract(millisecond
+                                               FROM __time)) <> millis_to_timestamp(extract(millisecond
+                                                                                            FROM __time)-2)) IS TRUE
+              AND (millis_to_timestamp(extract(millisecond
+                                               FROM __time)) = millis_to_timestamp(extract(millisecond
+                                                                                           FROM __time)-2)) IS NOT TRUE
+              AND (millis_to_timestamp(extract(millisecond
+                                               FROM __time)) = millis_to_timestamp(extract(millisecond
+                                                                                           FROM __time)-2)) IS FALSE
+              AND (millis_to_timestamp(extract(millisecond
+                                               FROM __time)) <> millis_to_timestamp(extract(millisecond
+                                                                                            FROM __time)-2)) IS NOT FALSE
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) BETWEEN millis_to_timestamp(extract(millisecond
+                                                                                                FROM __time)-2) AND millis_to_timestamp(extract(millisecond
+                                                                                                                                                FROM __time)+2)
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) NOT BETWEEN millis_to_timestamp(extract(millisecond
+                                                                                                    FROM __time)) AND millis_to_timestamp(extract(millisecond
+                                                                                                                                                  FROM __time)-2)
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) like '%'
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) not like '__DOES_NOT_EXIST__%'
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) IN (millis_to_timestamp(extract(millisecond
+                                                                                            FROM __time)-2),
+                                                                millis_to_timestamp(extract(millisecond
+                                                                                            FROM __time)),
+                                                                millis_to_timestamp(extract(millisecond
+                                                                                            FROM __time)+2))
+              AND millis_to_timestamp(extract(millisecond
+                                              FROM __time)) NOT IN (millis_to_timestamp(extract(millisecond
+                                                                                                FROM __time)-2),
+                                                                    millis_to_timestamp(extract(millisecond
+                                                                                                FROM __time)+2))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A13: timestamp_to_millis
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (timestamp_to_millis(__time) IS NULL
+       OR (timestamp_to_millis(__time) = timestamp_to_millis(__time)
+           AND timestamp_to_millis(__time) IS NOT DISTINCT
+           FROM timestamp_to_millis(__time)
+           AND timestamp_to_millis(__time) <> timestamp_to_millis(__time)-2
+           AND (timestamp_to_millis(__time) IS DISTINCT
+                FROM timestamp_to_millis(__time)-2)
+           AND timestamp_to_millis(__time) > timestamp_to_millis(__time)-2
+           AND timestamp_to_millis(__time) >= timestamp_to_millis(__time)-2
+           AND timestamp_to_millis(__time) < timestamp_to_millis(__time)+2
+           AND timestamp_to_millis(__time) <= timestamp_to_millis(__time)+2
+           AND (timestamp_to_millis(__time) <> timestamp_to_millis(__time)-2) IS TRUE
+           AND (timestamp_to_millis(__time) = timestamp_to_millis(__time)-2) IS NOT TRUE
+           AND (timestamp_to_millis(__time) = timestamp_to_millis(__time)-2) IS FALSE
+           AND (timestamp_to_millis(__time) <> timestamp_to_millis(__time)-2) IS NOT FALSE
+           AND timestamp_to_millis(__time) BETWEEN timestamp_to_millis(__time)-2 AND timestamp_to_millis(__time)+2
+           AND timestamp_to_millis(__time) NOT BETWEEN timestamp_to_millis(__time) AND timestamp_to_millis(__time)-2
+           AND timestamp_to_millis(__time) like '%'
+           AND timestamp_to_millis(__time) not like '__DOES_NOT_EXIST__%'
+           AND timestamp_to_millis(__time) IN (timestamp_to_millis(__time)-2,
+                                                                          timestamp_to_millis(__time),
+                                                                          timestamp_to_millis(__time)+2)
+           AND timestamp_to_millis(__time) NOT IN (timestamp_to_millis(__time)-2,
+                                                                              timestamp_to_millis(__time)+2))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (timestamp_to_millis(__time) IS NULL
+       OR timestamp_to_millis(__time) IN
+         (SELECT timestamp_to_millis(__time)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (timestamp_to_millis(__time) IS NULL
+                 OR (timestamp_to_millis(__time) = timestamp_to_millis(__time)
+                     AND timestamp_to_millis(__time) IS NOT DISTINCT
+                     FROM timestamp_to_millis(__time)
+                     AND timestamp_to_millis(__time) <> timestamp_to_millis(__time)-2
+                     AND (timestamp_to_millis(__time) IS DISTINCT
+                          FROM timestamp_to_millis(__time)-2)
+                     AND timestamp_to_millis(__time) > timestamp_to_millis(__time)-2
+                     AND timestamp_to_millis(__time) >= timestamp_to_millis(__time)-2
+                     AND timestamp_to_millis(__time) < timestamp_to_millis(__time)+2
+                     AND timestamp_to_millis(__time) <= timestamp_to_millis(__time)+2
+                     AND (timestamp_to_millis(__time) <> timestamp_to_millis(__time)-2) IS TRUE
+                     AND (timestamp_to_millis(__time) = timestamp_to_millis(__time)-2) IS NOT TRUE
+                     AND (timestamp_to_millis(__time) = timestamp_to_millis(__time)-2) IS FALSE
+                     AND (timestamp_to_millis(__time) <> timestamp_to_millis(__time)-2) IS NOT FALSE
+                     AND timestamp_to_millis(__time) BETWEEN timestamp_to_millis(__time)-2 AND timestamp_to_millis(__time)+2
+                     AND timestamp_to_millis(__time) NOT BETWEEN timestamp_to_millis(__time) AND timestamp_to_millis(__time)-2
+                     AND timestamp_to_millis(__time) like '%'
+                     AND timestamp_to_millis(__time) not like '__DOES_NOT_EXIST__%'
+                     AND timestamp_to_millis(__time) IN (timestamp_to_millis(__time)-2,
+                                                                                    timestamp_to_millis(__time),
+                                                                                    timestamp_to_millis(__time)+2)
+                     AND timestamp_to_millis(__time) NOT IN (timestamp_to_millis(__time)-2,
+                                                                                        timestamp_to_millis(__time)+2)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          timestamp_to_millis(__time),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (timestamp_to_millis(__time) IS NULL
+          OR (timestamp_to_millis(__time) = timestamp_to_millis(__time)
+              AND timestamp_to_millis(__time) IS NOT DISTINCT
+              FROM timestamp_to_millis(__time)
+              AND timestamp_to_millis(__time) <> timestamp_to_millis(__time)-2
+              AND (timestamp_to_millis(__time) IS DISTINCT
+                   FROM timestamp_to_millis(__time)-2)
+              AND timestamp_to_millis(__time) > timestamp_to_millis(__time)-2
+              AND timestamp_to_millis(__time) >= timestamp_to_millis(__time)-2
+              AND timestamp_to_millis(__time) < timestamp_to_millis(__time)+2
+              AND timestamp_to_millis(__time) <= timestamp_to_millis(__time)+2
+              AND (timestamp_to_millis(__time) <> timestamp_to_millis(__time)-2) IS TRUE
+              AND (timestamp_to_millis(__time) = timestamp_to_millis(__time)-2) IS NOT TRUE
+              AND (timestamp_to_millis(__time) = timestamp_to_millis(__time)-2) IS FALSE
+              AND (timestamp_to_millis(__time) <> timestamp_to_millis(__time)-2) IS NOT FALSE
+              AND timestamp_to_millis(__time) BETWEEN timestamp_to_millis(__time)-2 AND timestamp_to_millis(__time)+2
+              AND timestamp_to_millis(__time) NOT BETWEEN timestamp_to_millis(__time) AND timestamp_to_millis(__time)-2
+              AND timestamp_to_millis(__time) like '%'
+              AND timestamp_to_millis(__time) not like '__DOES_NOT_EXIST__%'
+              AND timestamp_to_millis(__time) IN (timestamp_to_millis(__time)-2,
+                                                                             timestamp_to_millis(__time),
+                                                                             timestamp_to_millis(__time)+2)
+              AND timestamp_to_millis(__time) NOT IN (timestamp_to_millis(__time)-2,
+                                                                                 timestamp_to_millis(__time)+2)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A14: extract
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (extract(HOUR
+               FROM __time) IS NULL
+       OR (extract(HOUR
+                   FROM __time) = extract(HOUR
+                                          FROM __time)
+           AND extract(HOUR
+                       FROM __time) IS NOT DISTINCT
+           FROM extract(HOUR
+                        FROM __time)
+           AND extract(HOUR
+                       FROM __time) <> extract(HOUR
+                                               FROM __time)-2
+           AND (extract(HOUR
+                        FROM __time) IS DISTINCT
+                FROM extract(HOUR
+                             FROM __time)-2)
+           AND extract(HOUR
+                       FROM __time) > extract(HOUR
+                                              FROM __time)-2
+           AND extract(HOUR
+                       FROM __time) >= extract(HOUR
+                                               FROM __time)-2
+           AND extract(HOUR
+                       FROM __time) < extract(HOUR
+                                              FROM __time)+2
+           AND extract(HOUR
+                       FROM __time) <= extract(HOUR
+                                               FROM __time)+2
+           AND (extract(HOUR
+                        FROM __time) <> extract(HOUR
+                                                FROM __time)-2) IS TRUE
+           AND (extract(HOUR
+                        FROM __time) = extract(HOUR
+                                               FROM __time)-2) IS NOT TRUE
+           AND (extract(HOUR
+                        FROM __time) = extract(HOUR
+                                               FROM __time)-2) IS FALSE
+           AND (extract(HOUR
+                        FROM __time) <> extract(HOUR
+                                                FROM __time)-2) IS NOT FALSE
+           AND extract(HOUR
+                       FROM __time) BETWEEN extract(HOUR
+                                                    FROM __time)-2 AND extract(HOUR
+                                                                               FROM __time)+2
+           AND extract(HOUR
+                       FROM __time) NOT BETWEEN extract(HOUR
+                                                        FROM __time) AND extract(HOUR
+                                                                                 FROM __time)-2
+           AND extract(HOUR
+                       FROM __time) like '%'
+           AND extract(HOUR
+                       FROM __time) not like '__DOES_NOT_EXIST__%'
+           AND extract(HOUR
+                       FROM __time) IN (extract(HOUR
+                                                FROM __time)-2,
+                                                            extract(HOUR
+                                                                    FROM __time),
+                                                            extract(HOUR
+                                                                    FROM __time)+2)
+           AND extract(HOUR
+                       FROM __time) NOT IN (extract(HOUR
+                                                    FROM __time)-2,
+                                                                extract(HOUR
+                                                                        FROM __time)+2))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (extract(HOUR
+               FROM __time) IS NULL
+       OR extract(HOUR
+                  FROM __time) IN
+         (SELECT extract(HOUR
+                         FROM __time)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (extract(HOUR
+                         FROM __time) IS NULL
+                 OR (extract(HOUR
+                             FROM __time) = extract(HOUR
+                                                    FROM __time)
+                     AND extract(HOUR
+                                 FROM __time) IS NOT DISTINCT
+                     FROM extract(HOUR
+                                  FROM __time)
+                     AND extract(HOUR
+                                 FROM __time) <> extract(HOUR
+                                                         FROM __time)-2
+                     AND (extract(HOUR
+                                  FROM __time) IS DISTINCT
+                          FROM extract(HOUR
+                                       FROM __time)-2)
+                     AND extract(HOUR
+                                 FROM __time) > extract(HOUR
+                                                        FROM __time)-2
+                     AND extract(HOUR
+                                 FROM __time) >= extract(HOUR
+                                                         FROM __time)-2
+                     AND extract(HOUR
+                                 FROM __time) < extract(HOUR
+                                                        FROM __time)+2
+                     AND extract(HOUR
+                                 FROM __time) <= extract(HOUR
+                                                         FROM __time)+2
+                     AND (extract(HOUR
+                                  FROM __time) <> extract(HOUR
+                                                          FROM __time)-2) IS TRUE
+                     AND (extract(HOUR
+                                  FROM __time) = extract(HOUR
+                                                         FROM __time)-2) IS NOT TRUE
+                     AND (extract(HOUR
+                                  FROM __time) = extract(HOUR
+                                                         FROM __time)-2) IS FALSE
+                     AND (extract(HOUR
+                                  FROM __time) <> extract(HOUR
+                                                          FROM __time)-2) IS NOT FALSE
+                     AND extract(HOUR
+                                 FROM __time) BETWEEN extract(HOUR
+                                                              FROM __time)-2 AND extract(HOUR
+                                                                                         FROM __time)+2
+                     AND extract(HOUR
+                                 FROM __time) NOT BETWEEN extract(HOUR
+                                                                  FROM __time) AND extract(HOUR
+                                                                                           FROM __time)-2
+                     AND extract(HOUR
+                                 FROM __time) like '%'
+                     AND extract(HOUR
+                                 FROM __time) not like '__DOES_NOT_EXIST__%'
+                     AND extract(HOUR
+                                 FROM __time) IN (extract(HOUR
+                                                          FROM __time)-2,
+                                                                      extract(HOUR
+                                                                              FROM __time),
+                                                                      extract(HOUR
+                                                                              FROM __time)+2)
+                     AND extract(HOUR
+                                 FROM __time) NOT IN (extract(HOUR
+                                                              FROM __time)-2,
+                                                                          extract(HOUR
+                                                                                  FROM __time)+2)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          extract(HOUR
+                                  FROM __time),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (extract(HOUR
+                  FROM __time) IS NULL
+          OR (extract(HOUR
+                      FROM __time) = extract(HOUR
+                                             FROM __time)
+              AND extract(HOUR
+                          FROM __time) IS NOT DISTINCT
+              FROM extract(HOUR
+                           FROM __time)
+              AND extract(HOUR
+                          FROM __time) <> extract(HOUR
+                                                  FROM __time)-2
+              AND (extract(HOUR
+                           FROM __time) IS DISTINCT
+                   FROM extract(HOUR
+                                FROM __time)-2)
+              AND extract(HOUR
+                          FROM __time) > extract(HOUR
+                                                 FROM __time)-2
+              AND extract(HOUR
+                          FROM __time) >= extract(HOUR
+                                                  FROM __time)-2
+              AND extract(HOUR
+                          FROM __time) < extract(HOUR
+                                                 FROM __time)+2
+              AND extract(HOUR
+                          FROM __time) <= extract(HOUR
+                                                  FROM __time)+2
+              AND (extract(HOUR
+                           FROM __time) <> extract(HOUR
+                                                   FROM __time)-2) IS TRUE
+              AND (extract(HOUR
+                           FROM __time) = extract(HOUR
+                                                  FROM __time)-2) IS NOT TRUE
+              AND (extract(HOUR
+                           FROM __time) = extract(HOUR
+                                                  FROM __time)-2) IS FALSE
+              AND (extract(HOUR
+                           FROM __time) <> extract(HOUR
+                                                   FROM __time)-2) IS NOT FALSE
+              AND extract(HOUR
+                          FROM __time) BETWEEN extract(HOUR
+                                                       FROM __time)-2 AND extract(HOUR
+                                                                                  FROM __time)+2
+              AND extract(HOUR
+                          FROM __time) NOT BETWEEN extract(HOUR
+                                                           FROM __time) AND extract(HOUR
+                                                                                    FROM __time)-2
+              AND extract(HOUR
+                          FROM __time) like '%'
+              AND extract(HOUR
+                          FROM __time) not like '__DOES_NOT_EXIST__%'
+              AND extract(HOUR
+                          FROM __time) IN (extract(HOUR
+                                                   FROM __time)-2,
+                                                               extract(HOUR
+                                                                       FROM __time),
+                                                               extract(HOUR
+                                                                       FROM __time)+2)
+              AND extract(HOUR
+                          FROM __time) NOT IN (extract(HOUR
+                                                       FROM __time)-2,
+                                                                   extract(HOUR
+                                                                           FROM __time)+2)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A15: floor
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(__time TO DAY) IS NULL
+       OR (floor(__time TO DAY) = floor(__time TO DAY)
+           AND floor(__time TO DAY) IS NOT DISTINCT
+           FROM floor(__time TO DAY)
+           AND floor(__time TO DAY) <> floor(time_shift(__time, 'P1D', -2) TO DAY)
+           AND (floor(__time TO DAY) IS DISTINCT
+                FROM floor(time_shift(__time, 'P1D', -2) TO DAY))
+           AND floor(__time TO DAY) > floor(time_shift(__time, 'P1D', -2) TO DAY)
+           AND floor(__time TO DAY) >= floor(time_shift(__time, 'P1D', -2) TO DAY)
+           AND floor(__time TO DAY) < floor(time_shift(__time, 'P1D', 2) TO DAY)
+           AND floor(__time TO DAY) <= floor(time_shift(__time, 'P1D', 2) TO DAY)
+           AND (floor(__time TO DAY) <> floor(time_shift(__time, 'P1D', -2) TO DAY)) IS TRUE
+           AND (floor(__time TO DAY) = floor(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT TRUE
+           AND (floor(__time TO DAY) = floor(time_shift(__time, 'P1D', -2) TO DAY)) IS FALSE
+           AND (floor(__time TO DAY) <> floor(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT FALSE
+           AND floor(__time TO DAY) BETWEEN floor(time_shift(__time, 'P1D', -2) TO DAY) AND floor(time_shift(__time, 'P1D', 2) TO DAY)
+           AND floor(__time TO DAY) NOT BETWEEN floor(__time TO DAY) AND floor(time_shift(__time, 'P1D', -2) TO DAY)
+           AND floor(__time TO DAY) like '%'
+           AND floor(__time TO DAY) not like '__DOES_NOT_EXIST__%'
+           AND floor(__time TO DAY) IN (floor(time_shift(__time, 'P1D', -2) TO DAY),
+                                        floor(__time TO DAY),
+                                        floor(time_shift(__time, 'P1D', 2) TO DAY))
+           AND floor(__time TO DAY) NOT IN (floor(time_shift(__time, 'P1D', -2) TO DAY),
+                                            floor(time_shift(__time, 'P1D', 2) TO DAY)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (floor(__time TO DAY) IS NULL
+       OR floor(__time TO DAY) IN
+         (SELECT floor(__time TO DAY)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (floor(__time TO DAY) IS NULL
+                 OR (floor(__time TO DAY) = floor(__time TO DAY)
+                     AND floor(__time TO DAY) IS NOT DISTINCT
+                     FROM floor(__time TO DAY)
+                     AND floor(__time TO DAY) <> floor(time_shift(__time, 'P1D', -2) TO DAY)
+                     AND (floor(__time TO DAY) IS DISTINCT
+                          FROM floor(time_shift(__time, 'P1D', -2) TO DAY))
+                     AND floor(__time TO DAY) > floor(time_shift(__time, 'P1D', -2) TO DAY)
+                     AND floor(__time TO DAY) >= floor(time_shift(__time, 'P1D', -2) TO DAY)
+                     AND floor(__time TO DAY) < floor(time_shift(__time, 'P1D', 2) TO DAY)
+                     AND floor(__time TO DAY) <= floor(time_shift(__time, 'P1D', 2) TO DAY)
+                     AND (floor(__time TO DAY) <> floor(time_shift(__time, 'P1D', -2) TO DAY)) IS TRUE
+                     AND (floor(__time TO DAY) = floor(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT TRUE
+                     AND (floor(__time TO DAY) = floor(time_shift(__time, 'P1D', -2) TO DAY)) IS FALSE
+                     AND (floor(__time TO DAY) <> floor(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT FALSE
+                     AND floor(__time TO DAY) BETWEEN floor(time_shift(__time, 'P1D', -2) TO DAY) AND floor(time_shift(__time, 'P1D', 2) TO DAY)
+                     AND floor(__time TO DAY) NOT BETWEEN floor(__time TO DAY) AND floor(time_shift(__time, 'P1D', -2) TO DAY)
+                     AND floor(__time TO DAY) like '%'
+                     AND floor(__time TO DAY) not like '__DOES_NOT_EXIST__%'
+                     AND floor(__time TO DAY) IN (floor(time_shift(__time, 'P1D', -2) TO DAY),
+                                                  floor(__time TO DAY),
+                                                  floor(time_shift(__time, 'P1D', 2) TO DAY))
+                     AND floor(__time TO DAY) NOT IN (floor(time_shift(__time, 'P1D', -2) TO DAY),
+                                                      floor(time_shift(__time, 'P1D', 2) TO DAY))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          floor(__time TO DAY),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (floor(__time TO DAY) IS NULL
+          OR (floor(__time TO DAY) = floor(__time TO DAY)
+              AND floor(__time TO DAY) IS NOT DISTINCT
+              FROM floor(__time TO DAY)
+              AND floor(__time TO DAY) <> floor(time_shift(__time, 'P1D', -2) TO DAY)
+              AND (floor(__time TO DAY) IS DISTINCT
+                   FROM floor(time_shift(__time, 'P1D', -2) TO DAY))
+              AND floor(__time TO DAY) > floor(time_shift(__time, 'P1D', -2) TO DAY)
+              AND floor(__time TO DAY) >= floor(time_shift(__time, 'P1D', -2) TO DAY)
+              AND floor(__time TO DAY) < floor(time_shift(__time, 'P1D', 2) TO DAY)
+              AND floor(__time TO DAY) <= floor(time_shift(__time, 'P1D', 2) TO DAY)
+              AND (floor(__time TO DAY) <> floor(time_shift(__time, 'P1D', -2) TO DAY)) IS TRUE
+              AND (floor(__time TO DAY) = floor(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT TRUE
+              AND (floor(__time TO DAY) = floor(time_shift(__time, 'P1D', -2) TO DAY)) IS FALSE
+              AND (floor(__time TO DAY) <> floor(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT FALSE
+              AND floor(__time TO DAY) BETWEEN floor(time_shift(__time, 'P1D', -2) TO DAY) AND floor(time_shift(__time, 'P1D', 2) TO DAY)
+              AND floor(__time TO DAY) NOT BETWEEN floor(__time TO DAY) AND floor(time_shift(__time, 'P1D', -2) TO DAY)
+              AND floor(__time TO DAY) like '%'
+              AND floor(__time TO DAY) not like '__DOES_NOT_EXIST__%'
+              AND floor(__time TO DAY) IN (floor(time_shift(__time, 'P1D', -2) TO DAY),
+                                           floor(__time TO DAY),
+                                           floor(time_shift(__time, 'P1D', 2) TO DAY))
+              AND floor(__time TO DAY) NOT IN (floor(time_shift(__time, 'P1D', -2) TO DAY),
+                                               floor(time_shift(__time, 'P1D', 2) TO DAY))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A16: ceil
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (ceil(__time TO DAY) IS NULL
+       OR (ceil(__time TO DAY) = ceil(__time TO DAY)
+           AND ceil(__time TO DAY) IS NOT DISTINCT
+           FROM ceil(__time TO DAY)
+           AND ceil(__time TO DAY) <> ceil(time_shift(__time, 'P1D', -2) TO DAY)
+           AND (ceil(__time TO DAY) IS DISTINCT
+                FROM ceil(time_shift(__time, 'P1D', -2) TO DAY))
+           AND ceil(__time TO DAY) > ceil(time_shift(__time, 'P1D', -2) TO DAY)
+           AND ceil(__time TO DAY) >= ceil(time_shift(__time, 'P1D', -2) TO DAY)
+           AND ceil(__time TO DAY) < floor(time_shift(__time, 'P1D', 2) TO DAY)
+           AND ceil(__time TO DAY) <= floor(time_shift(__time, 'P1D', 2) TO DAY)
+           AND (ceil(__time TO DAY) <> ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS TRUE
+           AND (ceil(__time TO DAY) = ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT TRUE
+           AND (ceil(__time TO DAY) = ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS FALSE
+           AND (ceil(__time TO DAY) <> ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT FALSE
+           AND ceil(__time TO DAY) BETWEEN ceil(time_shift(__time, 'P1D', -2) TO DAY) AND floor(time_shift(__time, 'P1D', 2) TO DAY)
+           AND ceil(__time TO DAY) NOT BETWEEN ceil(__time TO DAY) AND ceil(time_shift(__time, 'P1D', -2) TO DAY)
+           AND ceil(__time TO DAY) like '%'
+           AND ceil(__time TO DAY) not like '__DOES_NOT_EXIST__%'
+           AND ceil(__time TO DAY) IN (ceil(time_shift(__time, 'P1D', -2) TO DAY),
+                                       ceil(__time TO DAY),
+                                       floor(time_shift(__time, 'P1D', 2) TO DAY))
+           AND ceil(__time TO DAY) NOT IN (ceil(time_shift(__time, 'P1D', -2) TO DAY),
+                                           floor(time_shift(__time, 'P1D', 2) TO DAY)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (ceil(__time TO DAY) IS NULL
+       OR ceil(__time TO DAY) IN
+         (SELECT ceil(__time TO DAY)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (ceil(__time TO DAY) IS NULL
+                 OR (ceil(__time TO DAY) = ceil(__time TO DAY)
+                     AND ceil(__time TO DAY) IS NOT DISTINCT
+                     FROM ceil(__time TO DAY)
+                     AND ceil(__time TO DAY) <> ceil(time_shift(__time, 'P1D', -2) TO DAY)
+                     AND (ceil(__time TO DAY) IS DISTINCT
+                          FROM ceil(time_shift(__time, 'P1D', -2) TO DAY))
+                     AND ceil(__time TO DAY) > ceil(time_shift(__time, 'P1D', -2) TO DAY)
+                     AND ceil(__time TO DAY) >= ceil(time_shift(__time, 'P1D', -2) TO DAY)
+                     AND ceil(__time TO DAY) < floor(time_shift(__time, 'P1D', 2) TO DAY)
+                     AND ceil(__time TO DAY) <= floor(time_shift(__time, 'P1D', 2) TO DAY)
+                     AND (ceil(__time TO DAY) <> ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS TRUE
+                     AND (ceil(__time TO DAY) = ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT TRUE
+                     AND (ceil(__time TO DAY) = ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS FALSE
+                     AND (ceil(__time TO DAY) <> ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT FALSE
+                     AND ceil(__time TO DAY) BETWEEN ceil(time_shift(__time, 'P1D', -2) TO DAY) AND floor(time_shift(__time, 'P1D', 2) TO DAY)
+                     AND ceil(__time TO DAY) NOT BETWEEN ceil(__time TO DAY) AND ceil(time_shift(__time, 'P1D', -2) TO DAY)
+                     AND ceil(__time TO DAY) like '%'
+                     AND ceil(__time TO DAY) not like '__DOES_NOT_EXIST__%'
+                     AND ceil(__time TO DAY) IN (ceil(time_shift(__time, 'P1D', -2) TO DAY),
+                                                 ceil(__time TO DAY),
+                                                 floor(time_shift(__time, 'P1D', 2) TO DAY))
+                     AND ceil(__time TO DAY) NOT IN (ceil(time_shift(__time, 'P1D', -2) TO DAY),
+                                                     floor(time_shift(__time, 'P1D', 2) TO DAY))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          ceil(__time TO DAY),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (ceil(__time TO DAY) IS NULL
+          OR (ceil(__time TO DAY) = ceil(__time TO DAY)
+              AND ceil(__time TO DAY) IS NOT DISTINCT
+              FROM ceil(__time TO DAY)
+              AND ceil(__time TO DAY) <> ceil(time_shift(__time, 'P1D', -2) TO DAY)
+              AND (ceil(__time TO DAY) IS DISTINCT
+                   FROM ceil(time_shift(__time, 'P1D', -2) TO DAY))
+              AND ceil(__time TO DAY) > ceil(time_shift(__time, 'P1D', -2) TO DAY)
+              AND ceil(__time TO DAY) >= ceil(time_shift(__time, 'P1D', -2) TO DAY)
+              AND ceil(__time TO DAY) < floor(time_shift(__time, 'P1D', 2) TO DAY)
+              AND ceil(__time TO DAY) <= floor(time_shift(__time, 'P1D', 2) TO DAY)
+              AND (ceil(__time TO DAY) <> ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS TRUE
+              AND (ceil(__time TO DAY) = ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT TRUE
+              AND (ceil(__time TO DAY) = ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS FALSE
+              AND (ceil(__time TO DAY) <> ceil(time_shift(__time, 'P1D', -2) TO DAY)) IS NOT FALSE
+              AND ceil(__time TO DAY) BETWEEN ceil(time_shift(__time, 'P1D', -2) TO DAY) AND floor(time_shift(__time, 'P1D', 2) TO DAY)
+              AND ceil(__time TO DAY) NOT BETWEEN ceil(__time TO DAY) AND ceil(time_shift(__time, 'P1D', -2) TO DAY)
+              AND ceil(__time TO DAY) like '%'
+              AND ceil(__time TO DAY) not like '__DOES_NOT_EXIST__%'
+              AND ceil(__time TO DAY) IN (ceil(time_shift(__time, 'P1D', -2) TO DAY),
+                                          ceil(__time TO DAY),
+                                          floor(time_shift(__time, 'P1D', 2) TO DAY))
+              AND ceil(__time TO DAY) NOT IN (ceil(time_shift(__time, 'P1D', -2) TO DAY),
+                                              floor(time_shift(__time, 'P1D', 2) TO DAY))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A17: timestampadd
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (timestampadd(DAY, 1, __time) IS NULL
+       OR (timestampadd(DAY, 1, __time) = timestampadd(DAY, 1, __time)
+           AND timestampadd(DAY, 1, __time) IS NOT DISTINCT
+           FROM timestampadd(DAY, 1, __time)
+           AND timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)
+           AND (timestampadd(DAY, 1, __time) IS DISTINCT
+                FROM timestampadd(DAY, -1, __time))
+           AND timestampadd(DAY, 1, __time) > timestampadd(DAY, -1, __time)
+           AND timestampadd(DAY, 1, __time) >= timestampadd(DAY, -1, __time)
+           AND timestampadd(DAY, 1, __time) < timestampadd(DAY, 2, __time)
+           AND timestampadd(DAY, 1, __time) <= timestampadd(DAY, 2, __time)
+           AND (timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)) IS TRUE
+           AND (timestampadd(DAY, 1, __time) = timestampadd(DAY, -1, __time)) IS NOT TRUE
+           AND (timestampadd(DAY, 1, __time) = timestampadd(DAY, -1, __time)) IS FALSE
+           AND (timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)) IS NOT FALSE
+           AND timestampadd(DAY, 1, __time) BETWEEN timestampadd(DAY, -1, __time) AND timestampadd(DAY, 2, __time)
+           AND timestampadd(DAY, 1, __time) NOT BETWEEN timestampadd(DAY, 1, __time) AND timestampadd(DAY, -1, __time)
+           AND timestampadd(DAY, 1, __time) like '%'
+           AND timestampadd(DAY, 1, __time) not like '__DOES_NOT_EXIST__%'
+           AND timestampadd(DAY, 1, __time) IN (timestampadd(DAY, -1, __time),
+                                                timestampadd(DAY, 1, __time),
+                                                timestampadd(DAY, 2, __time))
+           AND timestampadd(DAY, 1, __time) NOT IN (timestampadd(DAY, -1, __time),
+                                                    timestampadd(DAY, 2, __time)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (timestampadd(DAY, 1, __time) IS NULL
+       OR timestampadd(DAY, 1, __time) IN
+         (SELECT timestampadd(DAY, 1, __time)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (timestampadd(DAY, 1, __time) IS NULL
+                 OR (timestampadd(DAY, 1, __time) = timestampadd(DAY, 1, __time)
+                     AND timestampadd(DAY, 1, __time) IS NOT DISTINCT
+                     FROM timestampadd(DAY, 1, __time)
+                     AND timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)
+                     AND (timestampadd(DAY, 1, __time) IS DISTINCT
+                          FROM timestampadd(DAY, -1, __time))
+                     AND timestampadd(DAY, 1, __time) > timestampadd(DAY, -1, __time)
+                     AND timestampadd(DAY, 1, __time) >= timestampadd(DAY, -1, __time)
+                     AND timestampadd(DAY, 1, __time) < timestampadd(DAY, 2, __time)
+                     AND timestampadd(DAY, 1, __time) <= timestampadd(DAY, 2, __time)
+                     AND (timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)) IS TRUE
+                     AND (timestampadd(DAY, 1, __time) = timestampadd(DAY, -1, __time)) IS NOT TRUE
+                     AND (timestampadd(DAY, 1, __time) = timestampadd(DAY, -1, __time)) IS FALSE
+                     AND (timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)) IS NOT FALSE
+                     AND timestampadd(DAY, 1, __time) BETWEEN timestampadd(DAY, -1, __time) AND timestampadd(DAY, 2, __time)
+                     AND timestampadd(DAY, 1, __time) NOT BETWEEN timestampadd(DAY, 1, __time) AND timestampadd(DAY, -1, __time)
+                     AND timestampadd(DAY, 1, __time) like '%'
+                     AND timestampadd(DAY, 1, __time) not like '__DOES_NOT_EXIST__%'
+                     AND timestampadd(DAY, 1, __time) IN (timestampadd(DAY, -1, __time),
+                                                          timestampadd(DAY, 1, __time),
+                                                          timestampadd(DAY, 2, __time))
+                     AND timestampadd(DAY, 1, __time) NOT IN (timestampadd(DAY, -1, __time),
+                                                              timestampadd(DAY, 2, __time))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          timestampadd(DAY, 1, __time),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (timestampadd(DAY, 1, __time) IS NULL
+          OR (timestampadd(DAY, 1, __time) = timestampadd(DAY, 1, __time)
+              AND timestampadd(DAY, 1, __time) IS NOT DISTINCT
+              FROM timestampadd(DAY, 1, __time)
+              AND timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)
+              AND (timestampadd(DAY, 1, __time) IS DISTINCT
+                   FROM timestampadd(DAY, -1, __time))
+              AND timestampadd(DAY, 1, __time) > timestampadd(DAY, -1, __time)
+              AND timestampadd(DAY, 1, __time) >= timestampadd(DAY, -1, __time)
+              AND timestampadd(DAY, 1, __time) < timestampadd(DAY, 2, __time)
+              AND timestampadd(DAY, 1, __time) <= timestampadd(DAY, 2, __time)
+              AND (timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)) IS TRUE
+              AND (timestampadd(DAY, 1, __time) = timestampadd(DAY, -1, __time)) IS NOT TRUE
+              AND (timestampadd(DAY, 1, __time) = timestampadd(DAY, -1, __time)) IS FALSE
+              AND (timestampadd(DAY, 1, __time) <> timestampadd(DAY, -1, __time)) IS NOT FALSE
+              AND timestampadd(DAY, 1, __time) BETWEEN timestampadd(DAY, -1, __time) AND timestampadd(DAY, 2, __time)
+              AND timestampadd(DAY, 1, __time) NOT BETWEEN timestampadd(DAY, 1, __time) AND timestampadd(DAY, -1, __time)
+              AND timestampadd(DAY, 1, __time) like '%'
+              AND timestampadd(DAY, 1, __time) not like '__DOES_NOT_EXIST__%'
+              AND timestampadd(DAY, 1, __time) IN (timestampadd(DAY, -1, __time),
+                                                   timestampadd(DAY, 1, __time),
+                                                   timestampadd(DAY, 2, __time))
+              AND timestampadd(DAY, 1, __time) NOT IN (timestampadd(DAY, -1, __time),
+                                                       timestampadd(DAY, 2, __time))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A18: timestampdiff
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NULL
+       OR (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NOT DISTINCT
+           FROM timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+           AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS DISTINCT
+                FROM timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) > timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) >= timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) < timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <= timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+           AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS TRUE
+           AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT TRUE
+           AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS FALSE
+           AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT FALSE
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) like '%'
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) not like '__DOES_NOT_EXIST__%'
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                            timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)),
+                                                                            timestampdiff(DAY, __time, timestampadd(DAY, 3, __time)))
+           AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                                timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NULL
+       OR timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IN
+         (SELECT timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NULL
+                 OR (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NOT DISTINCT
+                     FROM timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+                     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS DISTINCT
+                          FROM timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) > timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) >= timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) < timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <= timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+                     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS TRUE
+                     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT TRUE
+                     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS FALSE
+                     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT FALSE
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) like '%'
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) not like '__DOES_NOT_EXIST__%'
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                                      timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)),
+                                                                                      timestampdiff(DAY, __time, timestampadd(DAY, 3, __time)))
+                     AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                                          timestampdiff(DAY, __time, timestampadd(DAY, 3, __time)))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NULL
+          OR (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS NOT DISTINCT
+              FROM timestampdiff(DAY, __time, timestampadd(DAY, 2, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+              AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IS DISTINCT
+                   FROM timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) > timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) >= timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) < timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <= timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+              AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS TRUE
+              AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT TRUE
+              AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) = timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS FALSE
+              AND (timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) <> timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))) IS NOT FALSE
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 3, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT BETWEEN timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) AND timestampdiff(DAY, __time, timestampadd(DAY, 1, __time))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) like '%'
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) not like '__DOES_NOT_EXIST__%'
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                               timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)),
+                                                                               timestampdiff(DAY, __time, timestampadd(DAY, 3, __time)))
+              AND timestampdiff(DAY, __time, timestampadd(DAY, 2, __time)) NOT IN (timestampdiff(DAY, __time, timestampadd(DAY, 1, __time)),
+                                                                                   timestampdiff(DAY, __time, timestampadd(DAY, 3, __time)))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# Total query count 55
+#-------------------------------------------------------------------------
