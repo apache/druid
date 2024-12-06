@@ -1455,9 +1455,13 @@ public class DataSourcesResourceTest
   {
     List<DataSegment> segments = ImmutableList.of();
     // Test when datasource fully loaded
-    EasyMock.expect(segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(EasyMock.eq(
-        TestDataSource.WIKI), EasyMock.anyObject(Interval.class), EasyMock.anyBoolean()))
-            .andReturn(Optional.of(segments)).once();
+    EasyMock.expect(
+        segmentsMetadataManager.iterateAllUsedNonOvershadowedSegmentsForDatasourceInterval(
+            EasyMock.eq(TestDataSource.WIKI),
+            EasyMock.anyObject(Interval.class),
+            EasyMock.anyBoolean()
+        )
+    ).andReturn(Optional.of(segments)).once();
     EasyMock.replay(segmentsMetadataManager);
 
     DataSourcesResource dataSourcesResource = new DataSourcesResource(
