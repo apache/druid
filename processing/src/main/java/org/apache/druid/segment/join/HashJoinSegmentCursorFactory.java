@@ -87,7 +87,7 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
 
     if (physicalColumns != null && combinedFilter != null) {
       for (String column : combinedFilter.getRequiredColumns()) {
-        if (spec.getVirtualColumns().getVirtualColumn(column) == null) {
+        if (!spec.getVirtualColumns().exists(column)) {
           physicalColumns.add(column);
         }
       }
@@ -170,16 +170,14 @@ public class HashJoinSegmentCursorFactory implements CursorFactory
         if (physicalColumns != null) {
           if (joinFilterSplit.getBaseTableFilter().isPresent()) {
             for (String column : joinFilterSplit.getBaseTableFilter().get().getRequiredColumns()) {
-              if (spec.getVirtualColumns().getVirtualColumn(column) == null
-                  && preJoinVirtualColumns.getVirtualColumn(column) == null) {
+              if (!spec.getVirtualColumns().exists(column) && !preJoinVirtualColumns.exists(column)) {
                 physicalColumns.add(column);
               }
             }
           }
           for (VirtualColumn virtualColumn : preJoinVirtualColumns.getVirtualColumns()) {
             for (String column : virtualColumn.requiredColumns()) {
-              if (spec.getVirtualColumns().getVirtualColumn(column) == null
-                  && preJoinVirtualColumns.getVirtualColumn(column) == null) {
+              if (!spec.getVirtualColumns().exists(column) && !preJoinVirtualColumns.exists(column)) {
                 physicalColumns.add(column);
               }
             }

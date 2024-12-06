@@ -96,8 +96,9 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
 
         DruidException.conditionalDefensive(
             cursorBuildSpec.getPhysicalColumns() == null || capabilities != null || capabilitiesMap.containsKey(column),
-            "Asked for physical column capabilities for column[%s] which wasn't specified as required by the query, this is a bug",
-            column
+            "Asked for physical column capabilities for column[%s] which wasn't specified as required by the query (specified columns[%s])",
+            column,
+            cursorBuildSpec.getPhysicalColumns()
         );
         return capabilities;
       }

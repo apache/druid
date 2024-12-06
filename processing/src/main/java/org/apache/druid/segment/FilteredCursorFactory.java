@@ -57,7 +57,7 @@ public class FilteredCursorFactory implements CursorFactory
       if (spec.getPhysicalColumns() != null) {
         physicalColumns = new HashSet<>(spec.getPhysicalColumns());
         for (String column : filter.getRequiredColumns()) {
-          if (spec.getVirtualColumns().getVirtualColumn(column) == null) {
+          if (!spec.getVirtualColumns().exists(column)) {
             physicalColumns.add(column);
           }
         }

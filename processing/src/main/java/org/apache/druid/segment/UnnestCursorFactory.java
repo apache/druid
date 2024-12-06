@@ -93,13 +93,13 @@ public class UnnestCursorFactory implements CursorFactory
     } else {
       physicalColumns = new HashSet<>();
       for (String column : unnestColumn.requiredColumns()) {
-        if (spec.getVirtualColumns().getVirtualColumn(column) == null) {
+        if (!spec.getVirtualColumns().exists(column)) {
           physicalColumns.add(column);
         }
       }
       if (filter != null) {
         for (String column : filter.getRequiredColumns()) {
-          if (spec.getVirtualColumns().getVirtualColumn(column) == null) {
+          if (!spec.getVirtualColumns().exists(column)) {
             physicalColumns.add(column);
           }
         }
