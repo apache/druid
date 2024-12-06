@@ -31,10 +31,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ScheduledBatchStatusTracker
 {
-  // Track supervisor -> tasks.
+  /**
+   * Track supervisor ID -> task IDs.
+   */
   private final ConcurrentHashMap<String, List<String>> supervisorToTaskIds = new ConcurrentHashMap<>();
 
-  // Track task -> task status
+  /**
+   * Track task ID -> task status
+   */
   private final ConcurrentHashMap<String, TaskStatus> taskStatusMap = new ConcurrentHashMap<>();
 
   public void onTaskSubmitted(final String supervisorId, final SqlTaskStatus sqlTaskStatus)

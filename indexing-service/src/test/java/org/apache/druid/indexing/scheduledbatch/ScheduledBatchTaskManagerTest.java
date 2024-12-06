@@ -50,10 +50,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
-public class ScheduledBatchSchedulerTest
+public class ScheduledBatchTaskManagerTest
 {
   private static final String SUPERVISOR_ID_FOO = "foo";
   private static final String SUPERVISOR_ID_BAR = "bar";
+
+  private static final String DATASOURCE = "ds";
 
   private static final String TASK_ID_FOO1 = "fooTaskId1";
   private static final String TASK_ID_FOO2 = "fooTaskId2";
@@ -63,13 +65,13 @@ public class ScheduledBatchSchedulerTest
   private static final CronSchedulerConfig IMMEDIATE_SCHEDULER_CONFIG = new CronSchedulerConfig()
   {
     @Override
-    public DateTime getNextTaskSubmissionTime(final DateTime dateTime)
+    public DateTime getNextTaskStartTimeAfter(final DateTime referenceTime)
     {
-      return dateTime;
+      return referenceTime;
     }
 
     @Override
-    public Duration getTimeUntilNextTaskSubmission(final DateTime dateTime)
+    public Duration getDurationUntilNextTaskStartTimeAfter(final DateTime referenceTime)
     {
       return Duration.ZERO;
     }
@@ -80,7 +82,7 @@ public class ScheduledBatchSchedulerTest
   private StubServiceEmitter serviceEmitter;
   private SqlQuery query1;
   private SqlQuery query2;
-  private ScheduledBatchScheduler scheduler;
+  private ScheduledBatchTaskManager scheduler;
 
   @Before
   public void setUp()
@@ -90,7 +92,7 @@ public class ScheduledBatchSchedulerTest
     serviceEmitter = new StubServiceEmitter();
     query1 = createSqlQuery("REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY ALL");
     query2 = createSqlQuery("REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY DAY");
-    scheduler = new ScheduledBatchScheduler(
+    scheduler = new ScheduledBatchTaskManager(
         new TaskMaster(null, null),
         (nameFormat, numThreads) -> new WrappingScheduledExecutorService("test", executor, false),
         brokerClient,
@@ -120,7 +122,7 @@ public class ScheduledBatchSchedulerTest
            .thenReturn(Futures.immediateFuture(expectedTaskStatus));
 
     scheduler.start();
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, IMMEDIATE_SCHEDULER_CONFIG, query1);
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
     verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
     executor.finishNextPendingTasks(2);
@@ -163,7 +165,7 @@ public class ScheduledBatchSchedulerTest
                ));
 
     scheduler.start();
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, IMMEDIATE_SCHEDULER_CONFIG, query1);
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
     verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
     executor.finishNextPendingTasks(2);
@@ -199,8 +201,8 @@ public class ScheduledBatchSchedulerTest
            .thenReturn(Futures.immediateFuture(expectedBarTask2));
 
     scheduler.start();
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, IMMEDIATE_SCHEDULER_CONFIG, query1);
-    scheduler.startScheduledIngestion(SUPERVISOR_ID_BAR, IMMEDIATE_SCHEDULER_CONFIG, query2);
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_BAR, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query2);
 
     verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
     verifySchedulerSnapshot(SUPERVISOR_ID_BAR, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);

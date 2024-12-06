@@ -66,7 +66,7 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
   private final String id;
 
   private final ObjectMapper objectMapper;
-  private final ScheduledBatchScheduler batchScheduler;
+  private final ScheduledBatchTaskManager batchTaskManager;
   private final BrokerClient brokerClient;
 
   @JsonCreator
@@ -77,7 +77,7 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
       @JsonProperty("id") @Nullable final String id,
       @JsonProperty("dataSource") @Nullable final String dataSource,
       @JacksonInject ObjectMapper objectMapper,
-      @JacksonInject ScheduledBatchScheduler batchScheduler,
+      @JacksonInject ScheduledBatchTaskManager batchTaskManager,
       @JacksonInject BrokerClient brokerClient
   )
   {
@@ -85,7 +85,7 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
     this.schedulerConfig = schedulerConfig;
     this.suspended = Configs.valueOrDefault(suspended, false);
     this.objectMapper = objectMapper;
-    this.batchScheduler = batchScheduler;
+    this.batchTaskManager = batchTaskManager;
     this.brokerClient = brokerClient;
 
     this.dataSource = dataSource != null ? dataSource : getDatasourceFromQuery();
@@ -132,7 +132,7 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
   @Override
   public ScheduledBatchSupervisor createSupervisor()
   {
-    return new ScheduledBatchSupervisor(this, batchScheduler);
+    return new ScheduledBatchSupervisor(this, batchTaskManager);
   }
 
   @Override
@@ -148,9 +148,10 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
         spec,
         schedulerConfig,
         true,
-        id, dataSource,
+        id,
+        dataSource,
         objectMapper,
-        batchScheduler,
+        batchTaskManager,
         null
     );
   }
@@ -165,7 +166,7 @@ public class ScheduledBatchSupervisorSpec implements SupervisorSpec
         id,
         dataSource,
         objectMapper,
-        batchScheduler,
+        batchTaskManager,
         null
     );
   }

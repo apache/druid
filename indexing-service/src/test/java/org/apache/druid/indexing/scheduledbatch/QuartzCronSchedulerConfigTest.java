@@ -21,10 +21,14 @@ package org.apache.druid.indexing.scheduledbatch;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -41,8 +45,8 @@ public class QuartzCronSchedulerConfigTest
   {
     final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 * * * * ?");
 
-    assertEquals(DATE_2024_01_01.plusMinutes(1), config.getNextTaskSubmissionTime(DATE_2024_01_01));
-    assertEquals(Duration.standardMinutes(1), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+    assertEquals(DATE_2024_01_01.plusMinutes(1), config.getNextTaskStartTimeAfter(DATE_2024_01_01));
+    assertEquals(Duration.standardMinutes(1), config.getDurationUntilNextTaskStartTimeAfter(DATE_2024_01_01));
   }
 
   @Test
@@ -50,8 +54,8 @@ public class QuartzCronSchedulerConfigTest
   {
     final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 15 10 * * ? *");
 
-    assertEquals(DATE_2024_01_01.withTime(10, 15, 0, 0), config.getNextTaskSubmissionTime(DATE_2024_01_01));
-    assertEquals(Duration.standardMinutes(615), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+    assertEquals(DATE_2024_01_01.withTime(10, 15, 0, 0), config.getNextTaskStartTimeAfter(DATE_2024_01_01));
+    assertEquals(Duration.standardMinutes(615), config.getDurationUntilNextTaskStartTimeAfter(DATE_2024_01_01));
   }
 
   @Test
@@ -59,8 +63,8 @@ public class QuartzCronSchedulerConfigTest
   {
     final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 0 0 31 12 ? 2024-2025");
 
-    assertEquals(DATE_2024_01_01.withDate(2024, 12, 31), config.getNextTaskSubmissionTime(DATE_2024_01_01));
-    assertEquals(Duration.standardDays(365), config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+    assertEquals(DATE_2024_01_01.withDate(2024, 12, 31), config.getNextTaskStartTimeAfter(DATE_2024_01_01));
+    assertEquals(Duration.standardDays(365), config.getDurationUntilNextTaskStartTimeAfter(DATE_2024_01_01));
   }
 
   @Test
@@ -68,8 +72,8 @@ public class QuartzCronSchedulerConfigTest
   {
     final QuartzCronSchedulerConfig config = new QuartzCronSchedulerConfig("0 0 0 31 12 ? 2020-2021");
 
-    assertNull(config.getNextTaskSubmissionTime(DATE_2024_01_01));
-    assertNull(config.getTimeUntilNextTaskSubmission(DATE_2024_01_01));
+    assertNull(config.getNextTaskStartTimeAfter(DATE_2024_01_01));
+    assertNull(config.getDurationUntilNextTaskStartTimeAfter(DATE_2024_01_01));
   }
 
   @Test
@@ -79,11 +83,11 @@ public class QuartzCronSchedulerConfigTest
 
     assertEquals(
         DATE_2024_01_01.withDayOfWeek(3).withTime(10, 30, 0, 0),
-        config.getNextTaskSubmissionTime(DATE_2024_01_01)
+        config.getNextTaskStartTimeAfter(DATE_2024_01_01)
     );
     assertEquals(
         Duration.standardHours(58).plus(Duration.standardMinutes(30)),
-        config.getTimeUntilNextTaskSubmission(DATE_2024_01_01)
+        config.getDurationUntilNextTaskStartTimeAfter(DATE_2024_01_01)
     );
   }
 
@@ -103,12 +107,28 @@ public class QuartzCronSchedulerConfigTest
   @Test
   public void testInvalidCronExpression()
   {
-    assertThrows(IllegalArgumentException.class, () -> new QuartzCronSchedulerConfig("0 15 10 * *"));
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new QuartzCronSchedulerConfig("0 15 10 * *")
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Quartz schedule[0 15 10 * *] is invalid: [Cron expression contains 5 parts but we expect one of [6, 7]]"
+        )
+    );
   }
 
   @Test
   public void testMacroExpressionsNotSupported()
   {
-    assertThrows(IllegalArgumentException.class, () -> new QuartzCronSchedulerConfig("@daily"));
+    MatcherAssert.assertThat(
+        Assert.assertThrows(
+            DruidException.class,
+            () -> new QuartzCronSchedulerConfig("@daily")
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(
+            "Quartz schedule[@daily] is invalid: [Nicknames not supported!]"
+        )
+    );
   }
 }

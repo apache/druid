@@ -67,7 +67,7 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
-import org.apache.druid.indexing.scheduledbatch.ScheduledBatchScheduler;
+import org.apache.druid.indexing.scheduledbatch.ScheduledBatchTaskManager;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -260,7 +260,7 @@ public class OverlordTest
         new TestDruidLeaderSelector(),
         EasyMock.createNiceMock(SegmentAllocationQueue.class),
         EasyMock.createNiceMock(CompactionScheduler.class),
-        EasyMock.createNiceMock(ScheduledBatchScheduler.class),
+        EasyMock.createNiceMock(ScheduledBatchTaskManager.class),
         new DefaultObjectMapper(),
         new NoopTaskContextEnricher()
     );

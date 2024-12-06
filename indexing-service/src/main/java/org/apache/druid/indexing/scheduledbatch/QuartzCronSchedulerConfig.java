@@ -25,6 +25,9 @@ import com.cronutils.model.time.ExecutionTime;
 import com.cronutils.parser.CronParser;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.vavr.control.Validation;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 
@@ -46,22 +49,28 @@ public class QuartzCronSchedulerConfig implements CronSchedulerConfig
   @JsonCreator
   public QuartzCronSchedulerConfig(@JsonProperty("schedule") final String schedule)
   {
-    this.executionTime = ExecutionTime.forCron(QUARTZ_PARSER.parse(schedule));
-    this.schedule = schedule;
+    try {
+      this.executionTime = ExecutionTime.forCron(QUARTZ_PARSER.parse(schedule));
+      this.schedule = schedule;
+    }
+    catch (IllegalArgumentException e)
+    {
+      throw InvalidInput.exception("Quartz schedule[%s] is invalid: [%s]", schedule, e.getMessage());
+    }
   }
 
   @Nullable
   @Override
-  public DateTime getNextTaskSubmissionTime(final DateTime dateTime)
+  public DateTime getNextTaskStartTimeAfter(final DateTime referenceTime)
   {
-    return CronSchedulerUtils.getNextTaskSubmissionTime(executionTime, dateTime);
+    return CronSchedulerUtils.getNextTaskStartTimeAfter(executionTime, referenceTime);
   }
 
   @Nullable
   @Override
-  public Duration getTimeUntilNextTaskSubmission(final DateTime dateTime)
+  public Duration getDurationUntilNextTaskStartTimeAfter(final DateTime referenceTime)
   {
-    return CronSchedulerUtils.getTimeUntilNextTaskSubmission(executionTime, dateTime);
+    return CronSchedulerUtils.getDurationUntilNextTaskStartTimeAfter(executionTime, referenceTime);
   }
 
   @Override
