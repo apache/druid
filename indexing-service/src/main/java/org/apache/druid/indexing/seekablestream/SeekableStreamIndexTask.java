@@ -179,6 +179,16 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     return (queryPlus, responseContext) -> queryPlus.run(getRunner().getAppenderator(), responseContext);
   }
 
+  /**
+   * @return the current status of this task.
+   */
+  @Nullable
+  public String getCurrentRunnerStatus()
+  {
+    SeekableStreamIndexTaskRunner.Status status = (getRunner() != null) ? getRunner().getStatus() : null;
+    return (status != null) ? status.toString() : null;
+  }
+
   public Appenderator newAppenderator(
       TaskToolbox toolbox,
       SegmentGenerationMetrics metrics,
