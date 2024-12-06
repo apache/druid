@@ -28,7 +28,7 @@ import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
-import org.apache.druid.sql.http.ExplainPlan;
+import org.apache.druid.query.explain.ExplainPlan;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlTaskStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
