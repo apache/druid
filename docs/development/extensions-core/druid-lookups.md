@@ -81,10 +81,22 @@ This example demonstrates a polling cache that will update its on-heap cache eve
 
 ```json
 {
-    "type":"pollingLookup",
-   "pollPeriod":"PT10M",
-   "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
-   "cacheFactory":{"type":"onHeapPolling"}
+    "type": "pollingLookup",
+    "pollPeriod": "PT10M",
+    "dataFetcher": {
+       "type": "jdbcDataFetcher",
+       "connectorConfig": {
+          "connectURI": "jdbc://mysql://localhost:3306/my_data_base",
+          "user": "druid",
+          "password": "druid"
+       },
+       "table": "lookup_table_name",
+       "keyColumn": "key_column_name",
+       "valueColumn": "value_column_name"
+    },
+    "cacheFactory": {
+       "type": "onHeapPolling"
+    }
 }
 
 ```
@@ -94,9 +106,21 @@ This example demonstrates an off-heap lookup that will be cached once and never 
 
 ```json
 {
-    "type":"pollingLookup",
-   "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
-   "cacheFactory":{"type":"offHeapPolling"}
+   "type": "pollingLookup",
+   "dataFetcher": {
+      "type": "jdbcDataFetcher",
+      "connectorConfig": {
+         "connectURI": "jdbc://mysql://localhost:3306/my_data_base",
+         "user": "druid",
+         "password": "druid"
+      },
+      "table": "lookup_table_name",
+      "keyColumn": "key_column_name",
+      "valueColumn": "value_column_name"
+   },
+   "cacheFactory": {
+      "type": "offHeapPolling"
+   }
 }
 
 ```
@@ -125,10 +149,27 @@ Guava cache configuration spec.
 
 ```json
 {
-   "type":"loadingLookup",
-   "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
-   "loadingCacheSpec":{"type":"guava"},
-   "reverseLoadingCacheSpec":{"type":"guava", "maximumSize":500000, "expireAfterAccess":100000, "expireAfterWrite":10000}
+   "type": "loadingLookup",
+   "dataFetcher": {
+      "type": "jdbcDataFetcher",
+      "connectorConfig": {
+         "connectURI": "jdbc://mysql://localhost:3306/my_data_base",
+         "user": "druid",
+         "password": "druid"
+      },
+      "table": "lookup_table_name",
+      "keyColumn": "key_column_name",
+      "valueColumn": "value_column_name"
+   },
+   "loadingCacheSpec": {
+      "type": "guava"
+   },
+   "reverseLoadingCacheSpec": {
+      "type": "guava",
+      "maximumSize": 500000,
+      "expireAfterAccess": 100000,
+      "expireAfterWrite": 10000
+   }
 }
 ```
 
@@ -146,10 +187,28 @@ Off heap cache is backed by [MapDB](http://www.mapdb.org/) implementation. MapDB
 
 ```json
 {
-   "type":"loadingLookup",
-   "dataFetcher":{ "type":"jdbcDataFetcher", "connectorConfig":"jdbc://mysql://localhost:3306/my_data_base", "table":"lookup_table_name", "keyColumn":"key_column_name", "valueColumn": "value_column_name"},
-   "loadingCacheSpec":{"type":"mapDb", "maxEntriesSize":100000},
-   "reverseLoadingCacheSpec":{"type":"mapDb", "maxStoreSize":5, "expireAfterAccess":100000, "expireAfterWrite":10000}
+   "type": "loadingLookup",
+   "dataFetcher": {
+      "type": "jdbcDataFetcher",
+      "connectorConfig": {
+         "connectURI": "jdbc://mysql://localhost:3306/my_data_base",
+         "user": "druid",
+         "password": "druid"
+      },
+      "table": "lookup_table_name",
+      "keyColumn": "key_column_name",
+      "valueColumn": "value_column_name"
+   },
+   "loadingCacheSpec": {
+      "type": "mapDb",
+      "maxEntriesSize": 100000
+   },
+   "reverseLoadingCacheSpec": {
+      "type": "mapDb",
+      "maxStoreSize": 5,
+      "expireAfterAccess": 100000,
+      "expireAfterWrite": 10000
+   }
 }
 ```
 
