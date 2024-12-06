@@ -23,28 +23,25 @@ title: "Bloom Filter"
   -->
 
 
-To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `druid-bloom-filter` in the extensions load list.
+To use the Apache Druid&circledR; Bloom filter extension, include `druid-bloom-filter` in the extensions load list. See [Loading extensions](../../configuration/extensions.md#loading-extensions) for more information.
 
-This extension adds the ability to both construct bloom filters from query results, and filter query results by testing
-against a bloom filter. A Bloom filter is a probabilistic data structure for performing a set membership check. A bloom
-filter is a good candidate to use with Druid for cases where an explicit filter is impossible, e.g. filtering a query
+This extension adds the ability to both construct Bloom filters from query results, and filter query results by testing
+against a Bloom filter. A Bloom filter is a probabilistic data structure for performing a set membership check. A Bloom
+filter is a good candidate to use with Druid for cases where an explicit filter is impossible, such as filtering a query
 against a set of millions of values.
 
 Following are some characteristics of Bloom filters:
 
-- Bloom filters are highly space efficient when compared to using a HashSet.
-- Because of the probabilistic nature of bloom filters, false positive results are possible (element was not actually
-inserted into a bloom filter during construction, but `test()` says true)
-- False negatives are not possible (if element is present then `test()` will never say false).
-- The false positive probability of this implementation is currently fixed at 5%, but increasing the number of entries
-that the filter can hold can decrease this false positive rate in exchange for overall size.
-- Bloom filters are sensitive to number of elements that will be inserted in the bloom filter. During the creation of bloom filter expected number of entries must be specified. If the number of insertions exceed
- the specified initial number of entries then false positive probability will increase accordingly.
+- Bloom filters are highly space efficient compared to using a HashSet.
+- Because of the probabilistic nature of Bloom filters, false positive results are possible. For example, the `test()` function might return `true` for an element that wasn't inserted into the filter.
+- False negatives are not possible. If an element is present, `test()` always returns `true`.
+- The false positive probability of this implementation is fixed at 5%. Increasing the number of entries that the filter can hold can decrease this false positive rate in exchange for overall size.
+- Bloom filters are sensitive to the number of inserted elements. You must specify the expected number of entries when you create the Bloom filter. If the number of insertions exceeds the specified number of entries, the false positive probability increases accordingly.
 
-This extension is currently based on `org.apache.hive.common.util.BloomKFilter` from `hive-storage-api`. Internally,
+This extension is based on `org.apache.hive.common.util.BloomKFilter` from `hive-storage-api`. Internally,
 this implementation uses Murmur3 as the hash algorithm.
 
-To construct a BloomKFilter externally with Java to use as a filter in a Druid query:
+The following example shows how to construct a BloomKFilter externally with Java to use as a filter in a Druid query:
 
 ```java
 BloomKFilter bloomFilter = new BloomKFilter(1500);
@@ -56,11 +53,12 @@ BloomKFilter.serialize(byteArrayOutputStream, bloomFilter);
 String base64Serialized = Base64.encodeBase64String(byteArrayOutputStream.toByteArray());
 ```
 
-This string can then be used in the native or SQL Druid query.
+You can then use this string in the native or SQL Druid query.
 
-## Filtering queries with a Bloom Filter
+## Filter queries with a Bloom filter
 
-### JSON Specification of Bloom Filter
+### JSON specification
+
 ```json
 {
   "type" : "bloom",
@@ -70,50 +68,46 @@ This string can then be used in the native or SQL Druid query.
 }
 ```
 
-|Property                 |Description                   |required?                           |
-|-------------------------|------------------------------|----------------------------------|
-|`type`                   |Filter Type. Should always be `bloom`|yes|
-|`dimension`              |The dimension to filter over. | yes |
-|`bloomKFilter`           |Base64 encoded Binary representation of `org.apache.hive.common.util.BloomKFilter`| yes |
-|`extractionFn`|[Extraction function](../../querying/dimensionspecs.md#extraction-functions) to apply to the dimension values |no|
+|Property|Description|Required|
+|--------|-----------|--------|
+|`type`|Filter type. Should always be `bloom`.|Yes|
+|`dimension`|Dimension to filter over.|Yes|
+|`bloomKFilter`|Base64 encoded binary representation of `org.apache.hive.common.util.BloomKFilter`.|Yes|
+|`extractionFn`|[Extraction function](../../querying/dimensionspecs.md#extraction-functions) to apply to the dimension values.|No|
 
+### Serialized format for BloomKFilter
 
-### Serialized Format for BloomKFilter
+Serialized BloomKFilter format:
 
- Serialized BloomKFilter format:
+- 1 byte for the number of hash functions.
+- 1 big-endian integer for the number of longs in the bitset.
+- Big-endian longs in the BloomKFilter bitset.
 
- - 1 byte for the number of hash functions.
- - 1 big endian int(That is how OutputStream works) for the number of longs in the bitset
- - big endian longs in the BloomKFilter bitset
+`org.apache.hive.common.util.BloomKFilter` provides a method to serialize Bloom filters to `outputStream`.
 
-Note: `org.apache.hive.common.util.BloomKFilter` provides a serialize method which can be used to serialize bloom filters to outputStream.
+### Filter SQL queries
 
-### Filtering SQL Queries
-
-Bloom filters can be used in SQL `WHERE` clauses via the `bloom_filter_test` operator:
+You can use Bloom filters in SQL `WHERE` clauses with the `bloom_filter_test` operator:
 
 ```sql
 SELECT COUNT(*) FROM druid.foo WHERE bloom_filter_test(<expr>, '<serialized_bytes_for_BloomKFilter>')
 ```
 
-### Expression and Virtual Column Support
+### Expression and virtual column support
 
-The bloom filter extension also adds a bloom filter [Druid expression](../../querying/math-expr.md) which shares syntax
+The Bloom filter extension also adds a Bloom filter [Druid expression](../../querying/math-expr.md) which shares syntax
 with the SQL operator.
 
 ```sql
 bloom_filter_test(<expr>, '<serialized_bytes_for_BloomKFilter>')
 ```
 
-## Bloom Filter Query Aggregator
+## Bloom filter query aggregator
 
-Input for a `bloomKFilter` can also be created from a druid query with the `bloom` aggregator. Note that it is very
-important to set a reasonable value for the `maxNumEntries` parameter, which is the maximum number of distinct entries
-that the bloom filter can represent without increasing the false positive rate. It may be worth performing a query using
-one of the unique count sketches to calculate the value for this parameter in order to build a bloom filter appropriate
-for the query.
+You can create an input for a `BloomKFilter` from a Druid query with the `bloom` aggregator. Make sure to set a reasonable value for the `maxNumEntries` parameter, which is the maximum number of distinct entries that the Bloom filter can represent without increasing the false positive rate. It may be worth performing a query using
+one of the unique count sketches to calculate the value for this parameter to build a Bloom filter appropriate for the query.
 
-### JSON Specification of Bloom Filter Aggregator
+### JSON specification
 
 ```json
 {
@@ -124,14 +118,16 @@ for the query.
     }
 ```
 
-|Property                 |Description                   |required?                           |
-|-------------------------|------------------------------|----------------------------------|
-|`type`                   |Aggregator Type. Should always be `bloom`|yes|
-|`name`                   |Output field name |yes|
-|`field`                  |[DimensionSpec](../../querying/dimensionspecs.md) to add to `org.apache.hive.common.util.BloomKFilter` | yes |
-|`maxNumEntries`          |Maximum number of distinct values supported by `org.apache.hive.common.util.BloomKFilter`, default `1500`| no |
+|Property|Description|Required|
+|--------|-----------|--------|
+|`type`|Aggregator type. Should always be `bloom`.|Yes|
+|`name`|Output field name.|Yes|
+|`field`|[DimensionSpec](../../querying/dimensionspecs.md) to add to `org.apache.hive.common.util.BloomKFilter`.|Yes|
+|`maxNumEntries`|Maximum number of distinct values supported by `org.apache.hive.common.util.BloomKFilter`. Defaults to `1500`.|No|
 
 ### Example
+
+The following example shows a timeseries query object with a `bloom` aggregator:
 
 ```json
 {
@@ -154,25 +150,25 @@ for the query.
 }
 ```
 
-response
+Example response:
 
 ```json
-[{"timestamp":"2015-09-12T00:00:00.000Z","result":{"userBloom":"BAAAJhAAAA..."}}]
+[
+  {
+    "timestamp":"2015-09-12T00:00:00.000Z",
+    "result":{"userBloom":"BAAAJhAAAA..."}
+  }
+]
 ```
 
-These values can then be set in the filter specification described above.
+Ordering results by a Bloom filter aggregator, for example in a TopN query, can be resource-intensive. This is because the operation performs an expensive linear scan of the filter to approximate the count of items added to the set by counting the number of set bits. We recommend ordering by an alternative aggregation method.
 
-Ordering results by a bloom filter aggregator, for example in a TopN query, will perform a comparatively expensive
-linear scan _of the filter itself_ to count the number of set bits as a means of approximating how many items have been
-added to the set. As such, ordering by an alternate aggregation is recommended if possible.
+### SQL Bloom filter aggregator
 
-
-### SQL Bloom Filter Aggregator
-Bloom filters can be computed in SQL expressions with the `bloom_filter` aggregator:
+You can compute Bloom filters in SQL expressions with the BLOOM_FILTER aggregator. For example:
 
 ```sql
 SELECT BLOOM_FILTER(<expression>, <max number of entries>) FROM druid.foo WHERE dim2 = 'abc'
 ```
 
-but requires the setting `druid.sql.planner.serializeComplexValues` to be set to `true`. Bloom filter results in a SQL
- response are serialized into a base64 string, which can then be used in subsequent queries as a filter.
+Druid serializes Bloom filter results in a SQL response into a Base64 string. You can use the resulting string in subsequent queries as a filter.
