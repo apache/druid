@@ -22,6 +22,8 @@ package org.apache.druid.k8s.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -90,6 +92,8 @@ public class KubernetesPeonLifecycle
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
+  private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
+
   @MonotonicNonNull
   private LogWatch logWatch;
 
@@ -109,6 +113,7 @@ public class KubernetesPeonLifecycle
     this.taskLogs = taskLogs;
     this.mapper = mapper;
     this.stateListener = stateListener;
+    this.taskStartedSuccessfullyFuture = SettableFuture.create();
   }
 
   /**
@@ -137,11 +142,13 @@ public class KubernetesPeonLifecycle
           launchTimeout,
           TimeUnit.MILLISECONDS
       );
-
       return join(timeout);
     }
     catch (Exception e) {
       log.info("Failed to run task: %s", taskId.getOriginalTaskId());
+      if (!taskStartedSuccessfullyFuture.isDone()) {
+        taskStartedSuccessfullyFuture.set(false);
+      }
       throw e;
     }
     finally {
@@ -179,7 +186,7 @@ public class KubernetesPeonLifecycle
   {
     try {
       updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
-
+      taskStartedSuccessfullyFuture.set(true);
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
           taskId,
           timeout,
@@ -188,6 +195,12 @@ public class KubernetesPeonLifecycle
 
       return getTaskStatus(jobResponse.getJobDuration());
     }
+    catch (Exception e) {
+      if (!taskStartedSuccessfullyFuture.isDone()) {
+        taskStartedSuccessfullyFuture.set(false);
+      }
+      throw e;
+    }
     finally {
       try {
         saveLogs();
@@ -195,7 +208,6 @@ public class KubernetesPeonLifecycle
       catch (Exception e) {
         log.warn(e, "Log processing failed for task [%s]", taskId);
       }
-
       stopTask();
     }
   }
@@ -246,7 +258,10 @@ public class KubernetesPeonLifecycle
   protected TaskLocation getTaskLocation()
   {
     if (State.PENDING.equals(state.get()) || State.NOT_STARTED.equals(state.get())) {
-      log.debug("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
+      /* This should not actually ever happen because KubernetesTaskRunner.start() should not return until all running tasks
+      have already gone into State.RUNNING, so getTaskLocation should not be called.
+       */
+      log.warn("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
       return TaskLocation.unknown();
     }
 
@@ -257,6 +272,10 @@ public class KubernetesPeonLifecycle
     if (taskLocation == null) {
       Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
       if (!maybePod.isPresent()) {
+        /* Arguably we should throw a exception here but leaving it as a warn log to prevent unexpected errors.
+         If there is strange behavior during overlord restarts the operator should look for this warn log.
+        */
+        log.warn("Could not get task location from k8s for task [%s].", taskId);
         return TaskLocation.unknown();
       }
 
@@ -264,6 +283,7 @@ public class KubernetesPeonLifecycle
       PodStatus podStatus = pod.getStatus();
 
       if (podStatus == null || podStatus.getPodIP() == null) {
+        log.warn("Could not get task location from k8s for task [%s].", taskId);
         return TaskLocation.unknown();
       }
       taskLocation = TaskLocation.create(
@@ -375,5 +395,18 @@ public class KubernetesPeonLifecycle
         targetState
     );
     stateListener.stateChanged(state.get(), taskId.getOriginalTaskId());
+  }
+
+  /**
+   * Retrieves the current {@link ListenableFuture} representing whether the task started successfully
+   *
+   * <p>This future can be used to track whether the task started successfully, with a boolean result
+   * indicating success (true) or failure (false) when the task starts.
+   *
+   * @return a {@link ListenableFuture} representing whether the task started successfully.
+   */
+  protected ListenableFuture<Boolean> getTaskStartedSuccessfullyFuture()
+  {
+    return taskStartedSuccessfullyFuture;
   }
 }

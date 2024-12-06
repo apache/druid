@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { C, SqlFunction, SqlQuery } from '@druid-toolkit/query';
+import { C, SqlFunction, SqlQuery } from 'druid-query-toolkit';
 
 import { filterMap, uniq } from '../../../utils';
 import { Measure } from '../models';

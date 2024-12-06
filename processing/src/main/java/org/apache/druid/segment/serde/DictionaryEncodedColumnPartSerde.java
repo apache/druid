@@ -344,7 +344,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         final StringUtf8DictionaryEncodedColumnSupplier<?> supplier = new StringUtf8DictionaryEncodedColumnSupplier<>(
             dictionarySupplier,
             rSingleValuedColumn,
-            rMultiValuedColumn
+            rMultiValuedColumn,
+            bitmapSerdeFactory.getBitmapFactory()
         );
         builder.setHasMultipleValues(hasMultipleValues)
                .setHasNulls(hasNulls)

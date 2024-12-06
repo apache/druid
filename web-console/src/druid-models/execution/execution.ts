@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@druid-toolkit/query';
+import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from 'druid-query-toolkit';
 
 import { maybeGetClusterCapacity } from '../../helpers';
 import {

@@ -808,7 +808,7 @@ public class ParallelMergeCombiningSequence<T> extends YieldingSequenceBase<T>
   /**
    * {@link ForkJoinPool} friendly {@link BlockingQueue} feeder, adapted from 'QueueTaker' of Java documentation on
    * {@link ForkJoinPool.ManagedBlocker},
-   * https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ForkJoinPool.ManagedBlocker.html
+   * https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/concurrent/ForkJoinPool.ManagedBlocker.html
    */
   static class QueuePusher<E> implements ForkJoinPool.ManagedBlocker
   {

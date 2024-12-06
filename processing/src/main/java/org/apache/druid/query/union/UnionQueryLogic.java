@@ -96,6 +96,7 @@ public class UnionQueryLogic implements QueryLogic
         Sequence run = runner.run(queryPlus.withQuery(q), responseContext);
         seqs.add(run);
       }
+
       return Sequences.concat(seqs);
     }
   }

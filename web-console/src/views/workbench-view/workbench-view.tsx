@@ -26,10 +26,10 @@ import {
   Popover,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlQuery } from '@druid-toolkit/query';
-import { SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
+import type { SqlQuery } from 'druid-query-toolkit';
+import { SqlExpression } from 'druid-query-toolkit';
 import React from 'react';
 
 import { MenuCheckbox, SplitterLayout } from '../../components';

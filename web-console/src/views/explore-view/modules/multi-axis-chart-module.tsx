@@ -17,8 +17,8 @@
  */
 
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlQuery } from '@druid-toolkit/query';
-import { C, F, L } from '@druid-toolkit/query';
+import type { SqlQuery } from 'druid-query-toolkit';
+import { C, F, L } from 'druid-query-toolkit';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
 import { useEffect, useMemo, useRef } from 'react';
@@ -26,6 +26,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Loader } from '../../../components';
 import { useQueryManager } from '../../../hooks';
 import {
+  Duration,
   formatInteger,
   formatNumber,
   prettyFormatIsoDateTick,
@@ -35,7 +36,7 @@ import { Issue } from '../components';
 import { highlightStore } from '../highlight-store/highlight-store';
 import type { ExpressionMeta } from '../models';
 import { ModuleRepository } from '../module-repository/module-repository';
-import { DATE_FORMAT, getAutoGranularity, snapToGranularity } from '../utils';
+import { DATE_FORMAT, getAutoGranularity } from '../utils';
 
 import './record-table-module.scss';
 
@@ -223,12 +224,9 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
         // this is only used for the label and the data saved in the highlight
         // the positioning is done with the true coordinates until the user
         // releases the mouse button (in the `brushend` event)
-        const { start, end } = snapToGranularity(
-          params.areas[0].coordRange[0],
-          params.areas[0].coordRange[1],
-          timeGranularity,
-          undefined, // context.timezone,
-        );
+        const duration = new Duration(timeGranularity);
+        const start = duration.round(params.areas[0].coordRange[0], 'Etc/UTC');
+        const end = duration.round(params.areas[0].coordRange[1], 'Etc/UTC');
 
         const x0 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[0]);
         const x1 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[1]);

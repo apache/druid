@@ -72,6 +72,7 @@ public class SleepSqlTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("v0")
+                  .columnTypes(ColumnType.STRING)
                   .filters(range("m1", ColumnType.DOUBLE, null, 2.0, false, true))
                   .resultFormat(ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_DEFAULT)

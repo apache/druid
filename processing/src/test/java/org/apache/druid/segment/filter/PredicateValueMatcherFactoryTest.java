@@ -20,6 +20,7 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
@@ -76,7 +77,8 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
             GenericIndexed.UTF8_STRATEGY
         )::singleThreaded,
         null,
-        () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1})))
+        () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1}))),
+        new RoaringBitmapFactory()
     );
     final ValueMatcher matcher = forSelector("v2")
         .makeDimensionProcessor(columnSupplier.get().makeDimensionSelector(new SimpleAscendingOffset(1), null), true);
@@ -97,7 +99,8 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
             GenericIndexed.UTF8_STRATEGY
         )::singleThreaded,
         null,
-        () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1})))
+        () -> VSizeColumnarMultiInts.fromIterable(ImmutableList.of(VSizeColumnarInts.fromArray(new int[]{1}))),
+        new RoaringBitmapFactory()
     );
     final ValueMatcher matcher = forSelector("v3")
         .makeDimensionProcessor(columnSupplier.get().makeDimensionSelector(new SimpleAscendingOffset(1), null), true);

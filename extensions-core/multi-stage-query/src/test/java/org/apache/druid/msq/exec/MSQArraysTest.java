@@ -758,13 +758,13 @@ public class MSQArraysTest extends MSQTestBase
                                             .build();
 
     RowSignature scanSignature = RowSignature.builder()
-                                             .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
-                                             .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
-                                             .add("arrayLong", ColumnType.LONG_ARRAY)
-                                             .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                                             .add("v0", ColumnType.LONG)
                                              .add("arrayString", ColumnType.STRING_ARRAY)
                                              .add("arrayStringNulls", ColumnType.STRING_ARRAY)
-                                             .add("v0", ColumnType.LONG)
+                                             .add("arrayLong", ColumnType.LONG_ARRAY)
+                                             .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                                             .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                                             .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
                                              .build();
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
@@ -773,15 +773,8 @@ public class MSQArraysTest extends MSQTestBase
     Query<?> expectedQuery = newScanQueryBuilder()
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
-        .columns(
-            "arrayDouble",
-            "arrayDoubleNulls",
-            "arrayLong",
-            "arrayLongNulls",
-            "arrayString",
-            "arrayStringNulls",
-            "v0"
-        )
+        .columns(scanSignature.getColumnNames())
+        .columnTypes(scanSignature.getColumnTypes())
         .virtualColumns(new ExpressionVirtualColumn(
             "v0",
             "timestamp_parse(\"timestamp\",null,'UTC')",
@@ -862,6 +855,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayString")
+        .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.descending("arrayString")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
@@ -925,6 +919,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayLong")
+        .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.ascending("arrayLong")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
@@ -988,6 +983,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayDouble")
+        .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.ascending("arrayDouble")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
@@ -1040,6 +1036,7 @@ public class MSQArraysTest extends MSQTestBase
         )
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("a_bool")
+        .columnTypes(scanSignature.getColumnTypes())
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 
@@ -1088,6 +1085,7 @@ public class MSQArraysTest extends MSQTestBase
         )
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("a_bool")
+        .columnTypes(scanSignature.getColumnTypes())
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 

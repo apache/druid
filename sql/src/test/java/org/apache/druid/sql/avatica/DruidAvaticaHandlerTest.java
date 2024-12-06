@@ -1600,7 +1600,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testArrayStuff() throws SQLException
   {
     try (PreparedStatement statement = client.prepareStatement(
-        "SELECT ARRAY_AGG(dim2) AS arr1, ARRAY_AGG(l1) AS arr2, ARRAY_AGG(d1)  AS arr3, ARRAY_AGG(f1) AS arr4 FROM druid.numfoo")) {
+        "SELECT ARRAY_AGG(dim2) AS arr1, ARRAY_AGG(l1) AS arr2, ARRAY_AGG(dbl1)  AS arr3, ARRAY_AGG(f1) AS arr4 FROM druid.numfoo")) {
       final ResultSet resultSet = statement.executeQuery();
       final List<Map<String, Object>> rows = getRows(resultSet);
       Assert.assertEquals(1, rows.size());

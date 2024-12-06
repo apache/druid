@@ -32,7 +32,7 @@ import {
   Tree,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression } from '@druid-toolkit/query';
+import type { SqlExpression } from 'druid-query-toolkit';
 import {
   C,
   F,
@@ -43,7 +43,7 @@ import {
   SqlQuery,
   SqlTable,
   T,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import type { ChangeEvent } from 'react';
 import React from 'react';
 

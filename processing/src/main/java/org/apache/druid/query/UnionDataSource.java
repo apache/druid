@@ -198,4 +198,9 @@ public class UnionDataSource implements DataSource
            "dataSources=" + dataSources +
            '}';
   }
+
+  public static boolean isCompatibleDataSource(DataSource dataSource)
+  {
+    return (dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource);
+  }
 }

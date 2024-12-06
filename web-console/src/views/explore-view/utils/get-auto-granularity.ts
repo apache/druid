@@ -16,67 +16,48 @@
  * limitations under the License.
  */
 
-import type { SqlExpression } from '@druid-toolkit/query';
-import { fitFilterPattern, SqlMulti } from '@druid-toolkit/query';
-import { day, Duration, hour } from 'chronoshift';
+import type { SqlExpression } from 'druid-query-toolkit';
+import { fitFilterPatterns } from 'druid-query-toolkit';
 
-function getCanonicalDuration(
+import { Duration } from '../../../utils';
+
+function getTimeSpanInExpression(
   expression: SqlExpression,
   timeColumnName: string,
 ): number | undefined {
-  const pattern = fitFilterPattern(expression);
-  if ('column' in pattern && pattern.column !== timeColumnName) return undefined;
-
-  switch (pattern.type) {
-    case 'timeInterval':
+  const patterns = fitFilterPatterns(expression);
+  for (const pattern of patterns) {
+    if (pattern.type === 'timeInterval' && pattern.column === timeColumnName) {
       return pattern.end.valueOf() - pattern.start.valueOf();
-
-    case 'timeRelative':
-      return Duration.fromJS(pattern.rangeDuration).getCanonicalLength();
-
-    case 'custom':
-      if (pattern.expression instanceof SqlMulti) {
-        for (const value of pattern.expression.args.values) {
-          const canonicalDuration = getCanonicalDuration(value, timeColumnName);
-          if (canonicalDuration !== undefined) return canonicalDuration;
-        }
-      }
-
-      break;
-
-    default:
-      break;
+    } else if (pattern.type === 'timeRelative' && pattern.column === timeColumnName) {
+      return new Duration(pattern.rangeDuration).getCanonicalLength();
+    }
   }
 
-  return undefined;
+  return;
 }
 
-const DEFAULT_GRANULARITY = 'PT1H';
-
-/**
- * Computes the granularity string from a where clause. If the where clause is TRUE, the default
- * granularity is returned (PT1H). Otherwise, the granularity is computed from the time column and the
- * duration of the where clause.
- *
- * @param where the where SQLExpression to read from
- * @param timeColumnName the name of the time column (any other time column will be ignored)
- * @returns the granularity string (default is PT1H)
- */
 export function getAutoGranularity(where: SqlExpression, timeColumnName: string): string {
-  if (where.toString() === 'TRUE') return DEFAULT_GRANULARITY;
-
-  const canonicalDuration = getCanonicalDuration(where, timeColumnName);
-
-  if (canonicalDuration) {
-    if (canonicalDuration > day.canonicalLength * 95) return 'P1W';
-    if (canonicalDuration > day.canonicalLength * 8) return 'P1D';
-    if (canonicalDuration > hour.canonicalLength * 8) return 'PT1H';
-    if (canonicalDuration > hour.canonicalLength * 3) return 'PT5M';
-
-    return 'PT1M';
-  }
-
-  console.debug('Unable to determine granularity from where clause', where.toString());
-
-  return DEFAULT_GRANULARITY;
+  const timeSpan = getTimeSpanInExpression(where, timeColumnName);
+  if (!timeSpan) return 'P1D';
+  return Duration.pickSmallestGranularityThatFits(
+    [
+      'PT1S',
+      'PT5S',
+      'PT20S',
+      'PT1M',
+      'PT5M',
+      'PT20M',
+      'PT1H',
+      'PT3H',
+      'PT6H',
+      'P1D',
+      'P1W',
+      'P1M',
+      'P3M',
+      'P1Y',
+    ].map(s => new Duration(s)),
+    timeSpan,
+    200,
+  ).toString();
 }

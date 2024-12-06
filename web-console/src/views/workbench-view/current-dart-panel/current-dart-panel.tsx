@@ -20,7 +20,7 @@ import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, Popover } from '@blu
 import { type IconName, IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
 import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
@@ -30,7 +30,7 @@ import { Api, AppToaster } from '../../../singletons';
 import { formatDuration, prettyFormatIsoDate } from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
 import { DartDetailsDialog } from '../dart-details-dialog/dart-details-dialog';
-import { workStateStore } from '../work-state-store';
+import { getMsqDartVersion, WORK_STATE_STORE } from '../work-state-store';
 
 import './current-dart-panel.scss';
 
@@ -59,13 +59,8 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
   const [showSql, setShowSql] = useState<string | undefined>();
   const [confirmCancelId, setConfirmCancelId] = useState<string | undefined>();
 
-  const workStateVersion = useStore(
-    workStateStore,
-    useCallback(state => state.version, []),
-  );
-
   const [dartQueryEntriesState, queryManager] = useQueryManager<number, DartQueryEntry[]>({
-    query: workStateVersion,
+    query: useStore(WORK_STATE_STORE, getMsqDartVersion),
     processQuery: async (_, cancelToken) => {
       return (await Api.instance.get('/druid/v2/sql/dart', { cancelToken })).data.queries;
     },
@@ -178,6 +173,7 @@ export const CurrentDartPanel = React.memo(function CurrentViberPanel(
                 message: 'Query canceled',
                 intent: Intent.SUCCESS,
               });
+              queryManager.rerunLastQuery();
             } catch {
               AppToaster.show({
                 message: 'Could not cancel query',
