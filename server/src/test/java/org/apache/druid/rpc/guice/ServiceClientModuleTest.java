@@ -22,6 +22,7 @@ package org.apache.druid.rpc.guice;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import org.apache.druid.client.broker.BrokerClient;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.DruidGuiceExtensions;
@@ -95,5 +96,11 @@ public class ServiceClientModuleTest
   public void testGetCoordinatorClient()
   {
     assertNotNull(injector.getInstance(CoordinatorClient.class));
+  }
+
+  @Test
+  public void testGetBrokerClient()
+  {
+    assertNotNull(injector.getInstance(BrokerClient.class));
   }
 }
