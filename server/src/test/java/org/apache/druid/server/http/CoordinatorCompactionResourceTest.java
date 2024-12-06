@@ -22,7 +22,7 @@ package org.apache.druid.server.http;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.rpc.indexing.OverlordClient;

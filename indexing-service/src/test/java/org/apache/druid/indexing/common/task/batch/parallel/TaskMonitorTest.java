@@ -21,7 +21,7 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.indexer.RunnerTaskState;

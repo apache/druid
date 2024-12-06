@@ -21,7 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;

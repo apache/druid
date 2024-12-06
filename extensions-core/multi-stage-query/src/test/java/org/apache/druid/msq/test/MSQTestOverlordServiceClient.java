@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Injector;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
-import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskStatus;

@@ -19,13 +19,11 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
@@ -40,7 +38,6 @@ import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -54,6 +51,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.rules.LoadRule;
@@ -67,7 +65,6 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -122,7 +119,7 @@ public class DataSourcesResource
       CoordinatorServerView serverInventoryView,
       SegmentsMetadataManager segmentsMetadataManager,
       MetadataRuleManager metadataRuleManager,
-      @Nullable OverlordClient overlordClient,
+      OverlordClient overlordClient,
       AuthorizerMapper authorizerMapper,
       DruidCoordinator coordinator,
       AuditManager auditManager
@@ -186,20 +183,27 @@ public class DataSourcesResource
 
   private interface SegmentUpdateOperation
   {
-    int perform();
+    ListenableFuture<SegmentUpdateResponse> perform(OverlordClient client);
   }
 
+  /**
+   * @deprecated Use {@code OverlordDataSourcesResource#markAllNonOvershadowedSegmentsAsUsed} instead.
+   */
+  @Deprecated
   @POST
   @Path("/{dataSourceName}")
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    SegmentUpdateOperation operation = () -> segmentsMetadataManager
-        .markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
+    SegmentUpdateOperation operation = client -> client.markNonOvershadowedSegmentsAsUsed(dataSourceName);
     return performSegmentUpdate(dataSourceName, operation);
   }
 
+  /**
+   * @deprecated Use {@code OverlordDataSourcesResource#markNonOvershadowedSegmentsAsUsed} instead.
+   */
+  @Deprecated
   @POST
   @Path("/{dataSourceName}/markUsed")
   @Produces(MediaType.APPLICATION_JSON)
@@ -215,36 +219,16 @@ public class DataSourcesResource
           .entity(SegmentsToUpdateFilter.INVALID_PAYLOAD_ERROR_MESSAGE)
           .build();
     } else {
-      SegmentUpdateOperation operation = () -> {
-        final Interval interval = payload.getInterval();
-        final List<String> versions = payload.getVersions();
-        if (interval != null) {
-          return segmentsMetadataManager.markAsUsedNonOvershadowedSegmentsInInterval(dataSourceName, interval, versions);
-        } else {
-          final Set<String> segmentIds = payload.getSegmentIds();
-          if (segmentIds == null || segmentIds.isEmpty()) {
-            return 0;
-          }
-
-          // Validate segmentIds
-          final List<String> invalidSegmentIds = new ArrayList<>();
-          for (String segmentId : segmentIds) {
-            if (SegmentId.iteratePossibleParsingsWithDataSource(dataSourceName, segmentId).isEmpty()) {
-              invalidSegmentIds.add(segmentId);
-            }
-          }
-          if (!invalidSegmentIds.isEmpty()) {
-            throw InvalidInput.exception("Could not parse invalid segment IDs[%s]", invalidSegmentIds);
-          }
-
-          return segmentsMetadataManager.markAsUsedNonOvershadowedSegments(dataSourceName, segmentIds);
-        }
-      };
-
+      SegmentUpdateOperation operation = overlord ->
+          overlord.markNonOvershadowedSegmentsAsUsed(dataSourceName, payload);
       return performSegmentUpdate(dataSourceName, operation);
     }
   }
 
+  /**
+   * @deprecated Use {@code OverlordDataSourcesResource#markSegmentsAsUnused} instead.
+   */
+  @Deprecated
   @POST
   @Path("/{dataSourceName}/markUnused")
   @ResourceFilters(DatasourceResourceFilter.class)
@@ -262,38 +246,8 @@ public class DataSourcesResource
           .entity(SegmentsToUpdateFilter.INVALID_PAYLOAD_ERROR_MESSAGE)
           .build();
     } else {
-      SegmentUpdateOperation operation = () -> {
-        final Interval interval = payload.getInterval();
-        final List<String> versions = payload.getVersions();
-        final int numUpdatedSegments;
-        if (interval != null) {
-          numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval, versions);
-        } else {
-          final Set<SegmentId> segmentIds =
-              payload.getSegmentIds()
-                  .stream()
-                  .map(idStr -> SegmentId.tryParse(dataSourceName, idStr))
-                  .filter(Objects::nonNull)
-                  .collect(Collectors.toSet());
-
-          // Filter out segmentIds that do not belong to this datasource
-          numUpdatedSegments = segmentsMetadataManager.markSegmentsAsUnused(
-              segmentIds.stream()
-                  .filter(segmentId -> segmentId.getDataSource().equals(dataSourceName))
-                  .collect(Collectors.toSet())
-          );
-        }
-        auditManager.doAudit(
-            AuditEntry.builder()
-                .key(dataSourceName)
-                .type("segment.markUnused")
-                .payload(payload)
-                .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
-                .build()
-        );
-        return numUpdatedSegments;
-      };
+      SegmentUpdateOperation operation = overlord ->
+          overlord.markSegmentsAsUnused(dataSourceName, payload);
       return performSegmentUpdate(dataSourceName, operation);
     }
   }
@@ -304,11 +258,11 @@ public class DataSourcesResource
     return Response.noContent().build();
   }
 
-  private static Response performSegmentUpdate(String dataSourceName, SegmentUpdateOperation operation)
+  private Response performSegmentUpdate(String dataSourceName, SegmentUpdateOperation operation)
   {
     try {
-      int numChangedSegments = operation.perform();
-      return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
+      SegmentUpdateResponse response = FutureUtils.getUnchecked(operation.perform(overlordClient), true);
+      return Response.ok(ImmutableMap.of("numChangedSegments", response.getNumUpdatedSegments())).build();
     }
     catch (DruidException e) {
       return ServletResourceUtils.buildErrorResponseFrom(e);
@@ -323,11 +277,8 @@ public class DataSourcesResource
   }
 
   /**
-   * When this method is removed, a new method needs to be introduced corresponding to
-   * the end point "DELETE /druid/coordinator/v1/datasources/{dataSourceName}" (with no query parameters).
-   * Ultimately we want to have no method with kill parameter -
-   * DELETE `{dataSourceName}` to mark all segments belonging to a data source as unused, and
-   * DELETE `{dataSourceName}/intervals/{interval}` to kill unused segments within an interval
+   * @deprecated Use {@code OverlordDataSourcesResource#markAllSegmentsAsUnused}
+   * or {@link #killUnusedSegmentsInInterval} instead.
    */
   @DELETE
   @Deprecated
@@ -341,31 +292,11 @@ public class DataSourcesResource
       @Context HttpServletRequest req
   )
   {
-    if (overlordClient == null) {
-      return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
-    }
-
-    boolean killSegments = kill != null && Boolean.valueOf(kill);
-    if (killSegments) {
+    if (Boolean.parseBoolean(kill)) {
       return killUnusedSegmentsInInterval(dataSourceName, interval, req);
     } else {
-      SegmentUpdateOperation operation = () -> segmentsMetadataManager.markAsUnusedAllSegmentsInDataSource(dataSourceName);
-      final Response response = performSegmentUpdate(dataSourceName, operation);
-
-      final int responseCode = response.getStatus();
-      if (responseCode >= 200 && responseCode < 300) {
-        auditManager.doAudit(
-            AuditEntry.builder()
-                      .key(dataSourceName)
-                      .type("segment.markUnused")
-                      .payload(response.getEntity())
-                      .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                      .request(AuthorizationUtils.buildRequestInfo("coordinator", req))
-                      .build()
-        );
-      }
-
-      return response;
+      SegmentUpdateOperation operation = client -> client.markSegmentsAsUnused(dataSourceName);
+      return performSegmentUpdate(dataSourceName, operation);
     }
   }
 
@@ -379,9 +310,6 @@ public class DataSourcesResource
       @Context final HttpServletRequest req
   )
   {
-    if (overlordClient == null) {
-      return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
-    }
     if (StringUtils.contains(interval, '_')) {
       log.warn("Use interval with '/', not '_': [%s] given", interval);
     }
@@ -696,6 +624,10 @@ public class DataSourcesResource
     return Response.noContent().build();
   }
 
+  /**
+   * @deprecated Use {@code OverlordDataSourcesResource#markSegmentAsUnused} instead.
+   */
+  @Deprecated
   @DELETE
   @Path("/{dataSourceName}/segments/{segmentId}")
   @ResourceFilters(DatasourceResourceFilter.class)
@@ -705,21 +637,52 @@ public class DataSourcesResource
   )
   {
     final SegmentId segmentId = SegmentId.tryParse(dataSourceName, segmentIdString);
-    final boolean segmentStateChanged = segmentId != null && segmentsMetadataManager.markSegmentAsUnused(segmentId);
-    return Response.ok(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
+    if (segmentId == null) {
+      return Response.status(Response.Status.BAD_REQUEST).entity(
+          org.apache.druid.java.util.common.StringUtils.format("Could not parse Segment ID[%s]", segmentIdString)
+      ).build();
+    }
+
+    SegmentUpdateOperation operation = overlord -> overlord.markSegmentAsUnused(segmentId);
+
+    final Response response = performSegmentUpdate(dataSourceName, operation);
+    final int responseCode = response.getStatus();
+    if (responseCode >= 200 && responseCode < 300) {
+      return Response.ok().entity(ImmutableMap.of("segmentStateChanged", true)).build();
+    } else {
+      return response;
+    }
   }
 
+  /**
+   * @deprecated Use {@code OverlordDataSourcesResource#markSegmentAsUsed} instead.
+   */
+  @Deprecated
   @POST
   @Path("/{dataSourceName}/segments/{segmentId}")
   @Consumes(MediaType.APPLICATION_JSON)
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markSegmentAsUsed(
       @PathParam("dataSourceName") String dataSourceName,
-      @PathParam("segmentId") String segmentId
+      @PathParam("segmentId") String segmentIdString
   )
   {
-    boolean segmentStateChanged = segmentsMetadataManager.markSegmentAsUsed(segmentId);
-    return Response.ok().entity(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
+    final SegmentId segmentId = SegmentId.tryParse(dataSourceName, segmentIdString);
+    if (segmentId == null) {
+      return Response.status(Response.Status.BAD_REQUEST).entity(
+          org.apache.druid.java.util.common.StringUtils.format("Could not parse Segment ID[%s]", segmentIdString)
+      ).build();
+    }
+
+    SegmentUpdateOperation operation = overlord -> overlord.markSegmentAsUsed(segmentId);
+
+    final Response response = performSegmentUpdate(dataSourceName, operation);
+    final int responseCode = response.getStatus();
+    if (responseCode >= 200 && responseCode < 300) {
+      return Response.ok().entity(ImmutableMap.of("segmentStateChanged", true)).build();
+    } else {
+      return response;
+    }
   }
 
   @GET
@@ -986,61 +949,4 @@ public class DataSourcesResource
     return false;
   }
 
-  /**
-   * Either {@code interval} or {@code segmentIds} array must be specified, but not both.
-   * {@code versions} may be optionally specified only when {@code interval} is provided.
-   */
-  @VisibleForTesting
-  static class SegmentsToUpdateFilter
-  {
-    private final Interval interval;
-    private final Set<String> segmentIds;
-    private final List<String> versions;
-
-    private static final String INVALID_PAYLOAD_ERROR_MESSAGE = "Invalid request payload. Specify either 'interval' or 'segmentIds', but not both."
-                                                                + " Optionally, include 'versions' only when 'interval' is provided.";
-
-    @JsonCreator
-    public SegmentsToUpdateFilter(
-        @JsonProperty("interval") @Nullable Interval interval,
-        @JsonProperty("segmentIds") @Nullable Set<String> segmentIds,
-        @JsonProperty("versions") @Nullable List<String> versions
-    )
-    {
-      this.interval = interval;
-      this.segmentIds = segmentIds;
-      this.versions = versions;
-    }
-
-    @Nullable
-    @JsonProperty
-    public Interval getInterval()
-    {
-      return interval;
-    }
-
-    @Nullable
-    @JsonProperty
-    public Set<String> getSegmentIds()
-    {
-      return segmentIds;
-    }
-
-    @Nullable
-    @JsonProperty
-    public List<String> getVersions()
-    {
-      return versions;
-    }
-
-    private boolean isValid()
-    {
-      final boolean hasSegmentIds = !CollectionUtils.isNullOrEmpty(segmentIds);
-      if (interval == null) {
-        return hasSegmentIds && CollectionUtils.isNullOrEmpty(versions);
-      } else {
-        return !hasSegmentIds;
-      }
-    }
-  }
 }
