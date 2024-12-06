@@ -21,6 +21,7 @@ package org.apache.druid.query.http;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,6 +40,22 @@ public class ClientSqlQueryTest
         true,
         null,
         null
+    );
+    Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), ClientSqlQuery.class));
+  }
+
+  @Test
+  public void testSerdeWithParameters() throws JsonProcessingException
+  {
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    final ClientSqlQuery query = new ClientSqlQuery(
+        "SELECT 1",
+        "array",
+        true,
+        true,
+        true,
+        null,
+        ImmutableList.of(new ClientSqlParameter("ARRAY", ImmutableList.of(-25.7, 20.2, 36.85)))
     );
     Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), ClientSqlQuery.class));
   }

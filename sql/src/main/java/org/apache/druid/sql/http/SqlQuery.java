@@ -37,7 +37,9 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * @see ClientSqlQuery for the equivalent POJO class for use on the client side.
+ * See {@link ClientSqlQuery} for the equivalent POJO class used on the client side to interact with the Broker.
+ * Note: The fields {@link #resultFormat} and {@link #parameters} rely on Calcite data types,
+ * preventing this class from being moved to the processing module for reuse.
  */
 public class SqlQuery
 {
