@@ -27,6 +27,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -69,6 +70,7 @@ public class LocalTaskActionClient implements TaskActionClient
       return result;
     }
     catch (Throwable t) {
+      log.error("Failed to perform action [%s]", Arrays.toString(t.getStackTrace()));
       throw new RuntimeException(t);
     }
   }

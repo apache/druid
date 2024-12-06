@@ -69,4 +69,9 @@ public interface StreamSupervisor extends Supervisor
   {
     throw new UnsupportedOperationException("Supervisor does not have the feature to handoff task groups early implemented");
   }
+
+  default boolean canPublishSegments(Integer taskGroupId, String taskId)
+  {
+    return true;
+  }
 }
