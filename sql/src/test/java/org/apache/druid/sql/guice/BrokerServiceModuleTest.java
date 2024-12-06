@@ -33,7 +33,7 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.sql.client.BrokerClient;
+import org.apache.druid.client.broker.BrokerClient;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

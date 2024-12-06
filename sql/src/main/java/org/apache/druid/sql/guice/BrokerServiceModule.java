@@ -35,9 +35,9 @@ import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.ServiceLocator;
 import org.apache.druid.rpc.StandardRetryPolicy;
 import org.apache.druid.rpc.guice.ServiceClientModule;
-import org.apache.druid.sql.client.Broker;
-import org.apache.druid.sql.client.BrokerClient;
-import org.apache.druid.sql.client.BrokerClientImpl;
+import org.apache.druid.client.broker.Broker;
+import org.apache.druid.client.broker.BrokerClient;
+import org.apache.druid.client.broker.BrokerClientImpl;
 
 /**
  * Module that processes can install if they require a {@link BrokerClient}.

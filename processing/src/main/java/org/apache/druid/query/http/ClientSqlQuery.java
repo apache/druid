@@ -27,9 +27,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Similar to {@link org.apache.druid.sql.http.SqlQuery}, but should be used only when interacting with the
- * Broker. This is effectively a thin POJO class for use by clients without brining in any of the Calcite dependencies
- * and server-side business logic.
+ * Client representation of {@link org.apache.druid.sql.http.SqlQuery}. This is effectively a thin POJO class for
+ * use by clients such as {@link org.apache.druid.client.broker.BrokerClient} that doesn't bring in any of the
+ * Calcite dependencies and server-side logic from the Broker.
  */
 public class ClientSqlQuery
 {
@@ -70,7 +70,7 @@ public class ClientSqlQuery
     this.header = header;
     this.typesHeader = typesHeader;
     this.sqlTypesHeader = sqlTypesHeader;
-    this.context = context;;
+    this.context = context;
     this.parameters = parameters;
   }
 
