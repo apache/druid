@@ -567,8 +567,9 @@ public class CliPeon extends GuiceRunnable
 
     if (task instanceof SeekableStreamIndexTask) {
       SeekableStreamIndexTask streamingTask = (SeekableStreamIndexTask) task;
-      if (streamingTask.getCurrentRunnerStatus() != null) {
-        builder.put(DruidMetrics.STATUS, streamingTask.getCurrentRunnerStatus());
+      String status = streamingTask.getCurrentRunnerStatus();
+      if (status != null) {
+        builder.put(DruidMetrics.STATUS, status);
       }
     }
 

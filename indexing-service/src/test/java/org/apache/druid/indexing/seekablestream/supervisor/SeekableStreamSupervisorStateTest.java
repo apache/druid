@@ -1479,7 +1479,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     Assert.assertTrue(supervisor.getNoticesQueueSize() == 0);
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 10_000L)
   public void testSupervisorStopTaskGroupEarly() throws JsonProcessingException, InterruptedException
   {
     DateTime startTime = DateTimes.nowUtc();
