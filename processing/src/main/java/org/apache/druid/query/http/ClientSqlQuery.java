@@ -1,0 +1,130 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.query.http;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.query.QueryContext;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Similar to {@link org.apache.druid.sql.http.SqlQuery}, but should be used only when interacting with the
+ * Broker. This is effectively a thin POJO class for use by clients without brining in any of the Calcite dependencies
+ * and server-side business logic.
+ */
+public class ClientSqlQuery
+{
+  @JsonProperty
+  private final String query;
+
+  @JsonProperty
+  private final String resultFormat;
+
+  @JsonProperty
+  private final boolean header;
+
+  @JsonProperty
+  private final boolean typesHeader;
+
+  @JsonProperty
+  private final boolean sqlTypesHeader;
+
+  @JsonProperty
+  private final Map<String, Object> context;
+
+  @JsonProperty
+  private final List<String> parameters;
+
+  @JsonCreator
+  public ClientSqlQuery(
+      @JsonProperty("query") final String query,
+      @JsonProperty("resultFormat") final String resultFormat,
+      @JsonProperty("header") final boolean header,
+      @JsonProperty("typesHeader") final boolean typesHeader,
+      @JsonProperty("sqlTypesHeader") final boolean sqlTypesHeader,
+      @JsonProperty("context") final Map<String, Object> context,
+      @JsonProperty("parameters") final List<String> parameters
+  )
+  {
+    this.query = query;
+    this.resultFormat = resultFormat;
+    this.header = header;
+    this.typesHeader = typesHeader;
+    this.sqlTypesHeader = sqlTypesHeader;
+    this.context = context;;
+    this.parameters = parameters;
+  }
+
+  public String getQuery()
+  {
+    return query;
+  }
+
+  public String getResultFormat()
+  {
+    return resultFormat;
+  }
+
+  public boolean includeHeader()
+  {
+    return header;
+  }
+
+  public boolean includeTypesHeader()
+  {
+    return typesHeader;
+  }
+
+  public boolean includeSqlTypesHeader()
+  {
+    return sqlTypesHeader;
+  }
+
+  public Map<String, Object> getContext()
+  {
+    return context;
+  }
+
+  public QueryContext queryContext()
+  {
+    return QueryContext.of(context);
+  }
+
+  public List<String> getParameters()
+  {
+    return parameters;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "ClientSqlQuery{" +
+           "query='" + query + '\'' +
+           ", resultFormat=" + resultFormat +
+           ", header=" + header +
+           ", typesHeader=" + typesHeader +
+           ", sqlTypesHeader=" + sqlTypesHeader +
+           ", context=" + context +
+           ", parameters=" + parameters +
+           '}';
+  }
+}
