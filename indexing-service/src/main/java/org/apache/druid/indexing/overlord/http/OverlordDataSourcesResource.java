@@ -128,12 +128,7 @@ public class OverlordDataSourcesResource
       final SegmentsToUpdateFilter payload
   )
   {
-    if (payload == null) {
-      // Mark all non-overshadowed segments as used
-      SegmentUpdateOperation operation = () -> segmentsMetadataManager
-          .markAsUsedAllNonOvershadowedSegmentsInDataSource(dataSourceName);
-      return performSegmentUpdate(dataSourceName, operation);
-    } else if (!payload.isValid()) {
+    if (payload == null || !payload.isValid()) {
       return Response
           .status(Response.Status.BAD_REQUEST)
           .entity(SegmentsToUpdateFilter.INVALID_PAYLOAD_ERROR_MESSAGE)

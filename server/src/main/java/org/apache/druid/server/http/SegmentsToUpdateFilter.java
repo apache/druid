@@ -29,8 +29,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Either {@code interval} or {@code segmentIds} array must be specified, but not both.
- * {@code versions} may be optionally specified only when {@code interval} is provided.
+ * Filter to identify segments that need to be updated via REST APIs.
  */
 public class SegmentsToUpdateFilter
 {
@@ -75,6 +74,10 @@ public class SegmentsToUpdateFilter
     return versions;
   }
 
+  /**
+   * The filter is valid if either {@code interval} or {@code segmentIds} is specified, but not both.
+   * {@code versions} may be optionally specified only when {@code interval} is provided.
+   */
   public boolean isValid()
   {
     final boolean hasSegmentIds = !CollectionUtils.isNullOrEmpty(segmentIds);

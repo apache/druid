@@ -183,7 +183,7 @@ public class DataSourcesResource
 
   private interface SegmentUpdateOperation
   {
-    ListenableFuture<SegmentUpdateResponse> perform(OverlordClient client);
+    ListenableFuture<SegmentUpdateResponse> perform();
   }
 
   /**
@@ -196,7 +196,7 @@ public class DataSourcesResource
   @ResourceFilters(DatasourceResourceFilter.class)
   public Response markAsUsedAllNonOvershadowedSegments(@PathParam("dataSourceName") final String dataSourceName)
   {
-    SegmentUpdateOperation operation = client -> client.markNonOvershadowedSegmentsAsUsed(dataSourceName);
+    SegmentUpdateOperation operation = () -> overlordClient.markNonOvershadowedSegmentsAsUsed(dataSourceName);
     return performSegmentUpdate(dataSourceName, operation);
   }
 
@@ -219,8 +219,8 @@ public class DataSourcesResource
           .entity(SegmentsToUpdateFilter.INVALID_PAYLOAD_ERROR_MESSAGE)
           .build();
     } else {
-      SegmentUpdateOperation operation = overlord ->
-          overlord.markNonOvershadowedSegmentsAsUsed(dataSourceName, payload);
+      SegmentUpdateOperation operation = () ->
+          overlordClient.markNonOvershadowedSegmentsAsUsed(dataSourceName, payload);
       return performSegmentUpdate(dataSourceName, operation);
     }
   }
@@ -246,8 +246,8 @@ public class DataSourcesResource
           .entity(SegmentsToUpdateFilter.INVALID_PAYLOAD_ERROR_MESSAGE)
           .build();
     } else {
-      SegmentUpdateOperation operation = overlord ->
-          overlord.markSegmentsAsUnused(dataSourceName, payload);
+      SegmentUpdateOperation operation = () ->
+          overlordClient.markSegmentsAsUnused(dataSourceName, payload);
       return performSegmentUpdate(dataSourceName, operation);
     }
   }
@@ -261,7 +261,7 @@ public class DataSourcesResource
   private Response performSegmentUpdate(String dataSourceName, SegmentUpdateOperation operation)
   {
     try {
-      SegmentUpdateResponse response = FutureUtils.getUnchecked(operation.perform(overlordClient), true);
+      SegmentUpdateResponse response = FutureUtils.getUnchecked(operation.perform(), true);
       return Response.ok(ImmutableMap.of("numChangedSegments", response.getNumUpdatedSegments())).build();
     }
     catch (DruidException e) {
@@ -295,7 +295,7 @@ public class DataSourcesResource
     if (Boolean.parseBoolean(kill)) {
       return killUnusedSegmentsInInterval(dataSourceName, interval, req);
     } else {
-      SegmentUpdateOperation operation = client -> client.markSegmentsAsUnused(dataSourceName);
+      SegmentUpdateOperation operation = () -> overlordClient.markSegmentsAsUnused(dataSourceName);
       return performSegmentUpdate(dataSourceName, operation);
     }
   }
@@ -643,7 +643,7 @@ public class DataSourcesResource
       ).build();
     }
 
-    SegmentUpdateOperation operation = overlord -> overlord.markSegmentAsUnused(segmentId);
+    SegmentUpdateOperation operation = () -> overlordClient.markSegmentAsUnused(segmentId);
 
     final Response response = performSegmentUpdate(dataSourceName, operation);
     final int responseCode = response.getStatus();
@@ -674,7 +674,7 @@ public class DataSourcesResource
       ).build();
     }
 
-    SegmentUpdateOperation operation = overlord -> overlord.markSegmentAsUsed(segmentId);
+    SegmentUpdateOperation operation = () -> overlordClient.markSegmentAsUsed(segmentId);
 
     final Response response = performSegmentUpdate(dataSourceName, operation);
     final int responseCode = response.getStatus();
