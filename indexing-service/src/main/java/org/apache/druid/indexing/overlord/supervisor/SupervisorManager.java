@@ -21,7 +21,11 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -30,6 +34,7 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -39,10 +44,13 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Manages the creation and lifetime of {@link Supervisor}.
@@ -56,6 +64,7 @@ public class SupervisorManager
   // SupervisorTaskAutoScaler could be null
   private final ConcurrentHashMap<String, SupervisorTaskAutoScaler> autoscalers = new ConcurrentHashMap<>();
   private final Object lock = new Object();
+  private final ListeningExecutorService shutdownExec;
 
   private volatile boolean started = false;
 
@@ -63,6 +72,9 @@ public class SupervisorManager
   public SupervisorManager(MetadataSupervisorManager metadataSupervisorManager)
   {
     this.metadataSupervisorManager = metadataSupervisorManager;
+    this.shutdownExec = MoreExecutors.listeningDecorator(
+        Execs.multiThreaded(25, "supervisor-manager-shutdown-%d")
+    );
   }
 
   public MetadataSupervisorManager getMetadataSupervisorManager()
@@ -212,19 +224,33 @@ public class SupervisorManager
   public void stop()
   {
     Preconditions.checkState(started, "SupervisorManager not started");
-
+    List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     synchronized (lock) {
       for (String id : supervisors.keySet()) {
-        try {
-          supervisors.get(id).lhs.stop(false);
-          SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
-          if (autoscaler != null) {
-            autoscaler.stop();
+        stopFutures.add(shutdownExec.submit(() -> {
+          try {
+            supervisors.get(id).lhs.stop(false);
+            SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
+            if (autoscaler != null) {
+              autoscaler.stop();
+            }
           }
-        }
-        catch (Exception e) {
-          log.warn(e, "Caught exception while stopping supervisor [%s]", id);
-        }
+          catch (Exception e) {
+            log.warn(e, "Caught exception while stopping supervisor [%s]", id);
+          }
+          return null;
+        }));
+      }
+      log.info("Waiting for [%d] supervisors to shutdown", stopFutures.size());
+      try {
+        FutureUtils.coalesce(stopFutures).get(80, TimeUnit.SECONDS);
+      }
+      catch (Exception e) {
+        log.warn(
+            "Stopped [%d] out of [%d] supervisors. Remaining supervisors will be killed.",
+            stopFutures.stream().filter(Future::isDone).count(),
+            stopFutures.size()
+        );
       }
       supervisors.clear();
       autoscalers.clear();
