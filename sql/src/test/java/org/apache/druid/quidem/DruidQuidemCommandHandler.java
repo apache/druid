@@ -26,7 +26,9 @@ import net.hydromatic.quidem.Command;
 import net.hydromatic.quidem.CommandHandler;
 import net.hydromatic.quidem.Quidem.SqlCommand;
 import org.apache.calcite.plan.RelOptUtil;
+import org.apache.calcite.rel.RelHomogeneousShuttle;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.hint.Hintable;
 import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
@@ -58,6 +60,9 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
     if (line.startsWith("druidPlan")) {
       return new DruidPlanCommand(lines, content);
+    }
+    if (line.startsWith("hints")) {
+      return new HintPlanCommand(lines, content);
     }
     if (line.startsWith("nativePlan")) {
       return new NativePlanCommand(lines, content);
@@ -202,9 +207,15 @@ public class DruidQuidemCommandHandler implements CommandHandler
         if (node instanceof DruidRel<?>) {
           node = ((DruidRel<?>) node).unwrapLogicalPlan();
         }
-        String str = RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT, SqlExplainLevel.EXPPLAN_ATTRIBUTES);
+        String str = convertRelToString(node);
         context.echo(ImmutableList.of(str));
       }
+    }
+
+    protected String convertRelToString(RelNode node)
+    {
+      String str = RelOptUtil.dumpPlan("", node, SqlExplainFormat.TEXT, SqlExplainLevel.EXPPLAN_ATTRIBUTES);
+      return str;
     }
   }
 
@@ -242,6 +253,54 @@ public class DruidQuidemCommandHandler implements CommandHandler
     DruidPlanCommand(List<String> lines, List<String> content)
     {
       super(lines, content, DruidHook.DRUID_PLAN);
+    }
+  }
+
+  static class HintPlanCommand extends AbstractRelPlanCommand
+  {
+    HintPlanCommand(List<String> lines, List<String> content)
+    {
+      super(lines, content, DruidHook.DRUID_PLAN);
+    }
+
+    @Override
+    protected String convertRelToString(RelNode node)
+    {
+      final HintCollector collector = new HintCollector();
+      node.accept(collector);
+      return collector.getCollectedHintsAsString();
+    }
+
+    private static class HintCollector extends RelHomogeneousShuttle
+    {
+      private final List<String> hintsCollect;
+
+      HintCollector()
+      {
+        this.hintsCollect = new ArrayList<>();
+      }
+
+      @Override
+      public RelNode visit(RelNode relNode)
+      {
+        if (relNode instanceof Hintable) {
+          Hintable hintableRelNode = (Hintable) relNode;
+          if (!hintableRelNode.getHints().isEmpty()) {
+            this.hintsCollect.add(relNode.getClass().getSimpleName() + ":" + hintableRelNode.getHints());
+          }
+        }
+        return super.visit(relNode);
+      }
+
+      public String getCollectedHintsAsString()
+      {
+        StringBuilder builder = new StringBuilder();
+        for (String hintLine : hintsCollect) {
+          builder.append(hintLine).append("\n");
+        }
+
+        return builder.toString();
+      }
     }
   }
 
