@@ -45,9 +45,10 @@ DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
       "outputType" : "ARRAY<STRING>"
     },
     "unnestFilter" : {
-      "type" : "selector",
-      "dimension" : "j0.unnest",
-      "value" : "b"
+      "type" : "equals",
+      "column" : "j0.unnest",
+      "matchValueType" : "STRING",
+      "matchValue" : "b"
     }
   },
   "intervals" : {

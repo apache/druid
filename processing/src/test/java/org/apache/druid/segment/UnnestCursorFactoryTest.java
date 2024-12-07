@@ -115,7 +115,6 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
     UNNEST_CURSOR_FACTORY = new UnnestCursorFactory(
         INCREMENTAL_INDEX_CURSOR_FACTORY,
         new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + INPUT_COLUMN_NAME + "\"", null, ExprMacroTable.nil()),
-        null,
         null
     );
 
@@ -812,7 +811,6 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
     UnnestCursorFactory unnestCursorFactory = new UnnestCursorFactory(
         cursorFactory,
         new ExpressionVirtualColumn(OUTPUT_COLUMN_NAME, "\"" + inputColumn + "\"", null, ExprMacroTable.nil()),
-        null,
         null
     );
 

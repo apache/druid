@@ -20,8 +20,6 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
@@ -33,7 +31,6 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -52,8 +49,6 @@ public class UnnestDataSource implements DataSource
 {
   private final DataSource base;
   private final VirtualColumn virtualColumn;
-  @Nullable
-  private final String outputName;
 
   @Nullable
   private final DimFilter unnestFilter;
@@ -61,29 +56,15 @@ public class UnnestDataSource implements DataSource
   private UnnestDataSource(
       DataSource dataSource,
       VirtualColumn virtualColumn,
-      DimFilter unnestFilter,
-      @Nullable String outputName)
+      DimFilter unnestFilter
+  )
   {
     this.base = dataSource;
     this.virtualColumn = virtualColumn;
     this.unnestFilter = unnestFilter;
-    this.outputName = outputName;
   }
 
   @JsonCreator
-  public static UnnestDataSource create(
-      @JsonProperty("base") DataSource base,
-      @JsonProperty("virtualColumn") VirtualColumn virtualColumn,
-      @Nullable @JsonProperty("unnestFilter") DimFilter unnestFilter,
-      @Nullable @JsonProperty("outputName") String outputName
-
-  )
-  {
-    return new UnnestDataSource(base, virtualColumn, unnestFilter, outputName);
-  }
-
-  // FIXME
-  @Deprecated
   public static UnnestDataSource create(
       @JsonProperty("base") DataSource base,
       @JsonProperty("virtualColumn") VirtualColumn virtualColumn,
@@ -91,7 +72,7 @@ public class UnnestDataSource implements DataSource
 
   )
   {
-    return create(base, virtualColumn, unnestFilter, null);
+    return new UnnestDataSource(base, virtualColumn, unnestFilter);
   }
 
   @JsonProperty("base")
@@ -112,14 +93,6 @@ public class UnnestDataSource implements DataSource
     return unnestFilter;
   }
 
-  @JsonInclude(Include.NON_NULL)
-  @JsonProperty("outputName")
-  public String getOutputName()
-  {
-    return outputName;
-  }
-
-
   @Override
   public Set<String> getTableNames()
   {
@@ -139,7 +112,7 @@ public class UnnestDataSource implements DataSource
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
 
-    return UnnestDataSource.create(children.get(0), virtualColumn, unnestFilter, outputName);
+    return new UnnestDataSource(children.get(0), virtualColumn, unnestFilter);
   }
 
   @Override
@@ -172,14 +145,14 @@ public class UnnestDataSource implements DataSource
     );
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> baseSegment -> new UnnestSegment(segmentMapFn.apply(baseSegment), virtualColumn, unnestFilter, outputName)
+        () -> baseSegment -> new UnnestSegment(segmentMapFn.apply(baseSegment), virtualColumn, unnestFilter)
     );
   }
 
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return new UnnestDataSource(newSource, virtualColumn, unnestFilter, outputName);
+    return new UnnestDataSource(newSource, virtualColumn, unnestFilter);
   }
 
   @Override
