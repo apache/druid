@@ -52,12 +52,16 @@ public @interface DecoupledTestConfig
    */
   IgnoreDefaultsReson ignoreDefaultsMode() default IgnoreDefaultsReson.NONE;
 
-  enum IgnoreDefaultsReson {
+  enum IgnoreDefaultsReson
+  {
     NONE,
     /**
      * Decoupled mode avoids unnesting "" in defaults mode
+     *
+     * <pre>
      * new Object[]{"a", "[\"a\",\"b\"]"},
      * new Object[]{"a", ""}
+     * </pre>
      */
     UNNEST_EMPTY_DIFFERENCE
   }
