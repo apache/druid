@@ -22,21 +22,42 @@ package org.apache.druid.rpc.indexing;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class SegmentUpdateResponse
 {
-  private final int numUpdatedSegments;
+  private final int numChangedSegments;
 
   @JsonCreator
   public SegmentUpdateResponse(
-      @JsonProperty("numUpdatedSegments") int numUpdatedSegments
+      @JsonProperty("numChangedSegments") int numChangedSegments
   )
   {
-    this.numUpdatedSegments = numUpdatedSegments;
+    this.numChangedSegments = numChangedSegments;
   }
 
   @JsonProperty
-  public int getNumUpdatedSegments()
+  public int getNumChangedSegments()
   {
-    return numUpdatedSegments;
+    return numChangedSegments;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    SegmentUpdateResponse response = (SegmentUpdateResponse) o;
+    return numChangedSegments == response.numChangedSegments;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hashCode(numChangedSegments);
   }
 }

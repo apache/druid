@@ -262,7 +262,7 @@ public class DataSourcesResource
   {
     try {
       SegmentUpdateResponse response = FutureUtils.getUnchecked(operation.perform(), true);
-      return Response.ok(ImmutableMap.of("numChangedSegments", response.getNumUpdatedSegments())).build();
+      return Response.ok(response).build();
     }
     catch (DruidException e) {
       return ServletResourceUtils.buildErrorResponseFrom(e);
@@ -679,7 +679,13 @@ public class DataSourcesResource
     final Response response = performSegmentUpdate(dataSourceName, operation);
     final int responseCode = response.getStatus();
     if (responseCode >= 200 && responseCode < 300) {
-      return Response.ok().entity(ImmutableMap.of("segmentStateChanged", true)).build();
+      if (response.getEntity() instanceof SegmentUpdateResponse) {
+        int updatedCount = ((SegmentUpdateResponse) response.getEntity()).getNumChangedSegments();
+        if (updatedCount > 0) {
+          return Response.ok().entity(ImmutableMap.of("segmentStateChanged", true)).build();
+        }
+      }
+      return Response.ok().entity(ImmutableMap.of("segmentStateChanged", false)).build();
     } else {
       return response;
     }
