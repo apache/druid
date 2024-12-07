@@ -1,4 +1,4 @@
-# testUnnestThriceWithFiltersOnDimAndAllUnnestColumnsArrayColumns@NullHandling=sql case-crc:84cffaf8
+# testUnnestThriceWithFiltersOnDimAndAllUnnestColumnsArrayColumns case-crc:84cffaf8
 # quidem testcase reason: IMPROVED_PLAN
 !set debug true
 !set defaultTimeout 300000
