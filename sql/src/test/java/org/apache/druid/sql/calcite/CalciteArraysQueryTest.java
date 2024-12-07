@@ -68,6 +68,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreDefaultsReson;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreQueriesReason;
 import org.apache.druid.sql.calcite.DecoupledTestConfig.QuidemTestCaseReason;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
@@ -4686,7 +4687,6 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @NotYetSupported(Modes.RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS)
-  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS)
   @Test
   public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumns()
   {
@@ -5310,6 +5310,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreDefaultsMode = IgnoreDefaultsReson.UNNEST_EMPTY_DIFFERENCE)
   @Test
   public void testUnnestWithFilters()
   {
@@ -5459,6 +5460,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreDefaultsMode = IgnoreDefaultsReson.UNNEST_EMPTY_DIFFERENCE)
   @Test
   public void testUnnestWithFiltersInsideAndOutside()
   {

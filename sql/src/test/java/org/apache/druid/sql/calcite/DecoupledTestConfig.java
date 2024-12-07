@@ -47,6 +47,21 @@ public @interface DecoupledTestConfig
    */
   IgnoreQueriesReason ignoreExpectedQueriesReason() default IgnoreQueriesReason.NONE;
 
+  /**
+   * Ignores defaults mode for the given reason
+   */
+  IgnoreDefaultsReson ignoreDefaultsMode() default IgnoreDefaultsReson.NONE;
+
+  enum IgnoreDefaultsReson {
+    NONE,
+    /**
+     * Decoupled mode avoids unnesting "" in defaults mode
+     * new Object[]{"a", "[\"a\",\"b\"]"},
+     * new Object[]{"a", ""}
+     */
+    UNNEST_EMPTY_DIFFERENCE
+  }
+
   enum IgnoreQueriesReason
   {
     NONE,

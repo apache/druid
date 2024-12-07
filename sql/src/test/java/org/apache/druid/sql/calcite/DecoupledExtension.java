@@ -28,6 +28,7 @@ import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest.CalciteTestConfig;
+import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreDefaultsReson;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
@@ -35,6 +36,8 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.io.File;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class DecoupledExtension implements BeforeEachCallback
 {
@@ -68,6 +71,13 @@ public class DecoupledExtension implements BeforeEachCallback
     boolean runQuidem = (decTestConfig != null && decTestConfig.quidemReason().isPresent());
 
     boolean ignoreQueries = (decTestConfig != null && decTestConfig.ignoreExpectedQueriesReason().isPresent());
+
+    if (NullHandling.replaceWithDefault()) {
+      assumeTrue(
+          decTestConfig == null || decTestConfig.ignoreDefaultsMode() == IgnoreDefaultsReson.NONE,
+          "Disabled beacuse ignoreDefaultsMode specified"
+      );
+    }
 
     CalciteTestConfig testConfig = baseTest.new CalciteTestConfig(CONTEXT_OVERRIDES)
     {

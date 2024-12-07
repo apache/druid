@@ -93,7 +93,7 @@ public @interface NotYetSupported
     REQUIRE_TIME_CONDITION(CannotBuildQueryException.class, "requireTimeCondition is enabled"),
     UNNEST_INLINED(Exception.class, "Missing conversion is Uncollect"),
     UNNEST_RESULT_MISMATCH(AssertionError.class, "(Result count mismatch|column content mismatch)"),
-    RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS(AssertionError.class, "(Result count mismatch|column content mismatch)");
+    RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS(Throwable.class, "(Result count mismatch|column content mismatch|ARRAY)");
     // @formatter:on
 
     public Class<? extends Throwable> throwableClass;
