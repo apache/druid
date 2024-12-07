@@ -29,22 +29,25 @@ public class UnnestSegment extends WrappedSegmentReference
   private final VirtualColumn unnestColumn;
   @Nullable
   private final DimFilter filter;
+  private final String outputName;
 
   public UnnestSegment(
       SegmentReference delegate,
       VirtualColumn unnestColumn,
-      @Nullable DimFilter filter
+      @Nullable DimFilter filter,
+      String outputName
   )
   {
     super(delegate);
     this.unnestColumn = unnestColumn;
     this.filter = filter;
+    this.outputName = outputName;
   }
 
   @Override
   public CursorFactory asCursorFactory()
   {
-    return new UnnestCursorFactory(delegate.asCursorFactory(), unnestColumn, filter);
+    return new UnnestCursorFactory(delegate.asCursorFactory(), unnestColumn, filter, outputName);
   }
 
   @Nullable

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.BooleanFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -62,16 +63,38 @@ public class UnnestCursorFactory implements CursorFactory
   private final VirtualColumn unnestColumn;
   @Nullable
   private final DimFilter filter;
+  private final String outputName;
 
+  public UnnestCursorFactory(
+      CursorFactory baseCursorFactory,
+      VirtualColumn unnestColumn,
+      @Nullable DimFilter filter,
+      String outputName
+  )
+  {
+    this.baseCursorFactory = baseCursorFactory;
+    this.unnestColumn = unnestColumn;
+    this.filter = filter;
+    this.outputName = outputName;
+  }
+
+  // FIXME
+  @Deprecated
   public UnnestCursorFactory(
       CursorFactory baseCursorFactory,
       VirtualColumn unnestColumn,
       @Nullable DimFilter filter
   )
   {
-    this.baseCursorFactory = baseCursorFactory;
-    this.unnestColumn = unnestColumn;
-    this.filter = filter;
+    this(baseCursorFactory, unnestColumn, filter, null);
+  }
+
+  private String getUnnestOutputColumn()
+  {
+    if (outputName != null) {
+      return outputName;
+    }
+    return unnestColumn.getOutputName();
   }
 
   @Override
@@ -86,10 +109,11 @@ public class UnnestCursorFactory implements CursorFactory
         input == null ? null : spec.getVirtualColumns()
                                    .getColumnCapabilitiesWithFallback(baseCursorFactory, input)
     );
+    VirtualColumns vcs = getUnnestVCS();
     final CursorBuildSpec unnestBuildSpec =
         CursorBuildSpec.builder(spec)
                        .setFilter(filterPair.lhs)
-                       .setVirtualColumns(VirtualColumns.create(Collections.singletonList(unnestColumn)))
+                       .setVirtualColumns(vcs)
                        .build();
 
     return new CursorHolder()
@@ -117,14 +141,14 @@ public class UnnestCursorFactory implements CursorFactory
               cursor,
               cursor.getColumnSelectorFactory(),
               unnestColumn,
-              unnestColumn.getOutputName()
+              getUnnestOutputColumn()
           );
         } else {
           unnestCursor = new UnnestColumnValueSelectorCursor(
               cursor,
               cursor.getColumnSelectorFactory(),
               unnestColumn,
-              unnestColumn.getOutputName()
+              getUnnestOutputColumn()
           );
         }
         return PostJoinCursor.wrap(
@@ -133,6 +157,7 @@ public class UnnestCursorFactory implements CursorFactory
             filterPair.rhs
         );
       }
+
 
       @Override
       public List<OrderBy> getOrdering()
@@ -146,6 +171,18 @@ public class UnnestCursorFactory implements CursorFactory
         CloseableUtils.closeAndWrapExceptions(closer);
       }
     };
+  }
+
+  private VirtualColumns getUnnestVCS()
+  {
+    if(outputName !=null ) {
+      ColumnCapabilities columnCapabilities = computeOutputColumnCapabilities(baseCursorFactory, unnestColumn);
+      ColumnType t = ColumnType.fromCapabilities(columnCapabilities);
+      ExpressionVirtualColumn e = new ExpressionVirtualColumn(outputName, "null", t, TestExprMacroTable.INSTANCE);
+      return VirtualColumns.create(unnestColumn, e);
+    }else {
+      return VirtualColumns.create(Collections.singletonList(unnestColumn));
+    }
   }
 
   @Override

@@ -70,11 +70,11 @@ public class DruidUnnest extends Unnest implements DruidLogicalNode, SourceDescP
     VirtualColumn virtualColumn = buildUnnestVirtualColumn(
         plannerContext,
         inputDesc,
-        filterRowSignature.getColumnName(0)
+        outputRowSignature.getColumnName(inputDesc.rowSignature.size())
     );
 
     DimFilter dimFilter = buildDimFilter(plannerContext, filterRowSignature);
-    DataSource dataSource = UnnestDataSource.create(inputDesc.dataSource, virtualColumn, dimFilter);
+    DataSource dataSource = UnnestDataSource.create(inputDesc.dataSource, virtualColumn, dimFilter, filterRowSignature.getColumnName(0));
     return new SourceDesc(dataSource, outputRowSignature);
   }
 
@@ -114,10 +114,10 @@ public class DruidUnnest extends Unnest implements DruidLogicalNode, SourceDescP
   {
     return DruidJoinQueryRel.computeJoinRowSignature(
         inputDesc.rowSignature,
-        RowSignature.builder().add(
-            "unnest",
-            Calcites.getColumnTypeForRelDataType(getUnnestedType())
-        ).build(),
+        RowSignature.builder()
+        .add("unnestExpr", Calcites.getColumnTypeForRelDataType(unnestExpr.getType()))
+        .add("unnest", Calcites.getColumnTypeForRelDataType(getUnnestedType()))
+            .build(),
         DruidJoinQueryRel.findExistingJoinPrefixes(inputDesc.dataSource)
     ).rhs;
   }
