@@ -27,24 +27,20 @@ LogicalProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1])
   LogicalJoin(condition=[=($0, $2)], joinType=[left])
     LogicalProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$0])
       LogicalFilter(condition=[AND(=($1, '10.1'), >=($0, 1999-01-01 00:00:00))])
-        LogicalProject(__time=[$0], dim1=[$1])
-          LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[druid, foo]])
     LogicalProject(dim1=[CAST('10.1':VARCHAR):VARCHAR])
       LogicalFilter(condition=[AND(=($1, '10.1'), >=($0, 1999-01-01 00:00:00))])
-        LogicalProject(__time=[$0], dim1=[$1])
-          LogicalTableScan(table=[[druid, foo]])
+        LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
   DruidJoin(condition=[=($0, $2)], joinType=[left])
     DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$0], druid=[logical])
       DruidFilter(condition=[AND(=($1, '10.1'), >=($0, 1999-01-01 00:00:00))])
-        DruidProject(__time=[$0], dim1=[$1], druid=[logical])
-          DruidTableScan(table=[[druid, foo]], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
     DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], druid=[logical])
       DruidFilter(condition=[AND(=($1, '10.1'), >=($0, 1999-01-01 00:00:00))])
-        DruidProject(__time=[$0], dim1=[$1], druid=[logical])
-          DruidTableScan(table=[[druid, foo]], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
 {

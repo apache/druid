@@ -20,18 +20,18 @@ SELECT dim1, l.v from druid.foo f inner join lookup.lookyloo l on f.dim1 = l.k w
 (1 row)
 
 !ok
-LogicalProject(dim1=[$0], v=[$3])
-  LogicalJoin(condition=[=($0, $2)], joinType=[inner])
-    LogicalFilter(condition=[IS NULL($1)])
-      LogicalProject(dim1=[$1], dim2=[$2])
+LogicalProject(dim1=[$0], v=[$2])
+  LogicalJoin(condition=[=($0, $1)], joinType=[inner])
+    LogicalProject(dim1=[$1])
+      LogicalFilter(condition=[IS NULL($2)])
         LogicalTableScan(table=[[druid, foo]])
     LogicalTableScan(table=[[lookup, lookyloo]])
 
 !logicalPlan
-DruidProject(dim1=[$0], v=[$3], druid=[logical])
-  DruidJoin(condition=[=($0, $2)], joinType=[inner])
-    DruidFilter(condition=[IS NULL($1)])
-      DruidProject(dim1=[$1], dim2=[$2], druid=[logical])
+DruidProject(dim1=[$0], v=[$2], druid=[logical])
+  DruidJoin(condition=[=($0, $1)], joinType=[inner])
+    DruidProject(dim1=[$1], druid=[logical])
+      DruidFilter(condition=[IS NULL($2)])
         DruidTableScan(table=[[druid, foo]], druid=[logical])
     DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
 
@@ -58,8 +58,8 @@ DruidProject(dim1=[$0], v=[$3], druid=[logical])
           "dimension" : "dim2",
           "value" : null
         },
-        "columns" : [ "dim1", "dim2" ],
-        "columnTypes" : [ "STRING", "STRING" ],
+        "columns" : [ "dim1" ],
+        "columnTypes" : [ "STRING" ],
         "granularity" : {
           "type" : "all"
         },

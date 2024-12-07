@@ -63,7 +63,11 @@ public @interface DecoupledTestConfig
      * new Object[]{"a", ""}
      * </pre>
      */
-    UNNEST_EMPTY_DIFFERENCE
+    UNNEST_EMPTY_DIFFERENCE,
+    /**
+     *
+     */
+    UNNEST_ARRAY_ISSUE
   }
 
   enum IgnoreQueriesReason

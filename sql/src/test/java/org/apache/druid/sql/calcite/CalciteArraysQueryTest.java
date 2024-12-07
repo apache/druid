@@ -4686,7 +4686,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.IMPROVED_PLAN)
   @Test
   public void testUnnestThriceWithFiltersOnDimAndAllUnnestColumns()
   {

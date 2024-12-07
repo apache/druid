@@ -24,24 +24,22 @@ SELECT dim1, EXTRACT(MONTH FROM __time) FROM druid.foo
 !ok
 LogicalProject(dim1=[$1], EXPR$1=[EXTRACT(FLAG(MONTH), $0)])
   LogicalJoin(condition=[=($2, $3)], joinType=[inner])
-    LogicalFilter(condition=[<>($1, '')])
-      LogicalProject(__time=[$0], dim1=[$1], dim2=[$2])
+    LogicalProject(__time=[$0], dim1=[$1], dim2=[$2])
+      LogicalFilter(condition=[<>($1, '')])
         LogicalTableScan(table=[[druid, foo]])
-    LogicalAggregate(group=[{1}])
-      LogicalFilter(condition=[=($0, 'def')])
-        LogicalProject(dim1=[$1], dim2=[$2])
-          LogicalTableScan(table=[[druid, foo]])
+    LogicalAggregate(group=[{2}])
+      LogicalFilter(condition=[=($1, 'def')])
+        LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidProject(dim1=[$1], EXPR$1=[EXTRACT(FLAG(MONTH), $0)], druid=[logical])
   DruidJoin(condition=[=($2, $3)], joinType=[inner])
-    DruidFilter(condition=[<>($1, '')])
-      DruidProject(__time=[$0], dim1=[$1], dim2=[$2], druid=[logical])
+    DruidProject(__time=[$0], dim1=[$1], dim2=[$2], druid=[logical])
+      DruidFilter(condition=[<>($1, '')])
         DruidTableScan(table=[[druid, foo]], druid=[logical])
-    DruidAggregate(group=[{1}], druid=[logical])
-      DruidFilter(condition=[=($0, 'def')])
-        DruidProject(dim1=[$1], dim2=[$2], druid=[logical])
-          DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidAggregate(group=[{2}], druid=[logical])
+      DruidFilter(condition=[=($1, 'def')])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
 {
