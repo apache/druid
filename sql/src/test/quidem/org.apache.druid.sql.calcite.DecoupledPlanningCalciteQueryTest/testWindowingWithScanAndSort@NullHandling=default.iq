@@ -35,9 +35,8 @@ LogicalProject(ranking=[$2], trend_score=[$1])
     LogicalSort(fetch=[10])
       LogicalWindow(window#0=[window(partition {0} order by [0] aggs [RANK()])])
         LogicalProject(m2=[$1], trend_score=[$2])
-          LogicalAggregate(group=[{0, 1}], trend_score=[COUNT()])
-            LogicalProject(m1=[$5], m2=[$6])
-              LogicalTableScan(table=[[druid, foo]])
+          LogicalAggregate(group=[{5, 6}], trend_score=[COUNT()])
+            LogicalTableScan(table=[[druid, foo]])
 
 !logicalPlan
 DruidProject(ranking=[$2], trend_score=[$1], druid=[logical])
@@ -45,9 +44,8 @@ DruidProject(ranking=[$2], trend_score=[$1], druid=[logical])
     DruidSort(fetch=[10], druid=[logical])
       DruidWindow(window#0=[window(partition {0} order by [0] aggs [RANK()])])
         DruidProject(m2=[$1], trend_score=[$2], druid=[logical])
-          DruidAggregate(group=[{0, 1}], trend_score=[COUNT()], druid=[logical])
-            DruidProject(m1=[$5], m2=[$6], druid=[logical])
-              DruidTableScan(table=[[druid, foo]], druid=[logical])
+          DruidAggregate(group=[{5, 6}], trend_score=[COUNT()], druid=[logical])
+            DruidTableScan(table=[[druid, foo]], druid=[logical])
 
 !druidPlan
 {
