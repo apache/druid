@@ -30,6 +30,7 @@ import org.apache.calcite.rel.core.Uncollect;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.rules.SubstitutionRule;
+import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.error.DruidException;
@@ -84,6 +85,8 @@ public class LogicalUnnestRule extends RelOptRule implements SubstitutionRule
     unnestConfig.expr = new DruidCorrelateUnnestRel.CorrelatedFieldAccessToInputRef(cor.getCorrelationId())
         .apply(unnestConfig.expr);
 
+    RelDataTypeField unnestFieldType = Iterables.getLast(cor.getRowType().getFieldList());
+
     RelBuilder builder = call.builder();
     builder.push(cor.getLeft());
     RelNode newNode = builder.push(
@@ -92,7 +95,7 @@ public class LogicalUnnestRule extends RelOptRule implements SubstitutionRule
             cor.getTraitSet(),
             builder.build(),
             unnestConfig.expr,
-            cor.getRowType(),
+            unnestFieldType,
             unnestConfig.condition
         )
     ).build();

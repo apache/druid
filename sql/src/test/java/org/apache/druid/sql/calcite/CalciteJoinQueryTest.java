@@ -6128,9 +6128,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
-
+//
   @Test
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS, separateDefaultModeTest = true)
   public void testJoinWithInputRefCondition()
   {
     cannotVectorize();
