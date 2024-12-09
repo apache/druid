@@ -333,6 +333,7 @@ public class TimeseriesQueryEngine
                        .setInterval(query.getSingleInterval())
                        .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
                        .setVirtualColumns(query.getVirtualColumns())
+                       .setPhysicalColumns(query.getRequiredColumns())
                        .setAggregators(query.getAggregatorSpecs())
                        .setQueryContext(query.context())
                        .setPreferredOrdering(

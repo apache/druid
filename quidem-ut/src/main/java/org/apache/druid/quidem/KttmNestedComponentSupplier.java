@@ -30,7 +30,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexBuilder;
@@ -138,7 +137,7 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
             .inputSource(
                 inputSource
             )
-            .inputFormat(NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT)
+            .inputFormat(TestIndex.DEFAULT_JSON_INPUT_FORMAT)
             .inputTmpDir(new File(tmpDir, "tmpKttm"))
             .buildIncrementalIndex();
       }

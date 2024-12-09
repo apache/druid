@@ -447,6 +447,9 @@ public class TestHelper
           );
         }
       } else if (expectedValue instanceof Float || expectedValue instanceof Double) {
+        if (actualValue == null) {
+          Assert.fail(message + ": failed because expected numeric value is actually null");
+        }
         Assert.assertEquals(
             message,
             ((Number) expectedValue).doubleValue(),
