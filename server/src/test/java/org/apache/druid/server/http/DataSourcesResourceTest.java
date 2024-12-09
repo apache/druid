@@ -1676,7 +1676,7 @@ public class DataSourcesResourceTest
     EasyMock.replay(segmentsMetadataManager, druidCoordinator);
 
     DataSourcesResource dataSourcesResource =
-       new DataSourcesResource(null, segmentsMetadataManager, null, null, null, druidCoordinator, auditManager);
+        new DataSourcesResource(null, segmentsMetadataManager, null, null, null, druidCoordinator, auditManager);
     Response response = dataSourcesResource.getDatasourceLoadstatus(TestDataSource.WIKI, true, null, null, "full", "computeUsingClusterView");
     Assert.assertEquals(200, response.getStatus());
     Assert.assertNotNull(response.getEntity());

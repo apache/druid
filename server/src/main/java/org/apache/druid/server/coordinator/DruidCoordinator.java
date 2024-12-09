@@ -33,6 +33,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
@@ -48,6 +49,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.server.DruidNode;
@@ -89,6 +91,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -535,8 +538,7 @@ public class DruidCoordinator
 
   private List<CoordinatorDuty> makeHistoricalManagementDuties()
   {
-    final MetadataAction.DeleteSegments deleteSegments
-        = segments -> metadataManager.segments().markSegmentsAsUnused(segments);
+    final MetadataAction.DeleteSegments deleteSegments = this::markSegmentsAsUnused;
     final MetadataAction.GetDatasourceRules getRules
         = dataSource -> metadataManager.rules().getRulesWithDefault(dataSource);
 
@@ -626,6 +628,33 @@ public class DruidCoordinator
                            .filter(duty -> duty instanceof CompactSegments)
                            .map(duty -> (CompactSegments) duty)
                            .collect(Collectors.toList());
+  }
+
+  /**
+   * Makes an API call to Overlord to mark segments of a datasource as unused.
+   *
+   * @return Number of segments updated.
+   */
+  private int markSegmentsAsUnused(String datasource, Set<SegmentId> segmentIds)
+  {
+    if (overlordClient == null) {
+      return 0;
+    }
+
+    try {
+      final Set<String> segmentIdsToUpdate
+          = segmentIds.stream().map(SegmentId::toString).collect(Collectors.toSet());
+      final SegmentsToUpdateFilter filter
+          = new SegmentsToUpdateFilter(null, segmentIdsToUpdate, null);
+      SegmentUpdateResponse response = FutureUtils.getUnchecked(
+          overlordClient.markSegmentsAsUnused(datasource, filter),
+          true
+      );
+      return response.getNumChangedSegments();
+    }
+    catch (Exception e) {
+      return 0;
+    }
   }
 
   /**
