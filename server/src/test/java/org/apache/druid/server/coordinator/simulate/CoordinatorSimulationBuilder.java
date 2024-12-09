@@ -36,6 +36,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
@@ -201,7 +202,7 @@ public class CoordinatorSimulationBuilder
         env.coordinatorInventoryView,
         env.serviceEmitter,
         env.executorFactory,
-        null,
+        new NoopOverlordClient(),
         env.loadQueueTaskMaster,
         env.loadQueueManager,
         new ServiceAnnouncer.Noop(),

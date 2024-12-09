@@ -448,16 +448,14 @@ public class DruidCoordinator
               config.getCoordinatorPeriod()
           )
       );
-      if (overlordClient != null) {
-        dutiesRunnables.add(
-            new DutiesRunnable(
-                makeIndexingServiceDuties(),
-                startingLeaderCounter,
-                INDEXING_SERVICE_DUTIES_DUTY_GROUP,
-                config.getCoordinatorIndexingPeriod()
-            )
-        );
-      }
+      dutiesRunnables.add(
+          new DutiesRunnable(
+              makeIndexingServiceDuties(),
+              startingLeaderCounter,
+              INDEXING_SERVICE_DUTIES_DUTY_GROUP,
+              config.getCoordinatorIndexingPeriod()
+          )
+      );
       dutiesRunnables.add(
           new DutiesRunnable(
               makeMetadataStoreManagementDuties(),
@@ -637,10 +635,6 @@ public class DruidCoordinator
    */
   private int markSegmentsAsUnused(String datasource, Set<SegmentId> segmentIds)
   {
-    if (overlordClient == null) {
-      return 0;
-    }
-
     try {
       final Set<String> segmentIdsToUpdate
           = segmentIds.stream().map(SegmentId::toString).collect(Collectors.toSet());
