@@ -647,6 +647,7 @@ public class DruidCoordinator
       return response.getNumChangedSegments();
     }
     catch (Exception e) {
+      log.error(e, "Could not mark segments as unused");
       return 0;
     }
   }
