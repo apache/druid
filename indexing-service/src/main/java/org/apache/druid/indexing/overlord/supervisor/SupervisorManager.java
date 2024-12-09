@@ -148,18 +148,6 @@ public class SupervisorManager
     return true;
   }
 
-  public boolean canPublishSegments(String id, Integer taskGroupId, String taskId)
-  {
-    try {
-      final StreamSupervisor streamSupervisor = requireStreamSupervisor(id, "publishSegments");
-      return streamSupervisor.canPublishSegments(taskGroupId, taskId);
-    }
-    catch (Exception e) {
-      // If the publishing task is not a streaming task for whatever reason, allow it to publish.
-      return true;
-    }
-  }
-
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
   {
     Preconditions.checkState(started, "SupervisorManager not started");

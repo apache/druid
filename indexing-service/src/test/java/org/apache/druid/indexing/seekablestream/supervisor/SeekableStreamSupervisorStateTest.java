@@ -1603,29 +1603,6 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
-  public void testSupervisorCanPublish()
-  {
-    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
-    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
-    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
-    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
-
-    replayAll();
-
-    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
-    Map<String, Integer> startingPartitions = new HashMap<>();
-    startingPartitions.put("partition", 0);
-    Map<String, Integer> checkpointPartitions = new HashMap<>();
-    checkpointPartitions.put("partition", 10);
-    Assert.assertTrue(supervisor.canPublishSegments(0, "unknown_task"));
-    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "task_1", startingPartitions);
-    Assert.assertTrue(supervisor.canPublishSegments(0, "task_1"));
-    supervisor.addDiscoveredTaskToPendingCompletionTaskGroups(0, "task_2", checkpointPartitions);
-    Assert.assertTrue(supervisor.canPublishSegments(0, "task_1"));
-    Assert.assertFalse(supervisor.canPublishSegments(0, "task_2"));
-  }
-
-  @Test
   public void testEmitBothLag() throws Exception
   {
     expectEmitterSupervisor(false);

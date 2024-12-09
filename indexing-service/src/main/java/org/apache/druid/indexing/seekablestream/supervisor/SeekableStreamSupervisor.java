@@ -146,7 +146,7 @@ import java.util.stream.Stream;
  * @param <PartitionIdType>    the type of the partition id, for example, partitions in Kafka are int type while partitions in Kinesis are String type
  * @param <SequenceOffsetType> the type of the sequence number or offsets, for example, Kafka uses long offsets while Kinesis uses String sequence numbers
  */
-public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType extends Comparable<SequenceOffsetType>, RecordType extends ByteEntity>
+public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
     implements StreamSupervisor
 {
   public static final String CHECKPOINTS_CTX_KEY = "checkpoints";
@@ -1993,40 +1993,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public void handoffTaskGroupsEarly(List<Integer> taskGroupIds)
   {
     addNotice(new HandoffTaskGroupsNotice(taskGroupIds));
-  }
-
-  @Override
-  public boolean canPublishSegments(Integer taskGroupId, String taskId)
-  {
-    CopyOnWriteArrayList<TaskGroup> pendingCompletionTasksForGroup = pendingCompletionTaskGroups.get(taskGroupId);
-    if (pendingCompletionTasksForGroup == null) {
-      // This function is called by the SegmentTransactionAppendAction.
-      // This is only triggered after a task has already started publishing so this shouldn't really happen.
-      // It's okay to just let the task try publishing in this case.
-      log.warn("Did not find task group [%s] to check for publishing.", taskGroupId);
-      return true;
-    }
-    TaskGroup taskGroupToCheck = pendingCompletionTasksForGroup.stream().filter(taskGroup -> taskGroup.taskIds().contains(taskId)).findFirst().orElse(null);
-    if (taskGroupToCheck == null) {
-      log.warn("Did not find task group [%s] to check for publishing.", taskGroupId);
-      return true;
-    }
-
-    for (TaskGroup taskGroup : pendingCompletionTasksForGroup) {
-      if (!taskGroup.startingSequences.equals(taskGroupToCheck.startingSequences)) {
-        for (PartitionIdType sequence : taskGroup.startingSequences.keySet()) {
-          SequenceOffsetType publishingGroupOffset = taskGroupToCheck.startingSequences.getOrDefault(sequence, null);
-          SequenceOffsetType taskGroupOffset = taskGroup.startingSequences.getOrDefault(sequence, null);
-          if (publishingGroupOffset != null && taskGroupOffset != null) {
-            // The group that is trying to publish is ahead of a task that is still publishing. It should wait to publish.
-            if (publishingGroupOffset.compareTo(taskGroupOffset) > 0) {
-              return false;
-            }
-          }
-        }
-      }
-    }
-    return true;
   }
 
   private void discoverTasks() throws ExecutionException, InterruptedException

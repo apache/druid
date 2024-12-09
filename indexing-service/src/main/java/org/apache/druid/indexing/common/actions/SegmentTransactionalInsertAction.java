@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -33,9 +32,7 @@ import org.apache.druid.indexing.common.task.TaskLockHelper;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
-import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
@@ -74,8 +71,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   private final String dataSource;
   @Nullable
   private final SegmentSchemaMapping segmentSchemaMapping;
-  private static final EmittingLogger log = new EmittingLogger(SegmentTransactionalAppendAction.class);
-
 
   public static SegmentTransactionalInsertAction overwriteAction(
       @Nullable Set<DataSegment> segmentsToBeOverwritten,
@@ -217,20 +212,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
         checkWithSegmentLock();
       }
     }
-    String dataSourceToInsert = segments.stream().findFirst().get().getDataSource();
-    if (task instanceof SeekableStreamIndexTask) {
-      SeekableStreamIndexTask seekableStreamIndexTask = (SeekableStreamIndexTask) task;
-      if (!toolbox.getSupervisorManager().canPublishSegments(dataSourceToInsert, seekableStreamIndexTask.getIOConfig().getTaskGroupId(), task.getId())) {
-        log.warn("Streaming task [%s] is not currently publishable.", task.getId());
-        throw DruidException
-            .forPersona(DruidException.Persona.DEVELOPER)
-            .ofCategory(DruidException.Category.SERVICE_UNAVAILABLE)
-            .build("Cannot append segments to [%s] right now. " +
-                    "There might be another task waiting to publish its segments. Check the overlord logs for details.",
-                dataSourceToInsert
-            );
-      }
-    }
+
     try {
       retVal = toolbox.getTaskLockbox().doInCriticalSection(
           task,
