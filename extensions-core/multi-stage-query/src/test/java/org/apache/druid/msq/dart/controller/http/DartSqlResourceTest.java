@@ -51,6 +51,7 @@ import org.apache.druid.msq.test.MSQTestControllerContext;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.server.BaseQueryCountResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.ResponseContextConfig;
@@ -239,7 +240,8 @@ public class DartSqlResourceTest extends MSQTestBase
         new ServerConfig() /* currently only used for error transform strategy */,
         ResponseContextConfig.newConfig(false),
         SELF_NODE,
-        new DefaultQueryConfig(ImmutableMap.of("foo", "bar"))
+        new DefaultQueryConfig(ImmutableMap.of("foo", "bar")),
+        new BaseQueryCountResource()
     );
 
     // Setup mocks
