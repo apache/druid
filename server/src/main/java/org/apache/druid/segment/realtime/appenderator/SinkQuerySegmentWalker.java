@@ -100,6 +100,23 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private static final EmittingLogger log = new EmittingLogger(SinkQuerySegmentWalker.class);
   private static final String CONTEXT_SKIP_INCREMENTAL_SEGMENT = "skipIncrementalSegment";
 
+  private static final Set<String> SEGMENT_QUERY_METRIC = Collections.singleton(DefaultQueryMetrics.QUERY_SEGMENT_TIME);
+  private static final Set<String> SEGMENT_CACHE_AND_WAIT_METRICS = Collections.unmodifiableSet(
+      new HashSet<>(
+          Arrays.asList(
+              DefaultQueryMetrics.QUERY_WAIT_TIME,
+              DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME
+          )
+      )
+  );
+
+  private static final Map<String, ObjLongConsumer<? super QueryMetrics<?>>> METRICS_TO_REPORT =
+      Map.of(
+          DefaultQueryMetrics.QUERY_SEGMENT_TIME, QueryMetrics::reportSegmentTime,
+          DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME, QueryMetrics::reportSegmentAndCacheTime,
+          DefaultQueryMetrics.QUERY_WAIT_TIME, QueryMetrics::reportWaitTime
+      );
+
   private final String dataSource;
 
   // Maintain a timeline of ids and Sinks for all the segments including the base and upgraded versions
@@ -207,11 +224,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final LinkedHashMap<SegmentDescriptor, List<QueryRunner<T>>> allRunners = new LinkedHashMap<>();
     final ConcurrentHashMap<String, ConcurrentHashMap<String, AtomicLong>> segmentMetricsAccumulator = new ConcurrentHashMap<>();
 
-    final Map<String, ObjLongConsumer<? super QueryMetrics<?>>> metricsToReport = new HashMap<>();
-    metricsToReport.put(DefaultQueryMetrics.QUERY_SEGMENT_TIME, QueryMetrics::reportSegmentTime);
-    metricsToReport.put(DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME, QueryMetrics::reportSegmentAndCacheTime);
-    metricsToReport.put(DefaultQueryMetrics.QUERY_WAIT_TIME, QueryMetrics::reportWaitTime);
-
     try {
       for (final SegmentDescriptor descriptor : specs) {
         final PartitionChunk<SinkHolder> chunk = upgradedSegmentsTimeline.findChunk(
@@ -253,9 +265,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                         emitter,
                         factory.getToolchest(),
                         factory.createRunner(segmentReference.getSegment()),
-                        metricsToReport,
                         segmentMetricsAccumulator,
-                        Collections.singleton(DefaultQueryMetrics.QUERY_SEGMENT_TIME),
+                        SEGMENT_QUERY_METRIC,
                         sinkSegmentId.toString()
                     );
 
@@ -297,14 +308,8 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                         emitter,
                         factory.getToolchest(),
                         runner,
-                        metricsToReport,
                         segmentMetricsAccumulator,
-                        new HashSet<>(
-                            Arrays.asList(
-                                DefaultQueryMetrics.QUERY_WAIT_TIME,
-                                DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME
-                            )
-                        ),
+                        SEGMENT_CACHE_AND_WAIT_METRICS,
                         sinkSegmentId.toString()
                     );
 
@@ -378,7 +383,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                           toolChest.mergeResults(mergedRunner, true),
                           toolChest
                       ),
-                      metricsToReport,
                       segmentMetricsAccumulator,
                       Collections.emptySet(),
                       null
@@ -455,16 +459,20 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   }
   
   /**
-   * Emit query/segment/time, query/wait/time and query/segmentAndCache/Time metrics for a Sink.
+   * This class is responsible for emitting query/segment/time, query/wait/time and query/segmentAndCache/Time metrics for a Sink.
    * It accumulates query/segment/time and query/segmentAndCache/time metric for each FireHydrant at the level of Sink.
    * query/wait/time metric is the time taken to process the first FireHydrant for the Sink.
+   * <p>
+   * This class operates in two distinct modes based on whether {@link SinkMetricsEmittingQueryRunner#segmentId} is null or non-null.
+   * When segmentId is non-null, it accumulates the metrics. When segmentId is null, it emits the accumulated metrics.
+   * <p>
+   * This class is derived from {@link org.apache.druid.query.MetricsEmittingQueryRunner}.
    */
   private static class SinkMetricsEmittingQueryRunner<T> implements QueryRunner<T>
   {
     private final ServiceEmitter emitter;
     private final QueryToolChest<T, ? extends Query<T>> queryToolChest;
     private final QueryRunner<T> queryRunner;
-    private final Map<String, ObjLongConsumer<? super QueryMetrics<?>>> metricsToReport;
     private final ConcurrentHashMap<String, ConcurrentHashMap<String, AtomicLong>> segmentMetricsAccumulator;
     private final Set<String> metricsToCompute;
     @Nullable
@@ -475,7 +483,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         ServiceEmitter emitter,
         QueryToolChest<T, ? extends Query<T>> queryToolChest,
         QueryRunner<T> queryRunner,
-        Map<String, ObjLongConsumer<? super QueryMetrics<?>>> metricsToReport,
         ConcurrentHashMap<String, ConcurrentHashMap<String, AtomicLong>> segmentMetricsAccumulator,
         Set<String> metricsToCompute,
         @Nullable String segmentId
@@ -484,7 +491,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       this.emitter = emitter;
       this.queryToolChest = queryToolChest;
       this.queryRunner = queryRunner;
-      this.metricsToReport = metricsToReport;
       this.segmentMetricsAccumulator = segmentMetricsAccumulator;
       this.metricsToCompute = metricsToCompute;
       this.segmentId = segmentId;
@@ -495,8 +501,6 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
     {
       QueryPlus<T> queryWithMetrics = queryPlus.withQueryMetrics(queryToolChest);
-      final QueryMetrics<?> queryMetrics = queryWithMetrics.getQueryMetrics();
-
       return Sequences.wrap(
           // Use LazySequence because we want to account execution time of queryRunner.run() (it prepares the underlying
           // Sequence) as part of the reported query time, i.e. we want to execute queryRunner.run() after
@@ -531,11 +535,12 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                   }
                 }
               } else {
+                final QueryMetrics<?> queryMetrics = queryWithMetrics.getQueryMetrics();
                 // report accumulated metrics
                 for (Map.Entry<String, ConcurrentHashMap<String, AtomicLong>> segmentAndMetrics : segmentMetricsAccumulator.entrySet()) {
                   queryMetrics.segment(segmentAndMetrics.getKey());
 
-                  for (Map.Entry<String, ObjLongConsumer<? super QueryMetrics<?>>> reportMetric : metricsToReport.entrySet()) {
+                  for (Map.Entry<String, ObjLongConsumer<? super QueryMetrics<?>>> reportMetric : METRICS_TO_REPORT.entrySet()) {
                     String metricName = reportMetric.getKey();
                     if (segmentAndMetrics.getValue().containsKey(metricName)) {
                       reportMetric.getValue().accept(queryMetrics, segmentAndMetrics.getValue().get(metricName).get());
@@ -547,7 +552,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
                   }
                   catch (Exception e) {
                     // Query should not fail, because of emitter failure. Swallowing the exception.
-                    log.error("Failure while trying to emit [%s] with stacktrace [%s]", emitter.toString(), e);
+                    log.error(e, "Failed to emit metrics for segment[%s]", segmentAndMetrics.getKey());
                   }
                 }
               }
