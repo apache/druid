@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.run;
 
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 
 /**
@@ -103,7 +104,7 @@ public enum EngineFeature
   UNNEST,
 
   /**
-   * Planner is permitted to use {@link org.apache.druid.sql.calcite.planner.JoinAlgorithm#BROADCAST} with RIGHT
+   * Planner is permitted to use {@link JoinAlgorithm#BROADCAST} with RIGHT
    * and FULL join. Not guaranteed to produce correct results in either the native or MSQ engines, but we allow
    * it in native for two reasons: legacy (the docs caution against it, but it's always been allowed), and the fact
    * that it actually *does* generate correct results in native when the join is processed on the Broker. It is much

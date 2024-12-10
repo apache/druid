@@ -25,6 +25,7 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.run.EngineFeature;
 
 /**
