@@ -135,7 +135,7 @@ public class SqlStatementTest
   {
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
 
-    final PlannerConfig plannerConfig = PlannerConfig.builder().serializeComplexValues(false).build();
+    final PlannerConfig plannerConfig = PlannerConfig.builder().build();
     final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
         conglomerate,
         walker,

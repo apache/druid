@@ -75,8 +75,6 @@ public class PlannerConfig
   @JsonProperty
   private String nativeQuerySqlPlanningMode = QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED; // can be COUPLED or DECOUPLED
 
-  private boolean serializeComplexValues = true;
-
   public int getMaxNumericInFilters()
   {
     return maxNumericInFilters;
@@ -110,11 +108,6 @@ public class PlannerConfig
   public DateTimeZone getSqlTimeZone()
   {
     return sqlTimeZone;
-  }
-
-  public boolean shouldSerializeComplexValues()
-  {
-    return serializeComplexValues;
   }
 
   public boolean isComputeInnerJoinCostAsFilter()
@@ -170,7 +163,6 @@ public class PlannerConfig
            useApproximateCountDistinct == that.useApproximateCountDistinct &&
            useApproximateTopN == that.useApproximateTopN &&
            requireTimeCondition == that.requireTimeCondition &&
-           serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
            useNativeQueryExplain == that.useNativeQueryExplain &&
            forceExpressionVirtualColumns == that.forceExpressionVirtualColumns &&
@@ -191,7 +183,6 @@ public class PlannerConfig
         useApproximateTopN,
         requireTimeCondition,
         sqlTimeZone,
-        serializeComplexValues,
         useNativeQueryExplain,
         forceExpressionVirtualColumns,
         nativeQuerySqlPlanningMode
@@ -207,7 +198,6 @@ public class PlannerConfig
            ", useApproximateTopN=" + useApproximateTopN +
            ", requireTimeCondition=" + requireTimeCondition +
            ", sqlTimeZone=" + sqlTimeZone +
-           ", serializeComplexValues=" + serializeComplexValues +
            ", useNativeQueryExplain=" + useNativeQueryExplain +
            ", nativeQuerySqlPlanningMode=" + nativeQuerySqlPlanningMode +
            '}';
@@ -242,7 +232,6 @@ public class PlannerConfig
     private boolean useNativeQueryExplain;
     private boolean forceExpressionVirtualColumns;
     private int maxNumericInFilters;
-    private boolean serializeComplexValues;
     private String nativeQuerySqlPlanningMode;
 
     public Builder(PlannerConfig base)
@@ -261,7 +250,6 @@ public class PlannerConfig
       useNativeQueryExplain = base.isUseNativeQueryExplain();
       forceExpressionVirtualColumns = base.isForceExpressionVirtualColumns();
       maxNumericInFilters = base.getMaxNumericInFilters();
-      serializeComplexValues = base.shouldSerializeComplexValues();
       nativeQuerySqlPlanningMode = base.getNativeQuerySqlPlanningMode();
     }
 
@@ -316,12 +304,6 @@ public class PlannerConfig
     public Builder authorizeSystemTablesDirectly(boolean option)
     {
       this.authorizeSystemTablesDirectly = option;
-      return this;
-    }
-
-    public Builder serializeComplexValues(boolean option)
-    {
-      this.serializeComplexValues = option;
       return this;
     }
 
@@ -421,7 +403,6 @@ public class PlannerConfig
       config.useNativeQueryExplain = useNativeQueryExplain;
       config.maxNumericInFilters = maxNumericInFilters;
       config.forceExpressionVirtualColumns = forceExpressionVirtualColumns;
-      config.serializeComplexValues = serializeComplexValues;
       config.nativeQuerySqlPlanningMode = nativeQuerySqlPlanningMode;
       return config;
     }
