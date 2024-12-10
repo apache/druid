@@ -22,6 +22,8 @@ package org.apache.druid.segment.realtime.appenderator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.CachingQueryRunner;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
@@ -77,10 +79,8 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,18 +100,14 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
   private static final EmittingLogger log = new EmittingLogger(SinkQuerySegmentWalker.class);
   private static final String CONTEXT_SKIP_INCREMENTAL_SEGMENT = "skipIncrementalSegment";
 
-  private static final Set<String> SEGMENT_QUERY_METRIC = Collections.singleton(DefaultQueryMetrics.QUERY_SEGMENT_TIME);
-  private static final Set<String> SEGMENT_CACHE_AND_WAIT_METRICS = Collections.unmodifiableSet(
-      new HashSet<>(
-          Arrays.asList(
-              DefaultQueryMetrics.QUERY_WAIT_TIME,
-              DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME
-          )
-      )
+  private static final Set<String> SEGMENT_QUERY_METRIC = ImmutableSet.of(DefaultQueryMetrics.QUERY_SEGMENT_TIME);
+  private static final Set<String> SEGMENT_CACHE_AND_WAIT_METRICS = ImmutableSet.of(
+      DefaultQueryMetrics.QUERY_WAIT_TIME,
+      DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME
   );
 
   private static final Map<String, ObjLongConsumer<? super QueryMetrics<?>>> METRICS_TO_REPORT =
-      Map.of(
+      ImmutableMap.of(
           DefaultQueryMetrics.QUERY_SEGMENT_TIME, QueryMetrics::reportSegmentTime,
           DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME, QueryMetrics::reportSegmentAndCacheTime,
           DefaultQueryMetrics.QUERY_WAIT_TIME, QueryMetrics::reportWaitTime
