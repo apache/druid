@@ -784,15 +784,15 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
-            InvalidInput.exception(
+            new RetryTransactionException(
                 "The new start metadata state[ObjectMetadata{theObject={foo=bar}}] is ahead of the last committed"
                 + " end state[null]. Try resetting the supervisor."
             ).toString()),
         result1
     );
 
-    // Should only be tried once.
-    Assert.assertEquals(1, metadataUpdateCounter.get());
+    // Should be retried.
+    Assert.assertEquals(2, metadataUpdateCounter.get());
   }
 
   @Test
