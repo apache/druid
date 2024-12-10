@@ -99,7 +99,7 @@ public class RunRulesTest
     emitter = new StubServiceEmitter("coordinator", "host");
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    ruleRunner = new RunRules(Set::size, databaseRuleManager::getRulesWithDefault);
+    ruleRunner = new RunRules((ds, set) -> set.size(), databaseRuleManager::getRulesWithDefault);
     loadQueueManager = new SegmentLoadQueueManager(null, null);
     balancerExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
   }
