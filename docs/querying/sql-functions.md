@@ -124,14 +124,14 @@ Counts distinct values of an HLL sketch column or a regular column.
 
 ## APPROX_COUNT_DISTINCT_DS_THETA
 
-Estimates distinct values of a Theta sketch column or a regular column. The [Theta sketch documentation](../development/extensions-core/datasketches-theta#aggregator) describes the optional `size` parameter. 
+Returns the approximate number of distinct values in a Theta sketch column or a regular column. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
 
 * **Syntax:** `APPROX_COUNT_DISTINCT_DS_THETA(expr, [size])`
 * **Function type:** Aggregation
 
 <details><summary>Example</summary>
 
-The following example estimates the number of distinct tail numbers in the `Tail_Number` column from the `flight-carriers` datasource. 
+The following example returns the approximate number of distinct tail numbers in the `Tail_Number` column of the `flight-carriers` datasource.
 
 ```sql 
 SELECT APPROX_COUNT_DISTINCT_DS_THETA("Tail_Number") AS "estimate"
@@ -1089,15 +1089,14 @@ Returns an approximate rank between 0 and 1 of a given value, in which the rank 
 
 ## DS_THETA
 
-Creates a Theta sketch on a column containing Theta sketches or a regular column. The [Theta sketch documentation](../development/extensions-core/datasketches-theta#aggregator) describes the optional `size` parameter
+Creates a Theta sketch on a column containing Theta sketches or a regular column. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
 
 * **Syntax:** `DS_THETA(expr, [size])`
 * **Function type:** Aggregation
 
-
 <details><summary>Example</summary>
 
-The following example creates a Theta sketch on the `Tail_number` column from the `flight-carriers` dataset grouping by `originState` and `DestState`.
+The following example creates a Theta sketch on the `Tail_number` column of the `flight-carriers` datasource grouping by `OriginState` and `DestState`.
 
 ```sql
 SELECT
@@ -2689,7 +2688,7 @@ Returns the distinct count estimate from a Theta sketch. The `expr` argument mus
 
 <details><summary>Example</summary>
 
-The following example estimates the distinct number of tail numbers in the `Tail_Number` column from the `flight-carriers` datasource.
+The following example estimates the distinct number of tail numbers in the `Tail_Number` column of the `flight-carriers` datasource.
 
 ```sql
 SELECT THETA_SKETCH_ESTIMATE( DS_THETA("Tail_Number") ) AS "estimate"
@@ -2708,14 +2707,14 @@ Returns the following:
 
 ## THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS
 
-Returns the distinct count estimate and error bounds from a Theta sketch. The `expr` argument must return a Theta sketch. The optional `errorBoundsStdDev` argument represents the standard deviation of the error bars and  must be 1, 2, or 3.
+Returns the distinct count estimate and error bounds from a Theta sketch. The `expr` argument must return a Theta sketch. Use `errorBoundsStdDev` to specify the number of standard error bound deviations.
 
 * **Syntax:** `THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr, errorBoundsStdDev)`
 * **Function type:** Scalar, sketch
 
 <details><summary>Details</summary>
 
-The following example returns the estimate with error bars for the number of distinct tail numbers in the `Tail_Number` column from the `flight-carriers`.
+The following example estimates the number of distinct tail numbers in the `Tail_Number` column of the `flight-carriers` datasource with error bounds at plus or minus one standard deviation.
 
 ```sql
 SELECT THETA_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(DS_THETA("Tail_Number", 4096), 1) AS "estimate_with_error"
@@ -2734,14 +2733,14 @@ Returns the following:
 
 ## THETA_SKETCH_INTERSECT
 
-Returns an intersection of Theta sketches. Each input expression must return a Theta sketch. The [Theta sketch documentation](../development/extensions-core/datasketches-theta#aggregator) describes the optional `size` parameter. 
+Returns an intersection of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters. 
 
 * **Syntax:** `THETA_SKETCH_INTERSECT([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
 
 <details><summary>Example</summary>
 
-The following example estimates the intersection of distinct tail numbers that have flights that originate in `CA`, `TX` and `NY` based on the `flight-carriers` datasource.
+The following example estimates the intersection of distinct tail numbers in the `flight-carriers` datasource for flights originating in CA, TX, and NY.
 
 ```sql
 SELECT
@@ -2767,14 +2766,14 @@ Returns the following:
 
 ## THETA_SKETCH_NOT
 
-Returns a set difference of Theta sketches. Each input expression must return a Theta sketch. The [Theta sketch documentation](../development/extensions-core/datasketches-theta#aggregator) describes the optional `size` parameter.
+Returns a set difference of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
 
 * **Syntax:** `THETA_SKETCH_NOT([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
 
 <details><summary>Example</summary>
 
-The following example estimates the number of distinct tail numbers that have no departures from the states of `CA`, `TX`, or `NY` based on the `flight-carriers` datasource.
+The following example estimates the number of distinct tail numbers in the `flight-carriers` datasource for flights not originating in CA, TX, or NY.
 
 ```sql
 SELECT
@@ -2801,14 +2800,14 @@ Returns the following:
 
 ## THETA_SKETCH_UNION
 
-Returns a union of Theta sketches. Each input expression must return a Theta sketch. The [Theta sketch documentation](../development/extensions-core/datasketches-theta#aggregator) describes the optional `size` parameter.
+Returns a union of Theta sketches. Each input expression must return a Theta sketch. See [DataSketches Theta Sketch module](../development/extensions-core/datasketches-theta#aggregator) for a description of optional parameters.
 
 * **Syntax:**`THETA_SKETCH_UNION([size], expr0, expr1, ...)`
 * **Function type:** Scalar, sketch
 
 <details><summary>Example</summary>
 
-The following example estimates the number of distinct tail numbers that have departures from `CA`, `TX`, or `NY`.
+The following example estimates the number of distinct tail numbers that depart from CA, TX, or NY.
 
 ```sql
 SELECT
