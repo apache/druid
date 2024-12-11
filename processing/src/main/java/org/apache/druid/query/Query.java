@@ -33,6 +33,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.select.SelectQuery;
@@ -40,8 +41,11 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Finalization;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Duration;
@@ -66,6 +70,7 @@ import java.util.UUID;
     @JsonSubTypes.Type(name = Query.TIMESERIES, value = TimeseriesQuery.class),
     @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
     @JsonSubTypes.Type(name = Query.WINDOW_OPERATOR, value = WindowOperatorQuery.class),
+    @JsonSubTypes.Type(name = Query.UNION_QUERY, value = UnionQuery.class),
 })
 public interface Query<T>
 {
@@ -79,6 +84,7 @@ public interface Query<T>
   String TIMESERIES = "timeseries";
   String TOPN = "topN";
   String WINDOW_OPERATOR = "windowOperator";
+  String UNION_QUERY = "union";
 
   DataSource getDataSource();
 
@@ -284,5 +290,20 @@ public interface Query<T>
             i
         )
     );
+  }
+
+  default DataSourceAnalysis getDataSourceAnalysis()
+  {
+    return getDataSource().getAnalysis().maybeWithBaseQuery(this);
+  }
+
+  default RowSignature getResultRowSignature()
+  {
+    return getResultRowSignature(Finalization.UNKNOWN);
+  }
+
+  default RowSignature getResultRowSignature(RowSignature.Finalization finalization)
+  {
+    return null;
   }
 }

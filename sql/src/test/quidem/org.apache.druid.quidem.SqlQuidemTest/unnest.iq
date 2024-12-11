@@ -1,0 +1,89 @@
+#!set plannerStrategy DECOUPLED
+!use druidtest://?numMergeBuffers=3
+!set outputformat mysql
+
+SELECT d3 FROM (select * from druid.numfoo where dim2='a'), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3);
+LogicalProject(d3=[$17])
+  LogicalProject(__time=[$0], dim1=[$1], dim2=[$2], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], d3=[$18])
+    LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{17}])
+      LogicalProject(__time=[$0], dim1=[$1], dim2=[$2], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], $f17=[MV_TO_ARRAY($3)])
+        LogicalFilter(condition=[=($2, 'a')])
+          LogicalTableScan(table=[[druid, numfoo]])
+      LogicalProject(d3=[$0])
+        Uncollect
+          LogicalProject(EXPR$0=[$cor0.$f17])
+            LogicalValues(tuples=[[{ 0 }]])
+
+!convertedPlan
+
+
+LogicalProject(d3=[$18])
+  LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{17}])
+    LogicalProject(__time=[$0], dim1=[$1], dim2=[CAST('a':VARCHAR):VARCHAR], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], $f17=[MV_TO_ARRAY($3)])
+      LogicalFilter(condition=[=($2, 'a')])
+        LogicalTableScan(table=[[druid, numfoo]])
+    Uncollect
+      LogicalProject(EXPR$0=[$cor0.$f17])
+        LogicalValues(tuples=[[{ 0 }]])
+
+!logicalPlan
+
+LogicalProject(d3=[$17])
+  LogicalCorrelate(correlation=[$cor2], joinType=[inner], requiredColumns=[{3}])
+    LogicalFilter(condition=[=($2, 'a')])
+      LogicalTableScan(table=[[druid, numfoo]])
+    DruidUnnestRel(expr=[MV_TO_ARRAY($cor2.dim3)], filter=[null])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "filter",
+      "base" : {
+        "type" : "table",
+        "name" : "numfoo"
+      },
+      "filter" : {
+        "type" : "equals",
+        "column" : "dim2",
+        "matchValueType" : "STRING",
+        "matchValue" : "a"
+      }
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "j0.unnest",
+      "expression" : "\"dim3\"",
+      "outputType" : "STRING"
+    },
+    "unnestFilter" : null
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "j0.unnest" ],
+  "columnTypes" : [ "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan
++----+
+| d3 |
++----+
+|    |
+| a  |
+| b  |
++----+
+(3 rows)
+
+!ok
+
+# LogicalPlan plan = calcite.plan();
+# PhysicalQuery pq = DruidQueryGenerator.generate(plan);
+

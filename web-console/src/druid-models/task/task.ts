@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { C } from '@druid-toolkit/query';
+import { C } from 'druid-query-toolkit';
 
 import type { Counters, StageDefinition } from '../stages/stages';
 
@@ -113,6 +113,12 @@ export interface MsqTaskReportResponse {
       };
       stages: StageDefinition[];
       counters: Counters;
+      results?: {
+        signature: { name: string; type: string }[];
+        sqlTypeNames: string[];
+        results: any[];
+        resultsTruncated?: boolean;
+      };
     };
   };
   error?: any;

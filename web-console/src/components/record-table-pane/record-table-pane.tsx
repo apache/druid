@@ -18,8 +18,8 @@
 
 import { Button, Icon, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Column, QueryResult } from '@druid-toolkit/query';
 import classNames from 'classnames';
+import type { Column, QueryResult } from 'druid-query-toolkit';
 import React, { useEffect, useState } from 'react';
 import type { RowRenderProps } from 'react-table';
 import ReactTable from 'react-table';
@@ -140,7 +140,7 @@ export const RecordTablePane = React.memo(function RecordTablePane(props: Record
               Header() {
                 return (
                   <div className="clickable-cell">
-                    <div className="output-name" title={columnToSummary(column)}>
+                    <div className="output-name" data-tooltip={columnToSummary(column)}>
                       {icon && <Icon className="type-icon" icon={icon} size={12} />}
                       {h}
                       {hasFilterOnHeader(h, i) && <Icon icon={IconNames.FILTER} size={14} />}

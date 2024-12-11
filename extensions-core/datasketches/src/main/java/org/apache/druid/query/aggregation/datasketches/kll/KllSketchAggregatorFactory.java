@@ -226,6 +226,23 @@ abstract class KllSketchAggregatorFactory<SketchType extends KllSketch, ValueTyp
     return new CacheKeyBuilder(cacheTypeId).appendString(name).appendString(fieldName).appendInt(k).build();
   }
 
+  @Nullable
+  @Override
+  public AggregatorFactory substituteCombiningFactory(AggregatorFactory preAggregated)
+  {
+    if (this == preAggregated) {
+      return getCombiningFactory();
+    }
+    if (getClass() != preAggregated.getClass()) {
+      return null;
+    }
+    KllSketchAggregatorFactory<?, ?> that = (KllSketchAggregatorFactory<?, ?>) preAggregated;
+    if (Objects.equals(fieldName, that.fieldName) && k == that.k && maxStreamLength <= that.maxStreamLength) {
+      return getCombiningFactory();
+    }
+    return null;
+  }
+
   @Override
   public boolean equals(final Object o)
   {

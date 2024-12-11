@@ -22,7 +22,7 @@ import type {
   SqlClusteredByClause,
   SqlExpression,
   SqlPartitionedByClause,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import {
   C,
   F,
@@ -30,7 +30,7 @@ import {
   SqlOrderByClause,
   SqlOrderByExpression,
   SqlQuery,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
@@ -115,7 +115,7 @@ export class WorkbenchQuery {
     const headers: string[] = [];
     const bodies: string[] = [];
     for (const part of parts) {
-      const m = part.match(/^===== (Helper:.+|Query|Context) =====$/);
+      const m = /^===== (Helper:.+|Query|Context) =====$/.exec(part);
       if (m) {
         headers.push(m[1]);
       } else {
@@ -153,7 +153,7 @@ export class WorkbenchQuery {
 
   static fromTaskQueryAndContext(queryString: string, context: QueryContext): WorkbenchQuery {
     const noSqlOuterLimit = typeof context['sqlOuterLimit'] === 'undefined';
-    const cleanContext = deleteKeys(context, ['sqlOuterLimit']);
+    const cleanContext = deleteKeys(context, ['sqlOuterLimit', '__resultFormat']);
 
     let retQuery = WorkbenchQuery.blank()
       .changeEngine('sql-msq-task')
@@ -214,7 +214,7 @@ export class WorkbenchQuery {
   }
 
   static getRowColumnFromIssue(issue: string): RowColumn | undefined {
-    const m = issue.match(/at line (\d+),(\d+)/);
+    const m = /at line (\d+),(\d+)/.exec(issue);
     if (!m) return;
     return { row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
   }
@@ -528,7 +528,7 @@ export class WorkbenchQuery {
     };
 
     let cancelQueryId: string | undefined;
-    if (engine === 'sql-native') {
+    if (engine === 'sql-native' || engine === 'sql-msq-dart') {
       cancelQueryId = apiQuery.context.sqlQueryId;
       if (!cancelQueryId) {
         // If the sqlQueryId is not explicitly set on the context generate one, so it is possible to cancel the query.
@@ -548,6 +548,10 @@ export class WorkbenchQuery {
 
     if (engine === 'sql-native' || engine === 'sql-msq-task') {
       apiQuery.context.sqlStringifyArrays ??= false;
+    }
+
+    if (engine === 'sql-msq-dart') {
+      apiQuery.context.fullReport ??= true;
     }
 
     if (Array.isArray(queryParameters) && queryParameters.length) {

@@ -26,12 +26,13 @@ import {
   Popover,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlQuery } from '@druid-toolkit/query';
-import { SqlExpression } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
+import type { SqlQuery } from 'druid-query-toolkit';
+import { SqlExpression } from 'druid-query-toolkit';
 import React from 'react';
 
+import { MenuCheckbox, SplitterLayout } from '../../components';
 import { SpecDialog, StringInputDialog } from '../../dialogs';
 import type {
   CapacityInfo,
@@ -69,6 +70,7 @@ import {
 
 import { ColumnTree } from './column-tree/column-tree';
 import { ConnectExternalDataDialog } from './connect-external-data-dialog/connect-external-data-dialog';
+import { CurrentDartPanel } from './current-dart-panel/current-dart-panel';
 import { getDemoQueries } from './demo-queries';
 import { ExecutionDetailsDialog } from './execution-details-dialog/execution-details-dialog';
 import type { ExecutionDetailsTab } from './execution-details-pane/execution-details-pane';
@@ -84,6 +86,14 @@ import { WorkbenchHistoryDialog } from './workbench-history-dialog/workbench-his
 import './workbench-view.scss';
 
 const LAST_DAY = SqlExpression.parse(`__time >= CURRENT_TIMESTAMP - INTERVAL '1' DAY`);
+
+function handleLeftPaneSizeChange(paneSize: number) {
+  localStorageSetJson(LocalStorageKeys.WORKBENCH_LEFT_SIZE, paneSize);
+}
+
+function handleRightPaneSizeChange(paneSize: number) {
+  localStorageSetJson(LocalStorageKeys.WORKBENCH_RIGHT_SIZE, paneSize);
+}
 
 function cleanupTabEntry(tabEntry: TabEntry): void {
   const discardedId = tabEntry.id;
@@ -148,6 +158,7 @@ export interface WorkbenchViewState {
   renamingTab?: TabEntry;
 
   showRecentQueryTaskPanel: boolean;
+  showCurrentDartPanel: boolean;
 }
 
 export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, WorkbenchViewState> {
@@ -164,6 +175,11 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     const hasSqlTask = queryEngines.includes('sql-msq-task');
     const showRecentQueryTaskPanel = Boolean(
       hasSqlTask && localStorageGetJson(LocalStorageKeys.WORKBENCH_TASK_PANEL),
+    );
+
+    const showCurrentDartPanel = Boolean(
+      queryEngines.includes('sql-msq-dart') &&
+        localStorageGetJson(LocalStorageKeys.WORKBENCH_DART_PANEL),
     );
 
     const tabEntries =
@@ -198,15 +214,19 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       taskIdSubmitDialogOpen: false,
 
       showRecentQueryTaskPanel,
+      showCurrentDartPanel,
     };
   }
 
   componentDidMount(): void {
     this.metadataQueryManager = new QueryManager({
-      processQuery: async () => {
-        return await queryDruidSql<ColumnMetadata>({
-          query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
-        });
+      processQuery: async (_, cancelToken) => {
+        return await queryDruidSql<ColumnMetadata>(
+          {
+            query: `SELECT TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS`,
+          },
+          cancelToken,
+        );
       },
       onStateChange: columnMetadataState => {
         if (columnMetadataState.error) {
@@ -264,7 +284,12 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     localStorageSetJson(LocalStorageKeys.WORKBENCH_TASK_PANEL, false);
   };
 
-  private readonly handleDetails = (id: string, initTab?: ExecutionDetailsTab) => {
+  private readonly handleCurrentDartPanelClose = () => {
+    this.setState({ showCurrentDartPanel: false });
+    localStorageSetJson(LocalStorageKeys.WORKBENCH_DART_PANEL, false);
+  };
+
+  private readonly handleDetailsWithId = (id: string, initTab?: ExecutionDetailsTab) => {
     this.setState({
       details: { id, initTab },
     });
@@ -273,6 +298,15 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   private getInitWorkbenchQuery(): WorkbenchQuery {
     return WorkbenchQuery.blank().changeQueryContext(this.props.defaultQueryContext || {});
   }
+
+  private readonly handleDetailsWithExecution = (
+    execution: Execution,
+    initTab?: ExecutionDetailsTab,
+  ) => {
+    this.setState({
+      details: { id: execution.id, initExecution: execution, initTab },
+    });
+  };
 
   private getInitTab(): TabEntry {
     return {
@@ -513,7 +547,11 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           const currentId = tabEntry.id;
           const active = currentTabEntry === tabEntry;
           return (
-            <div key={i} className={classNames('tab-button', { active })}>
+            <div
+              key={i}
+              className={classNames('tab-button', { active })}
+              data-tooltip={tabEntry.tabName}
+            >
               {active ? (
                 <Popover
                   position="bottom"
@@ -590,7 +628,6 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                   <Button
                     className="tab-name"
                     text={tabEntry.tabName}
-                    title={tabEntry.tabName}
                     minimal
                     onDoubleClick={() => this.setState({ renamingTab: tabEntry })}
                   />
@@ -599,7 +636,6 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
                 <Button
                   className="tab-name"
                   text={tabEntry.tabName}
-                  title={tabEntry.tabName}
                   minimal
                   onClick={() => {
                     localStorageSet(LocalStorageKeys.WORKBENCH_LAST_TAB, currentId);
@@ -610,7 +646,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
               <Button
                 className="tab-close"
                 icon={IconNames.CROSS}
-                title={`Close tab '${tabEntry.tabName}`}
+                data-tooltip={`Close tab: ${tabEntry.tabName}`}
                 small
                 minimal
                 onClick={() => {
@@ -628,8 +664,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           );
         })}
         <Button
-          className="add-tab"
+          className="new-tab"
           icon={IconNames.PLUS}
+          data-tooltip="New tab"
           minimal
           onClick={() => {
             this.handleNewTab(this.getInitWorkbenchQuery());
@@ -644,7 +681,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
     if (!queryEngines.includes('sql-msq-task')) return;
     if (hideToolbar) return;
 
-    const { showRecentQueryTaskPanel } = this.state;
+    const { showRecentQueryTaskPanel, showCurrentDartPanel } = this.state;
     return (
       <ButtonGroup className="toolbar">
         <Button
@@ -657,17 +694,35 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           }}
           minimal
         />
-        {!showRecentQueryTaskPanel && (
-          <Button
-            icon={IconNames.DRAWER_RIGHT}
-            minimal
-            title="Show recent query task panel"
-            onClick={() => {
-              this.setState({ showRecentQueryTaskPanel: true });
-              localStorageSetJson(LocalStorageKeys.WORKBENCH_TASK_PANEL, true);
-            }}
-          />
-        )}
+        <Popover
+          position="bottom-right"
+          content={
+            <Menu>
+              <MenuCheckbox
+                text="Recent query task panel"
+                checked={showRecentQueryTaskPanel}
+                shouldDismissPopover
+                onChange={() => {
+                  const n = !showRecentQueryTaskPanel;
+                  this.setState({ showRecentQueryTaskPanel: n });
+                  localStorageSetJson(LocalStorageKeys.WORKBENCH_TASK_PANEL, n);
+                }}
+              />
+              <MenuCheckbox
+                text="Current Dart query panel"
+                checked={showCurrentDartPanel}
+                shouldDismissPopover
+                onChange={() => {
+                  const n = !showCurrentDartPanel;
+                  this.setState({ showCurrentDartPanel: n });
+                  localStorageSetJson(LocalStorageKeys.WORKBENCH_DART_PANEL, n);
+                }}
+              />
+            </Menu>
+          }
+        >
+          <Button icon={IconNames.DRAWER_RIGHT} minimal data-tooltip="Open helper panels" />
+        </Popover>
       </ButtonGroup>
     );
   }
@@ -713,7 +768,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           columnMetadata={columnMetadataState.getSomeData()}
           onQueryChange={this.handleQueryChange}
           onQueryTab={this.handleNewTab}
-          onDetails={this.handleDetails}
+          onDetails={this.handleDetailsWithExecution}
           queryEngines={queryEngines}
           clusterCapacity={capabilities.getMaxTaskSlots()}
           goToTask={goToTask}
@@ -733,7 +788,9 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
           runMoreMenu={
             <Menu>
               {!hiddenMoreMenuItems.includes('explain') &&
-                (effectiveEngine === 'sql-native' || effectiveEngine === 'sql-msq-task') && (
+                (effectiveEngine === 'sql-native' ||
+                  effectiveEngine === 'sql-msq-task' ||
+                  effectiveEngine === 'sql-msq-dart') && (
                   <MenuItem
                     icon={IconNames.CLEAN}
                     text="Explain SQL query"
@@ -850,8 +907,7 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
   };
 
   render() {
-    const { queryEngines } = this.props;
-    const { columnMetadataState, showRecentQueryTaskPanel } = this.state;
+    const { columnMetadataState, showRecentQueryTaskPanel, showCurrentDartPanel } = this.state;
     const query = this.getCurrentQuery();
 
     let defaultSchema: string | undefined;
@@ -862,34 +918,62 @@ export class WorkbenchView extends React.PureComponent<WorkbenchViewProps, Workb
       defaultTables = parsedQuery.getUsedTableNames();
     }
 
+    const showRightPanel = showRecentQueryTaskPanel || showCurrentDartPanel;
     return (
-      <div
-        className={classNames('workbench-view app-view', {
-          'hide-column-tree': columnMetadataState.isError(),
-          'hide-work-history': !showRecentQueryTaskPanel,
-        })}
-      >
-        {!columnMetadataState.isError() && (
-          <ColumnTree
-            getParsedQuery={this.getParsedQuery}
-            columnMetadataLoading={columnMetadataState.loading}
-            columnMetadata={columnMetadataState.data}
-            onQueryChange={this.handleSqlQueryChange}
-            defaultSchema={defaultSchema ? defaultSchema : 'druid'}
-            defaultTables={defaultTables}
-            defaultWhere={LAST_DAY}
-            highlightTable={undefined}
-          />
-        )}
-        {this.renderCenterPanel()}
-        {showRecentQueryTaskPanel && queryEngines.includes('sql-msq-task') && (
-          <RecentQueryTaskPanel
-            onClose={this.handleRecentQueryTaskPanelClose}
-            onExecutionDetails={this.handleDetails}
-            onChangeQuery={this.handleQueryStringChange}
-            onNewTab={this.handleNewTab}
-          />
-        )}
+      <div className="workbench-view app-view">
+        <SplitterLayout
+          className="workbench-splitter"
+          primaryIndex={0}
+          secondaryMinSize={250}
+          secondaryMaxSize={500}
+          secondaryInitialSize={
+            Number(localStorageGetJson(LocalStorageKeys.WORKBENCH_RIGHT_SIZE)) || 250
+          }
+          onSecondaryPaneSizeChange={handleRightPaneSizeChange}
+          primaryMinSize={600}
+        >
+          <SplitterLayout
+            className="workbench-splitter"
+            primaryIndex={1}
+            secondaryMinSize={250}
+            secondaryMaxSize={500}
+            secondaryInitialSize={
+              Number(localStorageGetJson(LocalStorageKeys.WORKBENCH_LEFT_SIZE)) || 250
+            }
+            onSecondaryPaneSizeChange={handleLeftPaneSizeChange}
+            primaryMinSize={400}
+          >
+            {!columnMetadataState.isError() && (
+              <ColumnTree
+                getParsedQuery={this.getParsedQuery}
+                columnMetadata={columnMetadataState.getSomeData()}
+                columnMetadataLoading={columnMetadataState.loading}
+                onQueryChange={this.handleSqlQueryChange}
+                defaultSchema={defaultSchema ? defaultSchema : 'druid'}
+                defaultTables={defaultTables}
+                defaultWhere={LAST_DAY}
+                highlightTable={undefined}
+              />
+            )}
+            {this.renderCenterPanel()}
+          </SplitterLayout>
+          {showRightPanel && (
+            <div className="recent-panel">
+              {showRecentQueryTaskPanel && (
+                <RecentQueryTaskPanel
+                  onClose={this.handleRecentQueryTaskPanelClose}
+                  onExecutionDetails={this.handleDetailsWithId}
+                  onChangeQuery={this.handleQueryStringChange}
+                  onNewTab={this.handleNewTab}
+                />
+              )}
+              {showCurrentDartPanel && (
+                <CurrentDartPanel onClose={this.handleCurrentDartPanelClose} />
+              )}
+            </div>
+          )}
+        </SplitterLayout>
+
         {this.renderExecutionDetailsDialog()}
         {this.renderExplainDialog()}
         {this.renderHistoryDialog()}

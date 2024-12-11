@@ -36,6 +36,7 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.util.Modules;
 import com.google.inject.util.Providers;
+import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
@@ -75,6 +76,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.metadata.input.InputSourceModule;
 import org.apache.druid.msq.counters.CounterNames;
@@ -158,6 +160,7 @@ import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.DirectStatement;
@@ -175,7 +178,6 @@ import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.SqlEngine;
@@ -218,7 +220,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -272,7 +273,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
                   .put(MSQTaskQueryMaker.USER_KEY, "allowAll")
-                  .put(PlannerContext.CTX_ENABLE_WINDOW_FNS, true)
+                  .put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true)
                   .build();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
@@ -322,6 +323,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;
   private static final Logger log = new Logger(MSQTestBase.class);
+  protected Injector injector;
   protected ObjectMapper objectMapper;
   protected MSQTestOverlordServiceClient indexingServiceClient;
   protected MSQTestTaskActionClient testTaskActionClient;
@@ -509,7 +511,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
         binder -> binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class)),
         new JoinableFactoryModule(),
         new IndexingServiceTuningConfigModule(),
-        new MSQIndexingModule(),
         Modules.override(new MSQSqlModule()).with(
             binder -> {
               // Our Guice configuration currently requires bindings to exist even if they aren't ever used, the
@@ -532,12 +533,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
         binder -> binder.bind(Bouncer.class).toInstance(new Bouncer(1))
     );
     // adding node role injection to the modules, since CliPeon would also do that through run method
-    Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
+    injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build(), ImmutableSet.of(NodeRole.PEON))
         .addAll(modules)
         .build();
 
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
+    objectMapper.registerModules(new MSQIndexingModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
     objectMapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
 
@@ -588,6 +590,8 @@ public class MSQTestBase extends BaseCalciteQueryTest
     sqlStatementFactory = CalciteTests.createSqlStatementFactory(engine, plannerFactory);
 
     authorizerMapper = CalciteTests.TEST_EXTERNAL_AUTHORIZER_MAPPER;
+
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
   }
 
   protected CatalogResolver createMockCatalogResolver()
@@ -693,7 +697,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
           break;
         default:
           throw new ISE("Cannot query segment %s in test runner", segmentId);
-
       }
       Segment segment = new Segment()
       {
@@ -786,13 +789,13 @@ public class MSQTestBase extends BaseCalciteQueryTest
     );
   }
 
-  private String runMultiStageQuery(String query, Map<String, Object> context)
+  private String runMultiStageQuery(String query, Map<String, Object> context, List<TypedValue> parameters)
   {
     final DirectStatement stmt = sqlStatementFactory.directStatement(
         new SqlQueryPlus(
             query,
             context,
-            Collections.emptyList(),
+            parameters,
             CalciteTests.REGULAR_USER_AUTH_RESULT
         )
     );
@@ -888,6 +891,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     protected String sql = null;
     protected MSQControllerTask taskSpec = null;
     protected Map<String, Object> queryContext = DEFAULT_MSQ_CONTEXT;
+    protected List<TypedValue> dynamicParameters = new ArrayList<>();
     protected List<MSQResultsReport.ColumnAndType> expectedRowSignature = null;
     protected MSQSpec expectedMSQSpec = null;
     protected MSQTuningConfig expectedTuningConfig = null;
@@ -923,6 +927,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
     public Builder setQueryContext(Map<String, Object> queryContext)
     {
       this.queryContext = queryContext;
+      return asBuilder();
+    }
+
+    public Builder setDynamicParameters(List<TypedValue> dynamicParameters)
+    {
+      this.dynamicParameters = dynamicParameters;
       return asBuilder();
     }
 
@@ -1059,7 +1069,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
       final Throwable e = Assert.assertThrows(
           Throwable.class,
-          () -> runMultiStageQuery(sql, queryContext)
+          () -> runMultiStageQuery(sql, queryContext, dynamicParameters)
       );
 
       assertThat(e, expectedValidationErrorMatcher);
@@ -1211,7 +1221,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         String controllerId;
         if (sql != null) {
           // Run the sql command.
-          controllerId = runMultiStageQuery(sql, queryContext);
+          controllerId = runMultiStageQuery(sql, queryContext, dynamicParameters);
         } else {
           // Run the task spec directly instead.
           controllerId = TEST_CONTROLLER_TASK_ID;
@@ -1428,7 +1438,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       try {
         String controllerId;
         if (sql != null) {
-          controllerId = runMultiStageQuery(sql, queryContext);
+          controllerId = runMultiStageQuery(sql, queryContext, dynamicParameters);
         } else {
           // Run the task spec directly instead.
           controllerId = TEST_CONTROLLER_TASK_ID;
@@ -1470,7 +1480,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
       Preconditions.checkArgument(sql == null || queryContext != null, "queryContext cannot be null");
 
       try {
-        String controllerId = runMultiStageQuery(sql, queryContext);
+        String controllerId = runMultiStageQuery(sql, queryContext, dynamicParameters);
 
         if (expectedMSQFault != null || expectedMSQFaultClass != null) {
           MSQErrorReport msqErrorReport = getErrorReportOrThrow(controllerId);

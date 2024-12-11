@@ -18,9 +18,9 @@
 
 import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { Column, QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
-import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar } from '@druid-toolkit/query';
 import classNames from 'classnames';
+import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { C, F, SqlAlias, SqlFunction, SqlLiteral, SqlStar } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
@@ -610,7 +610,7 @@ export const ResultTablePane = React.memo(function ResultTablePane(props: Result
                 return (
                   <Popover content={<Deferred content={() => getHeaderMenu(column, i)} />}>
                     <div className="clickable-cell">
-                      <div className="output-name" title={columnToSummary(column)}>
+                      <div className="output-name" data-tooltip={columnToSummary(column)}>
                         {icon && <Icon className="type-icon" icon={icon} size={12} />}
                         {h}
                         {hasFilterOnHeader(h, i) && (

@@ -29,6 +29,7 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.calcite.linq4j.QueryProvider;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Numbers;
@@ -38,6 +39,7 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -91,9 +93,9 @@ public class PlannerContext
   public static final String CTX_SQL_OUTER_LIMIT = "sqlOuterLimit";
 
   /**
-   * Key to enable window functions.
+   * Key to enable transfer of RACs over wire.
    */
-  public static final String CTX_ENABLE_WINDOW_FNS = "enableWindowing";
+  public static final String CTX_ENABLE_RAC_TRANSFER_OVER_WIRE = "enableRACOverWire";
 
   /**
    * Context key for {@link PlannerContext#isUseBoundsAndSelectors()}.
@@ -508,6 +510,9 @@ public class PlannerContext
    */
   public void setPlanningError(String formatText, Object... arguments)
   {
+    if (queryContext().isDecoupledMode()) {
+      throw InvalidSqlInput.exception(formatText, arguments);
+    }
     planningError = StringUtils.nonStrictFormat(formatText, arguments);
   }
 
@@ -634,15 +639,10 @@ public class PlannerContext
    * Checks if the current {@link SqlEngine} supports a particular feature.
    *
    * When executing a specific query, use this method instead of {@link SqlEngine#featureAvailable(EngineFeature)}
-   * because it also verifies feature flags such as {@link #CTX_ENABLE_WINDOW_FNS}.
+   * because it also verifies feature flags.
    */
   public boolean featureAvailable(final EngineFeature feature)
   {
-    if (feature == EngineFeature.WINDOW_FUNCTIONS &&
-        !QueryContexts.getAsBoolean(CTX_ENABLE_WINDOW_FNS, queryContext.get(CTX_ENABLE_WINDOW_FNS), false)) {
-      // Short-circuit: feature requires context flag.
-      return false;
-    }
     if (feature == EngineFeature.TIME_BOUNDARY_QUERY && !queryContext().isTimeBoundaryPlanningEnabled()) {
       // Short-circuit: feature requires context flag.
       return false;

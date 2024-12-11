@@ -21,12 +21,14 @@ package org.apache.druid.server.compaction;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.report.TaskReport;
@@ -40,7 +42,6 @@ import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -75,7 +76,8 @@ public class CompactionRunSimulator
    */
   public CompactionSimulateResult simulateRunWithConfig(
       DruidCompactionConfig compactionConfig,
-      Map<String, SegmentTimeline> datasourceTimelines
+      DataSourcesSnapshot dataSourcesSnapshot,
+      CompactionEngine defaultEngine
   )
   {
     final Table compactedIntervals
@@ -138,13 +140,14 @@ public class CompactionRunSimulator
 
     // Unlimited task slots to ensure that simulator does not skip any interval
     final DruidCompactionConfig configWithUnlimitedTaskSlots = compactionConfig.withClusterConfig(
-        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null, null)
+        new ClusterCompactionConfig(1.0, Integer.MAX_VALUE, null, null)
     );
 
     final CoordinatorRunStats stats = new CoordinatorRunStats();
     new CompactSegments(simulationStatusTracker, readOnlyOverlordClient).run(
         configWithUnlimitedTaskSlots,
-        datasourceTimelines,
+        dataSourcesSnapshot,
+        defaultEngine,
         stats
     );
 

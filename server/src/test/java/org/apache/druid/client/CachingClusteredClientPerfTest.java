@@ -37,10 +37,12 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactory;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
@@ -128,7 +130,7 @@ public class CachingClusteredClientPerfTest
     Mockito.doReturn(Optional.of(timeline)).when(serverView).getTimeline(any());
     Mockito.doReturn(new MockQueryRunner()).when(serverView).getQueryRunner(any());
     CachingClusteredClient cachingClusteredClient = new CachingClusteredClient(
-        new MockQueryToolChestWareHouse(),
+        new MockQueryRunnerFactoryConglomerate(),
         serverView,
         MapCache.create(1024),
         TestHelper.makeJsonMapper(),
@@ -170,13 +172,24 @@ public class CachingClusteredClientPerfTest
                       .build();
   }
 
-  private static class MockQueryToolChestWareHouse implements QueryToolChestWarehouse
+  private static class MockQueryRunnerFactoryConglomerate implements QueryRunnerFactoryConglomerate
   {
-
     @Override
     public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
     {
       return new ServerManagerTest.NoopQueryToolChest<>();
+    }
+
+    @Override
+    public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
+    {
+      return null;
+    }
+
+    @Override
+    public <T, QueryType extends Query<T>> QueryLogic getQueryLogic(QueryType query)
+    {
+      return null;
     }
   }
 

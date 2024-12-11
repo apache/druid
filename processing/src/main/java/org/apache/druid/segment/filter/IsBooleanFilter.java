@@ -79,6 +79,12 @@ public class IsBooleanFilter implements Filter
         }
 
         @Override
+        public int estimatedComputeCost()
+        {
+          return baseIndex.estimatedComputeCost();
+        }
+
+        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (isTrue) {

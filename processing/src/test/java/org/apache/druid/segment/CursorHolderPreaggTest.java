@@ -30,10 +30,12 @@ import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Result;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -59,6 +61,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class CursorHolderPreaggTest extends InitializedNullHandlingTest
 {
@@ -84,22 +87,24 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
     );
     topNQueryEngine = new TopNQueryEngine(bufferPool);
     timeseriesQueryEngine = new TimeseriesQueryEngine(bufferPool);
+    CloseableDefaultBlockingPool<ByteBuffer> mergePool =
+        new CloseableDefaultBlockingPool<>(
+            () -> ByteBuffer.allocate(50000),
+            4
+        );
+    GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     groupingEngine = new GroupingEngine(
         new DruidProcessingConfig(),
         GroupByQueryConfig::new,
         new GroupByResourcesReservationPool(
-            closer.closeLater(
-                new CloseableDefaultBlockingPool<>(
-                    () -> ByteBuffer.allocate(50000),
-                    4
-                )
-            ),
+            closer.closeLater(mergePool),
             new GroupByQueryConfig()
         ),
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
         (query, future) -> {
-        }
+        },
+        groupByStatsProvider
     );
 
     this.cursorFactory = new CursorFactory()
@@ -135,6 +140,15 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
           public boolean isPreAggregated()
           {
             return true;
+          }
+
+          @Nullable
+          @Override
+          public List<AggregatorFactory> getAggregatorsForPreAggregated()
+          {
+            return spec.getAggregators()
+                       .stream().map(AggregatorFactory::getCombiningFactory)
+                       .collect(Collectors.toList());
           }
 
           @Override

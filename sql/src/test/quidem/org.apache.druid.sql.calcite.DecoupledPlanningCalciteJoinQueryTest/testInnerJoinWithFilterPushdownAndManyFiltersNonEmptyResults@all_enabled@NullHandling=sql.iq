@@ -1,0 +1,306 @@
+# testInnerJoinWithFilterPushdownAndManyFiltersNonEmptyResults@all_enabled@NullHandling=sql case-crc:ad692955
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite true
+!set enableJoinFilterRewriteValueColumnFilters true
+!set enableRewriteJoinToFilter true
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT f1.m1, f2.m1
+FROM foo f1
+INNER JOIN foo f2 ON f1.m1 = f2.m1 where (f1.dim1, f1.dim2) in (('1', 'a'), ('C', 'D'), ('A', 'C'), ('C', 'E'), ('D', 'H'), ('A', 'D'), ('B', 'C'), 
+('H', 'E'), ('I', 'J'), ('I', 'K'), ('J', 'I'), ('Q', 'R'), ('Q', 'S'), ('S', 'Q'), ('X', 'Y'), ('Z', 'U'), ('U', 'Z'), ('P', 'Q'), ('X', 'A'))
+;
++-----+-----+
+| m1  | m1  |
++-----+-----+
+| 4.0 | 4.0 |
++-----+-----+
+(1 row)
+
+!ok
+LogicalProject(m1=[$2], m10=[$3])
+  LogicalJoin(condition=[=($2, $3)], joinType=[inner])
+    LogicalFilter(condition=[OR(AND(=($0, '1'), =($1, 'a')), AND(=($0, 'C'), =($1, 'D')), AND(=($0, 'A'), =($1, 'C')), AND(=($0, 'C'), =($1, 'E')), AND(=($0, 'D'), =($1, 'H')), AND(=($0, 'A'), =($1, 'D')), AND(=($0, 'B'), =($1, 'C')), AND(=($0, 'H'), =($1, 'E')), AND(=($0, 'I'), =($1, 'J')), AND(=($0, 'I'), =($1, 'K')), AND(=($0, 'J'), =($1, 'I')), AND(=($0, 'Q'), =($1, 'R')), AND(=($0, 'Q'), =($1, 'S')), AND(=($0, 'S'), =($1, 'Q')), AND(=($0, 'X'), =($1, 'Y')), AND(=($0, 'Z'), =($1, 'U')), AND(=($0, 'U'), =($1, 'Z')), AND(=($0, 'P'), =($1, 'Q')), AND(=($0, 'X'), =($1, 'A')))])
+      LogicalProject(dim1=[$1], dim2=[$2], m1=[$5])
+        LogicalTableScan(table=[[druid, foo]])
+    LogicalProject(m1=[$5])
+      LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidProject(m1=[$2], m10=[$3], druid=[logical])
+  DruidJoin(condition=[=($2, $3)], joinType=[inner])
+    DruidFilter(condition=[OR(AND(=($0, '1'), =($1, 'a')), AND(=($0, 'C'), =($1, 'D')), AND(=($0, 'A'), =($1, 'C')), AND(=($0, 'C'), =($1, 'E')), AND(=($0, 'D'), =($1, 'H')), AND(=($0, 'A'), =($1, 'D')), AND(=($0, 'B'), =($1, 'C')), AND(=($0, 'H'), =($1, 'E')), AND(=($0, 'I'), =($1, 'J')), AND(=($0, 'I'), =($1, 'K')), AND(=($0, 'J'), =($1, 'I')), AND(=($0, 'Q'), =($1, 'R')), AND(=($0, 'Q'), =($1, 'S')), AND(=($0, 'S'), =($1, 'Q')), AND(=($0, 'X'), =($1, 'Y')), AND(=($0, 'Z'), =($1, 'U')), AND(=($0, 'U'), =($1, 'Z')), AND(=($0, 'P'), =($1, 'Q')), AND(=($0, 'X'), =($1, 'A')))])
+      DruidProject(dim1=[$1], dim2=[$2], m1=[$5], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidProject(m1=[$5], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "or",
+          "fields" : [ {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "D"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "A", "C" ]
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "C"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "A", "B" ]
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "E"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "C", "H" ]
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "Q"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "P", "S" ]
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "1"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "a"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "D"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "H"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "I"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "J"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "I"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "K"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "J"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "I"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "Q"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "R"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "Q"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "S"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "X"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "Y"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "Z"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "U"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "U"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "Z"
+            } ]
+          }, {
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "X"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "A"
+            } ]
+          } ]
+        },
+        "columns" : [ "dim1", "dim2", "m1" ],
+        "columnTypes" : [ "STRING", "STRING", "FLOAT" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "m1" ],
+        "columnTypes" : [ "FLOAT" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"m1\" == \"j0.m1\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "m1", "j0.m1" ],
+  "columnTypes" : [ "FLOAT", "FLOAT" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

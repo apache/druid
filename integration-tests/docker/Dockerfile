@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG JDK_VERSION=8-slim-buster
+ARG JDK_VERSION=17-slim-buster
 FROM openjdk:$JDK_VERSION as druidbase
 
 # Bundle everything into one script so cleanup can reduce image size.
@@ -25,7 +25,17 @@ ARG KAFKA_VERSION
 # This is passed in by maven at build time to align with the client version we depend on in the pom file
 ARG ZK_VERSION
 ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org
-RUN APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh && rm -f /root/base-setup.sh
+ARG SETUP_RETRIES=3
+# Retry mechanism for running the setup script up to limit of 3 times.
+RUN set -e; \
+    for i in $(seq 1 $SETUP_RETRIES); do \
+        echo "Attempt $i to run the setup script..."; \
+        APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh && break || { \
+            echo "Set up script attempt $i/$SETUP_RETRIES failed."; \
+            sleep 2; \
+        }; \
+    done; \
+    rm -f /root/base-setup.sh
 
 FROM druidbase
 ARG MYSQL_VERSION

@@ -51,30 +51,9 @@ import { deepGet, pluralIfNeeded, removeUndefinedValues, tickIcon } from '../../
 import type { MaxTasksButtonProps } from '../max-tasks-button/max-tasks-button';
 import { MaxTasksButton } from '../max-tasks-button/max-tasks-button';
 import { QueryParametersDialog } from '../query-parameters-dialog/query-parameters-dialog';
+import { TimezoneMenuItems } from '../timezone-menu-items/timezone-menu-items';
 
 import './run-panel.scss';
-
-const NAMED_TIMEZONES: string[] = [
-  'America/Juneau', // -9.0
-  'America/Los_Angeles', // -8.0
-  'America/Yellowknife', // -7.0
-  'America/Phoenix', // -7.0
-  'America/Denver', // -7.0
-  'America/Mexico_City', // -6.0
-  'America/Chicago', // -6.0
-  'America/New_York', // -5.0
-  'America/Argentina/Buenos_Aires', // -4.0
-  'Etc/UTC', // +0.0
-  'Europe/London', // +0.0
-  'Europe/Paris', // +1.0
-  'Asia/Jerusalem', // +2.0
-  'Asia/Shanghai', // +8.0
-  'Asia/Hong_Kong', // +8.0
-  'Asia/Seoul', // +9.0
-  'Asia/Tokyo', // +9.0
-  'Pacific/Guam', // +10.0
-  'Australia/Sydney', // +11.0
-];
 
 const ARRAY_INGEST_MODE_LABEL: Record<ArrayIngestMode, string> = {
   array: 'Array',
@@ -100,18 +79,22 @@ const SQL_JOIN_ALGORITHM_LABEL: Record<SqlJoinAlgorithm, string> = {
 };
 
 const DEFAULT_ENGINES_LABEL_FN = (engine: DruidEngine | undefined) => {
+  if (!engine) return { text: 'Auto' };
   switch (engine) {
     case 'native':
-      return { text: 'Native' };
+      return { text: 'JSON (native)' };
 
     case 'sql-native':
-      return { text: 'SQL native' };
+      return { text: 'SQL (native)' };
 
     case 'sql-msq-task':
-      return { text: 'SQL MSQ-task', label: 'multi-stage-query' };
+      return { text: 'SQL (task)', label: 'multi-stage-query' };
+
+    case 'sql-msq-dart':
+      return { text: 'SQL (Dart)', label: 'multi-stage-query' };
 
     default:
-      return { text: 'Auto' };
+      return { text: engine };
   }
 };
 
@@ -120,9 +103,7 @@ const SELECT_DESTINATION_LABEL: Record<SelectDestination, string> = {
   durableStorage: 'Durable storage',
 };
 
-const EXPERIMENTAL_ICON = <Icon icon={IconNames.WARNING_SIGN} title="Experimental" />;
-
-type EnginesMenuOption =
+export type EnginesMenuOption =
   | 'edit-query-context'
   | 'define-parameters'
   | 'timezone'
@@ -137,6 +118,49 @@ type EnginesMenuOption =
   | 'use-cache'
   | 'approximate-top-n'
   | 'limit-inline-results';
+
+function optionVisible(
+  option: EnginesMenuOption,
+  engine: DruidEngine,
+  hiddenOptions: EnginesMenuOption[],
+): boolean {
+  if (hiddenOptions.includes(option)) return false;
+
+  switch (option) {
+    case 'edit-query-context':
+    case 'define-parameters':
+      return true;
+
+    case 'insert-replace-specific-context':
+    case 'max-parse-exceptions':
+    case 'select-destination':
+    case 'finalize-aggregations':
+    case 'group-by-enable-multi-value-unnesting':
+    case 'durable-shuffle-storage':
+      return engine === 'sql-msq-task';
+
+    case 'join-algorithm':
+      return engine === 'sql-msq-task' || engine === 'sql-msq-dart';
+
+    case 'timezone':
+    case 'approximate-count-distinct':
+      return engine === 'sql-native' || engine === 'sql-msq-task' || engine === 'sql-msq-dart';
+
+    case 'use-cache':
+      return engine === 'native' || engine === 'sql-native';
+
+    case 'approximate-top-n':
+      return engine === 'sql-native';
+
+    case 'limit-inline-results':
+      return engine === 'sql-native' || engine === 'sql-msq-dart';
+
+    default:
+      console.warn(`Unknown option: ${option}`);
+      return false;
+  }
+}
+
 export interface RunPanelProps
   extends Pick<
     MaxTasksButtonProps,
@@ -209,16 +233,6 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     queryContext,
     defaultQueryContext,
   );
-  const useConcurrentLocks = getQueryContextKey(
-    'useConcurrentLocks',
-    queryContext,
-    defaultQueryContext,
-  );
-  const forceSegmentSortByTime = getQueryContextKey(
-    'forceSegmentSortByTime',
-    queryContext,
-    defaultQueryContext,
-  );
   const finalizeAggregations = queryContext.finalizeAggregations;
   const waitUntilSegmentsLoad = queryContext.waitUntilSegmentsLoad;
   const groupByEnableMultiValueUnnesting = queryContext.groupByEnableMultiValueUnnesting;
@@ -279,25 +293,6 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
     onQueryChange(query.changeQueryContext(removeUndefinedValues(queryContext)));
   }
 
-  function offsetOptions(): JSX.Element[] {
-    const items: JSX.Element[] = [];
-
-    for (let i = -12; i <= 14; i++) {
-      const offset = `${i < 0 ? '-' : '+'}${String(Math.abs(i)).padStart(2, '0')}:00`;
-      items.push(
-        <MenuItem
-          key={offset}
-          icon={tickIcon(offset === sqlTimeZone)}
-          text={offset}
-          shouldDismissPopover={false}
-          onClick={() => changeQueryContext({ ...queryContext, sqlTimeZone: offset })}
-        />,
-      );
-    }
-
-    return items;
-  }
-
   const overloadWarning =
     query.unlimited &&
     (queryEngine === 'sql-native' ||
@@ -307,6 +302,10 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
   const effectiveEngine = query.getEffectiveEngine();
 
   const autoEngineLabel = enginesLabelFn(undefined);
+
+  function show(option: EnginesMenuOption) {
+    return optionVisible(option, effectiveEngine, hiddenOptions);
+  }
 
   return (
     <div className="run-panel">
@@ -334,7 +333,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
               <Menu>
                 {queryEngines.length > 1 && (
                   <>
-                    <MenuDivider title="Select engine" />
+                    <MenuDivider title="Select language and engine" />
                     <MenuItem
                       key="auto"
                       icon={tickIcon(queryEngine === undefined)}
@@ -361,7 +360,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     <MenuDivider />
                   </>
                 )}
-                {!hiddenOptions.includes('edit-query-context') && (
+                {show('edit-query-context') && (
                   <MenuItem
                     icon={IconNames.PROPERTIES}
                     text="Edit query context..."
@@ -369,7 +368,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     label={pluralIfNeeded(numContextKeys, 'key')}
                   />
                 )}
-                {!hiddenOptions.includes('define-parameters') && (
+                {show('define-parameters') && (
                   <MenuItem
                     icon={IconNames.HELP}
                     text="Define parameters..."
@@ -379,38 +378,19 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     }
                   />
                 )}
-                {effectiveEngine !== 'native' && !hiddenOptions.includes('timezone') && (
+                {show('timezone') && (
                   <MenuItem
                     icon={IconNames.GLOBE_NETWORK}
                     text="Timezone"
                     label={sqlTimeZone ?? defaultQueryContext.sqlTimeZone}
                   >
-                    <MenuDivider title="Timezone type" />
-                    <MenuItem
-                      icon={tickIcon(!sqlTimeZone)}
-                      text="Default"
-                      label={defaultQueryContext.sqlTimeZone}
-                      shouldDismissPopover={false}
-                      onClick={() =>
-                        changeQueryContext({ ...queryContext, sqlTimeZone: undefined })
+                    <TimezoneMenuItems
+                      sqlTimeZone={sqlTimeZone}
+                      setSqlTimeZone={sqlTimeZone =>
+                        changeQueryContext({ ...queryContext, sqlTimeZone })
                       }
+                      defaultSqlTimeZone={defaultQueryContext.sqlTimeZone}
                     />
-                    <MenuItem icon={tickIcon(String(sqlTimeZone).includes('/'))} text="Named">
-                      {NAMED_TIMEZONES.map(namedTimezone => (
-                        <MenuItem
-                          key={namedTimezone}
-                          icon={tickIcon(namedTimezone === sqlTimeZone)}
-                          text={namedTimezone}
-                          shouldDismissPopover={false}
-                          onClick={() =>
-                            changeQueryContext({ ...queryContext, sqlTimeZone: namedTimezone })
-                          }
-                        />
-                      ))}
-                    </MenuItem>
-                    <MenuItem icon={tickIcon(String(sqlTimeZone).includes(':'))} text="Offset">
-                      {offsetOptions()}
-                    </MenuItem>
                     <MenuItem
                       icon={IconNames.BLANK}
                       text="Custom"
@@ -418,257 +398,201 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     />
                   </MenuItem>
                 )}
-                {effectiveEngine === 'sql-msq-task' ? (
-                  <>
-                    {!hiddenOptions.includes('insert-replace-specific-context') && (
-                      <MenuItem
-                        icon={IconNames.BRING_DATA}
-                        text="INSERT / REPLACE specific context"
-                      >
-                        <MenuBoolean
-                          text="Force segment sort by time"
-                          value={forceSegmentSortByTime}
-                          onValueChange={forceSegmentSortByTime =>
-                            changeQueryContext({
-                              ...queryContext,
-                              forceSegmentSortByTime,
-                            })
-                          }
-                          optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
-                          optionsLabelElement={{ false: EXPERIMENTAL_ICON }}
-                        />
-                        <MenuBoolean
-                          text="Use concurrent locks"
-                          value={useConcurrentLocks}
-                          onValueChange={useConcurrentLocks =>
-                            changeQueryContext({
-                              ...queryContext,
-                              useConcurrentLocks,
-                            })
-                          }
-                          optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
-                          optionsLabelElement={{ true: EXPERIMENTAL_ICON }}
-                        />
-                        <MenuBoolean
-                          text="Fail on empty insert"
-                          value={failOnEmptyInsert}
-                          showUndefined
-                          undefinedEffectiveValue={false}
-                          onValueChange={failOnEmptyInsert =>
-                            changeQueryContext({ ...queryContext, failOnEmptyInsert })
-                          }
-                          optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
-                        />
-                        <MenuBoolean
-                          text="Wait until segments have loaded"
-                          value={waitUntilSegmentsLoad}
-                          showUndefined
-                          undefinedEffectiveValue={ingestMode}
-                          onValueChange={waitUntilSegmentsLoad =>
-                            changeQueryContext({ ...queryContext, waitUntilSegmentsLoad })
-                          }
-                          optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
-                        />
-                        <MenuItem
-                          text="Edit index spec..."
-                          label={summarizeIndexSpec(indexSpec)}
-                          shouldDismissPopover={false}
-                          onClick={() => {
-                            setIndexSpecDialogSpec(indexSpec || {});
-                          }}
-                        />
-                      </MenuItem>
-                    )}
-                    {!hiddenOptions.includes('max-parse-exceptions') && (
-                      <MenuItem
-                        icon={IconNames.ERROR}
-                        text="Max parse exceptions"
-                        label={String(maxParseExceptions)}
-                      >
-                        {[0, 1, 5, 10, 1000, 10000, -1].map(v => (
-                          <MenuItem
-                            key={String(v)}
-                            icon={tickIcon(v === maxParseExceptions)}
-                            text={v === -1 ? '∞ (-1)' : String(v)}
-                            onClick={() =>
-                              changeQueryContext({ ...queryContext, maxParseExceptions: v })
-                            }
-                            shouldDismissPopover={false}
-                          />
-                        ))}
-                      </MenuItem>
-                    )}
-                    {!hiddenOptions.includes('join-algorithm') && (
-                      <MenuItem
-                        icon={IconNames.INNER_JOIN}
-                        text="Join algorithm"
-                        label={
-                          SQL_JOIN_ALGORITHM_LABEL[sqlJoinAlgorithm as SqlJoinAlgorithm] ??
-                          sqlJoinAlgorithm
-                        }
-                      >
-                        {(['broadcast', 'sortMerge'] as SqlJoinAlgorithm[]).map(o => (
-                          <MenuItem
-                            key={o}
-                            icon={tickIcon(sqlJoinAlgorithm === o)}
-                            text={SQL_JOIN_ALGORITHM_LABEL[o]}
-                            shouldDismissPopover={false}
-                            onClick={() =>
-                              changeQueryContext({ ...queryContext, sqlJoinAlgorithm: o })
-                            }
-                          />
-                        ))}
-                      </MenuItem>
-                    )}
-
-                    {!hiddenOptions.includes('select-destination') && (
-                      <MenuItem
-                        icon={IconNames.MANUALLY_ENTERED_DATA}
-                        text="SELECT destination"
-                        label={
-                          SELECT_DESTINATION_LABEL[selectDestination as SelectDestination] ??
-                          selectDestination
-                        }
-                        intent={intent}
-                      >
-                        {(['taskReport', 'durableStorage'] as SelectDestination[]).map(o => (
-                          <MenuItem
-                            key={o}
-                            icon={tickIcon(selectDestination === o)}
-                            text={SELECT_DESTINATION_LABEL[o]}
-                            shouldDismissPopover={false}
-                            onClick={() =>
-                              changeQueryContext({ ...queryContext, selectDestination: o })
-                            }
-                          />
-                        ))}
-                        <MenuDivider />
-                        <MenuCheckbox
-                          checked={selectDestination === 'taskReport' ? !query.unlimited : false}
-                          intent={intent}
-                          disabled={selectDestination !== 'taskReport'}
-                          text="Limit SELECT results in taskReport"
-                          labelElement={
-                            query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
-                          }
-                          onChange={() => {
-                            onQueryChange(query.toggleUnlimited());
-                          }}
-                        />
-                      </MenuItem>
-                    )}
-
-                    {!hiddenOptions.includes('approximate-count-distinct') && (
-                      <MenuBoolean
-                        icon={IconNames.ROCKET_SLANT}
-                        text="Approximate COUNT(DISTINCT)"
-                        value={useApproximateCountDistinct}
-                        onValueChange={useApproximateCountDistinct =>
-                          changeQueryContext({
-                            ...queryContext,
-                            useApproximateCountDistinct,
-                          })
-                        }
-                        optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
-                      />
-                    )}
-
-                    {!hiddenOptions.includes('finalize-aggregations') && (
-                      <MenuBoolean
-                        icon={IconNames.TRANSLATE}
-                        text="Finalize aggregations"
-                        value={finalizeAggregations}
-                        showUndefined
-                        undefinedEffectiveValue={!ingestMode}
-                        onValueChange={finalizeAggregations =>
-                          changeQueryContext({ ...queryContext, finalizeAggregations })
-                        }
-                        optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
-                      />
-                    )}
-                    {!hiddenOptions.includes('group-by-enable-multi-value-unnesting') && (
-                      <MenuBoolean
-                        icon={IconNames.FORK}
-                        text="GROUP BY multi-value unnesting"
-                        value={groupByEnableMultiValueUnnesting}
-                        showUndefined
-                        undefinedEffectiveValue={!ingestMode}
-                        onValueChange={groupByEnableMultiValueUnnesting =>
-                          changeQueryContext({ ...queryContext, groupByEnableMultiValueUnnesting })
-                        }
-                        optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
-                      />
-                    )}
-                    {!hiddenOptions.includes('durable-shuffle-storage') && (
-                      <MenuBoolean
-                        icon={IconNames.CLOUD_TICK}
-                        text="Durable shuffle storage"
-                        value={durableShuffleStorage}
-                        onValueChange={durableShuffleStorage =>
-                          changeQueryContext({
-                            ...queryContext,
-                            durableShuffleStorage,
-                          })
-                        }
-                        optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
-                      />
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {!hiddenOptions.includes('use-cache') && (
-                      <MenuBoolean
-                        icon={IconNames.DATA_CONNECTION}
-                        text="Use cache"
-                        value={useCache}
-                        onValueChange={useCache =>
-                          changeQueryContext({
-                            ...queryContext,
-                            useCache,
-                            populateCache: useCache,
-                          })
-                        }
-                        optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
-                      />
-                    )}
-                    {!hiddenOptions.includes('approximate-top-n') && (
-                      <MenuBoolean
-                        icon={IconNames.HORIZONTAL_BAR_CHART_DESC}
-                        text="Approximate TopN"
-                        value={useApproximateTopN}
-                        onValueChange={useApproximateTopN =>
-                          changeQueryContext({
-                            ...queryContext,
-                            useApproximateTopN,
-                          })
-                        }
-                        optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
-                      />
-                    )}
-                  </>
+                {show('approximate-count-distinct') && (
+                  <MenuBoolean
+                    icon={IconNames.ROCKET_SLANT}
+                    text="Approximate COUNT(DISTINCT)"
+                    value={useApproximateCountDistinct}
+                    onValueChange={useApproximateCountDistinct =>
+                      changeQueryContext({
+                        ...queryContext,
+                        useApproximateCountDistinct,
+                      })
+                    }
+                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                  />
                 )}
-                {effectiveEngine !== 'native' &&
-                  effectiveEngine !== 'sql-msq-task' &&
-                  !hiddenOptions.includes('approximate-count-distinct') && (
+                {show('approximate-top-n') && (
+                  <MenuBoolean
+                    icon={IconNames.HORIZONTAL_BAR_CHART_DESC}
+                    text="Approximate TopN"
+                    value={useApproximateTopN}
+                    onValueChange={useApproximateTopN =>
+                      changeQueryContext({
+                        ...queryContext,
+                        useApproximateTopN,
+                      })
+                    }
+                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                  />
+                )}
+                {show('join-algorithm') && (
+                  <MenuItem
+                    icon={IconNames.INNER_JOIN}
+                    text="Join algorithm"
+                    label={
+                      SQL_JOIN_ALGORITHM_LABEL[sqlJoinAlgorithm as SqlJoinAlgorithm] ??
+                      sqlJoinAlgorithm
+                    }
+                  >
+                    {(['broadcast', 'sortMerge'] as SqlJoinAlgorithm[]).map(o => (
+                      <MenuItem
+                        key={o}
+                        icon={tickIcon(sqlJoinAlgorithm === o)}
+                        text={SQL_JOIN_ALGORITHM_LABEL[o]}
+                        shouldDismissPopover={false}
+                        onClick={() => changeQueryContext({ ...queryContext, sqlJoinAlgorithm: o })}
+                      />
+                    ))}
+                  </MenuItem>
+                )}
+
+                {show('insert-replace-specific-context') && (
+                  <MenuItem
+                    icon={IconNames.BRING_DATA}
+                    text="INSERT / REPLACE / EXTERN specific context"
+                  >
                     <MenuBoolean
-                      icon={IconNames.ROCKET_SLANT}
-                      text="Approximate COUNT(DISTINCT)"
-                      value={useApproximateCountDistinct}
-                      onValueChange={useApproximateCountDistinct =>
-                        changeQueryContext({
-                          ...queryContext,
-                          useApproximateCountDistinct,
-                        })
+                      text="Fail on empty insert"
+                      value={failOnEmptyInsert}
+                      showUndefined
+                      undefinedEffectiveValue={false}
+                      onValueChange={failOnEmptyInsert =>
+                        changeQueryContext({ ...queryContext, failOnEmptyInsert })
                       }
                       optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
                     />
-                  )}
-                {effectiveEngine === 'sql-native' &&
-                  !hiddenOptions.includes('limit-inline-results') && (
+                    <MenuBoolean
+                      text="Wait until segments have loaded"
+                      value={waitUntilSegmentsLoad}
+                      showUndefined
+                      undefinedEffectiveValue={ingestMode}
+                      onValueChange={waitUntilSegmentsLoad =>
+                        changeQueryContext({ ...queryContext, waitUntilSegmentsLoad })
+                      }
+                      optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    />
+                    <MenuItem text="Max parse exceptions" label={String(maxParseExceptions)}>
+                      {[0, 1, 5, 10, 1000, 10000, -1].map(v => (
+                        <MenuItem
+                          key={String(v)}
+                          icon={tickIcon(v === maxParseExceptions)}
+                          text={v === -1 ? '∞ (-1)' : String(v)}
+                          onClick={() =>
+                            changeQueryContext({ ...queryContext, maxParseExceptions: v })
+                          }
+                          shouldDismissPopover={false}
+                        />
+                      ))}
+                    </MenuItem>
+                    <MenuItem
+                      text="Edit index spec..."
+                      label={summarizeIndexSpec(indexSpec)}
+                      shouldDismissPopover={false}
+                      onClick={() => {
+                        setIndexSpecDialogSpec(indexSpec || {});
+                      }}
+                    />
+                  </MenuItem>
+                )}
+
+                {show('finalize-aggregations') && (
+                  <MenuBoolean
+                    icon={IconNames.TRANSLATE}
+                    text="Finalize aggregations"
+                    value={finalizeAggregations}
+                    showUndefined
+                    undefinedEffectiveValue={!ingestMode}
+                    onValueChange={finalizeAggregations =>
+                      changeQueryContext({ ...queryContext, finalizeAggregations })
+                    }
+                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                  />
+                )}
+                {show('group-by-enable-multi-value-unnesting') && (
+                  <MenuBoolean
+                    icon={IconNames.FORK}
+                    text="GROUP BY multi-value unnesting"
+                    value={groupByEnableMultiValueUnnesting}
+                    showUndefined
+                    undefinedEffectiveValue={!ingestMode}
+                    onValueChange={groupByEnableMultiValueUnnesting =>
+                      changeQueryContext({ ...queryContext, groupByEnableMultiValueUnnesting })
+                    }
+                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                  />
+                )}
+
+                {show('use-cache') && (
+                  <MenuBoolean
+                    icon={IconNames.DATA_CONNECTION}
+                    text="Use cache"
+                    value={useCache}
+                    onValueChange={useCache =>
+                      changeQueryContext({
+                        ...queryContext,
+                        useCache,
+                        populateCache: useCache,
+                      })
+                    }
+                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                  />
+                )}
+                {show('limit-inline-results') && (
+                  <MenuCheckbox
+                    checked={!query.unlimited}
+                    intent={query.unlimited ? Intent.WARNING : undefined}
+                    text="Limit inline results"
+                    labelElement={
+                      query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
+                    }
+                    onChange={() => {
+                      onQueryChange(query.toggleUnlimited());
+                    }}
+                  />
+                )}
+
+                {show('durable-shuffle-storage') && (
+                  <MenuBoolean
+                    icon={IconNames.CLOUD_TICK}
+                    text="Durable shuffle storage"
+                    value={durableShuffleStorage}
+                    onValueChange={durableShuffleStorage =>
+                      changeQueryContext({
+                        ...queryContext,
+                        durableShuffleStorage,
+                      })
+                    }
+                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                  />
+                )}
+                {show('select-destination') && (
+                  <MenuItem
+                    icon={IconNames.MANUALLY_ENTERED_DATA}
+                    text="SELECT destination"
+                    label={
+                      SELECT_DESTINATION_LABEL[selectDestination as SelectDestination] ??
+                      selectDestination
+                    }
+                    intent={intent}
+                  >
+                    {(['taskReport', 'durableStorage'] as SelectDestination[]).map(o => (
+                      <MenuItem
+                        key={o}
+                        icon={tickIcon(selectDestination === o)}
+                        text={SELECT_DESTINATION_LABEL[o]}
+                        shouldDismissPopover={false}
+                        onClick={() =>
+                          changeQueryContext({ ...queryContext, selectDestination: o })
+                        }
+                      />
+                    ))}
+                    <MenuDivider />
                     <MenuCheckbox
-                      checked={!query.unlimited}
-                      intent={query.unlimited ? Intent.WARNING : undefined}
-                      text="Limit inline results"
+                      checked={selectDestination === 'taskReport' ? !query.unlimited : false}
+                      intent={intent}
+                      disabled={selectDestination !== 'taskReport'}
+                      text="Limit SELECT results in taskReport"
                       labelElement={
                         query.unlimited ? <Icon icon={IconNames.WARNING_SIGN} /> : undefined
                       }
@@ -676,7 +600,8 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         onQueryChange(query.toggleUnlimited());
                       }}
                     />
-                  )}
+                  </MenuItem>
+                )}
               </Menu>
             }
           >
@@ -684,7 +609,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
               text={`Engine: ${
                 queryEngine
                   ? enginesLabelFn(queryEngine).text
-                  : `${autoEngineLabel.text} (${enginesLabelFn(effectiveEngine).text})`
+                  : `${autoEngineLabel.text} [${enginesLabelFn(effectiveEngine).text}]`
               }`}
               rightIcon={IconNames.CARET_DOWN}
               intent={intent}
@@ -745,7 +670,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
       )}
       {moreMenu && (
         <Popover position={Position.BOTTOM_LEFT} content={moreMenu}>
-          <Button rightIcon={IconNames.MORE} />
+          <Button rightIcon={IconNames.MORE} data-tooltip="Engine specific tools" />
         </Popover>
       )}
       {editContextDialogOpen && (

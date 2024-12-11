@@ -42,8 +42,9 @@ import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../reac
 import { Api, AppToaster } from '../../singletons';
 import {
   formatDuration,
+  getApiArray,
   getDruidErrorMessage,
-  hasPopoverOpen,
+  hasOverlayOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   oneOf,
@@ -165,14 +166,28 @@ ORDER BY
     };
 
     this.taskQueryManager = new QueryManager({
-      processQuery: async capabilities => {
+      processQuery: async (capabilities, cancelToken) => {
         if (capabilities.hasSql()) {
-          return await queryDruidSql({
-            query: TasksView.TASK_SQL,
-          });
+          return await queryDruidSql(
+            {
+              query: TasksView.TASK_SQL,
+            },
+            cancelToken,
+          );
         } else if (capabilities.hasOverlordAccess()) {
-          const resp = await Api.instance.get(`/druid/indexer/v1/tasks`);
-          return TasksView.parseTasks(resp.data);
+          return (await getApiArray(`/druid/indexer/v1/tasks`, cancelToken)).map(d => {
+            return {
+              task_id: d.id,
+              group_id: d.groupId,
+              type: d.type,
+              created_time: d.createdTime,
+              datasource: d.dataSource,
+              duration: d.duration ? d.duration : 0,
+              error_msg: d.errorMsg,
+              location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
+              status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
+            };
+          });
         } else {
           throw new Error(`must have SQL or overlord access`);
         }
@@ -184,22 +199,6 @@ ORDER BY
       },
     });
   }
-
-  static parseTasks = (data: any[]): TaskQueryResultRow[] => {
-    return data.map(d => {
-      return {
-        task_id: d.id,
-        group_id: d.groupId,
-        type: d.type,
-        created_time: d.createdTime,
-        datasource: d.dataSource,
-        duration: d.duration ? d.duration : 0,
-        error_msg: d.errorMsg,
-        location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
-        status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
-      };
-    });
-  };
 
   componentDidMount(): void {
     const { capabilities } = this.props;
@@ -319,6 +318,7 @@ ORDER BY
   private renderTaskFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
+    // eslint-disable-next-line react/display-name
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
@@ -372,6 +372,7 @@ ORDER BY
             width: 440,
             Cell: ({ value, original }) => (
               <TableClickableCell
+                tooltip="Show detail"
                 onClick={() => this.onTaskDetail(original)}
                 hoverIcon={IconNames.SEARCH_TEMPLATE}
               >
@@ -414,8 +415,11 @@ ORDER BY
             }),
             Cell: row => {
               if (row.aggregated) return '';
-              const { status } = row.original;
-              const errorMsg = row.original.error_msg;
+              const { status, error_msg } = row.original;
+              const errorMsg =
+                error_msg && !TASK_CANCELED_ERROR_MESSAGES.includes(error_msg)
+                  ? error_msg
+                  : undefined;
               return (
                 <TableFilterableCell
                   field="status"
@@ -423,10 +427,10 @@ ORDER BY
                   filters={filters}
                   onFiltersChange={onFiltersChange}
                 >
-                  <span title={errorMsg}>
+                  <span data-tooltip={errorMsg}>
                     <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
                     {status}
-                    {errorMsg && !TASK_CANCELED_ERROR_MESSAGES.includes(errorMsg) && (
+                    {errorMsg && (
                       <a onClick={() => this.setState({ alertErrorMsg: errorMsg })}>&nbsp;?</a>
                     )}
                   </span>
@@ -588,7 +592,7 @@ ORDER BY
             localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
             onRefresh={auto => {
               if (1 > 0) return; // skip refresh
-              if (auto && hasPopoverOpen()) return;
+              if (auto && hasOverlayOpen()) return;
               this.taskQueryManager.rerunLastQuery(auto);
             }}
           />

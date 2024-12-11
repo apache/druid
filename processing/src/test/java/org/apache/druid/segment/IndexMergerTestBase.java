@@ -30,7 +30,9 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -39,17 +41,23 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.DefaultBitmapResultFactory;
 import org.apache.druid.query.OrderBy;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.BitmapValues;
@@ -63,9 +71,11 @@ import org.apache.druid.segment.incremental.IncrementalIndexAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
+import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -143,6 +153,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
   private final IndexSpec indexSpec;
   private final IndexIO indexIO;
   private final boolean useBitmapIndexes;
+  private final BitmapSerdeFactory serdeFactory;
 
   @Rule
   public final CloserRule closer = new CloserRule(false);
@@ -163,6 +174,7 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
                               .withLongEncoding(longEncodingStrategy)
                               .build();
     this.indexIO = TestHelper.getTestIndexIO();
+    this.serdeFactory = bitmapSerdeFactory;
     this.useBitmapIndexes = bitmapSerdeFactory != null;
   }
 
@@ -410,7 +422,8 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
             null,
             Granularities.NONE,
             Boolean.TRUE,
-            Cursors.ascendingTimeOrder()
+            Cursors.ascendingTimeOrder(),
+            null
         ),
         index.getMetadata()
     );
@@ -3030,6 +3043,229 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
     validateTestMaxColumnsToMergeOutputSegment(merged7);
   }
 
+  @Test
+  public void testMergeProjections() throws IOException
+  {
+    File tmp = FileUtils.createTempDir();
+    closer.closeLater(tmp::delete);
+
+    final DateTime timestamp = Granularities.DAY.bucket(DateTimes.nowUtc()).getStart();
+
+    final RowSignature rowSignature = RowSignature.builder()
+                                                  .add("a", ColumnType.STRING)
+                                                  .add("b", ColumnType.STRING)
+                                                  .add("c", ColumnType.LONG)
+                                                  .build();
+
+    final List<InputRow> rows1 = Arrays.asList(
+        new ListBasedInputRow(
+            rowSignature,
+            timestamp,
+            rowSignature.getColumnNames(),
+            Arrays.asList("a", "x", 1L)
+        ),
+        new ListBasedInputRow(
+            rowSignature,
+            timestamp.plusMinutes(1),
+            rowSignature.getColumnNames(),
+            Arrays.asList("b", "y", 2L)
+        ),
+        new ListBasedInputRow(
+            rowSignature,
+            timestamp.plusHours(2),
+            rowSignature.getColumnNames(),
+            Arrays.asList("a", "z", 3L)
+        )
+    );
+
+    final List<InputRow> rows2 = Arrays.asList(
+        new ListBasedInputRow(
+            rowSignature,
+            timestamp,
+            rowSignature.getColumnNames(),
+            Arrays.asList("b", "y", 1L)
+        ),
+        new ListBasedInputRow(
+            rowSignature,
+            timestamp.plusMinutes(1),
+            rowSignature.getColumnNames(),
+            Arrays.asList("d", "w", 2L)
+        ),
+        new ListBasedInputRow(
+            rowSignature,
+            timestamp.plusHours(2),
+            rowSignature.getColumnNames(),
+            Arrays.asList("b", "z", 3L)
+        )
+    );
+
+    final DimensionsSpec.Builder dimensionsBuilder =
+        DimensionsSpec.builder()
+                      .setDimensions(
+                          Arrays.asList(
+                              new StringDimensionSchema("a"),
+                              new StringDimensionSchema("b")
+                          )
+                      );
+
+    List<AggregateProjectionSpec> projections = Arrays.asList(
+        new AggregateProjectionSpec(
+            "a_hourly_c_sum",
+            VirtualColumns.create(
+                Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+            ),
+            Arrays.asList(
+                new StringDimensionSchema("a"),
+                new LongDimensionSchema("__gran")
+            ),
+            new AggregatorFactory[]{
+                new LongSumAggregatorFactory("c_sum", "c")
+            }
+        ),
+        new AggregateProjectionSpec(
+            "a_c_sum",
+            VirtualColumns.EMPTY,
+            Collections.singletonList(
+                new StringDimensionSchema("a")
+            ),
+            new AggregatorFactory[]{
+                new LongSumAggregatorFactory("c_sum", "c")
+            }
+        )
+    );
+
+    IndexBuilder bob = IndexBuilder.create()
+                                   .tmpDir(tmp)
+                                   .schema(
+                                       IncrementalIndexSchema.builder()
+                                                             .withDimensionsSpec(dimensionsBuilder.build())
+                                                             .withRollup(false)
+                                                             .withProjections(projections)
+                                                             .build()
+                                   )
+                                   .rows(rows1);
+
+    IndexBuilder bob2 = IndexBuilder.create()
+                                    .tmpDir(tmp)
+                                    .schema(
+                                        IncrementalIndexSchema.builder()
+                                                              .withDimensionsSpec(dimensionsBuilder.build())
+                                                              .withRollup(false)
+                                                              .withProjections(projections)
+                                                              .build()
+                                    )
+                                    .rows(rows2);
+
+    QueryableIndex q1 = bob.buildMMappedIndex();
+    QueryableIndex q2 = bob2.buildMMappedIndex();
+
+    QueryableIndex merged = indexIO.loadIndex(
+        indexMerger.merge(
+            Arrays.asList(
+                new QueryableIndexIndexableAdapter(q1),
+                new QueryableIndexIndexableAdapter(q2)
+            ),
+            true,
+            new AggregatorFactory[0],
+            temporaryFolder.newFolder(),
+            dimensionsBuilder.build(),
+            IndexSpec.DEFAULT,
+            -1
+        )
+    );
+
+    CursorBuildSpec p1Spec = CursorBuildSpec.builder()
+                                            .setQueryContext(
+                                                QueryContext.of(
+                                                    ImmutableMap.of(QueryContexts.USE_PROJECTION, "a_hourly_c_sum")
+                                                )
+                                            )
+                                            .setVirtualColumns(
+                                                VirtualColumns.create(
+                                                    Granularities.toVirtualColumn(Granularities.HOUR, "gran")
+                                                )
+                                            )
+                                            .setAggregators(
+                                                Collections.singletonList(
+                                                    new LongSumAggregatorFactory("c", "c")
+                                                )
+                                            )
+                                            .setGroupingColumns(Collections.singletonList("a"))
+                                            .build();
+    CursorBuildSpec p2Spec = CursorBuildSpec.builder()
+                                            .setQueryContext(
+                                                QueryContext.of(
+                                                    ImmutableMap.of(QueryContexts.USE_PROJECTION, "a_c_sum")
+                                                )
+                                            )
+                                            .setAggregators(
+                                                Collections.singletonList(
+                                                    new LongSumAggregatorFactory("c", "c")
+                                                )
+                                            )
+                                            .setGroupingColumns(Collections.singletonList("a"))
+                                            .build();
+
+
+    QueryableIndexCursorFactory cursorFactory = new QueryableIndexCursorFactory(merged);
+
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(p1Spec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(5, rowCount);
+    }
+
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(p2Spec)) {
+      final Cursor cursor = cursorHolder.asCursor();
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        rowCount++;
+        cursor.advance();
+      }
+      Assert.assertEquals(3, rowCount);
+    }
+
+    QueryableIndex p1Index = merged.getProjectionQueryableIndex("a_hourly_c_sum");
+    Assert.assertNotNull(p1Index);
+    ColumnHolder aHolder = p1Index.getColumnHolder("a");
+    DictionaryEncodedColumn aCol = (DictionaryEncodedColumn) aHolder.getColumn();
+    Assert.assertEquals(3, aCol.getCardinality());
+
+    QueryableIndex p2Index = merged.getProjectionQueryableIndex("a_c_sum");
+    Assert.assertNotNull(p2Index);
+    ColumnHolder aHolder2 = p2Index.getColumnHolder("a");
+    DictionaryEncodedColumn aCol2 = (DictionaryEncodedColumn) aHolder2.getColumn();
+    Assert.assertEquals(3, aCol2.getCardinality());
+
+    if (serdeFactory != null) {
+
+      BitmapResultFactory resultFactory = new DefaultBitmapResultFactory(serdeFactory.getBitmapFactory());
+
+      Assert.assertEquals(
+          2,
+          resultFactory.toImmutableBitmap(
+              aHolder.getIndexSupplier()
+                     .as(ValueIndexes.class)
+                     .forValue("a", ColumnType.STRING)
+                     .computeBitmapResult(resultFactory, false)
+          ).size()
+      );
+
+      Assert.assertEquals(
+          1,
+          resultFactory.toImmutableBitmap(
+              aHolder2.getIndexSupplier()
+                      .as(ValueIndexes.class)
+                      .forValue("a", ColumnType.STRING)
+                      .computeBitmapResult(resultFactory, false)
+          ).size()
+      );
+    }
+  }
 
   private QueryableIndex persistAndLoad(List<DimensionSchema> schema, InputRow... rows) throws IOException
   {

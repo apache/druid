@@ -21,6 +21,7 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -33,6 +34,8 @@ import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.query.Query;
 import org.apache.druid.server.DruidNode;
+
+import java.io.File;
 
 /**
  * Context used by multi-stage query controllers. Useful because it allows test fixtures to provide their own
@@ -84,6 +87,11 @@ public interface ControllerContext
   TaskActionClient taskActionClient();
 
   /**
+   * Task lock type.
+   */
+  TaskLockType taskLockType();
+
+  /**
    * Provides services about workers: starting, canceling, obtaining status.
    *
    * @param queryId               query ID
@@ -97,6 +105,14 @@ public interface ControllerContext
       ControllerQueryKernelConfig queryKernelConfig,
       WorkerFailureListener workerFailureListener
   );
+
+  /**
+   * Fetch a directory for temporary outputs
+   */
+  default File taskTempDir()
+  {
+    throw new UnsupportedOperationException();
+  }
 
   /**
    * Client for communicating with workers.

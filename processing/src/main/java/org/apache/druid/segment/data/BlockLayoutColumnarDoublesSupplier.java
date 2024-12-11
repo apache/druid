@@ -36,6 +36,7 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
 
   // The number of doubles per buffer.
   private final int sizePer;
+  private final CompressionStrategy strategy;
 
   public BlockLayoutColumnarDoublesSupplier(
       int totalSize,
@@ -45,7 +46,8 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
       CompressionStrategy strategy
   )
   {
-    baseDoubleBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(byteOrder, strategy));
+    this.strategy = strategy;
+    this.baseDoubleBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(byteOrder, strategy));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
   }
@@ -78,7 +80,8 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
     }
   }
 
-  private class BlockLayoutColumnarDoubles implements ColumnarDoubles
+  // This needs to be a public class so that SemanticCreator is able to call it.
+  public class BlockLayoutColumnarDoubles implements ColumnarDoubles
   {
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedDoubleBuffers = baseDoubleBuffers.singleThreaded();
 
@@ -90,6 +93,11 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
      */
     @Nullable
     DoubleBuffer doubleBuffer;
+
+    public CompressionStrategy getCompressionStrategy()
+    {
+      return strategy;
+    }
 
     @Override
     public int size()
@@ -112,7 +120,7 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
     }
 
     @Override
-    public void get(final double[] out, final int start, final int length)
+    public void get(final double[] out, int offset, final int start, final int length)
     {
       // division + remainder is optimized by the compiler so keep those together
       int bufferNum = start / sizePer;
@@ -129,7 +137,7 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
         final int oldPosition = doubleBuffer.position();
         try {
           doubleBuffer.position(bufferIndex);
-          doubleBuffer.get(out, p, limit);
+          doubleBuffer.get(out, offset + p, limit);
         }
         finally {
           doubleBuffer.position(oldPosition);

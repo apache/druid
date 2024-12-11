@@ -431,25 +431,21 @@ and how to detect it.
 3. One common reason for implicit subquery generation is if the types of the two halves of an equality do not match.
 For example, since lookup keys are always strings, the condition `druid.d JOIN lookup.l ON d.field = l.field` will
 perform best if `d.field` is a string.
-4. The join operator must evaluate the condition for each row. In the future, we expect
-to implement both early and deferred condition evaluation, which we expect to improve performance considerably for
-common use cases.
+4. The join operator must evaluate the condition for each row. 
 5. Currently, Druid does not support pushing down predicates (condition and filter) past a Join (i.e. into
 Join's children). Druid only supports pushing predicates into the join if they originated from
 above the join. Hence, the location of predicates and filters in your Druid SQL is very important.
 Also, as a result of this, comma joins should be avoided.
 
-#### Future work for joins
+#### Limitations for joins
 
-Joins are an area of active development in Druid. The following features are missing today but may appear in
-future versions:
+Joins in Druid have the following limitations:
 
-- Reordering of join operations to get the most performant plan.
-- Preloaded dimension tables that are wider than lookups (i.e. supporting more than a single key and single value).
-- RIGHT OUTER and FULL OUTER joins in the native query engine. Currently, they are partially implemented. Queries run
+- The order of joins is not entirely optimized. Join operations are not reordered to get the most performant plan.
+- Preloaded dimension tables that are wider than lookups (i.e. supporting more than a single key and single value) are not supported.
+- RIGHT OUTER and FULL OUTER joins in the native query engine are not fully implemented. Queries run
   but results are not always correct.
-- Performance-related optimizations as mentioned in the [previous section](#join-performance).
-- Join conditions on a column containing a multi-value dimension.
+- Join conditions on a column can't contain a multi-value dimension.
 
 ### `unnest`
 

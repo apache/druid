@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.DruidAvaticaTestDriver;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
@@ -94,7 +95,7 @@ public class SqlTestFrameworkConfig
 {
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
-  @NumMergeBuffers(0)
+  @NumMergeBuffers(QueryStackTests.DEFAULT_NUM_MERGE_BUFFERS)
   public @interface NumMergeBuffers
   {
     ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(NumMergeBuffers.class)
@@ -298,16 +299,21 @@ public class SqlTestFrameworkConfig
     @Override
     public void beforeEach(ExtensionContext context)
     {
-      setConfig(context);
+      makeConfigFromContext(context);
     }
 
-    private void setConfig(ExtensionContext context)
+    public void makeConfigFromContext(ExtensionContext context)
     {
       testName = buildTestCaseName(context);
       method = context.getTestMethod().get();
       Class<?> testClass = context.getTestClass().get();
       List<Annotation> annotations = collectAnnotations(testClass, method);
-      config = new SqlTestFrameworkConfig(annotations);
+      setConfig(new SqlTestFrameworkConfig(annotations));
+    }
+
+    public void setConfig(SqlTestFrameworkConfig config)
+    {
+      this.config = config;
     }
 
     /**

@@ -72,7 +72,7 @@ public final class ExprEvalObjectVector extends ExprEvalVector<Object[]>
           }
         } else {
           // ARRAY, COMPLEX
-          final ExprEval<?> valueEval = ExprEval.bestEffortOf(values[i]);
+          final ExprEval<?> valueEval = ExprEval.ofType(type, values[i]).castTo(ExpressionType.DOUBLE);
           longs[i] = valueEval.asLong();
           doubles[i] = valueEval.asDouble();
           numericNulls[i] = valueEval.isNumericNull();

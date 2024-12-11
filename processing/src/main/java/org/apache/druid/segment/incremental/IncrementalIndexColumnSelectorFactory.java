@@ -19,12 +19,14 @@
 
 package org.apache.druid.segment.incremental;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionIndexer;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.RowIdSupplier;
@@ -35,6 +37,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ValueTypes;
 
 import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The basic implementation of {@link ColumnSelectorFactory} over an {@link IncrementalIndex}. It's counterpart for
@@ -50,22 +54,53 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
 
   IncrementalIndexColumnSelectorFactory(
       IncrementalIndexRowSelector rowSelector,
-      VirtualColumns virtualColumns,
-      Order timeOrder,
-      IncrementalIndexRowHolder rowHolder
+      IncrementalIndexRowHolder rowHolder,
+      CursorBuildSpec cursorBuildSpec,
+      Order timeOrder
   )
   {
-    this.virtualColumns = virtualColumns;
+    this.rowSelector = rowSelector;
+    this.virtualColumns = cursorBuildSpec.getVirtualColumns();
     this.timeOrder = timeOrder;
     this.rowHolder = rowHolder;
-    this.rowSelector = rowSelector;
+
+    final Map<String, ColumnCapabilities> capabilitiesMap = new HashMap<>();
+    if (cursorBuildSpec.getPhysicalColumns() == null) {
+      // add everything
+      for (String column : rowSelector.getDimensionNames(true)) {
+        capabilitiesMap.put(column, IncrementalIndexCursorFactory.snapshotColumnCapabilities(rowSelector, column));
+      }
+      for (String column : rowSelector.getMetricNames()) {
+        capabilitiesMap.put(column, IncrementalIndexCursorFactory.snapshotColumnCapabilities(rowSelector, column));
+      }
+      for (String column : cursorBuildSpec.getVirtualColumns().getColumnNames()) {
+        capabilitiesMap.put(column, IncrementalIndexCursorFactory.snapshotColumnCapabilities(rowSelector, column));
+      }
+    } else {
+      // just add required columns
+      for (String column : cursorBuildSpec.getPhysicalColumns()) {
+        capabilitiesMap.put(column, IncrementalIndexCursorFactory.snapshotColumnCapabilities(rowSelector, column));
+      }
+      // and virtual columns
+      for (String column : cursorBuildSpec.getVirtualColumns().getColumnNames()) {
+        capabilitiesMap.put(column, IncrementalIndexCursorFactory.snapshotColumnCapabilities(rowSelector, column));
+      }
+    }
     this.snapshotColumnInspector = new ColumnInspector()
     {
       @Nullable
       @Override
       public ColumnCapabilities getColumnCapabilities(String column)
       {
-        return IncrementalIndexCursorFactory.snapshotColumnCapabilities(rowSelector, column);
+        final ColumnCapabilities capabilities = capabilitiesMap.get(column);
+
+        DruidException.conditionalDefensive(
+            cursorBuildSpec.getPhysicalColumns() == null || capabilities != null || capabilitiesMap.containsKey(column),
+            "Asked for physical column capabilities for column[%s] which wasn't specified as required by the query (specified columns[%s])",
+            column,
+            cursorBuildSpec.getPhysicalColumns()
+        );
+        return capabilities;
       }
     };
   }
@@ -85,12 +120,8 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
     final String dimension = dimensionSpec.getDimension();
     final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME) && timeOrder != Order.NONE) {
-      return new SingleScanTimeDimensionSelector(
-          makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME),
-          extractionFn,
-          timeOrder
-      );
+    if (isTimeColumn(dimension) && timeOrder != Order.NONE) {
+      return new SingleScanTimeDimensionSelector(makeColumnValueSelector(dimension), extractionFn, timeOrder);
     }
 
     final IncrementalIndex.DimensionDesc dimensionDesc = rowSelector.getDimension(dimensionSpec.getDimension());
@@ -122,7 +153,7 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
     if (virtualColumns.exists(columnName)) {
       return virtualColumns.makeColumnValueSelector(columnName, this);
     }
-    if (ColumnHolder.TIME_COLUMN_NAME.equals(columnName)) {
+    if (isTimeColumn(columnName)) {
       return rowHolder;
     }
 
@@ -139,7 +170,11 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    // Use snapshotColumnInspector instead of index.getCapabilities (see note in IncrementalIndexStorageAdapater)
+    // Use snapshotColumnInspector instead of 'live' rowSelector.getCapabilities because the snapshot is frozen in time
+    // at approximately when this selector factory was created (e.g. taken just after max row id)
+    if (isTimeColumn(columnName)) {
+      return virtualColumns.getColumnCapabilitiesWithFallback(snapshotColumnInspector, ColumnHolder.TIME_COLUMN_NAME);
+    }
     return virtualColumns.getColumnCapabilitiesWithFallback(snapshotColumnInspector, columnName);
   }
 
@@ -154,5 +189,10 @@ class IncrementalIndexColumnSelectorFactory implements ColumnSelectorFactory, Ro
   public long getRowId()
   {
     return rowHolder.get().getRowIndex();
+  }
+
+  private boolean isTimeColumn(String columnName)
+  {
+    return ColumnHolder.TIME_COLUMN_NAME.equals(columnName);
   }
 }

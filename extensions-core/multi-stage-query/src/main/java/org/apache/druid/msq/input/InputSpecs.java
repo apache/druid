@@ -22,6 +22,7 @@ package org.apache.druid.msq.input;
 import it.unimi.dsi.fastutil.ints.IntRBTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.msq.input.stage.StageInputSpec;
+import org.apache.druid.msq.kernel.StageDefinition;
 
 import java.util.List;
 
@@ -49,5 +50,24 @@ public class InputSpecs
     }
 
     return retVal;
+  }
+
+  /**
+   * Returns whether any of the provided input specs are leafs. Leafs are anything that is not broadcast and not another
+   * stage. For example, regular tables and external files are leafs.
+   *
+   * @param inputSpecs      list of input specs, corresponds to {@link StageDefinition#getInputSpecs()}
+   * @param broadcastInputs positions in "inputSpecs" which are broadcast specs, corresponds to
+   *                        {@link StageDefinition#getBroadcastInputNumbers()}
+   */
+  public static boolean hasLeafInputs(final List<InputSpec> inputSpecs, final IntSet broadcastInputs)
+  {
+    for (int i = 0; i < inputSpecs.size(); i++) {
+      final InputSpec spec = inputSpecs.get(i);
+      if (!broadcastInputs.contains(i) && !(spec instanceof StageInputSpec)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

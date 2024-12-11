@@ -19,7 +19,7 @@
 import type { IconName } from '@blueprintjs/core';
 import { Card, Icon, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlQuery, SqlTable } from '@druid-toolkit/query';
+import { SqlQuery, SqlTable } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
@@ -256,7 +256,6 @@ export const SqlDataLoaderView = React.memo(function SqlDataLoaderView(
         <TitleFrame title="Load data" subtitle="Select input type">
           <InputSourceStep
             initInputSource={inputSource}
-            mode="sampler"
             onSet={(inputSource, inputFormat) => {
               setExternalConfigStep({ inputSource, inputFormat });
             }}

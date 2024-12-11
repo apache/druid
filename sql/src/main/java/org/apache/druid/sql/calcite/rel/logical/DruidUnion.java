@@ -29,13 +29,17 @@ import org.apache.calcite.rel.core.Union;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.SourceDescProducer;
+import org.apache.druid.sql.calcite.table.RowSignatures;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +53,9 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
       boolean all)
   {
     super(cluster, traits, hints, inputs, all);
+    if (!all) {
+      throw InvalidSqlInput.exception("SQL requires 'UNION' but only 'UNION ALL' is supported.");
+    }
   }
 
   @Override
@@ -66,31 +73,47 @@ public class DruidUnion extends Union implements DruidLogicalNode, SourceDescPro
   @Override
   public SourceDesc getSourceDesc(PlannerContext plannerContext, List<SourceDesc> sources)
   {
-    List<DataSource> dataSources = new ArrayList<>();
-    RowSignature signature = null;
-    for (SourceDesc sourceDesc : sources) {
-      checkDataSourceSupported(sourceDesc.dataSource);
-      dataSources.add(sourceDesc.dataSource);
-      if (signature == null) {
-        signature = sourceDesc.rowSignature;
-      } else {
-        if (!signature.equals(sourceDesc.rowSignature)) {
-          throw DruidException.defensive(
-              "Row signature mismatch in Union inputs [%s] and [%s]",
-              signature,
-              sourceDesc.rowSignature
-          );
-        }
-      }
+    RowSignature signature = RowSignatures.fromRelDataType(
+        sources.get(0).rowSignature.getColumnNames(),
+        getRowType()
+    );
+    UnionDataSource unionDataSource = buildUnionDataSource(sources);
+    if (unionDataSource != null) {
+      return new SourceDesc(unionDataSource, signature);
+
     }
-    return new SourceDesc(new UnionDataSource(dataSources), signature);
+    // all other cases are handled via UnionQuery
+    UnionQuery unionQuery = makeUnionQuery(sources);
+    return new SourceDesc(new QueryDataSource(unionQuery), signature);
   }
 
-  private void checkDataSourceSupported(DataSource dataSource)
+  private UnionDataSource buildUnionDataSource(List<SourceDesc> sources)
   {
-    if (dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource) {
-      return;
+    List<DataSource> dataSources = new ArrayList<>();
+    for (SourceDesc sourceDesc : sources) {
+      DataSource dataSource = sourceDesc.dataSource;
+      if (!UnionDataSource.isCompatibleDataSource(dataSource)) {
+        return null;
+      }
+      dataSources.add(dataSource);
     }
-    throw DruidException.defensive("Only Table and Values are supported as inputs for Union [%s]", dataSource);
+    return new UnionDataSource(dataSources);
+  }
+
+  private UnionQuery makeUnionQuery(List<SourceDesc> sources)
+  {
+    List<Query<?>> queries = new ArrayList<>();
+    for (SourceDesc sourceDesc : sources) {
+      DataSource dataSource = sourceDesc.dataSource;
+      if (dataSource instanceof QueryDataSource) {
+        queries.add(((QueryDataSource) dataSource).getQuery());
+      } else {
+        throw DruidException.defensive(
+            "Expected that all inputs are QueryDataSource-s! Encountered something else [%s].",
+            dataSource
+        );
+      }
+    }
+    return new UnionQuery(queries);
   }
 }

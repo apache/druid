@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.MemoryAllocatorFactory;
@@ -445,7 +445,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   @Override
   public RowSignature resultArraySignature(TimeseriesQuery query)
   {
-    return query.getResultSignature(RowSignature.Finalization.UNKNOWN);
+    return query.getResultRowSignature(RowSignature.Finalization.UNKNOWN);
   }
 
   @Override
@@ -486,9 +486,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   )
   {
     final RowSignature rowSignature =
-        query.getResultSignature(
-            query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
-        );
+        query.getResultRowSignature(query.context().isFinalize(true) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO);
     final Pair<Cursor, Closeable> cursorAndCloseable = IterableRowsCursorHelper.getCursorFromSequence(
         resultsAsArrays(query, resultSequence),
         rowSignature

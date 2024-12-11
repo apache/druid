@@ -83,7 +83,7 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
     for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
       SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(segmentWriteOutMediumFactory);
       final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
-      final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
+      final QueryableIndex persistedIncrementalIndex = TestIndex.persistAndMemoryMap(incrementalIndex);
       final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.getMergedIncrementalIndex();
       argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, null), false});
       argumentArrays.add(new Object[] {new QueryableIndexSegment(persistedIncrementalIndex, null), false});

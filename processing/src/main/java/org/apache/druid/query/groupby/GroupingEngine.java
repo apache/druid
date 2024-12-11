@@ -20,6 +20,7 @@
 package org.apache.druid.query.groupby;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -60,7 +61,6 @@ import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.ResultMergeQueryRunner;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -121,6 +121,7 @@ public class GroupingEngine
   private final ObjectMapper jsonMapper;
   private final ObjectMapper spillMapper;
   private final QueryWatcher queryWatcher;
+  private final GroupByStatsProvider groupByStatsProvider;
 
   @Inject
   public GroupingEngine(
@@ -129,7 +130,8 @@ public class GroupingEngine
       @Merging GroupByResourcesReservationPool groupByResourcesReservationPool,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper spillMapper,
-      QueryWatcher queryWatcher
+      QueryWatcher queryWatcher,
+      GroupByStatsProvider groupByStatsProvider
   )
   {
     this.processingConfig = processingConfig;
@@ -138,6 +140,7 @@ public class GroupingEngine
     this.jsonMapper = jsonMapper;
     this.spillMapper = spillMapper;
     this.queryWatcher = queryWatcher;
+    this.groupByStatsProvider = groupByStatsProvider;
   }
 
   /**
@@ -452,7 +455,8 @@ public class GroupingEngine
         processingConfig.getNumThreads(),
         processingConfig.intermediateComputeSizeBytes(),
         spillMapper,
-        processingConfig.getTmpDir()
+        processingConfig.getTmpDir(),
+        groupByStatsProvider
     );
   }
 
@@ -509,7 +513,7 @@ public class GroupingEngine
       final CursorHolder cursorHolder = closer.register(cursorFactory.makeCursorHolder(buildSpec));
 
       if (cursorHolder.isPreAggregated()) {
-        query = query.withAggregatorSpecs(AggregatorUtil.getCombiningAggregators(query.getAggregatorSpecs()));
+        query = query.withAggregatorSpecs(Preconditions.checkNotNull(cursorHolder.getAggregatorsForPreAggregated()));
       }
       final ColumnInspector inspector = query.getVirtualColumns().wrapInspector(cursorFactory);
 
@@ -587,7 +591,8 @@ public class GroupingEngine
       GroupByQuery query,
       GroupByQueryResources resource,
       Sequence<ResultRow> subqueryResult,
-      boolean wasQueryPushedDown
+      boolean wasQueryPushedDown,
+      GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
     // Keep a reference to resultSupplier outside the "try" so we can close it if something goes wrong
@@ -614,7 +619,8 @@ public class GroupingEngine
           resource,
           spillMapper,
           processingConfig.getTmpDir(),
-          processingConfig.intermediateComputeSizeBytes()
+          processingConfig.intermediateComputeSizeBytes(),
+          perQueryStats
       );
 
       final GroupByRowProcessor.ResultSupplier finalResultSupplier = resultSupplier;
@@ -644,7 +650,8 @@ public class GroupingEngine
   public Sequence<ResultRow> processSubtotalsSpec(
       GroupByQuery query,
       GroupByQueryResources resource,
-      Sequence<ResultRow> queryResult
+      Sequence<ResultRow> queryResult,
+      GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
     // How it works?
@@ -695,7 +702,8 @@ public class GroupingEngine
           resource,
           spillMapper,
           processingConfig.getTmpDir(),
-          processingConfig.intermediateComputeSizeBytes()
+          processingConfig.intermediateComputeSizeBytes(),
+          perQueryStats
       );
 
       List<String> queryDimNamesInOrder = baseSubtotalQuery.getDimensionNamesInOrder();
@@ -757,7 +765,8 @@ public class GroupingEngine
               resource,
               spillMapper,
               processingConfig.getTmpDir(),
-              processingConfig.intermediateComputeSizeBytes()
+              processingConfig.intermediateComputeSizeBytes(),
+              perQueryStats
           );
 
           subtotalsResults.add(
@@ -860,6 +869,7 @@ public class GroupingEngine
                        .setInterval(query.getSingleInterval())
                        .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
                        .setVirtualColumns(query.getVirtualColumns())
+                       .setPhysicalColumns(query.getRequiredColumns())
                        .setGroupingColumns(query.getGroupingColumns())
                        .setAggregators(query.getAggregatorSpecs())
                        .setQueryContext(query.context())

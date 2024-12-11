@@ -75,7 +75,7 @@ DruidSort(fetch=[1], druid=[logical])
         "dimensions" : [ {
           "type" : "default",
           "dimension" : "dim4",
-          "outputName" : "_d0",
+          "outputName" : "d0",
           "outputType" : "STRING"
         } ],
         "limitSpec" : {
@@ -84,7 +84,7 @@ DruidSort(fetch=[1], druid=[logical])
       }
     },
     "rightPrefix" : "j0.",
-    "condition" : "(\"dim4\" == \"j0._d0\")",
+    "condition" : "(\"dim4\" == \"j0.d0\")",
     "joinType" : "INNER"
   },
   "dimension" : {

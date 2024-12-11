@@ -38,6 +38,7 @@ import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.msq.rpc.ControllerResource;
+import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -137,6 +138,9 @@ public class MultiStageQueryContext
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
 
+  public static final String CTX_SKETCH_ENCODING_MODE = "sketchEncoding";
+  public static final String DEFAULT_CTX_SKETCH_ENCODING_MODE = SketchEncoding.OCTET_STREAM.toString();
+
   public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
   public static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
 
@@ -187,6 +191,9 @@ public class MultiStageQueryContext
 
   public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "maxRowsMaterializedInWindow";
 
+  // This flag ensures backward compatibility and will be removed in Druid 33, with the default behavior as enabled.
+  public static final String WINDOW_FUNCTION_OPERATOR_TRANSFORMATION = "windowFunctionOperatorTransformation";
+
   public static final String CTX_SKIP_TYPE_VERIFICATION = "skipTypeVerification";
 
   /**
@@ -202,6 +209,22 @@ public class MultiStageQueryContext
     return queryContext.getString(
         CTX_MSQ_MODE,
         DEFAULT_MSQ_MODE
+    );
+  }
+
+  public static int getMaxRowsMaterializedInWindow(final QueryContext queryContext)
+  {
+    return queryContext.getInt(
+        MAX_ROWS_MATERIALIZED_IN_WINDOW,
+        Limits.MAX_ROWS_MATERIALIZED_IN_WINDOW
+    );
+  }
+
+  public static boolean isWindowFunctionOperatorTransformationEnabled(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        WINDOW_FUNCTION_OPERATOR_TRANSFORMATION,
+        false
     );
   }
 
@@ -270,6 +293,15 @@ public class MultiStageQueryContext
         CTX_CLUSTER_STATISTICS_MERGE_MODE,
         queryContext.getString(CTX_CLUSTER_STATISTICS_MERGE_MODE, DEFAULT_CLUSTER_STATISTICS_MERGE_MODE),
         ClusterStatisticsMergeMode.class
+    );
+  }
+
+  public static SketchEncoding getSketchEncoding(QueryContext queryContext)
+  {
+    return QueryContexts.getAsEnum(
+        CTX_SKETCH_ENCODING_MODE,
+        queryContext.getString(CTX_SKETCH_ENCODING_MODE, DEFAULT_CTX_SKETCH_ENCODING_MODE),
+        SketchEncoding.class
     );
   }
 

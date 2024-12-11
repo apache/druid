@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.topn;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
@@ -30,7 +31,6 @@ import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessorFactory;
@@ -89,7 +89,7 @@ public class TopNQueryEngine
     final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, queryMetrics);
     final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec);
     if (cursorHolder.isPreAggregated()) {
-      query = query.withAggregatorSpecs(AggregatorUtil.getCombiningAggregators(query.getAggregatorSpecs()));
+      query = query.withAggregatorSpecs(Preconditions.checkNotNull(cursorHolder.getAggregatorsForPreAggregated()));
     }
     final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
@@ -297,6 +297,7 @@ public class TopNQueryEngine
                        .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
                        .setGroupingColumns(Collections.singletonList(query.getDimensionSpec().getDimension()))
                        .setVirtualColumns(query.getVirtualColumns())
+                       .setPhysicalColumns(query.getRequiredColumns())
                        .setAggregators(query.getAggregatorSpecs())
                        .setQueryContext(query.context())
                        .setQueryMetrics(queryMetrics)

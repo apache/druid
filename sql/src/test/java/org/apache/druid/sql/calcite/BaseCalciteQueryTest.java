@@ -43,6 +43,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.JoinDataSource;
@@ -77,6 +78,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -282,6 +284,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   final boolean useDefault = NullHandling.replaceWithDefault();
 
   public boolean cannotVectorize = false;
+  public boolean cannotVectorizeUnlessFallback = false;
   public boolean skipVectorize = false;
 
   static {
@@ -560,6 +563,25 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new ExpressionVirtualColumn(name, expression, outputType, CalciteTests.createExprMacroTable());
   }
 
+  /**
+   * Optionally updates the VC defintion for the one planned by the decoupled planner.
+   *
+   * Compared to original plans; decoupled planner:
+   *  * moves the mv_to_array into the VC
+   *  * the type is an ARRAY
+   */
+  public ExpressionVirtualColumn nestedExpressionVirtualColumn(
+      String name,
+      String expression,
+      ColumnType outputType)
+  {
+    if (testBuilder().isDecoupledMode()) {
+      expression = StringUtils.format("mv_to_array(%s)", expression);
+      outputType = ColumnType.ofArray(outputType);
+    }
+    return expressionVirtualColumn(name, expression, outputType);
+  }
+
   public static JoinDataSource join(
       DataSource left,
       DataSource right,
@@ -624,7 +646,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   @RegisterExtension
-  static SqlTestFrameworkConfig.Rule queryFrameworkRule = new SqlTestFrameworkConfig.Rule();
+  protected static SqlTestFrameworkConfig.Rule queryFrameworkRule = new SqlTestFrameworkConfig.Rule();
 
   public SqlTestFramework queryFramework()
   {
@@ -669,7 +691,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     if (testBuilder().isDecoupledMode()) {
       return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "invalidInput");
     } else {
-      return new DruidExceptionMatcher(Persona.ADMIN, Category.INVALID_INPUT, "general");
+      return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "general");
     }
   }
 
@@ -869,8 +891,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(new CalciteTestConfig())
-        .cannotVectorize(cannotVectorize)
+        .cannotVectorize(
+            cannotVectorize || (!ExpressionProcessing.allowVectorizeFallback() && cannotVectorizeUnlessFallback)
+        )
         .skipVectorize(skipVectorize);
+  }
+
+  public CalciteTestConfig createCalciteTestConfig()
+  {
+    return new CalciteTestConfig();
   }
 
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
@@ -1288,6 +1317,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     cannotVectorize = true;
   }
 
+  protected void cannotVectorizeUnlessFallback()
+  {
+    cannotVectorizeUnlessFallback = true;
+  }
+
   protected void skipVectorize()
   {
     skipVectorize = true;
@@ -1319,7 +1353,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static <T> Query<?> recursivelyClearContext(final Query<T> query, ObjectMapper queryJsonMapper)
   {
     try {
-      Query<T> newQuery = query.withDataSource(recursivelyClearContext(query.getDataSource(), queryJsonMapper));
+      Query<T> newQuery;
+      if (query instanceof UnionQuery) {
+        UnionQuery unionQuery = (UnionQuery) query;
+        newQuery = (Query<T>) unionQuery
+            .withDataSources(recursivelyClearDatasource(unionQuery.getDataSources(), queryJsonMapper));
+      } else {
+        newQuery = query.withDataSource(recursivelyClearContext(query.getDataSource(), queryJsonMapper));
+      }
       final JsonNode newQueryNode = queryJsonMapper.valueToTree(newQuery);
       ((ObjectNode) newQueryNode).remove("context");
       return queryJsonMapper.treeToValue(newQueryNode, Query.class);
@@ -1327,6 +1368,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private static List<DataSource> recursivelyClearDatasource(final List<DataSource> dataSources,
+      ObjectMapper queryJsonMapper)
+  {
+    List<DataSource> ret = new ArrayList<DataSource>();
+    for (DataSource dataSource : dataSources) {
+      ret.add(recursivelyClearContext(dataSource, queryJsonMapper));
+    }
+    return ret;
   }
 
   /**

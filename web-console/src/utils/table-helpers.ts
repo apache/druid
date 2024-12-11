@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-import type { QueryResult } from '@druid-toolkit/query';
-import { C } from '@druid-toolkit/query';
-import type { Filter } from 'react-table';
+import { ascending, descending, sort } from 'd3-array';
+import type { QueryResult, SqlExpression } from 'druid-query-toolkit';
+import { C } from 'druid-query-toolkit';
+import type { Filter, SortingRule } from 'react-table';
 
 import { filterMap, formatNumber, isNumberLike, oneOf } from './general';
 import { deepSet } from './object-change';
@@ -35,6 +36,8 @@ export function changePage(pagination: Pagination, page: number): Pagination {
 export interface ColumnHint {
   displayName?: string;
   group?: string;
+  hidden?: boolean;
+  expressionForWhere?: SqlExpression;
   formatter?: (x: any) => string;
 }
 
@@ -65,19 +68,24 @@ export function getNumericColumnBraces(
   return numericColumnBraces;
 }
 
-export interface Sorted {
-  id: string;
-  desc: boolean;
-}
-
 export interface TableState {
   page: number;
   pageSize: number;
   filtered: Filter[];
-  sorted: Sorted[];
+  sorted: SortingRule[];
 }
 
-export function sortedToOrderByClause(sorted: Sorted[]): string | undefined {
+export function sortedToOrderByClause(sorted: SortingRule[]): string | undefined {
   if (!sorted.length) return;
   return 'ORDER BY ' + sorted.map(sort => `${C(sort.id)} ${sort.desc ? 'DESC' : 'ASC'}`).join(', ');
+}
+
+export function applySorting(xs: any[], sorted: SortingRule[]): any[] {
+  const firstSortingRule = sorted[0];
+  if (!firstSortingRule) return xs;
+  const { id, desc } = firstSortingRule;
+  return sort(
+    xs,
+    desc ? (d1, d2) => descending(d1[id], d2[id]) : (d1, d2) => ascending(d1[id], d2[id]),
+  );
 }

@@ -20,7 +20,6 @@
 package org.apache.druid.segment.nested;
 
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -34,6 +33,7 @@ import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -62,7 +62,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
   }
 
   @Override
-  public void openDictionaryWriter() throws IOException
+  public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
     dictionaryWriter = StringEncodingStrategies.getStringDictionaryWriter(
         indexSpec.getStringDictionaryEncoding(),
@@ -73,7 +73,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
     dictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
-            FileUtils.getTempDir(),
+            segmentBaseDir,
             dictionaryWriter,
             null,
             null,
@@ -130,5 +130,14 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
     } else {
       writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME);
     }
+  }
+
+  @Override
+  public int getCardinality()
+  {
+    if (writeDictionary) {
+      return dictionaryWriter.getCardinality();
+    }
+    return dictionaryIdLookup.getStringCardinality();
   }
 }

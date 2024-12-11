@@ -43,7 +43,7 @@ DruidProject(dim4=[CAST('a':VARCHAR):VARCHAR], EXPR$1=[$0], EXPR$2=[$1], druid=[
   "dimension" : {
     "type" : "extraction",
     "dimension" : "dim5",
-    "outputName" : "_d0",
+    "outputName" : "d0",
     "outputType" : "STRING",
     "extractionFn" : {
       "type" : "substring",

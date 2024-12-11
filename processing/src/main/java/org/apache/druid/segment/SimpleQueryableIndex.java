@@ -24,29 +24,44 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Interner;
+import com.google.common.collect.Interners;
 import com.google.common.collect.Maps;
+import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.data.ListIndexed;
+import org.apache.druid.segment.projections.Projections;
+import org.apache.druid.segment.projections.QueryableProjection;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedSet;
+import java.util.stream.Collectors;
 
 /**
  *
  */
 public abstract class SimpleQueryableIndex implements QueryableIndex
 {
+  public static final Interner<List<OrderBy>> ORDERING_INTERNER = Interners.newWeakInterner();
+
   private final Interval dataInterval;
   private final List<String> columnNames;
   private final Indexed<String> availableDimensions;
   private final BitmapFactory bitmapFactory;
   private final Map<String, Supplier<ColumnHolder>> columns;
+  private final List<OrderBy> ordering;
+  private final Map<String, AggregateProjectionMetadata> projectionsMap;
+  private final SortedSet<AggregateProjectionMetadata> projections;
+  private final Map<String, Map<String, Supplier<ColumnHolder>>> projectionColumns;
   private final SmooshedFileMapper fileMapper;
   private final Supplier<Map<String, DimensionHandler>> dimensionHandlers;
 
@@ -57,6 +72,20 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
       Map<String, Supplier<ColumnHolder>> columns,
       SmooshedFileMapper fileMapper,
       boolean lazy
+  )
+  {
+    this(dataInterval, dimNames, bitmapFactory, columns, fileMapper, lazy, null, null);
+  }
+
+  public SimpleQueryableIndex(
+      Interval dataInterval,
+      Indexed<String> dimNames,
+      BitmapFactory bitmapFactory,
+      Map<String, Supplier<ColumnHolder>> columns,
+      SmooshedFileMapper fileMapper,
+      boolean lazy,
+      @Nullable Metadata metadata,
+      @Nullable Map<String, Map<String, Supplier<ColumnHolder>>> projectionColumns
   )
   {
     Preconditions.checkNotNull(columns.get(ColumnHolder.TIME_COLUMN_NAME));
@@ -78,10 +107,35 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     this.columns = columns;
     this.fileMapper = fileMapper;
 
+    this.projectionColumns = projectionColumns == null ? Collections.emptyMap() : projectionColumns;
+
     if (lazy) {
       this.dimensionHandlers = Suppliers.memoize(() -> initDimensionHandlers(availableDimensions));
     } else {
       this.dimensionHandlers = () -> initDimensionHandlers(availableDimensions);
+    }
+    if (metadata != null) {
+      if (metadata.getOrdering() != null) {
+        this.ordering = ORDERING_INTERNER.intern(metadata.getOrdering());
+      } else {
+        this.ordering = Cursors.ascendingTimeOrder();
+      }
+      if (metadata.getProjections() != null) {
+        this.projectionsMap = Maps.newHashMapWithExpectedSize(metadata.getProjections().size());
+        this.projections = new ObjectAVLTreeSet<>(AggregateProjectionMetadata.COMPARATOR);
+        for (AggregateProjectionMetadata projection : metadata.getProjections()) {
+          projections.add(projection);
+          projectionsMap.put(projection.getSchema().getName(), projection);
+        }
+      } else {
+        this.projectionsMap = Collections.emptyMap();
+        this.projections = Collections.emptySortedSet();
+      }
+    } else {
+      // When sort order isn't set in metadata.drd, assume the segment is sorted by __time.
+      this.ordering = Cursors.ascendingTimeOrder();
+      this.projections = Collections.emptySortedSet();
+      this.projectionsMap = Collections.emptyMap();
     }
   }
 
@@ -112,13 +166,7 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
   @Override
   public List<OrderBy> getOrdering()
   {
-    final Metadata metadata = getMetadata();
-    if (metadata != null && metadata.getOrdering() != null) {
-      return metadata.getOrdering();
-    } else {
-      // When sort order isn't set in metadata.drd, assume the segment is sorted by __time.
-      return Cursors.ascendingTimeOrder();
-    }
+    return ordering;
   }
 
   @Override
@@ -174,4 +222,69 @@ public abstract class SimpleQueryableIndex implements QueryableIndex
     }
     return dimensionHandlerMap;
   }
+
+  @Nullable
+  @Override
+  public QueryableProjection<QueryableIndex> getProjection(CursorBuildSpec cursorBuildSpec)
+  {
+    return Projections.findMatchingProjection(
+        cursorBuildSpec,
+        projections,
+        (projectionName, columnName) ->
+            projectionColumns.get(projectionName).containsKey(columnName) || getColumnCapabilities(columnName) == null,
+        this::getProjectionQueryableIndex
+    );
+  }
+
+  @Override
+  public QueryableIndex getProjectionQueryableIndex(String name)
+  {
+    final AggregateProjectionMetadata projectionSpec = projectionsMap.get(name);
+    final Metadata projectionMetadata = new Metadata(
+        null,
+        projectionSpec.getSchema().getAggregators(),
+        null,
+        null,
+        true,
+        projectionSpec.getSchema().getOrderingWithTimeColumnSubstitution(),
+        null
+    );
+    return new SimpleQueryableIndex(
+        dataInterval,
+        new ListIndexed<>(
+            projectionSpec.getSchema()
+                          .getGroupingColumns()
+                          .stream()
+                          .filter(x -> !x.equals(projectionSpec.getSchema().getTimeColumnName()))
+                          .collect(Collectors.toList())
+        ),
+        bitmapFactory,
+        projectionColumns.get(name),
+        fileMapper,
+        true,
+        projectionMetadata,
+        null
+    )
+    {
+      @Override
+      public Metadata getMetadata()
+      {
+        return projectionMetadata;
+      }
+
+      @Override
+      public int getNumRows()
+      {
+        return projectionSpec.getNumRows();
+      }
+
+      @Override
+      public List<OrderBy> getOrdering()
+      {
+        // return ordering with projection time column substituted with __time so query engines can treat it equivalently
+        return projectionSpec.getSchema().getOrderingWithTimeColumnSubstitution();
+      }
+    };
+  }
 }
+

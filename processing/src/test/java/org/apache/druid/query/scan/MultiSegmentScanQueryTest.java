@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -122,8 +122,8 @@ public class MultiSegmentScanQueryTest extends InitializedNullHandlingTest
     CharSource v_0112 = CharSource.wrap(StringUtils.join(V_0112, "\n"));
     CharSource v_0113 = CharSource.wrap(StringUtils.join(V_0113, "\n"));
 
-    IncrementalIndex index0 = TestIndex.loadIncrementalIndex(newIndex("2011-01-12T00:00:00.000Z"), v_0112);
-    IncrementalIndex index1 = TestIndex.loadIncrementalIndex(newIndex("2011-01-13T00:00:00.000Z"), v_0113);
+    IncrementalIndex index0 = TestIndex.loadIncrementalIndexFromTsvCharSource(newIndex("2011-01-12T00:00:00.000Z"), v_0112);
+    IncrementalIndex index1 = TestIndex.loadIncrementalIndexFromTsvCharSource(newIndex("2011-01-13T00:00:00.000Z"), v_0113);
 
     segment0 = new IncrementalIndexSegment(index0, makeIdentifier(index0, "v1"));
     segment1 = new IncrementalIndexSegment(index1, makeIdentifier(index1, "v1"));

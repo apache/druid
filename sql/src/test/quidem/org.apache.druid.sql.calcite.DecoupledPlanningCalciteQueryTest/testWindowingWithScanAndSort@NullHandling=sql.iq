@@ -1,8 +1,7 @@
-# testWindowingWithScanAndSort@NullHandling=sql case-crc:bb1d6e53
+# testWindowingWithScanAndSort@NullHandling=sql case-crc:45108080
 # quidem testcase reason: SLIGHTLY_WORSE_PLAN
 !set debug true
 !set defaultTimeout 300000
-!set enableWindowing true
 !set maxScatterGatherBytes 9223372036854775807
 !set plannerStrategy DECOUPLED
 !set sqlCurrentTimestamp 2000-01-01T00:00:00Z
@@ -149,8 +148,8 @@ DruidProject(ranking=[$2], trend_score=[$1], druid=[logical])
       },
       "resultFormat" : "compactedList",
       "limit" : 10,
-      "columns" : [ "a0", "d1", "w0" ],
-      "columnTypes" : [ "LONG", "DOUBLE", "LONG" ],
+      "columns" : [ "d1", "a0", "w0" ],
+      "columnTypes" : [ "DOUBLE", "LONG", "LONG" ],
       "granularity" : {
         "type" : "all"
       },
@@ -191,7 +190,7 @@ DruidProject(ranking=[$2], trend_score=[$1], druid=[logical])
       "offset" : 0,
       "limit" : 9223372036854775807
     },
-    "projectedColumns" : [ "a0", "w0" ],
+    "projectedColumns" : [ "w0", "a0" ],
     "virtualColumns" : null,
     "ordering" : null
   } ],

@@ -24,7 +24,6 @@
 @import '@blueprintjs/datetime/src/blueprint-datetime';
 @import '@blueprintjs/datetime2/src/blueprint-datetime2';
 @import '@blueprintjs/select/src/blueprint-select';
-@import 'react-splitter-layout/lib/index';
 @import './react-table/react-table-base-styles';
 @import './react-table/react-table-extra';
 
@@ -36,6 +35,7 @@ body {
   overflow: hidden;
   font-size: 13px;
   overscroll-behavior-x: none;
+  cursor: default;
 }
 
 body {
@@ -56,6 +56,7 @@ body {
   position: absolute;
   height: 100%;
   width: 100%;
+  z-index: 0;
 
   .console-application {
     position: absolute;
@@ -73,4 +74,11 @@ body {
 .#{$bp-ns}-popover-content > .#{$bp-ns}-menu {
   max-height: 47vh;
   overflow: auto;
+}
+
+// Make buttons stretch nicely
+.#{$bp-ns}-button.#{$bp-ns}-fill {
+  .#{$bp-ns}-button-text {
+    flex: 1;
+  }
 }

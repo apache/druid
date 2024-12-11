@@ -26,7 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -43,6 +43,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Finalization;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -181,7 +182,8 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return context().getBoolean(SKIP_EMPTY_BUCKETS, false);
   }
 
-  public RowSignature getResultSignature(final RowSignature.Finalization finalization)
+  @Override
+  public RowSignature getResultRowSignature(Finalization finalization)
   {
     final RowSignature.Builder builder = RowSignature.builder();
     builder.addTimeColumn();

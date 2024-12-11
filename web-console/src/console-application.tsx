@@ -28,7 +28,7 @@ import type { Filter } from 'react-table';
 
 import type { HeaderActiveTab } from './components';
 import { HeaderBar, Loader } from './components';
-import type { DruidEngine, QueryContext, QueryWithContext } from './druid-models';
+import type { QueryContext, QueryWithContext } from './druid-models';
 import { Capabilities, maybeGetClusterCapacity } from './helpers';
 import { stringToTableFilters, tableFiltersToString } from './react-table';
 import { AppToaster } from './singletons';
@@ -182,12 +182,24 @@ export class ConsoleApplication extends React.PureComponent<
     changeTabWithFilter('datasources', [{ id: 'datasource', value: `=${datasource}` }]);
   };
 
-  private readonly goToSegments = (datasource: string, onlyUnavailable = false) => {
+  private readonly goToSegments = ({
+    start,
+    end,
+    datasource,
+    realtime,
+  }: {
+    start?: Date;
+    end?: Date;
+    datasource?: string;
+    realtime?: boolean;
+  }) => {
     changeTabWithFilter(
       'segments',
       compact([
-        { id: 'datasource', value: `=${datasource}` },
-        onlyUnavailable ? { id: 'is_available', value: '=false' } : undefined,
+        start && { id: 'start', value: `>=${start.toISOString()}` },
+        end && { id: 'end', value: `<${end.toISOString()}` },
+        datasource && { id: 'datasource', value: `=${datasource}` },
+        typeof realtime === 'boolean' ? { id: 'is_realtime', value: `=${realtime}` } : undefined,
       ]),
     );
   };
@@ -307,14 +319,6 @@ export class ConsoleApplication extends React.PureComponent<
       this.props;
     const { capabilities } = this.state;
 
-    const queryEngines: DruidEngine[] = ['native'];
-    if (capabilities.hasSql()) {
-      queryEngines.push('sql-native');
-    }
-    if (capabilities.hasMultiStageQuery()) {
-      queryEngines.push('sql-msq-task');
-    }
-
     return this.wrapInViewContainer(
       'workbench',
       <WorkbenchView
@@ -326,7 +330,7 @@ export class ConsoleApplication extends React.PureComponent<
         mandatoryQueryContext={mandatoryQueryContext}
         baseQueryContext={baseQueryContext}
         serverQueryContext={serverQueryContext}
-        queryEngines={queryEngines}
+        queryEngines={capabilities.getSupportedQueryEngines()}
         goToTask={this.goToTasksWithTaskId}
         getClusterCapacity={maybeGetClusterCapacity}
       />,
@@ -469,7 +473,7 @@ export class ConsoleApplication extends React.PureComponent<
                   component={this.wrappedClassicBatchDataLoaderView}
                 />
               )}
-              {capabilities.hasCoordinatorAccess() && capabilities.hasMultiStageQuery() && (
+              {capabilities.hasCoordinatorAccess() && capabilities.hasMultiStageQueryTask() && (
                 <Route path="/sql-data-loader" component={this.wrappedSqlDataLoaderView} />
               )}
 

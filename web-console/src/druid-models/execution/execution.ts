@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from '@druid-toolkit/query';
+import { Column, QueryResult, SqlExpression, SqlQuery, SqlWithQuery } from 'druid-query-toolkit';
 
 import { maybeGetClusterCapacity } from '../../helpers';
 import {
@@ -255,12 +255,13 @@ export class Execution {
       };
     }
 
+    const { createdAt, durationMs, state } = asyncSubmitResult;
     return new Execution({
       engine: 'sql-msq-task',
       id: queryId,
-      startTime: new Date(asyncSubmitResult.createdAt),
-      duration: asyncSubmitResult.durationMs,
-      status: Execution.normalizeAsyncState(asyncSubmitResult.state),
+      startTime: new Date(createdAt),
+      duration: durationMs >= 0 ? durationMs : undefined,
+      status: Execution.normalizeAsyncState(state),
       sqlQuery,
       queryContext,
       stages: Array.isArray(stages) && counters ? new Stages(stages, counters) : undefined,
@@ -282,6 +283,10 @@ export class Execution {
       destinationPages: result?.pages,
       result: queryResult,
     });
+  }
+
+  static fromDartReport(dartReport: MsqTaskReportResponse): Execution {
+    return Execution.fromTaskReport(dartReport).changeEngine('sql-msq-dart');
   }
 
   static fromTaskReport(taskReport: MsqTaskReportResponse): Execution {
@@ -326,6 +331,7 @@ export class Execution {
             new Column({ name: sig.name, nativeType: sig.type, sqlType: sqlTypeNames?.[i] }),
         ),
         rows: results,
+        queryDuration: durationMs,
       }).inflateDatesFromSqlTypes();
     }
 
@@ -335,7 +341,7 @@ export class Execution {
       status: Execution.normalizeTaskStatus(status),
       segmentStatus: segmentLoaderStatus,
       startTime: isNaN(startTime.getTime()) ? undefined : startTime,
-      duration: typeof durationMs === 'number' ? durationMs : undefined,
+      duration: typeof durationMs === 'number' && durationMs >= 0 ? durationMs : undefined,
       usageInfo: getUsageInfoFromStatusPayload(
         deepGet(taskReport, 'multiStageQuery.payload.status'),
       ),
@@ -439,6 +445,13 @@ export class Execution {
 
       _payload: this._payload,
     };
+  }
+
+  public changeEngine(engine: DruidEngine): Execution {
+    return new Execution({
+      ...this.valueOf(),
+      engine,
+    });
   }
 
   public changeSqlQuery(sqlQuery: string, queryContext?: QueryContext): Execution {
