@@ -50,6 +50,7 @@ import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.server.coordination.DruidServerMetadata;
@@ -65,6 +66,7 @@ import org.apache.druid.timeline.TimelineLookup;
 import org.apache.druid.timeline.TimelineObjectHolder;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -269,9 +271,28 @@ public class DataSourcesResource
     }
     catch (Exception e) {
       log.error(e, "Error occurred while updating segments for datasource[%s]", dataSourceName);
+
+      final Throwable rootCause = Throwables.getRootCause(e);
+      if (rootCause instanceof HttpResponseException) {
+        HttpResponseStatus status = ((HttpResponseException) rootCause).getResponse().getStatus();
+        if (status.getCode() == 404) {
+          // Overlord is probably still on old version, do not fall back to directly
+          // updating metadata store. Segments can be updated once Overlord is upgraded.
+          return Response
+              .serverError()
+              .entity(
+                  ImmutableMap.of(
+                      "error", "Could not update segments",
+                      "message", "Ensure that Overlord is on latest version. Check logs for details."
+                  )
+              )
+              .build();
+        }
+      }
+
       return Response
           .serverError()
-          .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
+          .entity(ImmutableMap.of("error", "Unknown server error", "message", rootCause.toString()))
           .build();
     }
   }

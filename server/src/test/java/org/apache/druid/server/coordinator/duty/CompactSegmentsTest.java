@@ -105,7 +105,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -2078,12 +2077,6 @@ public class CompactSegmentsTest
     private TestOverlordClient(ObjectMapper jsonMapper)
     {
       this.jsonMapper = jsonMapper;
-    }
-
-    @Override
-    public ListenableFuture<URI> findCurrentLeader()
-    {
-      throw new UnsupportedOperationException();
     }
 
     @Override

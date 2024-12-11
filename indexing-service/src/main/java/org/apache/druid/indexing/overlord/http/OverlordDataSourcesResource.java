@@ -28,8 +28,10 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.TaskMaster;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
@@ -231,15 +233,15 @@ public class OverlordDataSourcesResource
   )
   {
     final SegmentId segmentId = SegmentId.tryParse(dataSourceName, segmentIdString);
+    if (segmentId == null) {
+      return Response.status(Response.Status.BAD_REQUEST).entity(
+          StringUtils.format("Could not parse Segment ID[%s] for DataSource[%s]", segmentIdString, dataSourceName)
+      ).build();
+    }
+
     SegmentUpdateOperation operation =
         () -> segmentsMetadataManager.markSegmentAsUnused(segmentId) ? 1 : 0;
     return performSegmentUpdate(dataSourceName, operation);
-  }
-
-  private static Response logAndCreateDataSourceNotFoundResponse(String dataSourceName)
-  {
-    log.warn("datasource[%s] not found", dataSourceName);
-    return Response.noContent().build();
   }
 
   private Response performSegmentUpdate(String dataSourceName, SegmentUpdateOperation operation)
@@ -250,7 +252,7 @@ public class OverlordDataSourcesResource
 
     try {
       int numChangedSegments = operation.perform();
-      return Response.ok(ImmutableMap.of("numChangedSegments", numChangedSegments)).build();
+      return Response.ok(new SegmentUpdateResponse(numChangedSegments)).build();
     }
     catch (DruidException e) {
       return ServletResourceUtils.buildErrorResponseFrom(e);

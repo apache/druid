@@ -60,4 +60,10 @@ public class SegmentUpdateResponse
   {
     return Objects.hashCode(numChangedSegments);
   }
+
+  @Override
+  public String toString()
+  {
+    return "SegmentUpdateResponse{numChangedSegments=" + numChangedSegments + "}";
+  }
 }

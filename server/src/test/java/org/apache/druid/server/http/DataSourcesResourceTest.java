@@ -30,6 +30,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.apache.curator.shaded.com.google.common.base.Charsets;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.client.CoordinatorServerView;
 import org.apache.druid.client.DruidDataSource;
@@ -40,10 +41,12 @@ import org.apache.druid.client.SegmentLoadInfo;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.TestDataSource;
@@ -70,6 +73,9 @@ import org.apache.druid.timeline.partition.NumberedPartitionChunk;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.apache.druid.timeline.partition.PartitionHolder;
 import org.easymock.EasyMock;
+import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
+import org.jboss.netty.handler.codec.http.HttpVersion;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -717,6 +723,32 @@ public class DataSourcesResourceTest
 
     Response response = dataSourcesResource.markSegmentAsUsed(segment.getDataSource(), segment.getId().toString());
     Assert.assertEquals(200, response.getStatus());
+    EasyMock.verify(overlordClient);
+  }
+
+  @Test
+  public void testMarkSegmentAsUsedWhenOverlordIsOnOldVersion()
+  {
+    DataSegment segment = dataSegmentList.get(0);
+
+    final StringFullResponseHolder responseHolder = new StringFullResponseHolder(
+        new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND),
+        Charsets.UTF_8
+    );
+    EasyMock.expect(overlordClient.markSegmentAsUsed(segment.getId()))
+            .andThrow(new RuntimeException(new HttpResponseException(responseHolder)))
+            .once();
+    EasyMock.replay(overlordClient);
+
+    Response response = dataSourcesResource.markSegmentAsUsed(segment.getDataSource(), segment.getId().toString());
+    Assert.assertEquals(500, response.getStatus());
+    Assert.assertEquals(
+        ImmutableMap.of(
+            "error", "Could not update segments",
+            "message", "Ensure that Overlord is on latest version. Check logs for details."
+        ),
+        response.getEntity()
+    );
     EasyMock.verify(overlordClient);
   }
 
