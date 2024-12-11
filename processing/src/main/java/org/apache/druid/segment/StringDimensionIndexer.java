@@ -25,6 +25,7 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -242,6 +243,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     ColumnCapabilitiesImpl capabilites = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                                                      .setHasBitmapIndexes(hasBitmapIndexes)
                                                                      .setHasSpatialIndexes(hasSpatialIndexes)
+                                                                     .setDictionaryEncoded(true)
                                                                      .setDictionaryValuesUnique(true)
                                                                      .setDictionaryValuesSorted(false);
 
@@ -254,18 +256,8 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
     if (hasMultipleValues) {
       capabilites.setHasMultipleValues(true);
     }
-    // Likewise, only set dictionaryEncoded if explicitly if true for a similar reason as multi-valued handling. The
-    // dictionary is populated as rows are processed, but there might be implicit default values not accounted for in
-    // the dictionary yet. We can be certain that the dictionary has an entry for every value if either of
-    //    a) we have already processed an explitic default (null) valued row for this column
-    //    b) the processing was not 'sparse', meaning that this indexer has processed an explict value for every row
-    // is true.
-    final boolean allValuesEncoded = dictionaryEncodesAllValues();
-    if (allValuesEncoded) {
-      capabilites.setDictionaryEncoded(true);
-    }
 
-    if (isSparse || dimLookup.getIdForNull() != DimensionDictionary.ABSENT_VALUE_ID) {
+    if (dimLookup.getIdForNull() != DimensionDictionary.ABSENT_VALUE_ID) {
       capabilites.setHasNulls(true);
     }
     return capabilites;
@@ -303,6 +295,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       {
         final Object[] dims = currEntry.get().getDims();
 
+        @Nullable
         int[] indices;
         if (dimIndex < dims.length) {
           indices = (int[]) dims[dimIndex];
@@ -317,26 +310,19 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
         if (indices == null || indices.length == 0) {
           if (hasMultipleValues) {
             row = IntArrays.EMPTY_ARRAY;
-            rowSize = 0;
           } else {
             final int nullId = getEncodedValue(null, false);
-            if (nullId >= 0 && nullId < maxId) {
-              // null was added to the dictionary before this selector was created; return its ID.
-              if (nullIdIntArray == null) {
-                nullIdIntArray = new int[]{nullId};
-              }
-              row = nullIdIntArray;
-              rowSize = 1;
-            } else {
-              // null doesn't exist in the dictionary; return an empty array.
-              // Choose to use ArrayBasedIndexedInts later, instead of special "empty" IndexedInts, for monomorphism
-              row = IntArrays.EMPTY_ARRAY;
-              rowSize = 0;
+            DruidException.conditionalDefensive(
+                nullId >= 0 && nullId < maxId,
+                "Null value not present in dictionary, how did this happen?"
+            );
+            if (nullIdIntArray == null) {
+              nullIdIntArray = new int[]{nullId};
             }
+            row = nullIdIntArray;
+            rowSize = 1;
           }
-        }
-
-        if (row == null && indices != null && indices.length > 0) {
+        } else {
           row = indices;
           rowSize = indices.length;
         }
@@ -346,75 +332,74 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(final String value)
+      public ValueMatcher makeValueMatcher(@Nullable final String value)
       {
-        if (extractionFn == null) {
-          final int valueId = lookupId(value);
-          final int nullValueId = lookupId(null);
-          if (valueId >= 0 || value == null) {
-            return new ValueMatcher()
-            {
-              @Override
-              public boolean matches(boolean includeUnknown)
-              {
-                Object[] dims = currEntry.get().getDims();
-                if (dimIndex >= dims.length) {
-                  return includeUnknown || value == null;
-                }
-
-                int[] dimsInt = (int[]) dims[dimIndex];
-                if (dimsInt == null || dimsInt.length == 0) {
-                  return includeUnknown || value == null;
-                }
-
-                for (int id : dimsInt) {
-                  if (id == valueId) {
-                    return true;
-                  }
-                  if (includeUnknown && (id == nullValueId)) {
-                    return true;
-                  }
-                }
-                return false;
-              }
-
-              @Override
-              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-              {
-                // nothing to inspect
-              }
-            };
-          } else {
-            return new ValueMatcher()
-            {
-              @Override
-              public boolean matches(boolean includeUnknown)
-              {
-                if (includeUnknown) {
-                  IndexedInts row = getRow();
-                  final int size = row.size();
-                  if (size == 0) {
-                    return true;
-                  }
-                  for (int i = 0; i < size; i++) {
-                    if (row.get(i) == nullValueId) {
-                      return true;
-                    }
-                  }
-                }
-                return false;
-              }
-
-              @Override
-              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-              {
-                // nothing to inspect
-              }
-            };
-          }
-        } else {
+        if (extractionFn != null) {
           // Employ caching BitSet optimization
           return makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(value));
+        }
+        final int valueId = lookupId(value);
+        final int nullValueId = lookupId(null);
+        if (valueId >= 0 || value == null) {
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches(boolean includeUnknown)
+            {
+              Object[] dims = currEntry.get().getDims();
+              if (dimIndex >= dims.length) {
+                return includeUnknown || value == null;
+              }
+
+              int[] dimsInt = (int[]) dims[dimIndex];
+              if (dimsInt == null || dimsInt.length == 0) {
+                return includeUnknown || value == null;
+              }
+
+              for (int id : dimsInt) {
+                if (id == valueId) {
+                  return true;
+                }
+                if (includeUnknown && (id == nullValueId)) {
+                  return true;
+                }
+              }
+              return false;
+            }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
+              // nothing to inspect
+            }
+          };
+        } else {
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches(boolean includeUnknown)
+            {
+              if (includeUnknown) {
+                IndexedInts row = getRow();
+                final int size = row.size();
+                if (size == 0) {
+                  return true;
+                }
+                for (int i = 0; i < size; i++) {
+                  if (row.get(i) == nullValueId) {
+                    return true;
+                  }
+                }
+              }
+              return false;
+            }
+
+            @Override
+            public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+            {
+              // nothing to inspect
+            }
+          };
         }
       }
 
@@ -486,7 +471,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       @Override
       public boolean nameLookupPossibleInAdvance()
       {
-        return dictionaryEncodesAllValues();
+        return true;
       }
 
       @Nullable
@@ -497,7 +482,7 @@ public class StringDimensionIndexer extends DictionaryEncodedColumnIndexer<int[]
       }
 
       @Override
-      public int lookupId(String name)
+      public int lookupId(@Nullable String name)
       {
         if (extractionFn != null) {
           throw new UnsupportedOperationException(

@@ -28,7 +28,6 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DelimitedInputFormat;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.guice.BuiltInTypesModule;
@@ -36,7 +35,6 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -48,6 +46,7 @@ import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
@@ -87,14 +86,6 @@ public class NestedDataTestUtils
   public static final ObjectMapper JSON_MAPPER;
 
   public static final TimestampSpec TIMESTAMP_SPEC = new TimestampSpec("timestamp", null, null);
-
-  public static final JsonInputFormat DEFAULT_JSON_INPUT_FORMAT = new JsonInputFormat(
-      JSONPathSpec.DEFAULT,
-      null,
-      null,
-      null,
-      null
-  );
 
   public static final DimensionsSpec AUTO_DISCOVERY =
       DimensionsSpec.builder()
@@ -271,7 +262,7 @@ public class NestedDataTestUtils
     return createIncrementalIndex(
         tempFolder,
         file,
-        DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         TIMESTAMP_SPEC,
         AUTO_DISCOVERY,
         TransformSpec.NONE,
@@ -294,7 +285,7 @@ public class NestedDataTestUtils
         tempFolder,
         closer,
         inputFile,
-        DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         TIMESTAMP_SPEC,
         AUTO_DISCOVERY,
         TransformSpec.NONE,
@@ -324,7 +315,7 @@ public class NestedDataTestUtils
         tempFolder,
         closer,
         inputFiles,
-        DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         TIMESTAMP_SPEC,
         AUTO_DISCOVERY,
         TransformSpec.NONE,

@@ -87,7 +87,7 @@ jobs:
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
       build_jdk: 17
-      runtime_jdk: 21.0.4
+      runtime_jdk: 17
       use_indexer: middleManager
       script: ./it.sh github S3DeepStorage
       it: S3DeepStorage

@@ -141,7 +141,7 @@ public class UnnestCursorFactoryTest extends InitializedNullHandlingTest
                                    )
                                    .indexSpec(IndexSpec.DEFAULT)
                                    .inputSource(inputSource)
-                                   .inputFormat(NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT)
+                                   .inputFormat(TestIndex.DEFAULT_JSON_INPUT_FORMAT)
                                    .transform(TransformSpec.NONE)
                                    .inputTmpDir(tmp.newFolder());
     QUERYABLE_INDEX = CLOSER.register(bob.buildMMappedIndex());

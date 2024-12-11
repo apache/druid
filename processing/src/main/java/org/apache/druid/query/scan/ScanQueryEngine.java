@@ -258,6 +258,7 @@ public class ScanQueryEngine
                           .setInterval(query.getSingleInterval())
                           .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
                           .setVirtualColumns(query.getVirtualColumns())
+                          .setPhysicalColumns(query.getRequiredColumns())
                           .setPreferredOrdering(query.getOrderBys())
                           .setQueryContext(query.context())
                           .setQueryMetrics(queryMetrics)
