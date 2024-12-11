@@ -5188,7 +5188,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testFilteredAggregations()
   {
-    cannotVectorizeUnlessFallback();
     Druids.TimeseriesQueryBuilder builder =
         Druids.newTimeseriesQueryBuilder()
               .dataSource(CalciteTests.DATASOURCE1)
@@ -5196,7 +5195,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
               .granularity(Granularities.ALL)
               .context(QUERY_CONTEXT_DEFAULT);
     if (NullHandling.sqlCompatible()) {
-      cannotVectorize();
+      cannotVectorizeUnlessFallback();
       builder = builder.virtualColumns(
                           expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
                         )
