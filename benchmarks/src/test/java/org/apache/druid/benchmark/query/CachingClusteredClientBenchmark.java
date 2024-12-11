@@ -30,13 +30,13 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -579,7 +579,7 @@ public class CachingClusteredClientBenchmark
     }
   }
 
-  private static class SingleSegmentDruidServer extends QueryableDruidServer<SimpleQueryRunner>
+  private static class SingleSegmentDruidServer extends QueryableDruidServer
   {
     SingleSegmentDruidServer(DruidServer server, SimpleQueryRunner runner)
     {

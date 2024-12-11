@@ -364,7 +364,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
             {
               // We want this module to bring InputSourceModule along for the ride.
               binder.install(new InputSourceModule());
-              binder.install(new BuiltInTypesModule());
               BuiltInTypesModule.registerHandlersAndSerde();
               SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
               SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);

@@ -20,39 +20,79 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Maps;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
+import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.BuiltInTypesModule;
+import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
+import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
+import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TestBufferPool;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
+import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
+import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.operator.WindowOperatorQueryQueryRunnerFactory;
+import org.apache.druid.query.operator.WindowOperatorQueryQueryToolChest;
+import org.apache.druid.query.scan.ScanQuery;
+import org.apache.druid.query.scan.ScanQueryQueryToolChest;
+import org.apache.druid.query.scan.ScanQueryRunnerFactory;
+import org.apache.druid.query.search.DefaultSearchQueryMetricsFactory;
+import org.apache.druid.query.search.SearchQuery;
+import org.apache.druid.query.search.SearchQueryConfig;
+import org.apache.druid.query.search.SearchQueryMetricsFactory;
+import org.apache.druid.query.search.SearchQueryQueryToolChest;
+import org.apache.druid.query.search.SearchQueryRunnerFactory;
+import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
+import org.apache.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
+import org.apache.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
+import org.apache.druid.query.timeseries.DefaultTimeseriesQueryMetricsFactory;
+import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.timeseries.TimeseriesQueryMetricsFactory;
+import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
+import org.apache.druid.query.topn.DefaultTopNQueryMetricsFactory;
+import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.query.topn.TopNQueryMetricsFactory;
+import org.apache.druid.query.topn.TopNQueryQueryToolChest;
+import org.apache.druid.query.topn.TopNQueryRunnerFactory;
 import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.query.union.UnionQueryLogic;
 import org.apache.druid.quidem.TestSqlModule;
@@ -67,7 +107,6 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
-import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
@@ -90,6 +129,7 @@ import javax.inject.Named;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -160,13 +200,6 @@ public class SqlTestFramework
     void gatherProperties(Properties properties);
 
 
-    /**
-     * Configure modules needed for tests. This is the preferred way to configure
-     * Jackson: include the production module in this method that includes the
-     * required Jackson configuration.
-     */
-    void configureGuice(DruidInjectorBuilder builder);
-
     SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
         QueryRunnerFactoryConglomerate conglomerate,
         JoinableFactoryWrapper joinableFactory,
@@ -187,7 +220,7 @@ public class SqlTestFramework
     /**
      * Configure the JSON mapper.
      *
-     * @see #configureGuice(DruidInjectorBuilder) for the preferred solution.
+     * @see #configureGuice(DruidInjectorBuilder, List) for the preferred solution.
      */
     void configureJsonMapper(ObjectMapper mapper);
 
@@ -201,10 +234,7 @@ public class SqlTestFramework
     {
     }
 
-    default void configureGuice(CoreInjectorBuilder injectorBuilder, List<Module> overrideModules)
-    {
-      configureGuice(injectorBuilder);
-    }
+    void configureGuice(DruidInjectorBuilder injectorBuilder, List<Module> overrideModules);
 
     /**
      * Communicates if explain are supported.
@@ -236,9 +266,9 @@ public class SqlTestFramework
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
     {
-      delegate.configureGuice(builder);
+      delegate.configureGuice(builder, overrideModules);
     }
 
     @Override
@@ -362,9 +392,21 @@ public class SqlTestFramework
     {
     }
 
-    @Override
     public void configureGuice(DruidInjectorBuilder builder)
     {
+      // This shell exists to minimize changes to child classes.  This method should probably be removed and
+      // places that extend this just updated, but that generates a lot of changes that could introduce conflicts
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
+    {
+      builder.addModules(
+          binder -> binder.bind(QuerySegmentWalker.class)
+                          .to(SpecificSegmentsQuerySegmentWalker.class)
+                          .in(LazySingleton.class)
+      );
+      configureGuice(builder);
     }
 
     @Override
@@ -699,57 +741,94 @@ public class SqlTestFramework
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
       binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));
-    }
 
+      binder.bind(QueryRunnerFactoryConglomerate.class)
+            .to(DefaultQueryRunnerFactoryConglomerate.class)
+            .in(LazySingleton.class);
+
+      binder.bind(new TypeLiteral<NonBlockingPool<ByteBuffer>>(){})
+            .annotatedWith(Global.class)
+            .to(TestBufferPool.class);
+
+      binder.bind(GenericQueryMetricsFactory.class).toInstance(DefaultGenericQueryMetricsFactory.instance());
+      binder.bind(SearchQueryMetricsFactory.class).toInstance(DefaultSearchQueryMetricsFactory.instance());
+      binder.bind(TimeseriesQueryMetricsFactory.class).toInstance(DefaultTimeseriesQueryMetricsFactory.instance());
+      binder.bind(TopNQueryMetricsFactory.class).toInstance(DefaultTopNQueryMetricsFactory.instance());
+
+      final SearchQueryConfig searchQueryConfig = new SearchQueryConfig();
+      binder.bind(SearchQueryConfig.class).toInstance(searchQueryConfig);
+      binder.bind(new TypeLiteral<Supplier<SearchQueryConfig>>(){}).toInstance(() -> searchQueryConfig);
+
+      final GroupByQueryConfig groupByConfig = new GroupByQueryConfig();
+      binder.bind(GroupByQueryConfig.class).toInstance(groupByConfig);
+      binder.bind(new TypeLiteral<Supplier<GroupByQueryConfig>>(){}).toInstance(() -> groupByConfig);
+
+      DruidBinders
+          .queryRFBinder(binder)
+          .mapOnlyBind(GroupByQuery.class, GroupByQueryRunnerFactory.class)
+          .naiveBinding(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
+          .naiveBinding(SearchQuery.class, SearchQueryRunnerFactory.class)
+          .naiveBinding(ScanQuery.class, ScanQueryRunnerFactory.class)
+          .naiveBinding(TimeseriesQuery.class, TimeseriesQueryRunnerFactory.class)
+          .naiveBinding(TopNQuery.class, TopNQueryRunnerFactory.class)
+          .naiveBinding(TimeBoundaryQuery.class, TimeBoundaryQueryRunnerFactory.class)
+          .naiveBinding(WindowOperatorQuery.class, WindowOperatorQueryQueryRunnerFactory.class);
+
+      DruidBinders
+          .queryTCBinder(binder)
+          .mapOnlyBind(GroupByQuery.class, GroupByQueryQueryToolChest.class)
+          .naiveBinding(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
+          .naiveBinding(SearchQuery.class, SearchQueryQueryToolChest.class)
+          .naiveBinding(ScanQuery.class, ScanQueryQueryToolChest.class)
+          .naiveBinding(TimeseriesQuery.class, TimeseriesQueryQueryToolChest.class)
+          .naiveBinding(TopNQuery.class, TopNQueryQueryToolChest.class)
+          .naiveBinding(TimeBoundaryQuery.class, TimeBoundaryQueryQueryToolChest.class)
+          .naiveBinding(WindowOperatorQuery.class, WindowOperatorQueryQueryToolChest.class);
+
+      DruidBinders
+          .queryLogicBinder(binder)
+          .naiveBinding(UnionQuery.class, UnionQueryLogic.class);
+    }
 
     @Provides
     @LazySingleton
-    public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> makeRunnerFactories(
+    public TopNQueryConfig makeTopNQueryConfig()
+    {
+      return new TopNQueryConfig()
+      {
+        @Override
+        public int getMinTopNThreshold()
+        {
+          return builder.minTopNThreshold;
+        }
+      };
+    }
+
+    @Provides
+    @LazySingleton
+    public GroupByQueryQueryToolChest makeGroupByToolChest(
+        GroupByQueryRunnerFactory groupByQueryRunnerFactory)
+    {
+      return (GroupByQueryQueryToolChest) groupByQueryRunnerFactory.getToolchest();
+    }
+
+    @Provides
+    @LazySingleton
+    public GroupByQueryRunnerFactory makeGroupByFactory(
         ObjectMapper jsonMapper,
-        final TestBufferPool testBufferPool,
-        final TestGroupByBuffers groupByBuffers,
-        @Named(SqlTestFramework.SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig)
+        GroupByQueryConfig groupByQueryConfig,
+        TestGroupByBuffers testBufferPool,
+        DruidProcessingConfig processingConfig
+    )
     {
-      return ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
-          .putAll(
-              QueryStackTests
-                  .makeDefaultQueryRunnerFactories(
-                      processingConfig,
-                      builder.minTopNThreshold,
-                      jsonMapper,
-                      testBufferPool,
-                      groupByBuffers
-                  )
-          )
-          .putAll(componentSupplier.makeRunnerFactories(injector))
-          .build();
+      return GroupByQueryRunnerTest.makeQueryRunnerFactory(
+          jsonMapper,
+          groupByQueryConfig,
+          testBufferPool,
+          processingConfig
+      );
     }
 
-    @Provides
-    @LazySingleton
-    public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryToolChest> makeToolchests(
-        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> factories)
-    {
-      return ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-          .putAll(Maps.transformValues(factories, f -> f.getToolchest()))
-          .putAll(componentSupplier.makeToolChests(injector))
-          .build();
-    }
-
-    @Provides
-    @LazySingleton
-    public @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryLogic> makeQueryLogics(
-        UnionQueryLogic unionQueryLogic)
-    {
-      return ImmutableMap.<Class<? extends Query>, QueryLogic>builder()
-          .put(UnionQuery.class, unionQueryLogic)
-          .build();
-    }
-
-    /*
-     * Ideally this should not have a Named annotation, but it clashes with {@link DruidProcessingModule}.
-     */
-    @Named(SQL_TEST_FRAME_WORK)
     @Provides
     @LazySingleton
     public DruidProcessingConfig makeProcessingConfig()
@@ -766,20 +845,9 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public TestGroupByBuffers makeTestGroupByBuffers(@Named(SQL_TEST_FRAME_WORK) DruidProcessingConfig processingConfig)
+    public TestGroupByBuffers makeTestGroupByBuffers(DruidProcessingConfig processingConfig)
     {
       return QueryStackTests.makeGroupByBuffers(resourceCloser, processingConfig);
-    }
-
-    @Provides
-    @LazySingleton
-    public QueryRunnerFactoryConglomerate conglomerate(
-        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryRunnerFactory> factories,
-        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryToolChest> toolchests,
-        @Named(SQL_TEST_FRAME_WORK) Map<Class<? extends Query>, QueryLogic> querylogics)
-    {
-      QueryRunnerFactoryConglomerate conglomerate = new DefaultQueryRunnerFactoryConglomerate(factories, toolchests, querylogics);
-      return componentSupplier.wrapConglomerate(conglomerate, resourceCloser);
     }
 
     @Provides
@@ -789,13 +857,6 @@ public class SqlTestFramework
       return builder.componentSupplier.createJoinableFactoryWrapper(
           injector.getInstance(LookupExtractorFactoryContainerProvider.class)
       );
-    }
-
-    @Provides
-    @LazySingleton
-    public QuerySegmentWalker querySegmentWalker(final Injector injector)
-    {
-      return injector.getInstance(SpecificSegmentsQuerySegmentWalker.class);
     }
 
     @Provides
@@ -871,6 +932,12 @@ public class SqlTestFramework
     {
       return builder.componentSupplier.isExplainSupported();
     }
+
+    @Provides
+    public QueryWatcher getQueryWatcher()
+    {
+      return QueryRunnerTestHelper.NOOP_QUERYWATCHER;
+    }
   }
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
@@ -896,12 +963,14 @@ public class SqlTestFramework
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
         .ignoreLoadScopes();
-    List<Module> overrideModules = new ArrayList<>(builder.overrideModules);
-    overrideModules.add(new LookylooModule());
-    overrideModules.add(new SqlAggregationModule());
-    overrideModules.add(new SegmentWranglerModule());
-    overrideModules.add(new ExpressionModule());
 
+    injectorBuilder.addModules(
+        new LookylooModule(),
+        new SegmentWranglerModule(),
+        new ExpressionModule()
+    );
+
+    ArrayList<Module> overrideModules = new ArrayList<>(builder.overrideModules);
     overrideModules.add(testSetupModule());
     builder.componentSupplier.configureGuice(injectorBuilder, overrideModules);
 

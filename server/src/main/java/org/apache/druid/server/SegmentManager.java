@@ -303,7 +303,7 @@ public class SegmentManager
     loadSegment(dataSegment, segment, cacheManager::loadSegmentIntoPageCache);
   }
 
-  private void loadSegment(
+  public void loadSegment(
       final DataSegment dataSegment,
       final ReferenceCountingSegment segment,
       final Consumer<DataSegment> pageCacheLoadFunction

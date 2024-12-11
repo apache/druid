@@ -30,7 +30,9 @@ import org.apache.druid.cli.CliBroker;
 import org.apache.druid.cli.QueryJettyServerInitializer;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.InternalQueryConfig;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
@@ -42,6 +44,7 @@ import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.BrokerServiceModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
+import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.ExtensionsModule;
 import org.apache.druid.guice.JacksonConfigManagerModule;
@@ -116,13 +119,14 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
   }
 
   @Override
-  public void configureGuice(CoreInjectorBuilder builder, List<Module> overrideModules)
+  public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
   {
-    super.configureGuice(builder);
+    super.configureGuice(builder, overrideModules);
 
     installForServerModules(builder);
     builder.add(new QueryRunnerFactoryModule());
 
+    builder.add(new BrokerProcessingModule());
     overrideModules.addAll(ExposedAsBrokerQueryComponentSupplierWrapper.brokerModules());
     overrideModules.add(new BrokerTestModule());
     builder.add(QuidemCaptureModule.class);
@@ -167,7 +171,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
   /**
    * Closely related to {@link CoreInjectorBuilder#forServer()}
    */
-  private void installForServerModules(CoreInjectorBuilder builder)
+  private void installForServerModules(DruidInjectorBuilder builder)
   {
 
     builder.add(
@@ -215,12 +219,12 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
   static List<? extends Module> brokerModules()
   {
     return ImmutableList.of(
-        new BrokerProcessingModule(),
         new SegmentWranglerModule(),
         new JoinableFactoryModule(),
         new BrokerServiceModule(),
         binder -> {
 
+          binder.bind(QueryableDruidServer.Maker.class).to(DirectDruidClientFactory.class).in(LazySingleton.class);
           binder.bindConstant().annotatedWith(Names.named("serviceName")).to(
               TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
           );

@@ -44,6 +44,11 @@ public class DruidBinders
     );
   }
 
+  public static MapBinderHelper<Class<? extends Query>, QueryRunnerFactory> queryRFBinder(Binder binder)
+  {
+    return new MapBinderHelper<>(binder, queryRunnerFactoryBinder(binder));
+  }
+
   public static MapBinder<Class<? extends Query>, QueryToolChest> queryToolChestBinder(Binder binder)
   {
     return MapBinder.newMapBinder(
@@ -51,6 +56,11 @@ public class DruidBinders
         new TypeLiteral<Class<? extends Query>>() {},
         new TypeLiteral<QueryToolChest>() {}
     );
+  }
+
+  public static MapBinderHelper<Class<? extends Query>, QueryToolChest> queryTCBinder(Binder binder)
+  {
+    return new MapBinderHelper<>(binder, queryToolChestBinder(binder));
   }
 
   public static MapBinder<Class<? extends Query>, QueryLogic> queryLogicBinderType(Binder binder)
@@ -67,23 +77,18 @@ public class DruidBinders
     return new QueryLogicBinder(binder);
   }
 
-  public static class QueryLogicBinder
+  public static class QueryLogicBinder extends MapBinderHelper<Class<? extends Query>, QueryLogic>
   {
-    private MapBinder<Class<? extends Query>, QueryLogic> queryLogicMapBinder;
-    private Binder binder;
-
     public QueryLogicBinder(Binder binder)
     {
-      this.binder = binder;
-      queryLogicMapBinder = DruidBinders.queryLogicBinderType(binder);
+      super(binder, DruidBinders.queryLogicBinderType(binder));
     }
 
     QueryLogicBinder bindQueryLogic(
         Class<? extends Query> queryTypeClazz,
         Class<? extends QueryLogic> queryLogicClazz)
     {
-      queryLogicMapBinder.addBinding(queryTypeClazz).to(queryLogicClazz);
-      binder.bind(queryLogicClazz).in(LazySingleton.class);
+      naiveBinding(queryTypeClazz, queryLogicClazz);
       return this;
     }
   }
@@ -123,5 +128,60 @@ public class DruidBinders
         new TypeLiteral<Class<? extends JoinableFactory>>() {},
         new TypeLiteral<Class<? extends DataSource>>() {}
     );
+  }
+
+  public static class MapBinderHelper<KeyClass, ValueClass>
+  {
+    private final Binder binder;
+    private final MapBinder<KeyClass, ValueClass> mapBinder;
+
+    private MapBinderHelper(
+        Binder binder,
+        MapBinder<KeyClass, ValueClass> mapBinder
+    )
+    {
+      this.binder = binder;
+      this.mapBinder = mapBinder;
+    }
+
+    public Binder getBinder()
+    {
+      return binder;
+    }
+
+    public MapBinder<KeyClass, ValueClass> getMapBinder()
+    {
+      return mapBinder;
+    }
+
+    /**
+     * Just binds with the MapBinder, so that modules can control how the actual object is injected
+     *
+     * @param key
+     * @param value
+     * @return
+     */
+    public MapBinderHelper<KeyClass, ValueClass> mapOnlyBind(KeyClass key, Class<? extends ValueClass> value)
+    {
+      mapBinder.addBinding(key).to(value);
+      return this;
+    }
+
+    /**
+     * Bundles the map binding and the binding of the object.  The actual object will be bound directly in
+     * LazySingleton scope.  It is important to realize that this binding will be used instead of, e.g. provider
+     * methods on the module.  So if you want to control how the object is instantiated beyond just using an
+     * @Inject constructor, use mapOnlyBind instead.
+     *
+     * @param key
+     * @param value
+     * @return
+     */
+    public MapBinderHelper<KeyClass, ValueClass> naiveBinding(KeyClass key, Class<? extends ValueClass> value)
+    {
+      mapOnlyBind(key, value);
+      binder.bind(value).in(LazySingleton.class);
+      return this;
+    }
   }
 }

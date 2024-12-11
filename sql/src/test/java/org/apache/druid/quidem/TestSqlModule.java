@@ -38,6 +38,7 @@ import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
+import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
@@ -49,6 +50,7 @@ public class TestSqlModule extends TestDruidModule
   @Override
   public void configure(Binder binder)
   {
+    binder.install(new SqlAggregationModule());
     binder.install(new SqlModule.SqlStatementFactoryModule());
     binder.bind(String.class)
         .annotatedWith(DruidSchemaName.class)
