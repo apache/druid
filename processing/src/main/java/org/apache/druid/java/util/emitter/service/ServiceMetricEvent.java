@@ -31,7 +31,6 @@ import org.apache.druid.java.util.emitter.core.EventMap;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -198,7 +197,7 @@ public class ServiceMetricEvent implements Event
       return new ServiceMetricEvent(
           createdTime,
           serviceDimensions,
-          new HashMap<>(userDims),
+          userDims,
           feed,
           metric,
           value

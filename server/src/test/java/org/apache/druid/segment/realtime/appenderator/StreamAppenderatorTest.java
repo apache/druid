@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.Druids;
@@ -2226,7 +2225,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
   private void verifySinkMetrics(StubServiceEmitter emitter, Set<String> segmentIds)
   {
-    Map<String, List<ServiceMetricEvent>> events = emitter.getMetricEvents();
+    Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> events = emitter.getMetricEvents();
     int segments = segmentIds.size();
     Assert.assertEquals(4, events.size());
     Assert.assertTrue(events.containsKey("query/cpu/time"));
