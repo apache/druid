@@ -134,8 +134,8 @@ GROUP BY 1
 LIMIT 10
 ```
 
-Druid exports the results of the query to the `/tmp/druid/wiki_example` dirctory.
-Run the following comannd to list the contents of 
+Druid exports the results of the query to the `/tmp/druid/wiki_example` directory.
+Run the following command to list the contents of 
 
 ```bash
 ls /tmp/druid/wiki_example
