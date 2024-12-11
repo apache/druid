@@ -654,6 +654,7 @@ GROUP BY 1, 2`;
   }
 
   private readonly refresh = (auto: boolean): void => {
+    if (1 > 0) return; // skip refresh
     if (auto && hasPopoverOpen()) return;
     this.datasourceQueryManager.rerunLastQuery(auto);
   };
