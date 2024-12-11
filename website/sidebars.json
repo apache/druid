@@ -38,7 +38,8 @@
           "tutorials/tutorial-sql-query-view",
           "tutorials/tutorial-unnest-arrays",
           "tutorials/tutorial-query-deep-storage",
-          "tutorials/tutorial-latest-by"]
+          "tutorials/tutorial-latest-by",
+          "tutorials/tutorial-extern"]
       },
     "tutorials/tutorial-sketches-theta",
     "tutorials/tutorial-jdbc",
