@@ -32,6 +32,7 @@ import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.overlord.TimeChunkLockRequest;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.metadata.RetryTransactionException;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.assertj.core.api.Assertions;
@@ -151,7 +152,7 @@ public class SegmentTransactionalInsertActionTest
 
     Assert.assertEquals(
         SegmentPublishResult.fail(
-            InvalidInput.exception(
+            new RetryTransactionException(
                 "The new start metadata state[ObjectMetadata{theObject=[1]}] is"
                 + " ahead of the last committed end state[null]. Try resetting the supervisor."
             ).toString()
