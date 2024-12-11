@@ -17,11 +17,12 @@ LogicalProject(d3=[$17])
 !convertedPlan
 
 
-LogicalProject(d3=[$18])
-  LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{17}])
-    LogicalProject(__time=[$0], dim1=[$1], dim2=[CAST('a':VARCHAR):VARCHAR], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], $f17=[MV_TO_ARRAY($3)])
-      LogicalFilter(condition=[=($2, 'a')])
-        LogicalTableScan(table=[[druid, numfoo]])
+LogicalProject(d3=[$1])
+  LogicalCorrelate(correlation=[$cor0], joinType=[inner], requiredColumns=[{0}])
+    LogicalProject($f17=[MV_TO_ARRAY($1)])
+      LogicalFilter(condition=[=($0, 'a')])
+        LogicalProject(dim2=[$2], dim3=[$3])
+          LogicalTableScan(table=[[druid, numfoo]])
     Uncollect
       LogicalProject(EXPR$0=[$cor0.$f17])
         LogicalValues(tuples=[[{ 0 }]])
@@ -29,10 +30,10 @@ LogicalProject(d3=[$18])
 !logicalPlan
 
 LogicalProject(d3=[$17])
-  LogicalCorrelate(correlation=[$cor2], joinType=[inner], requiredColumns=[{3}])
+  LogicalCorrelate(correlation=[$cor1], joinType=[inner], requiredColumns=[{3}])
     LogicalFilter(condition=[=($2, 'a')])
       LogicalTableScan(table=[[druid, numfoo]])
-    DruidUnnestRel(expr=[MV_TO_ARRAY($cor2.dim3)], filter=[null])
+    DruidUnnestRel(expr=[MV_TO_ARRAY($cor1.dim3)], filter=[null])
 
 !druidPlan
 {

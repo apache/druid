@@ -25,27 +25,45 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.SingleRel;
 import org.apache.calcite.rel.type.RelDataType;
+import org.apache.calcite.rel.type.RelDataTypeField;
+import org.apache.calcite.rel.type.RelRecordType;
 import org.apache.calcite.rex.RexNode;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public abstract class Unnest extends SingleRel
 {
   protected final RexNode unnestExpr;
   protected final RexNode filter;
+  protected final RelDataTypeField unnestFieldType;
 
   protected Unnest(RelOptCluster cluster, RelTraitSet traits, RelNode input, RexNode unnestExpr,
-      RelDataType rowType, RexNode condition)
+      RelDataTypeField unnestFieldType, RexNode condition)
   {
     super(cluster, traits, input);
     this.unnestExpr = unnestExpr;
-    this.rowType = rowType;
     this.filter = condition;
+    this.unnestFieldType = unnestFieldType;
+  }
+
+  @Override
+  protected RelDataType deriveRowType()
+  {
+    List<RelDataTypeField> fields = new ArrayList<>();
+    fields.addAll(input.getRowType().getFieldList());
+    fields.add(unnestFieldType);
+    return new RelRecordType(fields);
   }
 
   public final RexNode getUnnestExpr()
   {
     return unnestExpr;
+  }
+
+  public RexNode getFilter()
+  {
+    return filter;
   }
 
   @Override

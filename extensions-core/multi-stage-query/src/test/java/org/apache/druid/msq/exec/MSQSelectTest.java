@@ -2492,12 +2492,11 @@ public class MSQSelectTest extends MSQTestBase
                 new QueryDataSource(
                     newScanQueryBuilder()
                         .dataSource("foo")
-                        .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
-                        .columns("v0")
+                        .columns("__time")
                         .columnTypes(ColumnType.LONG)
                         .context(defaultScanQueryContext(
                             queryContext,
-                            RowSignature.builder().add("v0", ColumnType.LONG).build()
+                            RowSignature.builder().add("__time", ColumnType.LONG).build()
                         ))
                         .intervals(querySegmentSpec(Intervals.ETERNITY))
                         .build()
@@ -2516,13 +2515,18 @@ public class MSQSelectTest extends MSQTestBase
                                         "a0",
                                         "1",
                                         ColumnType.LONG
+                                    ),
+                                    expressionPostAgg(
+                                        "p0",
+                                        "(CAST(floor(100), 'DOUBLE') == \"d0\")",
+                                        ColumnType.LONG
                                     )
                                 )
                                 .build()
 
                 ),
                 "j0.",
-                "(CAST(floor(100), 'DOUBLE') == \"j0.d0\")",
+                "(1 == \"j0.p0\")",
                 JoinType.LEFT
             )
         )
