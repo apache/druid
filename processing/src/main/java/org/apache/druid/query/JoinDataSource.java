@@ -96,6 +96,8 @@ public class JoinDataSource implements DataSource
   private final DimFilter leftFilter;
   @Nullable
   private final JoinableFactoryWrapper joinableFactoryWrapper;
+  @Nullable
+  private final JoinAlgorithm preferredJoinAlgorithm;
   private static final Logger log = new Logger(JoinDataSource.class);
   private final DataSourceAnalysis analysis;
 
@@ -106,7 +108,8 @@ public class JoinDataSource implements DataSource
       JoinConditionAnalysis conditionAnalysis,
       JoinType joinType,
       @Nullable DimFilter leftFilter,
-      @Nullable JoinableFactoryWrapper joinableFactoryWrapper
+      @Nullable JoinableFactoryWrapper joinableFactoryWrapper,
+      @Nullable JoinAlgorithm preferredJoinAlgorithm
   )
   {
     this.left = Preconditions.checkNotNull(left, "left");
@@ -116,6 +119,7 @@ public class JoinDataSource implements DataSource
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
     this.leftFilter = validateLeftFilter(left, leftFilter);
     this.joinableFactoryWrapper = joinableFactoryWrapper;
+    this.preferredJoinAlgorithm = preferredJoinAlgorithm;
 
     this.analysis = this.getAnalysisForDataSource();
   }
@@ -123,7 +127,7 @@ public class JoinDataSource implements DataSource
   /**
    * Create a join dataSource from a string condition.
    */
-  @JsonCreator
+
   public static JoinDataSource create(
       @JsonProperty("left") DataSource left,
       @JsonProperty("right") DataSource right,
@@ -133,6 +137,22 @@ public class JoinDataSource implements DataSource
       @Nullable @JsonProperty("leftFilter") DimFilter leftFilter,
       @JacksonInject ExprMacroTable macroTable,
       @Nullable @JacksonInject JoinableFactoryWrapper joinableFactoryWrapper
+  )
+  {
+    return create(left, right, rightPrefix, condition, joinType, leftFilter, macroTable, joinableFactoryWrapper, null);
+  }
+
+  @JsonCreator
+  public static JoinDataSource create(
+      @JsonProperty("left") DataSource left,
+      @JsonProperty("right") DataSource right,
+      @JsonProperty("rightPrefix") String rightPrefix,
+      @JsonProperty("condition") String condition,
+      @JsonProperty("joinType") JoinType joinType,
+      @Nullable @JsonProperty("leftFilter") DimFilter leftFilter,
+      @JacksonInject ExprMacroTable macroTable,
+      @Nullable @JacksonInject JoinableFactoryWrapper joinableFactoryWrapper,
+      @Nullable @JsonProperty("preferredJoinAlgorithm") JoinAlgorithm preferredJoinAlgorithm
   )
   {
     return new JoinDataSource(
@@ -146,7 +166,8 @@ public class JoinDataSource implements DataSource
         ),
         joinType,
         leftFilter,
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        preferredJoinAlgorithm
     );
   }
 
@@ -160,7 +181,8 @@ public class JoinDataSource implements DataSource
       final JoinConditionAnalysis conditionAnalysis,
       final JoinType joinType,
       final DimFilter leftFilter,
-      @Nullable final JoinableFactoryWrapper joinableFactoryWrapper
+      @Nullable final JoinableFactoryWrapper joinableFactoryWrapper,
+      @Nullable final JoinAlgorithm preferredJoinAlgorithm
   )
   {
     return new JoinDataSource(
@@ -170,10 +192,10 @@ public class JoinDataSource implements DataSource
         conditionAnalysis,
         joinType,
         leftFilter,
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        preferredJoinAlgorithm
     );
   }
-
 
   @Override
   public Set<String> getTableNames()
@@ -253,7 +275,8 @@ public class JoinDataSource implements DataSource
         conditionAnalysis,
         joinType,
         leftFilter,
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        preferredJoinAlgorithm
     );
   }
 
@@ -320,7 +343,8 @@ public class JoinDataSource implements DataSource
           clause.getCondition(),
           clause.getJoinType(),
           joinBaseFilter,
-          this.joinableFactoryWrapper
+          this.joinableFactoryWrapper,
+          clause.getPreferredJoinAlgorithm()
       );
       joinBaseFilter = null;
     }
@@ -363,6 +387,13 @@ public class JoinDataSource implements DataSource
     return analysis;
   }
 
+  @Nullable
+  @JsonProperty("preferredJoinAlgorithm")
+  public JoinAlgorithm getPreferredJoinAlgorithm()
+  {
+    return preferredJoinAlgorithm;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -397,6 +428,7 @@ public class JoinDataSource implements DataSource
            ", condition=" + conditionAnalysis +
            ", joinType=" + joinType +
            ", leftFilter=" + leftFilter +
+           ", preferredJoinAlgorithm=" + preferredJoinAlgorithm +
            '}';
   }
 
@@ -539,7 +571,8 @@ public class JoinDataSource implements DataSource
                 joinDataSource.getRightPrefix(),
                 joinDataSource.getRight(),
                 joinDataSource.getJoinType(),
-                joinDataSource.getConditionAnalysis()
+                joinDataSource.getConditionAnalysis(),
+                joinDataSource.getPreferredJoinAlgorithm()
             )
         );
       } else if (current instanceof UnnestDataSource) {
