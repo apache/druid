@@ -712,7 +712,7 @@ Returns a result based on given conditions:
 
 <details><summary>Examples</summary>
 
-The following example returns a string representing the UI type based on the value of `agent_category` from the `kttm` datasource.
+The following example returns a UI type based on the value of `agent_category` from the `kttm` datasource.
 
 ```sql
 SELECT "agent_category" AS "device_type",
