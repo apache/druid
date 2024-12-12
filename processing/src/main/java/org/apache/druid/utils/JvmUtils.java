@@ -71,11 +71,6 @@ public class JvmUtils
     return MAJOR_VERSION;
   }
 
-  public static boolean isIsJava9Compatible()
-  {
-    return MAJOR_VERSION >= 9;
-  }
-
   public static RuntimeInfo getRuntimeInfo()
   {
     return RUNTIME_INFO;

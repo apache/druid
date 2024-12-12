@@ -19,12 +19,9 @@
 
 package org.apache.druid.java.util.common;
 
-import org.apache.druid.utils.JvmUtils;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.security.ProtectionDomain;
 
 /**
  * This utility class provides a thin runtime abstraction to pick between
@@ -44,11 +41,7 @@ public class DefineClassUtils
     Exception exception = null;
     try {
       MethodHandles.Lookup lookup = MethodHandles.lookup();
-      if (JvmUtils.isIsJava9Compatible()) {
-        defineClass = defineClassJava9(lookup);
-      } else {
-        defineClass = defineClassJava8(lookup);
-      }
+      defineClass = getMethodHandle(lookup);
     }
     catch (ReflectiveOperationException | RuntimeException e) {
       exception = e;
@@ -70,9 +63,8 @@ public class DefineClassUtils
    *    return targetClassLookup.defineClass(byteCode);
    *  }
    */
-  private static MethodHandle defineClassJava9(MethodHandles.Lookup lookup) throws ReflectiveOperationException
+  private static MethodHandle getMethodHandle(MethodHandles.Lookup lookup) throws ReflectiveOperationException
   {
-
     // this is getting meta
     MethodHandle defineClass = lookup.unreflect(MethodHandles.Lookup.class.getMethod("defineClass", byte[].class));
     MethodHandle privateLookupIn = lookup.findStatic(
@@ -92,93 +84,6 @@ public class DefineClassUtils
     // defineClass = (Class targetClass, byte[] byteCode, String className) -> defineClass(targetClass, byteCode)
     defineClass = MethodHandles.dropArguments(defineClass, 2, String.class);
     return defineClass;
-  }
-
-  /**
-   * "Compile" a MethodHandle that is equivalent to:
-   *
-   *  Class<?> defineClass(Class targetClass, byte[] byteCode, String className) {
-   *    return Unsafe.defineClass(
-   *        className,
-   *        byteCode,
-   *        0,
-   *        byteCode.length,
-   *        targetClass.getClassLoader(),
-   *        targetClass.getProtectionDomain()
-   *    );
-   *  }
-   */
-  private static MethodHandle defineClassJava8(MethodHandles.Lookup lookup) throws ReflectiveOperationException
-  {
-    MethodHandle defineClass = lookup.findVirtual(
-        UnsafeUtils.theUnsafeClass(),
-        "defineClass",
-        MethodType.methodType(
-            Class.class,
-            String.class,
-            byte[].class,
-            int.class,
-            int.class,
-            ClassLoader.class,
-            ProtectionDomain.class
-        )
-    ).bindTo(UnsafeUtils.theUnsafe());
-
-    MethodHandle getProtectionDomain = lookup.unreflect(Class.class.getMethod("getProtectionDomain"));
-    MethodHandle getClassLoader = lookup.unreflect(Class.class.getMethod("getClassLoader"));
-
-    // apply getProtectionDomain and getClassLoader to the targetClass, modifying the methodHandle as follows:
-    // defineClass = (String className, byte[] byteCode, int offset, int length, Class class1, Class class2) ->
-    //   defineClass(className, byteCode, offset, length, class1.getClassLoader(), class2.getProtectionDomain())
-    defineClass = MethodHandles.filterArguments(defineClass, 5, getProtectionDomain);
-    defineClass = MethodHandles.filterArguments(defineClass, 4, getClassLoader);
-
-    // duplicate the last argument to apply the methods above to the same class, modifying the methodHandle as follows:
-    // defineClass = (String className, byte[] byteCode, int offset, int length, Class targetClass) ->
-    //   defineClass(className, byteCode, offset, length, targetClass, targetClass)
-    defineClass = MethodHandles.permuteArguments(
-        defineClass,
-        MethodType.methodType(Class.class, String.class, byte[].class, int.class, int.class, Class.class),
-        0, 1, 2, 3, 4, 4
-    );
-
-    // set offset argument to 0, modifying the methodHandle as follows:
-    // defineClass = (String className, byte[] byteCode, int length, Class targetClass) ->
-    //   defineClass(className, byteCode, 0, length, targetClass)
-    defineClass = MethodHandles.insertArguments(defineClass, 2, (int) 0);
-
-    // JDK8 does not implement MethodHandles.arrayLength, so we have to roll our own
-    MethodHandle arrayLength = lookup.findStatic(
-        lookup.lookupClass(),
-        "getArrayLength",
-        MethodType.methodType(int.class, byte[].class)
-    );
-
-    // apply arrayLength to the length argument, modifying the methodHandle as follows:
-    // defineClass = (String className, byte[] byteCode1, byte[] byteCode2, Class targetClass) ->
-    //   defineClass(className, byteCode1, byteCode2.length, targetClass)
-    defineClass = MethodHandles.filterArguments(defineClass, 2, arrayLength);
-
-    // duplicate the byteCode argument and reorder to match JDK9 signature, modifying the methodHandle as follows:
-    // defineClass = (Class targetClass, byte[] byteCode, String className) ->
-    //   defineClass(className, byteCode, byteCode, targetClass)
-    defineClass = MethodHandles.permuteArguments(
-        defineClass,
-        MethodType.methodType(Class.class, Class.class, byte[].class, String.class),
-        2, 1, 1, 0
-    );
-
-    return defineClass;
-  }
-
-  /**
-   * This method is referenced in Java 8 using method handle, therefore it is not actually unused, and shouldn't be
-   * removed (till Java 8 is supported)
-   */
-  @SuppressWarnings("unused") // method is referenced and used in defineClassJava8
-  static int getArrayLength(byte[] bytes)
-  {
-    return bytes.length;
   }
 
   public static Class defineClass(
