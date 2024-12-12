@@ -27,11 +27,11 @@ import java.util.Arrays;
 
 public class Histogram
 {
-  public float[] breaks;
-  public long[] bins;
-  public transient long count;
-  public float min;
-  public float max;
+  private float[] breaks;
+  protected long[] bins;
+  protected transient long count;
+  private float min;
+  private float max;
 
   public Histogram(float[] breaks)
   {

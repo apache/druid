@@ -139,11 +139,10 @@
     <Bug pattern="URF_UNREAD_FIELD"/>
     <Bug pattern="CT_CONSTRUCTOR_THROW"/>
     <Bug pattern="SING_SINGLETON_HAS_NONPRIVATE_CONSTRUCTOR"/>
-    <!-- The following patterns have been excluded as part of upgrading to Java 17 as there were 100s of occurrences.
-         We should revisit these later.  -->
     <Bug pattern="SING_SINGLETON_INDIRECTLY_IMPLEMENTS_CLONEABLE"/>
     <Bug pattern="MS_EXPOSE_REP"/>
-    <Bug pattern="PA_PUBLIC_PRIMITIVE_ATTRIBUTE"/>
+    <!-- The following patterns have been excluded as part of upgrading to Java 17 as there were 100s of occurrences.
+         We should revisit these later.  -->
     <Bug pattern="EI_EXPOSE_STATIC_REP2"/>
     <Bug pattern="SS_SHOULD_BE_STATIC"/>
     <Bug pattern="SING_SINGLETON_IMPLEMENTS_SERIALIZABLE"/>
