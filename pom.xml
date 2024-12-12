@@ -1010,8 +1010,7 @@
             <dependency>
                 <groupId>org.asynchttpclient</groupId>
                 <artifactId>async-http-client</artifactId>
-                <!-- Uses Netty 4.1.x -->
-                <version>2.5.3</version>
+                <version>3.0.1</version>
             </dependency>
             <dependency>
                 <groupId>net.java.dev.jna</groupId>
