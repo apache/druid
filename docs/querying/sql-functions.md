@@ -625,7 +625,9 @@ Returns the following:
 
 ## CASE
 
-Returns a result based on given conditions.
+Returns a result based on given conditions:
+* Simple CASE compares an expression to a set of values or expressions.
+* Searched CASE evaluates a set of Boolean expressions.
 
 * **Syntax:** `CASE expr WHEN value1 THEN result1 \[ WHEN value2 THEN result2 ... \] \[ ELSE resultN \] END`
 * **Syntax:** `CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`
@@ -653,7 +655,7 @@ Returns the following:
 | `Personal computer` | `Large UI` |
 | `Smartphone` | `Mobile UI` |
 
-The following example returns a string based on the value of the `OriginStateName` column from the `flight-carriers` datasource.
+The following example returns the departure location corresponding to the value of the `OriginStateName` column from the `flight-carriers` datasource.
 
 ```sql
 SELECT "OriginStateName" AS "flight_origin",
@@ -687,7 +689,7 @@ Converts a value into the specified data type.
 
 <details><summary>Example</summary>
 
-The following example converts the values in the `Distance` column from the `flight-carriers` datasource from `DOUBLE` into type `VARCHAR`
+The following example converts the values in the `Distance` column from the `flight-carriers` datasource from `DOUBLE` to `VARCHAR`.
 
 ```sql
 SELECT "Distance" AS "original_column",
@@ -788,7 +790,7 @@ Returns the first non-null value.
 
 <details><summary>Example</summary>
 
-The following example returns the first non-null value from `null`, `null`, `5`, and `abc`.
+The following example returns the first non-null value from the list of parameters.
 
 ```sql
 SELECT COALESCE(null, null, 5, 'abc') AS "first_non_null"
@@ -2224,7 +2226,7 @@ Returns `value1` if `value1` is not null, otherwise returns `value2`.
 
 <details><summary>Example</summary>
 
-The following example returns "No tail number" if the `Tail_Number` column from the `flight-carriers` datasource is null.
+The following example replaces each null value in the `Tail_Number` column of the `flight-carriers` datasource with the string "No tail number."
 
 ```sql
 SELECT "Tail_Number" AS "original_column",
