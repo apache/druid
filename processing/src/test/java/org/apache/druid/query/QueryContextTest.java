@@ -394,6 +394,17 @@ public class QueryContextTest
     );
   }
 
+  @Test
+  public void testExtendedFilteredSumRewrite()
+  {
+    assertTrue(QueryContext.empty().isExtendedFilteredSumRewrite());
+    assertFalse(
+        QueryContext
+            .of(ImmutableMap.of(QueryContexts.EXTENDED_FILTERED_SUM_REWRITE_ENABLED, false))
+            .isExtendedFilteredSumRewrite()
+    );
+  }
+
   // This test is a bit silly. It is retained because another test uses the
   // LegacyContextQuery test.
   @Test
