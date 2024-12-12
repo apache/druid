@@ -74,7 +74,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
   private final BasicAuthCommonCacheConfig commonCacheConfig;
   private final ObjectMapper objectMapper;
   private final BasicAuthenticatorCacheNotifier cacheNotifier;
-  private final int numRetries = 5;
+  private static final int numRetries = 5;
 
   private final Map<String, BasicAuthenticatorUserMapBundle> cachedUserMaps;
   private final Set<String> authenticatorPrefixes;

@@ -31,8 +31,8 @@ import javax.annotation.Nullable;
 public class KubernetesAndWorkerTaskRunnerConfig
 {
 
-  private final String RUNNER_STRATEGY_TYPE = "runnerStrategy.type";
-  private final String RUNNER_STRATEGY_WORKER_TYPE = "runnerStrategy.workerType";
+  private static final String RUNNER_STRATEGY_TYPE = "runnerStrategy.type";
+  private static final String RUNNER_STRATEGY_WORKER_TYPE = "runnerStrategy.workerType";
   /**
    * Select which runner type a task would run on, options are k8s or worker.
    */
