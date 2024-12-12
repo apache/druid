@@ -1108,7 +1108,7 @@ SELECT DS_GET_QUANTILE( DS_QUANTILES_SKETCH("Distance"), 0.5) AS "estimate_media
 FROM "flight-carriers"
 ```
 
-May return the following:
+Returns a result similar to the following:
 
 | `estimate_median` |
 | -- | 
@@ -1134,7 +1134,7 @@ SELECT DS_GET_QUANTILES( DS_QUANTILES_SKETCH("Distance"), 0.25, 0.5, 0.75) AS "e
 FROM "flight-carriers"
 ```
 
-May returns the following:
+Returns a result similar to the following:
 
 | `estimate_fractions` |
 | -- | 
@@ -1161,7 +1161,7 @@ FROM "flight-carriers"
 
 ```
 
-May return the following:
+Returns a result similar to the following:
 
 | `estimate_histogram` | 
 | -- |
@@ -1278,7 +1278,7 @@ Returns a result similar to the following:
 
 | `estimate_rank` |
 | -- |
-| `0.43791089804959216` |
+| `0.43837721544923675 ` |
 
 
 </details>
@@ -1317,7 +1317,7 @@ Returns an intersection of Tuple sketches which each contain an array of double 
 
 **Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
 
-Computes approximate sums of the values contained within a Tuple sketch which contains an array of double values as the Summary Object. 
+Computes approximate sums of the values contained within a Tuple sketch which contains an array of double values as the Summary Object.
 
 ## DS_TUPLE_DOUBLES_NOT
 
