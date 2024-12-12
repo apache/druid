@@ -247,7 +247,7 @@ public class OverlordDataSourcesResource
   private Response performSegmentUpdate(String dataSourceName, SegmentUpdateOperation operation)
   {
     if (!taskMaster.isHalfOrFullLeader()) {
-      return Response.status(Response.Status.SERVICE_UNAVAILABLE).build();
+      return Response.status(Response.Status.SERVICE_UNAVAILABLE).entity("I am not leader").build();
     }
 
     try {
@@ -261,7 +261,7 @@ public class OverlordDataSourcesResource
       log.error(e, "Error occurred while updating segments for datasource[%s]", dataSourceName);
       return Response
           .serverError()
-          .entity(ImmutableMap.of("error", "Exception occurred.", "message", Throwables.getRootCause(e).toString()))
+          .entity(ImmutableMap.of("error", "Server error", "message", Throwables.getRootCause(e).toString()))
           .build();
     }
   }

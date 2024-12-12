@@ -736,20 +736,18 @@ public class DataSourcesResourceTest
         Charsets.UTF_8
     );
     EasyMock.expect(overlordClient.markSegmentAsUsed(segment.getId()))
-            .andThrow(new RuntimeException(new HttpResponseException(responseHolder)))
-            .once();
+            .andThrow(new RuntimeException(new HttpResponseException(responseHolder))).once();
     EasyMock.replay(overlordClient);
 
+    EasyMock.expect(segmentsMetadataManager.markSegmentAsUsed(segment.getId().toString()))
+            .andReturn(true).once();
+    EasyMock.replay(segmentsMetadataManager);
+
     Response response = dataSourcesResource.markSegmentAsUsed(segment.getDataSource(), segment.getId().toString());
-    Assert.assertEquals(500, response.getStatus());
-    Assert.assertEquals(
-        ImmutableMap.of(
-            "error", "Could not update segments",
-            "message", "Ensure that Overlord is on latest version. Check logs for details."
-        ),
-        response.getEntity()
-    );
-    EasyMock.verify(overlordClient);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("segmentStateChanged", true), response.getEntity());
+
+    EasyMock.verify(overlordClient, segmentsMetadataManager);
   }
 
   @Test
