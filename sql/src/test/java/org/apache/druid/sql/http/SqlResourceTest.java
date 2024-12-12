@@ -77,9 +77,9 @@ import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
@@ -2184,7 +2184,7 @@ public class SqlResourceTest extends CalciteTestBase
     @Override
     protected void authorize(
         DruidPlanner planner,
-        Function<Set<ResourceAction>, Access> authorizer
+        Function<Set<ResourceAction>, AuthorizationResult> authorizer
     )
     {
       if (validateAndAuthorizeLatchSupplier.get() != null) {

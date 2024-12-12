@@ -30,6 +30,7 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
@@ -74,7 +75,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     @Override
     public byte[] getCacheKey()
     {
-      return new byte[] {(byte) this.ordinal()};
+      return new byte[]{(byte) this.ordinal()};
     }
   }
 
@@ -116,9 +117,12 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     // of truth for consumers of this class variable. The defaults are to preserve backwards compatibility.
     // In a future release, 28.0+, we can remove the deprecated property lenientAggregatorMerge.
     if (lenientAggregatorMerge != null && aggregatorMergeStrategy != null) {
-      throw InvalidInput.exception("Both lenientAggregatorMerge [%s] and aggregatorMergeStrategy [%s] parameters cannot be set."
-                                   + " Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated.",
-                                   lenientAggregatorMerge, aggregatorMergeStrategy);
+      throw InvalidInput.exception(
+          "Both lenientAggregatorMerge [%s] and aggregatorMergeStrategy [%s] parameters cannot be set."
+          + " Consider using aggregatorMergeStrategy since lenientAggregatorMerge is deprecated.",
+          lenientAggregatorMerge,
+          aggregatorMergeStrategy
+      );
     }
     if (lenientAggregatorMerge != null) {
       this.aggregatorMergeStrategy = lenientAggregatorMerge
@@ -220,6 +224,11 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public Query<SegmentAnalysis> withDataSource(DataSource dataSource)
   {
+    if (dataSource instanceof RestrictedDataSource && ((RestrictedDataSource) dataSource).allowAll()) {
+      return Druids.SegmentMetadataQueryBuilder.copy(this)
+                                               .dataSource(((RestrictedDataSource) dataSource).getBase())
+                                               .build();
+    }
     return Druids.SegmentMetadataQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 
@@ -249,14 +258,14 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public String toString()
   {
     return "SegmentMetadataQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", toInclude=" + toInclude +
-        ", merge=" + merge +
-        ", usingDefaultInterval=" + usingDefaultInterval +
-        ", analysisTypes=" + analysisTypes +
-        ", aggregatorMergeStrategy=" + aggregatorMergeStrategy +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", toInclude=" + toInclude +
+           ", merge=" + merge +
+           ", usingDefaultInterval=" + usingDefaultInterval +
+           ", analysisTypes=" + analysisTypes +
+           ", aggregatorMergeStrategy=" + aggregatorMergeStrategy +
+           '}';
   }
 
   @Override
@@ -273,10 +282,10 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     }
     SegmentMetadataQuery that = (SegmentMetadataQuery) o;
     return merge == that.merge &&
-        usingDefaultInterval == that.usingDefaultInterval &&
-        Objects.equals(toInclude, that.toInclude) &&
-        Objects.equals(analysisTypes, that.analysisTypes) &&
-        Objects.equals(aggregatorMergeStrategy, that.aggregatorMergeStrategy);
+           usingDefaultInterval == that.usingDefaultInterval &&
+           Objects.equals(toInclude, that.toInclude) &&
+           Objects.equals(analysisTypes, that.analysisTypes) &&
+           Objects.equals(aggregatorMergeStrategy, that.aggregatorMergeStrategy);
   }
 
   @Override

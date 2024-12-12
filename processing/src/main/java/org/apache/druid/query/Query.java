@@ -54,6 +54,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -241,6 +242,16 @@ public interface Query<T>
   }
 
   Query<T> withDataSource(DataSource dataSource);
+
+  default Query<T> withPolicyRestrictions(Map<String, Optional<DimFilter>> restrictions)
+  {
+    return this.withPolicyRestrictions(restrictions, true);
+  }
+
+  default Query<T> withPolicyRestrictions(Map<String, Optional<DimFilter>> restrictions, boolean enableStrictPolicyCheck)
+  {
+    return this.withDataSource(this.getDataSource().mapWithRestriction(restrictions, enableStrictPolicyCheck));
+  }
 
   default Query<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {

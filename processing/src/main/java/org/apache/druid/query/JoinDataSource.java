@@ -529,7 +529,10 @@ public class JoinDataSource implements DataSource
     // Will need an instanceof check here
     // A future work should look into if the flattenJoin
     // can be refactored to omit these instanceof checks
-    while (current instanceof JoinDataSource || current instanceof UnnestDataSource || current instanceof FilteredDataSource) {
+    while (current instanceof JoinDataSource
+           || current instanceof UnnestDataSource
+           || current instanceof FilteredDataSource
+           || current instanceof RestrictedDataSource) {
       if (current instanceof JoinDataSource) {
         final JoinDataSource joinDataSource = (JoinDataSource) current;
         current = joinDataSource.getLeft();
@@ -545,6 +548,9 @@ public class JoinDataSource implements DataSource
       } else if (current instanceof UnnestDataSource) {
         final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
         current = unnestDataSource.getBase();
+      } else if (current instanceof RestrictedDataSource) {
+        final RestrictedDataSource restrictedDataSource = (RestrictedDataSource) current;
+        current = restrictedDataSource.getBase();
       } else {
         final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
         current = filteredDataSource.getBase();

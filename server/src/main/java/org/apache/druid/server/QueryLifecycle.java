@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.DirectDruidClient;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -49,10 +50,10 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -65,6 +66,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -79,7 +81,7 @@ import java.util.concurrent.TimeUnit;
  * <li>Execution ({@link #execute()}</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)}</li>
  * </ol>
- *
+ * <p>
  * This object is not thread-safe.
  */
 public class QueryLifecycle
@@ -136,16 +138,15 @@ public class QueryLifecycle
    * does it all in one call. Logs and metrics are emitted when the Sequence is either fully iterated or throws an
    * exception.
    *
-   * @param query                 the query
-   * @param authenticationResult  authentication result indicating identity of the requester
-   * @param authorizationResult   authorization result of requester
-   *
+   * @param query                the query
+   * @param authenticationResult authentication result indicating identity of the requester
+   * @param authorizationResult  authorization result of requester
    * @return results
    */
   public <T> QueryResponse<T> runSimple(
       final Query<T> query,
       final AuthenticationResult authenticationResult,
-      final Access authorizationResult
+      final AuthorizationResult authorizationResult
   )
   {
     initialize(query);
@@ -156,7 +157,7 @@ public class QueryLifecycle
     try {
       preAuthorized(authenticationResult, authorizationResult);
       if (!authorizationResult.isAllowed()) {
-        throw new ISE(Access.DEFAULT_ERROR_MESSAGE);
+        throw new ISE(Objects.requireNonNull(authorizationResult.getFailureMessage()));
       }
 
       queryResponse = execute();
@@ -204,7 +205,10 @@ public class QueryLifecycle
       queryId = UUID.randomUUID().toString();
     }
 
-    Map<String, Object> mergedUserAndConfigContext = QueryContexts.override(defaultQueryConfig.getContext(), baseQuery.getContext());
+    Map<String, Object> mergedUserAndConfigContext = QueryContexts.override(
+        defaultQueryConfig.getContext(),
+        baseQuery.getContext()
+    );
     mergedUserAndConfigContext.put(BaseQuery.QUERY_ID, queryId);
     this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext);
     this.toolChest = conglomerate.getToolChest(this.baseQuery);
@@ -215,10 +219,9 @@ public class QueryLifecycle
    *
    * @param req HTTP request object of the request. If provided, the auth-related fields in the HTTP request
    *            will be automatically set.
-   *
    * @return authorization result
    */
-  public Access authorize(HttpServletRequest req)
+  public AuthorizationResult authorize(HttpServletRequest req)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
     final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
@@ -249,7 +252,7 @@ public class QueryLifecycle
    * @param authenticationResult authentication result indicating identity of the requester
    * @return authorization result of requester
    */
-  public Access authorize(AuthenticationResult authenticationResult)
+  public AuthorizationResult authorize(AuthenticationResult authenticationResult)
   {
     transition(State.INITIALIZED, State.AUTHORIZING);
     final Iterable<ResourceAction> resourcesToAuthorize = Iterables.concat(
@@ -272,14 +275,20 @@ public class QueryLifecycle
     );
   }
 
-  private void preAuthorized(final AuthenticationResult authenticationResult, final Access access)
+  private void preAuthorized(
+      final AuthenticationResult authenticationResult,
+      final AuthorizationResult authorizationResult
+  )
   {
     // gotta transition those states, even if we are already authorized
     transition(State.INITIALIZED, State.AUTHORIZING);
-    doAuthorize(authenticationResult, access);
+    doAuthorize(authenticationResult, authorizationResult);
   }
 
-  private Access doAuthorize(final AuthenticationResult authenticationResult, final Access authorizationResult)
+  private AuthorizationResult doAuthorize(
+      final AuthenticationResult authenticationResult,
+      final AuthorizationResult authorizationResult
+  )
   {
     Preconditions.checkNotNull(authenticationResult, "authenticationResult");
     Preconditions.checkNotNull(authorizationResult, "authorizationResult");
@@ -289,6 +298,12 @@ public class QueryLifecycle
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
       transition(State.AUTHORIZING, State.AUTHORIZED);
+      if (!authorizationResult.equals(AuthorizationResult.ALLOW_ALL)) {
+        this.baseQuery = this.baseQuery.withPolicyRestrictions(
+            authorizationResult.getPolicyFilters(),
+            authConfig.isEnableStrictPolicyCheck()
+        );
+      }
     }
 
     this.authenticationResult = authenticationResult;
@@ -311,8 +326,8 @@ public class QueryLifecycle
 
     @SuppressWarnings("unchecked")
     final Sequence<T> res = QueryPlus.wrap((Query<T>) baseQuery)
-                                  .withIdentity(authenticationResult.getIdentity())
-                                  .run(texasRanger, responseContext);
+                                     .withIdentity(authenticationResult.getIdentity())
+                                     .run(texasRanger, responseContext);
 
     return new QueryResponse<T>(res == null ? Sequences.empty() : res, responseContext);
   }
@@ -455,7 +470,7 @@ public class QueryLifecycle
   private void transition(final State from, final State to)
   {
     if (state != from) {
-      throw new ISE("Cannot transition from[%s] to[%s].", from, to);
+      throw DruidException.defensive("Cannot transition from[%s] to[%s], current state[%s].", from, to, state);
     }
 
     state = to;

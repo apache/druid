@@ -23,7 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -33,6 +33,7 @@ import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.core.PathSegment;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Use this resource filter for API endpoints that contain {@link #DATASOURCES_PATH_SEGMENT} in their request path.
@@ -57,14 +58,14 @@ public class DatasourceResourceFilter extends AbstractResourceFilter
         getAction(request)
     );
 
-    final Access authResult = AuthorizationUtils.authorizeResourceAction(
+    final AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(
         getReq(),
         resourceAction,
         getAuthorizerMapper()
     );
 
     if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
+      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
     }
 
     return request;

@@ -63,7 +63,7 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null, null, false, false, null, null, false);
+    this(null, null, null, false, false, null, null, false, false);
   }
 
   @JsonProperty
@@ -100,6 +100,9 @@ public class AuthConfig
   @JsonProperty
   private final boolean enableInputSourceSecurity;
 
+  @JsonProperty
+  private final boolean enableStrictPolicyCheck;
+
   @JsonCreator
   public AuthConfig(
       @JsonProperty("authenticatorChain") List<String> authenticatorChain,
@@ -109,7 +112,8 @@ public class AuthConfig
       @JsonProperty("authorizeQueryContextParams") boolean authorizeQueryContextParams,
       @JsonProperty("unsecuredContextKeys") Set<String> unsecuredContextKeys,
       @JsonProperty("securedContextKeys") Set<String> securedContextKeys,
-      @JsonProperty("enableInputSourceSecurity") boolean enableInputSourceSecurity
+      @JsonProperty("enableInputSourceSecurity") boolean enableInputSourceSecurity,
+      @JsonProperty("enableStrictPolicyCheck") boolean enableStrictPolicyCheck
   )
   {
     this.authenticatorChain = authenticatorChain;
@@ -118,10 +122,11 @@ public class AuthConfig
     this.allowUnauthenticatedHttpOptions = allowUnauthenticatedHttpOptions;
     this.authorizeQueryContextParams = authorizeQueryContextParams;
     this.unsecuredContextKeys = unsecuredContextKeys == null
-        ? Collections.emptySet()
-        : unsecuredContextKeys;
+                                ? Collections.emptySet()
+                                : unsecuredContextKeys;
     this.securedContextKeys = securedContextKeys;
     this.enableInputSourceSecurity = enableInputSourceSecurity;
+    this.enableStrictPolicyCheck = enableStrictPolicyCheck;
   }
 
   public List<String> getAuthenticatorChain()
@@ -152,6 +157,11 @@ public class AuthConfig
   public boolean isEnableInputSourceSecurity()
   {
     return enableInputSourceSecurity;
+  }
+
+  public boolean isEnableStrictPolicyCheck()
+  {
+    return enableStrictPolicyCheck;
   }
 
   /**
@@ -201,7 +211,8 @@ public class AuthConfig
            && Objects.equals(unsecuredPaths, that.unsecuredPaths)
            && Objects.equals(unsecuredContextKeys, that.unsecuredContextKeys)
            && Objects.equals(securedContextKeys, that.securedContextKeys)
-           && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity);
+           && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity)
+           && Objects.equals(enableStrictPolicyCheck, that.enableStrictPolicyCheck);
   }
 
   @Override
@@ -215,7 +226,8 @@ public class AuthConfig
         authorizeQueryContextParams,
         unsecuredContextKeys,
         securedContextKeys,
-        enableInputSourceSecurity
+        enableInputSourceSecurity,
+        enableStrictPolicyCheck
     );
   }
 
@@ -231,6 +243,7 @@ public class AuthConfig
            ", unsecuredContextKeys=" + unsecuredContextKeys +
            ", securedContextKeys=" + securedContextKeys +
            ", enableInputSourceSecurity=" + enableInputSourceSecurity +
+           ", enableStrictPolicyCheck=" + enableStrictPolicyCheck +
            '}';
   }
 
@@ -252,6 +265,7 @@ public class AuthConfig
     private Set<String> unsecuredContextKeys;
     private Set<String> securedContextKeys;
     private boolean enableInputSourceSecurity;
+    private boolean enableStrictPolicyCheck;
 
     public Builder setAuthenticatorChain(List<String> authenticatorChain)
     {
@@ -301,6 +315,12 @@ public class AuthConfig
       return this;
     }
 
+    public Builder setEnableStrictPolicyCheck(boolean enableStrictPolicyCheck)
+    {
+      this.enableStrictPolicyCheck = enableStrictPolicyCheck;
+      return this;
+    }
+
     public AuthConfig build()
     {
       return new AuthConfig(
@@ -311,7 +331,8 @@ public class AuthConfig
           authorizeQueryContextParams,
           unsecuredContextKeys,
           securedContextKeys,
-          enableInputSourceSecurity
+          enableInputSourceSecurity,
+          enableStrictPolicyCheck
       );
     }
   }

@@ -51,6 +51,9 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
@@ -85,6 +88,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -326,6 +330,27 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(testQuery)).toList();
 
     Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
+  }
+
+  @Test
+  public void testSegmentMetadataQueryWorksWithRestrictions() throws Exception
+  {
+    ImmutableMap<String, Optional<DimFilter>> noRestriction = ImmutableMap.of(DATASOURCE, Optional.empty());
+    ImmutableMap<String, Optional<DimFilter>> alwaysTrueRestriction = ImmutableMap.of(DATASOURCE, Optional.of(
+        TrueDimFilter.instance()));
+    ImmutableMap<String, Optional<DimFilter>> withRestriction = ImmutableMap.of(DATASOURCE, Optional.of(
+        new NullFilter("some-column", null)));
+    List<?> results1 = runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(noRestriction)))
+                              .toList();
+    List<?> results2 = runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(alwaysTrueRestriction)))
+                              .toList();
+
+    Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results1);
+    Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results2);
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(withRestriction)))
+    );
   }
 
   @Test

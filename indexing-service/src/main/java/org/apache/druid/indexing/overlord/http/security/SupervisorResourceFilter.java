@@ -30,8 +30,8 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -41,6 +41,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.PathSegment;
 import javax.ws.rs.core.Response;
+import java.util.Objects;
 
 public class SupervisorResourceFilter extends AbstractResourceFilter
 {
@@ -97,14 +98,14 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
                                                               AuthorizationUtils.DATASOURCE_READ_RA_GENERATOR :
                                                               AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR;
 
-    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+    AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         getReq(),
         Iterables.transform(spec.getDataSources(), resourceActionFunction),
         getAuthorizerMapper()
     );
 
     if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
+      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
     }
 
     return request;

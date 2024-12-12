@@ -482,6 +482,26 @@ public class JoinDataSourceTest
   }
 
   @Test
+  public void testGetAnalysisWithRestrictedDS()
+  {
+    JoinDataSource dataSource = JoinDataSource.create(
+        RestrictedDataSource.create(
+            new TableDataSource("table1"),
+            TrueDimFilter.instance()
+        ),
+        new TableDataSource("table2"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        null
+    );
+    DataSourceAnalysis analysis = dataSource.getAnalysis();
+    Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
+  }
+
+  @Test
   public void test_computeJoinDataSourceCacheKey_keyChangesWithBaseFilter()
   {
     JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());

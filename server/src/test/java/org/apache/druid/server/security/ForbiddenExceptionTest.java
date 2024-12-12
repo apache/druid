@@ -66,22 +66,19 @@ public class ForbiddenExceptionTest
   @Test
   public void testAccess()
   {
-    Access access = new Access(false);
+    Access access = Access.deny(null);
     Assert.assertFalse(access.isAllowed());
-    Assert.assertEquals("", access.getMessage());
-    Assert.assertEquals("Allowed:false, Message:", access.toString());
-    Assert.assertEquals(Access.DEFAULT_ERROR_MESSAGE, access.toMessage());
+    Assert.assertEquals("Allowed:false, Message:, Row filter: Optional.empty", access.toString());
+    Assert.assertEquals(Access.DEFAULT_ERROR_MESSAGE, access.getMessage());
 
-    access = new Access(true);
+    access = Access.allow();
     Assert.assertTrue(access.isAllowed());
-    Assert.assertEquals("", access.getMessage());
-    Assert.assertEquals("Allowed:true, Message:", access.toString());
-    Assert.assertEquals("Authorized", access.toMessage());
+    Assert.assertEquals("Allowed:true, Message:, Row filter: Optional.empty", access.toString());
+    Assert.assertEquals("Authorized", access.getMessage());
 
-    access = new Access(false, "oops");
+    access = Access.deny("oops");
     Assert.assertFalse(access.isAllowed());
-    Assert.assertEquals("oops", access.getMessage());
-    Assert.assertEquals("Allowed:false, Message:oops", access.toString());
-    Assert.assertEquals("Allowed:false, Message:oops", access.toMessage());
+    Assert.assertEquals("Allowed:false, Message:oops, Row filter: Optional.empty", access.toString());
+    Assert.assertEquals("Unauthorized, oops", access.getMessage());
   }
 }

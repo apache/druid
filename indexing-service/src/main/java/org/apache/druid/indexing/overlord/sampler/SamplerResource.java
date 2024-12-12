@@ -23,9 +23,9 @@ import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerSpec;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -40,6 +40,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Path("/druid/indexer/v1/sampler")
@@ -72,14 +73,14 @@ public class SamplerResource
       resourceActions.addAll(sampler.getInputSourceResources());
     }
 
-    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+    AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         req,
         resourceActions,
         authorizerMapper
     );
 
     if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.getMessage());
+      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
     }
     return sampler.sample();
   }

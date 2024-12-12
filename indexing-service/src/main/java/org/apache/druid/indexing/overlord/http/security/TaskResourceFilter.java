@@ -29,7 +29,7 @@ import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -40,6 +40,7 @@ import org.apache.druid.server.security.ResourceType;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Objects;
 
 /**
  * Use this ResourceFilter when the datasource information is present after "task" segment in the request Path
@@ -92,14 +93,14 @@ public class TaskResourceFilter extends AbstractResourceFilter
         getAction(request)
     );
 
-    final Access authResult = AuthorizationUtils.authorizeResourceAction(
+    final AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(
         getReq(),
         resourceAction,
         getAuthorizerMapper()
     );
 
     if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
+      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
     }
 
     return request;

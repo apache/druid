@@ -19,7 +19,7 @@
 
 package org.apache.druid.msq.rpc;
 
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -27,6 +27,7 @@ import org.apache.druid.server.security.ResourceAction;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Utility methods for MSQ resources such as {@link ControllerResource}.
@@ -41,10 +42,14 @@ public class MSQResourceUtils
   {
     final List<ResourceAction> resourceActions = permissionMapper.getAdminPermissions();
 
-    Access access = AuthorizationUtils.authorizeAllResourceActions(request, resourceActions, authorizerMapper);
+    AuthorizationResult access = AuthorizationUtils.authorizeAllResourceActions(
+        request,
+        resourceActions,
+        authorizerMapper
+    );
 
     if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
+      throw new ForbiddenException(Objects.requireNonNull(access.getFailureMessage()));
     }
   }
 
@@ -57,10 +62,14 @@ public class MSQResourceUtils
   {
     final List<ResourceAction> resourceActions = permissionMapper.getQueryPermissions(queryId);
 
-    Access access = AuthorizationUtils.authorizeAllResourceActions(request, resourceActions, authorizerMapper);
+    AuthorizationResult access = AuthorizationUtils.authorizeAllResourceActions(
+        request,
+        resourceActions,
+        authorizerMapper
+    );
 
     if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
+      throw new ForbiddenException(Objects.requireNonNull(access.getFailureMessage()));
     }
   }
 }

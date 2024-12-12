@@ -21,14 +21,18 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Represents a source... of data... for a query. Analogous to the "FROM" clause in SQL.
@@ -43,7 +47,8 @@ import java.util.function.Function;
     @JsonSubTypes.Type(value = InlineDataSource.class, name = "inline"),
     @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable"),
     @JsonSubTypes.Type(value = UnnestDataSource.class, name = "unnest"),
-    @JsonSubTypes.Type(value = FilteredDataSource.class, name = "filter")
+    @JsonSubTypes.Type(value = FilteredDataSource.class, name = "filter"),
+    @JsonSubTypes.Type(value = RestrictedDataSource.class, name = "restrict")
 })
 public interface DataSource
 {
@@ -88,11 +93,11 @@ public interface DataSource
 
   /**
    * Returns true if this datasource can be the base datasource of query processing.
-   *
+   * <p>
    * Base datasources drive query processing. If the base datasource is {@link TableDataSource}, for example, queries
    * are processed in parallel on data servers. If the base datasource is {@link InlineDataSource}, queries are
    * processed on the Broker. See {@link DataSourceAnalysis#getBaseDataSource()} for further discussion.
-   *
+   * <p>
    * Datasources that are *not* concrete must be pre-processed in some way before they can be processed by the main
    * query stack. For example, {@link QueryDataSource} must be executed first and substituted with its results.
    *
@@ -117,6 +122,27 @@ public interface DataSource
    * @return the updated datasource to be used
    */
   DataSource withUpdatedDataSource(DataSource newSource);
+
+  default DataSource mapWithRestriction(Map<String, Optional<DimFilter>> rowFilters)
+  {
+    return mapWithRestriction(rowFilters, true);
+  }
+
+  /**
+   * Returns an updated datasource based on the policy restrictions on tables. If this datasource contains no table, no
+   * changes should occur.
+   *
+   * @param rowFilters a mapping of table names to row filters, every table in the datasource tree must have an entry
+   * @return the updated datasource, with restrictions applied in the datasource tree
+   */
+  default DataSource mapWithRestriction(Map<String, Optional<DimFilter>> rowFilters, boolean enableStrictPolicyCheck)
+  {
+    List<DataSource> children = this.getChildren()
+                                    .stream()
+                                    .map(child -> child.mapWithRestriction(rowFilters, enableStrictPolicyCheck))
+                                    .collect(Collectors.toList());
+    return this.withChildren(children);
+  }
 
   /**
    * Compute a cache key prefix for a data source. This includes the data sources that participate in the RHS of a

@@ -21,26 +21,55 @@ package org.apache.druid.server.security;
 
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.filter.DimFilter;
+
+import javax.annotation.Nullable;
+import java.util.Objects;
+import java.util.Optional;
 
 public class Access
 {
   public static final String DEFAULT_ERROR_MESSAGE = "Unauthorized";
+  public static final String DEFAULT_AUTHORIZED_MESSAGE = "Authorized";
 
-  public static final Access OK = new Access(true);
-  public static final Access DENIED = new Access(false);
+  public static final Access OK = Access.allow();
+  public static final Access DENIED = Access.deny("");
 
   private final boolean allowed;
   private final String message;
+  // A row-level policy filter on top of table-level read access. It should be empty if there are no policy restrictions
+  // or if access is requested for an action other than reading the table.
+  private final Optional<DimFilter> rowFilter;
 
+  /**
+   * @deprecated use {@link #allow()} or {@link #deny(String)} instead
+   */
+  @Deprecated
   public Access(boolean allowed)
   {
-    this(allowed, "");
+    this(allowed, "", Optional.empty());
   }
 
-  public Access(boolean allowed, String message)
+  Access(boolean allowed, String message, Optional<DimFilter> rowFilter)
   {
     this.allowed = allowed;
     this.message = message;
+    this.rowFilter = rowFilter;
+  }
+
+  public static Access allow()
+  {
+    return new Access(true, "", Optional.empty());
+  }
+
+  public static Access deny(@Nullable String message)
+  {
+    return new Access(false, Objects.isNull(message) ? "" : message, Optional.empty());
+  }
+
+  public static Access allowWithRestriction(Optional<DimFilter> rowFilter)
+  {
+    return new Access(true, "", rowFilter);
   }
 
   public boolean isAllowed()
@@ -48,25 +77,30 @@ public class Access
     return allowed;
   }
 
-  public String getMessage()
+  public Optional<DimFilter> getRowFilter()
   {
-    return message;
+    return rowFilter;
   }
 
-  public String toMessage()
+  public String getMessage()
   {
+    StringBuilder stringBuilder = new StringBuilder();
+    stringBuilder.append(allowed ? DEFAULT_AUTHORIZED_MESSAGE : DEFAULT_ERROR_MESSAGE);
     if (!Strings.isNullOrEmpty(message)) {
-      return toString();
-    } else if (allowed) {
-      return "Authorized";
-    } else {
-      return DEFAULT_ERROR_MESSAGE;
+      stringBuilder.append(", ");
+      stringBuilder.append(message);
     }
+    if (allowed && rowFilter.isPresent()) {
+      stringBuilder.append(", with restriction ");
+      stringBuilder.append(rowFilter.get());
+    }
+    return stringBuilder.toString();
   }
 
   @Override
   public String toString()
   {
-    return StringUtils.format("Allowed:%s, Message:%s", allowed, message);
+    return StringUtils.format("Allowed:%s, Message:%s, Row filter: %s", allowed, message, rowFilter);
   }
+
 }

@@ -33,7 +33,7 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryResultPusher;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
@@ -140,7 +140,7 @@ public class SqlResource
       return Response.status(Status.NOT_FOUND).build();
     }
 
-    final Access access = authorizeCancellation(req, lifecycles);
+    final AuthorizationResult access = authorizeCancellation(req, lifecycles);
 
     if (access.isAllowed()) {
       // should remove only the lifecycles in the snapshot.
@@ -332,11 +332,11 @@ public class SqlResource
 
   /**
    * Authorize a query cancellation operation.
-   *
+   * <p>
    * Considers only datasource and table resources; not context key resources when checking permissions. This means
    * that a user's permission to cancel a query depends on the datasource, not the context variables used in the query.
    */
-  public Access authorizeCancellation(final HttpServletRequest req, final List<Cancelable> cancelables)
+  public AuthorizationResult authorizeCancellation(final HttpServletRequest req, final List<Cancelable> cancelables)
   {
     Set<ResourceAction> resources = cancelables
         .stream()

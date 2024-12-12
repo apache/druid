@@ -40,7 +40,6 @@ public class NotDimFilter extends AbstractOptimizableDimFilter implements DimFil
     return new NotDimFilter(field);
   }
 
-
   private final DimFilter field;
 
   @JsonCreator
