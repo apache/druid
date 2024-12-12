@@ -18,15 +18,15 @@
 
 import { Button, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import classNames from 'classnames';
 import type {
   Column,
   FilterPattern,
   QueryResult,
   SqlExpression,
   SqlQuery,
-} from '@druid-toolkit/query';
-import { filterPatternsToExpression, fitFilterPatterns } from '@druid-toolkit/query';
-import classNames from 'classnames';
+} from 'druid-query-toolkit';
+import { filterPatternsToExpression, fitFilterPatterns } from 'druid-query-toolkit';
 import { forwardRef, useImperativeHandle, useState } from 'react';
 
 import type { QuerySource } from '../../models';

@@ -35,14 +35,14 @@ import type {
   FilterPatternType,
   QueryResult,
   SqlQuery,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import {
   C,
   changeFilterPatternType,
   filterPatternToExpression,
   fitFilterPattern,
   SqlExpression,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
