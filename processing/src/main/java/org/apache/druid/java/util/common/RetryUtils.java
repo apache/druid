@@ -206,9 +206,29 @@ public class RetryUtils
     Thread.sleep(sleepMillis);
   }
 
+  /**
+   * Calculates the duration in milliseconds to sleep before the next attempt of
+   * a retryable operation. The duration is calculated in an exponential back-off
+   * manner with a fuzzy multiplier to introduce some variance.
+   * <p>
+   * Sleep duration in milliseconds for subsequent retries:
+   * <ul>
+   * <li>Retry 1: [0, 2000]</li>
+   * <li>Retry 2: [0, 4000]</li>
+   * <li>Retry 3: [0, 8000]</li>
+   * <li>...</li>
+   * <li>Retry 7 and later: [0, 120,000]</li>
+   * </ul>
+   *
+   * @param nTry Index of the next retry, starting with 1
+   * @return Next sleep duration in the range [0, 120,000] millis
+   */
   public static long nextRetrySleepMillis(final int nTry)
   {
+    // fuzzyMultiplier in [0, 2]
     final double fuzzyMultiplier = Math.min(Math.max(1 + 0.2 * ThreadLocalRandom.current().nextGaussian(), 0), 2);
+
+    // sleepMillis in [1 x 2^(nTry-1), 60] * [0, 2] seconds
     final long sleepMillis = (long) (Math.min(MAX_SLEEP_MILLIS, BASE_SLEEP_MILLIS * Math.pow(2, nTry - 1))
                                      * fuzzyMultiplier);
     return sleepMillis;
