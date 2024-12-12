@@ -244,9 +244,7 @@ public class ForkingTaskRunner
 
                         command.add(config.getJavaCommand());
 
-                        if (JvmUtils.majorVersion() >= 11) {
-                          command.addAll(STRONG_ENCAPSULATION_PROPERTIES);
-                        }
+                        command.addAll(STRONG_ENCAPSULATION_PROPERTIES);
 
                         command.add("-cp");
                         command.add(taskClasspath);
