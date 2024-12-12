@@ -85,7 +85,7 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
     if (Types.is(type, ExprType.STRING)) {
       return VectorStringProcessors.concat(inspector, left, right);
     }
-    return VectorMathProcessors.plus(inspector, left, right);
+    return VectorMathProcessors.plus().asProcessor(inspector, left, right);
   }
 }
 
@@ -124,7 +124,7 @@ final class BinMinusExpr extends BinaryEvalOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.minus(inspector, left, right);
+    return VectorMathProcessors.subtract().asProcessor(inspector, left, right);
   }
 }
 
@@ -163,7 +163,7 @@ final class BinMulExpr extends BinaryEvalOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.multiply(inspector, left, right);
+    return VectorMathProcessors.multiply().asProcessor(inspector, left, right);
   }
 }
 
@@ -202,7 +202,7 @@ final class BinDivExpr extends BinaryEvalOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.divide(inspector, left, right);
+    return VectorMathProcessors.divide().asProcessor(inspector, left, right);
   }
 }
 
@@ -241,7 +241,7 @@ class BinPowExpr extends BinaryEvalOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.power(inspector, left, right);
+    return VectorMathProcessors.power().asProcessor(inspector, left, right);
   }
 }
 
@@ -280,6 +280,6 @@ class BinModuloExpr extends BinaryEvalOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.modulo(inspector, left, right);
+    return VectorMathProcessors.modulo().asProcessor(inspector, left, right);
   }
 }
