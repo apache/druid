@@ -137,29 +137,29 @@ Counts distinct values of a Theta sketch column or a regular column.
 Deprecated in favor of [`APPROX_QUANTILE_DS`](#approx_quantile_ds).
 :::
 
-* **Syntax:** `APPROX_QUANTILE(expr, fraction, [k])`
+* **Syntax:** `APPROX_QUANTILE(expr, probability, [k])`
 * **Function type:** Aggregation
 
 [Learn more](sql-aggregations.md)
 
 ## APPROX_QUANTILE_DS
 
-Computes approximate quantiles on a Quantiles sketch column or a regular numeric column. The parameter `k` determines the accuracy and size of the sketch. The [DataSketches Quantiles Sketch module](../development/extensions-core/datasketches-quantiles.md) provides more information on the parameter `k`.
+Computes approximate quantiles on a Quantiles sketch column or a regular numeric column. See [DataSketches Quantiles Sketch module](../development/extensions-core/datasketches-quantiles.md) for a description of parameters.
 
-* **Syntax:** `APPROX_QUANTILE_DS(expr, fraction, [k])`
+* **Syntax:** `APPROX_QUANTILE_DS(expr, probability, [k])`
 * **Function type:** Aggregation
 
 
 <details><summary>Example</summary>
 
-The following example approximates the median of the `Distance` column from the `flight-carriers` datasource using a `k` value of 128. The query may return a different approximation on each execution.
+The following example approximates the median of the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation on each execution.
 
 ```sql
 SELECT APPROX_QUANTILE_DS("Distance", 0.5, 128)  AS "estimate_median"
 FROM "flight-carriers"
 ```
 
-May return the following:
+Returns a result similar to the following:
 
 | `estimate_median` |
 | -- | 
@@ -171,7 +171,7 @@ May return the following:
 
 ## APPROX_QUANTILE_FIXED_BUCKETS
 
-Computes approximate quantiles on fixed buckets histogram column or a regular numeric column. The [fixed buckets histogram](../development/extensions-core/approximate-histograms.md#fixed-buckets-histogram) documentation describes the parameters.
+Computes approximate quantiles on fixed buckets histogram column or a regular numeric column. See [Fixed buckets histogram](../development/extensions-core/approximate-histograms.md#fixed-buckets-histogram) for a description of parameters.
 
 * **Syntax:** `APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`
 * **Function type:** Aggregation
@@ -179,7 +179,7 @@ Computes approximate quantiles on fixed buckets histogram column or a regular nu
 
 <details><summary>Example</summary>
 
-The following example approximates the median of a histogram on the `Distance` column from the `flight-carriers` datasource. The histogram has 10 buckets, a lower limit of zero, an upper limit of 2500, and outliers are ignored. 
+The following example approximates the median of a histogram on the `Distance` column from the `flight-carriers` datasource. The histogram has 10 buckets, a lower limit of zero, an upper limit of 2500, and ignores outlier values. 
 
 ```sql
 SELECT APPROX_QUANTILE_FIXED_BUCKETS("Distance", 0.5, 10, 0, 2500, 'ignore')  AS "estimate_median"
@@ -1082,7 +1082,7 @@ SELECT DS_CDF( DS_QUANTILES_SKETCH("Distance"), 750, 1500, 2250) AS "estimate_cd
 FROM "flight-carriers"
 ```
 
-May return the following:
+Returns a result similar to the following:
 
 | `estimate_cdf` | 
 | -- |
@@ -1094,7 +1094,7 @@ May return the following:
 
 ## DS_GET_QUANTILE
 
-Returns the quantile estimate corresponding to `fraction` from a Quantiles sketch. 
+Returns the quantile estimate corresponding to the fraction from a Quantiles sketch. 
 
 * **Syntax:** `DS_GET_QUANTILE(expr, fraction)`
 * **Function type:** Scalar, sketch
@@ -1146,7 +1146,7 @@ May returns the following:
 
 ## DS_HISTOGRAM
 
-Returns a string representing an approximation to the histogram given a list of split points that define the histogram bins from a Quantiles sketch. 
+Returns an approximation to the histogram from a Quantiles sketch. The split points define the histogram bins. 
 
 * **Syntax:** `DS_HISTOGRAM(expr, splitPoint0, splitPoint1, ...)`
 * **Function type:** Scalar, sketch
@@ -1165,7 +1165,7 @@ May return the following:
 
 | `estimate_histogram` | 
 | -- |
-| `[354396.0,150199.00000000003,39848.000000000015,21694.99999999997]` |
+| `[358496.0,153974.99999999997,39909.99999999999,13757.000000000005]` |
 
 </details>
 
@@ -1187,7 +1187,7 @@ Returns a string summary of a Quantiles sketch.
 
 <details><summary>Example</summary>
 
-The following example returns a summary of a Quantiles sketch on the `Distance` column from the `flight-carriers`.
+The following example returns a summary of a Quantiles sketch on the `Distance` column from the `flight-carriers` datasource.
 
 ```sql
 SELECT DS_QUANTILE_SUMMARY( DS_QUANTILES_SKETCH("Distance") ) AS "summary"
@@ -1234,7 +1234,7 @@ Returns the following:
 
 ## DS_QUANTILES_SKETCH
 
-Creates a Quantiles sketch on a column containing Quantiles sketches or a regular column. The parameter `k` determines the accuracy and size of the sketch. The [DataSketches Quantiles Sketch module](../development/extensions-core/datasketches-quantiles.md) provides more information on the parameter `k`.
+Creates a Quantiles sketch on a Quantiles sketch column or a regular column. See [DataSketches Quantiles Sketch module](../development/extensions-core/datasketches-quantiles.md) for a description of parameters.
 
 * **Syntax:** `DS_QUANTILES_SKETCH(expr, [k])`
 * **Function type:** Aggregation
@@ -1260,21 +1260,21 @@ Returns the following:
 
 ## DS_RANK
 
-Returns an approximate rank for `value` between zero and one, in which the rank signifies the fraction of the distribution less than `value`.
+Returns an approximate rank of a given value in a distribution. The rank represents the fraction of the distribution less than the given value.
 
 * **Syntax:** `DS_RANK(expr, value)`
 * **Function type:** Scalar, sketch
 
 <details><summary>Example</summary>
 
-The following example approximates what fraction of records have a lesser value than `500` in the `Distance` column from the `flight-carries` datasource. The query may return a different approximation on each execution.
+The following example estimates the fraction of records in the `flight-carriers` datasource where the value in the `Distance` column is less than 500. The query may return a different approximation on each execution.
 
 ```sql
 SELECT DS_RANK( DS_QUANTILES_SKETCH("Distance"), 500) AS "estimate_rank"
 FROM "flight-carriers"
 ```
 
-May return the following:
+Returns a result similar to the following:
 
 | `estimate_rank` |
 | -- |
