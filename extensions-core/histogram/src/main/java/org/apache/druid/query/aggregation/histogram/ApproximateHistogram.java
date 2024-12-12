@@ -42,7 +42,7 @@ public class ApproximateHistogram
   int size;
 
   protected float[] positions;
-  private long[] bins;
+  protected long[] bins;
 
   // used bincount
   int binCount;
