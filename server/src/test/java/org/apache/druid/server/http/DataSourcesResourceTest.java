@@ -745,7 +745,7 @@ public class DataSourcesResourceTest
 
     Response response = dataSourcesResource.markSegmentAsUsed(segment.getDataSource(), segment.getId().toString());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("segmentStateChanged", true), response.getEntity());
+    Assert.assertEquals(new SegmentUpdateResponse(1), response.getEntity());
 
     EasyMock.verify(overlordClient, segmentsMetadataManager);
   }
@@ -760,7 +760,7 @@ public class DataSourcesResourceTest
 
     Response response = dataSourcesResource.markSegmentAsUsed(segment.getDataSource(), segment.getId().toString());
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("segmentStateChanged", false), response.getEntity());
+    Assert.assertEquals(new SegmentUpdateResponse(0), response.getEntity());
     EasyMock.verify(overlordClient);
   }
 

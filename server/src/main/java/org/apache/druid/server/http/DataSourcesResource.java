@@ -781,12 +781,20 @@ public class DataSourcesResource
     final SegmentId segmentId = SegmentId.tryParse(dataSourceName, segmentIdString);
     if (segmentId == null) {
       return Response.status(Response.Status.BAD_REQUEST).entity(
-          org.apache.druid.java.util.common.StringUtils.format("Could not parse Segment ID[%s]", segmentIdString)
+          org.apache.druid.java.util.common.StringUtils.format(
+              "Could not parse Segment ID[%s] for DataSource[%s]",
+              segmentIdString, dataSourceName
+          )
       ).build();
     }
 
-    final boolean segmentStateChanged = segmentId != null && segmentsMetadataManager.markSegmentAsUnused(segmentId);
-    return Response.ok(ImmutableMap.of("segmentStateChanged", segmentStateChanged)).build();
+    SegmentUpdateOperation metadataOperation
+        = () -> segmentsMetadataManager.markSegmentAsUnused(segmentId) ? 1 : 0;
+    RemoteSegmentUpdateOperation remoteOperation
+        = () -> overlordClient.markSegmentAsUnused(segmentId);
+
+    return updateSegmentsViaOverlord(dataSourceName, remoteOperation)
+        .orUpdateMetadataIf404(metadataOperation);
   }
 
   /**
@@ -817,22 +825,8 @@ public class DataSourcesResource
     RemoteSegmentUpdateOperation remoteOperation
         = () -> overlordClient.markSegmentAsUsed(segmentId);
 
-    final Response response = updateSegmentsViaOverlord(dataSourceName, remoteOperation)
+    return updateSegmentsViaOverlord(dataSourceName, remoteOperation)
         .orUpdateMetadataIf404(metadataOperation);
-
-    // Convert response for backward compatibility
-    final int responseCode = response.getStatus();
-    if (responseCode >= 200 && responseCode < 300) {
-      if (response.getEntity() instanceof SegmentUpdateResponse) {
-        int updatedCount = ((SegmentUpdateResponse) response.getEntity()).getNumChangedSegments();
-        if (updatedCount > 0) {
-          return Response.ok().entity(ImmutableMap.of("segmentStateChanged", true)).build();
-        }
-      }
-      return Response.ok().entity(ImmutableMap.of("segmentStateChanged", false)).build();
-    } else {
-      return response;
-    }
   }
 
   @GET

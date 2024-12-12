@@ -27,6 +27,7 @@ import java.util.Objects;
 public class SegmentUpdateResponse
 {
   private final int numChangedSegments;
+  private final boolean segmentStateChanged;
 
   @JsonCreator
   public SegmentUpdateResponse(
@@ -34,12 +35,24 @@ public class SegmentUpdateResponse
   )
   {
     this.numChangedSegments = numChangedSegments;
+    this.segmentStateChanged = numChangedSegments > 0;
   }
 
   @JsonProperty
   public int getNumChangedSegments()
   {
     return numChangedSegments;
+  }
+
+  /**
+   * This field is required for backward compatibility of responses of
+   * {@link org.apache.druid.server.http.DataSourcesResource#markSegmentAsUsed}
+   * and {@link org.apache.druid.server.http.DataSourcesResource#markSegmentAsUnused}
+   */
+  @JsonProperty
+  public boolean isSegmentStateChanged()
+  {
+    return segmentStateChanged;
   }
 
   @Override
